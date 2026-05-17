@@ -7,11 +7,11 @@
     <title>Cici 健身计划</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=Outfit:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
     <link rel="stylesheet" href="style.css">
-
-    <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
@@ -19,447 +19,115 @@
 
 <body>
     <header class="masthead">
-        <div class="masthead-seal">健</div>
+        <div class="masthead-seal">咪</div>
         <div>
-            <h1>CICI</h1>
+            <h1>Cici</h1>
             <p class="masthead-sub">健身计划 · Fitness Planner</p>
         </div>
+        <div class="masthead-right" id="auth-btn"></div>
     </header>
-    <div id="app">
-        <div class="panel">
-            <p class="panel-title">设置 <span class="saved-dot" id="saved-dot"></span></p>
 
-            <p class="sec">目标</p>
-            <div class="chips" id="g-goal">
-                <button class="chip on" data-v="减脂塑形">减脂塑形</button>
-                <button class="chip" data-v="增肌力量">增肌力量</button>
-                <button class="chip" data-v="提升耐力">提升耐力</button>
-                <button class="chip" data-v="整体健康">整体健康</button>
-                <button class="chip" data-v="灵活柔韧">灵活柔韧</button>
+    <div class="wrap">
+        <div class="tabs-wrap">
+            <div class="tabs">
+                <button class="tab active" onclick="showTab('today',this)">今日训练</button>
+                <button class="tab" onclick="showTab('settings',this)">设置</button>
+                <button class="tab" onclick="showTab('journal',this)">日志</button>
+                <button class="tab" onclick="showTab('stats-tab',this)">统计</button>
             </div>
-
-            <p class="sec">当前水平</p>
-            <div class="chips" id="g-level">
-                <button class="chip on" data-v="初级">初级</button>
-                <button class="chip" data-v="中级">中级</button>
-                <button class="chip" data-v="高级">高级</button>
-            </div>
-
-            <p class="sec">每周训练天数</p>
-            <div class="srow">
-                <input type="range" id="sl-days" min="2" max="6" step="1" value="3">
-                <span class="sval" id="v-days">3天</span>
-            </div>
-
-            <p class="sec">每次时长</p>
-            <div class="srow">
-                <input type="range" id="sl-dur" min="20" max="90" step="5" value="45">
-                <span class="sval" id="v-dur">45分钟</span>
-            </div>
-
-            <p class="sec">器材</p>
-            <div class="chips" id="g-equip">
-                <button class="chip" data-v="无器材">无器材</button>
-                <button class="chip" data-v="弹力带">弹力带</button>
-                <button class="chip" data-v="哑铃">哑铃</button>
-                <button class="chip on" data-v="健身房全套">健身房全套</button>
-            </div>
-
-            <p class="sec">重点部位（可多选）</p>
-            <div class="chips" id="g-focus">
-                <button class="chip" data-v="上肢">上肢</button>
-                <button class="chip" data-v="下肢">下肢</button>
-                <button class="chip" data-v="核心">核心</button>
-                <button class="chip" data-v="有氧">有氧</button>
-            </div>
-
-            <p class="sec">限制或注意</p>
-            <textarea id="limits" placeholder="例如：膝盖不适、肩伤、避免跳跃..."></textarea>
-
-            <button id="gen-btn" onclick="genPlan()">生成计划</button>
-            <p class="sync-status" id="sync-status">正在连接...</p>
         </div>
 
-        <div class="panel" id="main">
-            <div class="empty">
-                <i class="ti ti-barbell"></i>
-                <p style="font-size:13px">调整参数，点击生成专属计划</p>
+        <!-- Tab: Today -->
+        <div class="panel-tab active" id="today">
+            <div id="main">
+                <div class="empty">
+                    <i class="ti ti-barbell"></i>
+                    <p>切换到「设置」标签，调整参数后点击生成计划</p>
+                </div>
             </div>
+        </div>
+
+        <!-- Tab: Settings -->
+        <div class="panel-tab" id="settings">
+            <div class="panel">
+                <p class="panel-title">训练设置 <span class="saved-dot" id="saved-dot"></span></p>
+                <p class="sec">目标</p>
+                <div class="chips" id="g-goal">
+                    <button class="chip on" data-v="减脂塑形">减脂塑形</button>
+                    <button class="chip" data-v="增肌力量">增肌力量</button>
+                    <button class="chip" data-v="提升耐力">提升耐力</button>
+                    <button class="chip" data-v="整体健康">整体健康</button>
+                    <button class="chip" data-v="灵活柔韧">灵活柔韧</button>
+                </div>
+                <p class="sec">当前水平</p>
+                <div class="chips" id="g-level">
+                    <button class="chip on" data-v="初级">初级</button>
+                    <button class="chip" data-v="中级">中级</button>
+                    <button class="chip" data-v="高级">高级</button>
+                </div>
+                <p class="sec">每周训练天数</p>
+                <div class="srow">
+                    <input type="range" id="sl-days" min="2" max="6" step="1" value="3">
+                    <span class="sval" id="v-days">3天</span>
+                </div>
+                <p class="sec">每次时长</p>
+                <div class="srow">
+                    <input type="range" id="sl-dur" min="20" max="90" step="5" value="45">
+                    <span class="sval" id="v-dur">45分钟</span>
+                </div>
+                <p class="sec">器材</p>
+                <div class="chips" id="g-equip">
+                    <button class="chip" data-v="无器材">无器材</button>
+                    <button class="chip" data-v="弹力带">弹力带</button>
+                    <button class="chip" data-v="哑铃">哑铃</button>
+                    <button class="chip on" data-v="健身房全套">健身房全套</button>
+                </div>
+                <p class="sec">重点部位（可多选）</p>
+                <div class="chips" id="g-focus">
+                    <button class="chip" data-v="上肢">上肢</button>
+                    <button class="chip" data-v="下肢">下肢</button>
+                    <button class="chip" data-v="核心">核心</button>
+                    <button class="chip" data-v="有氧">有氧</button>
+                </div>
+                <p class="sec">限制或注意</p>
+                <textarea id="limits" placeholder="例如：膝盖不适、肩伤、避免跳跃..."></textarea>
+                <button id="gen-btn" onclick="genPlan()">生成计划</button>
+            </div>
+            <div class="panel">
+                <p class="panel-title">数据管理</p>
+                <div class="export-row">
+                    <button class="exp-btn" onclick="exportJSON()">📦 导出 JSON</button>
+                    <button class="exp-btn" onclick="exportCSV()">📄 导出 CSV</button>
+                    <label class="exp-btn" style="cursor:pointer">📥 导入 JSON<input type="file" accept=".json"
+                            onchange="importJSON(this)" style="display:none"></label>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab: Journal -->
+        <div class="panel-tab" id="journal">
+            <div class="panel">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+                    <p class="panel-title" style="margin:0">训练日志</p>
+                    <button class="exp-btn" id="jrnl-toggle" onclick="toggleLogHistory()">显示全部</button>
+                </div>
+                <div id="log-list">
+                    <div class="empty">
+                        <p>完成训练后自动记录</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab: Stats -->
+        <div class="panel-tab" id="stats-tab">
+            <div id="stats-content"></div>
         </div>
     </div>
 
-    <script>
-        // ── Firebase 配置 ── 替换成你自己的 ─────────────────────────
-        const firebaseConfig = {
-            apiKey: "AIzaSyB12HcJxsqqmWoih3wnfpyqu9LDzEE9nXs",
-            authDomain: "cici-fitness.firebaseapp.com",
-            projectId: "cici-fitness",
-            storageBucket: "cici-fitness.firebasestorage.app",
-            messagingSenderId: "375793627351",
-            appId: "1:375793627351:web:f2dbfd8e107206417f4092",
-            measurementId: "G-ZHCCRWZ57P"
-        };
-        // ────────────────────────────────────────────────────────────
-
-        firebase.initializeApp(firebaseConfig);
-        const auth = firebase.auth();
-        const db = firebase.firestore();
-        let uid = null;
-
-        auth.signInAnonymously()
-            .then(result => {
-                uid = result.user.uid;
-                document.getElementById('sync-status').textContent = '已连接 · 数据自动同步';
-                loadSaved();
-            })
-            .catch(() => {
-                document.getElementById('sync-status').textContent = '离线模式（数据不会持久化）';
-            });
-
-        // ── State ────────────────────────────────────────────────────
-        const S = {
-            goal: '减脂塑形', level: '初级', days: 3, dur: 45,
-            equip: ['健身房全套'], focus: [], limits: '',
-            plan: null, selDay: 0, prog: {}, adj: {}
-        };
-
-        // ── Limits logic ─────────────────────────────────────────────
-        const LIMIT_RULES = [
-            { kw: ['膝', '膝盖', '膝关节'], exclude: ['深蹲', '史密斯机深蹲', '腿举机', '哑铃弓步蹲', '相扑深蹲', '跳绳', '开合跳', '壶铃摆动'] },
-            { kw: ['肩', '肩膀', '肩关节'], exclude: ['哑铃肩推', '哑铃侧平举', '绳索侧平举', '史密斯机卧推', '双杠撑体'] },
-            { kw: ['腰', '腰椎', '腰背'], exclude: ['罗马尼亚硬拉', '俯身哑铃划船', '髋关节合页', '壶铃摆动'] },
-            { kw: ['颈', '颈椎'], exclude: ['高位下拉', '哑铃肩推'] },
-            { kw: ['跳', '跳跃'], exclude: ['跳绳', '开合跳'] },
-            { kw: ['手腕', '腕'], exclude: ['哑铃卧推', '哑铃弯举', '锤式弯举', '俯卧撑', '腹轮'] },
-            { kw: ['踝', '脚踝'], exclude: ['跳绳', '开合跳', '站姿提踵'] },
-        ];
-
-        function getExcluded() {
-            const excluded = new Set();
-            LIMIT_RULES.forEach(rule => {
-                if (rule.kw.some(k => S.limits.includes(k)))
-                    rule.exclude.forEach(e => excluded.add(e));
-            });
-            return excluded;
-        }
-
-        // ── Exercise DB ──────────────────────────────────────────────
-        const DB = {
-            push: [
-                { n: '俯卧撑', eq: ['无器材', '弹力带', '哑铃', '健身房全套'], note: '核心收紧，身体一直线' },
-                { n: '哑铃卧推', eq: ['哑铃', '健身房全套'], note: '肘部45°，背部贴凳' },
-                { n: '史密斯机卧推', eq: ['健身房全套'], note: '下放至胸口停顿1秒' },
-                { n: '坐姿推胸机', eq: ['健身房全套'], note: '全程控制速度' },
-                { n: '绳索夹胸', eq: ['健身房全套'], note: '顶峰收缩保持1秒' },
-                { n: '上斜哑铃飞鸟', eq: ['哑铃', '健身房全套'], note: '感受胸肌上束拉伸' },
-                { n: '哑铃肩推', eq: ['哑铃', '健身房全套'], note: '不要耸肩' },
-                { n: '哑铃侧平举', eq: ['哑铃', '健身房全套'], note: '小拇指略高，肘微弯' },
-                { n: '绳索侧平举', eq: ['健身房全套'], note: '单臂交替' },
-                { n: '绳索下压', eq: ['健身房全套'], note: '肘部贴身固定不动' },
-                { n: '哑铃臂屈伸', eq: ['哑铃', '健身房全套'], note: '肘朝天花板' },
-                { n: '双杠撑体', eq: ['健身房全套'], note: '略前倾可更针对胸肌' },
-            ],
-            pull: [
-                { n: '高位下拉', eq: ['健身房全套'], note: '下拉至胸前，挺胸' },
-                { n: '坐姿划船', eq: ['健身房全套', '弹力带'], note: '肘部夹紧身体两侧' },
-                { n: '哑铃单臂划船', eq: ['哑铃', '健身房全套'], note: '拉到腰部，感受背阔' },
-                { n: '引体向上', eq: ['健身房全套'], note: '全程控制，下放要慢' },
-                { n: '俯身哑铃划船', eq: ['哑铃', '健身房全套'], note: '背部平行于地面' },
-                { n: '绳索直臂下压', eq: ['健身房全套'], note: '感受背阔肌收缩' },
-                { n: '哑铃弯举', eq: ['哑铃', '健身房全套'], note: '不借力，全程控制' },
-                { n: '锤式弯举', eq: ['哑铃', '健身房全套'], note: '中立握姿，肱肌发力' },
-                { n: '绳索弯举', eq: ['健身房全套'], note: '顶峰收缩停留' },
-                { n: '弹力带划船', eq: ['弹力带'], note: '收紧肩胛骨' },
-                { n: '反向飞鸟机', eq: ['健身房全套'], note: '针对后三角和菱形肌' },
-            ],
-            legs: [
-                { n: '深蹲', eq: ['无器材', '哑铃', '健身房全套'], note: '膝盖对准脚尖，背部挺直' },
-                { n: '史密斯机深蹲', eq: ['健身房全套'], note: '脚步可略超杠铃位置' },
-                { n: '腿举机', eq: ['健身房全套'], note: '不要锁死膝关节' },
-                { n: '腿弯举', eq: ['健身房全套'], note: '俯卧，腹部贴凳' },
-                { n: '哑铃弓步蹲', eq: ['哑铃', '健身房全套'], note: '前膝不超脚尖' },
-                { n: '臀推', eq: ['健身房全套', '哑铃'], note: '顶端挤压臀部1秒' },
-                { n: '髋关节合页', eq: ['无器材', '哑铃', '健身房全套'], note: '保持背部中立位' },
-                { n: '罗马尼亚硬拉', eq: ['哑铃', '健身房全套'], note: '腿后腱感受拉伸' },
-                { n: '腿伸展机', eq: ['健身房全套'], note: '顶端保持收缩' },
-                { n: '站姿提踵', eq: ['无器材', '哑铃', '健身房全套'], note: '全幅度，顶端停顿' },
-                { n: '相扑深蹲', eq: ['哑铃', '健身房全套'], note: '宽步距，脚尖外八' },
-                { n: '弹力带侧走', eq: ['弹力带', '健身房全套'], note: '激活臀外展肌' },
-                { n: '壶铃摆动', eq: ['健身房全套'], note: '髋关节发力驱动' },
-            ],
-            core: [
-                { n: '平板支撑', eq: ['无器材', '弹力带', '哑铃', '健身房全套'], note: '臀部不要过高', u: '秒' },
-                { n: '卷腹', eq: ['无器材', '健身房全套'], note: '下背不离地，慢速' },
-                { n: '悬挂抬腿', eq: ['健身房全套'], note: '控制下放，避免摇摆' },
-                { n: '俄罗斯转体', eq: ['无器材', '哑铃', '健身房全套'], note: '脚悬空增加难度' },
-                { n: '死虫式', eq: ['无器材', '健身房全套'], note: '下背全程贴地' },
-                { n: '腹轮', eq: ['健身房全套'], note: '初级可跪姿' },
-                { n: '侧平板支撑', eq: ['无器材', '健身房全套'], note: '每侧各做', u: '秒' },
-            ],
-            cardio: [
-                { n: '跑步机慢跑', eq: ['健身房全套'], note: '心率维持最大心率65-75%', u: '分钟' },
-                { n: '划船机', eq: ['健身房全套'], note: '腿发力为主，约28次/分', u: '分钟' },
-                { n: '椭圆机', eq: ['健身房全套'], note: '保持直立，手臂协同发力', u: '分钟' },
-                { n: '骑行机', eq: ['健身房全套'], note: '座位调至膝盖微弯位置', u: '分钟' },
-                { n: '跳绳', eq: ['无器材', '健身房全套'], note: '落地轻柔，手腕发力', u: '分钟' },
-                { n: '开合跳', eq: ['无器材', '弹力带', '哑铃', '健身房全套'], note: '膝关节微弯', u: '分钟' },
-            ]
-        };
-
-        const SPLITS = {
-            2: [
-                { type: '全身 A', cats: ['push', 'pull', 'legs', 'core'], ratio: [2, 2, 2, 1] },
-                { type: '全身 B', cats: ['push', 'pull', 'legs', 'core'], ratio: [2, 2, 2, 1] },
-            ],
-            3: [
-                { type: '推（胸/肩/三）', cats: ['push', 'core'], ratio: [4, 1] },
-                { type: '拉（背/二）', cats: ['pull', 'core'], ratio: [4, 1] },
-                { type: '腿臀', cats: ['legs', 'core'], ratio: [4, 1] },
-            ],
-            4: [
-                { type: '上肢 A', cats: ['push', 'pull'], ratio: [3, 2] },
-                { type: '下肢 A', cats: ['legs', 'core'], ratio: [4, 1] },
-                { type: '上肢 B', cats: ['push', 'pull'], ratio: [2, 3] },
-                { type: '下肢 B', cats: ['legs', 'core'], ratio: [3, 2] },
-            ],
-            5: [
-                { type: '推', cats: ['push'], ratio: [5] },
-                { type: '拉', cats: ['pull'], ratio: [5] },
-                { type: '腿臀', cats: ['legs'], ratio: [5] },
-                { type: '上肢综合', cats: ['push', 'pull', 'core'], ratio: [2, 2, 1] },
-                { type: '下肢+有氧', cats: ['legs', 'core', 'cardio'], ratio: [3, 1, 1] },
-            ],
-            6: [
-                { type: '推', cats: ['push'], ratio: [5] },
-                { type: '拉', cats: ['pull'], ratio: [5] },
-                { type: '腿臀', cats: ['legs', 'core'], ratio: [4, 1] },
-                { type: '推（变式）', cats: ['push', 'core'], ratio: [4, 1] },
-                { type: '拉（变式）', cats: ['pull', 'core'], ratio: [4, 1] },
-                { type: '全身有氧', cats: ['legs', 'cardio', 'core'], ratio: [2, 2, 1] },
-            ],
-        };
-
-        const SCHEMES = {
-            '减脂塑形': { sets: { 初级: 3, 中级: 4, 高级: 4 }, reps: { 初级: 15, 中级: 12, 高级: 12 }, cardioMin: 15 },
-            '增肌力量': { sets: { 初级: 3, 中级: 4, 高级: 5 }, reps: { 初级: 10, 中级: 8, 高级: 6 }, cardioMin: 0 },
-            '提升耐力': { sets: { 初级: 3, 中级: 3, 高级: 4 }, reps: { 初级: 20, 中级: 20, 高级: 20 }, cardioMin: 20 },
-            '整体健康': { sets: { 初级: 3, 中级: 3, 高级: 4 }, reps: { 初级: 12, 中级: 12, 高级: 12 }, cardioMin: 10 },
-            '灵活柔韧': { sets: { 初级: 3, 中级: 3, 高级: 3 }, reps: { 初级: 12, 中级: 12, 高级: 12 }, cardioMin: 10 },
-        };
-
-        const TIPS = {
-            '减脂塑形': '组间休息60秒，保持心率活跃。训练后补充蛋白质15-30g，热量缺口控制在500kcal/天以内。',
-            '增肌力量': '组间休息90-120秒。训练后30分钟内补充蛋白质20-40g + 碳水50-80g。',
-            '提升耐力': '渐进增加有氧时长，每周增幅不超过10%。注意补水，保持尿液淡黄色为宜。',
-            '整体健康': '不要连续两天训练同一部位。每晚保证7-8小时睡眠，这是恢复的关键。',
-            '灵活柔韧': '训练后进行10-15分钟静态拉伸，每个姿势保持30秒。',
-        };
-
-        const DN = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
-
-        // ── Plan generator ───────────────────────────────────────────
-        function pickExercises(cats, ratio, excluded) {
-            const result = [], used = new Set();
-            const scheme = SCHEMES[S.goal];
-            const sets = scheme.sets[S.level], reps = scheme.reps[S.level];
-            const focusCatMap = { '上肢': ['push', 'pull'], '下肢': ['legs'], '核心': ['core'], '有氧': ['cardio'] };
-            let orderedCats = [...cats];
-            if (S.focus.length) {
-                const favored = S.focus.flatMap(f => focusCatMap[f] || []);
-                orderedCats = [...new Set([...favored.filter(c => cats.includes(c)), ...cats])];
-            }
-            orderedCats.forEach(cat => {
-                const count = ratio[cats.indexOf(cat)] || 1;
-                const pool = (DB[cat] || []).filter(ex =>
-                    ex.eq.some(e => S.equip.includes(e)) && !used.has(ex.n) && !excluded.has(ex.n)
-                );
-                for (let i = pool.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1));[pool[i], pool[j]] = [pool[j], pool[i]]; }
-                pool.slice(0, count).forEach(ex => {
-                    used.add(ex.n);
-                    const isCardio = cat === 'cardio', isTime = !!ex.u;
-                    result.push({
-                        name: ex.n,
-                        sets: isCardio ? 1 : sets,
-                        reps: isCardio ? Math.max(scheme.cardioMin, 10) : (isTime ? (S.level === '初级' ? 30 : S.level === '中级' ? 45 : 60) : reps),
-                        unit: isCardio ? '分钟' : (isTime ? '秒' : '次'),
-                        note: ex.note
-                    });
-                });
-            });
-            return result;
-        }
-
-        function genPlan() {
-            const splits = SPLITS[S.days] || SPLITS[3];
-            const excluded = getExcluded();
-            const slots = [], gap = Math.floor(7 / S.days);
-            for (let i = 0; i < S.days; i++) slots.push(Math.min(6, i * gap));
-            const weekPlan = [];
-            for (let di = 0; di < 7; di++) {
-                const si = slots.indexOf(di);
-                if (si === -1) {
-                    weekPlan.push({ dayIndex: di, isRest: true, workoutType: '休息', duration: 0, exercises: [] });
-                } else {
-                    const split = splits[si % splits.length];
-                    weekPlan.push({
-                        dayIndex: di, isRest: false, workoutType: split.type, duration: S.dur,
-                        exercises: pickExercises(split.cats, split.ratio, excluded)
-                    });
-                }
-            }
-            S.plan = { weekPlan, tip: TIPS[S.goal], excludedCount: excluded.size };
-            S.selDay = weekPlan.find(d => !d.isRest)?.dayIndex ?? 0;
-            S.prog = {}; S.adj = {};
-            saveAll(); render();
-        }
-
-        // ── Firebase persistence ─────────────────────────────────────
-        async function saveSettings() {
-            if (!uid) return;
-            try {
-                await db.collection('fitness').doc(uid).set({
-                    settings: { goal: S.goal, level: S.level, days: S.days, dur: S.dur, equip: S.equip, focus: S.focus, limits: S.limits }
-                }, { merge: true });
-                const dot = document.getElementById('saved-dot');
-                dot.classList.add('show');
-                setTimeout(() => dot.classList.remove('show'), 1200);
-            } catch (e) { }
-        }
-
-        async function saveAll() {
-            if (!uid) return;
-            try {
-                await db.collection('fitness').doc(uid).set({
-                    settings: { goal: S.goal, level: S.level, days: S.days, dur: S.dur, equip: S.equip, focus: S.focus, limits: S.limits },
-                    plan: S.plan,
-                    progress: { selDay: S.selDay, prog: S.prog, adj: S.adj }
-                }, { merge: true });
-            } catch (e) { }
-        }
-
-        async function loadSaved() {
-            if (!uid) return;
-            try {
-                const doc = await db.collection('fitness').doc(uid).get();
-                if (doc.exists) {
-                    const data = doc.data();
-                    if (data.settings) { Object.assign(S, data.settings); applySettingsToUI(); }
-                    if (data.plan) { S.plan = data.plan; }
-                    if (data.progress) { S.selDay = data.progress.selDay || 0; S.prog = data.progress.prog || {}; S.adj = data.progress.adj || {}; }
-                    if (S.plan) render();
-                }
-            } catch (e) { }
-        }
-
-        // ── Render ───────────────────────────────────────────────────
-        function isDone(day) {
-            if (!day.exercises.length) return false;
-            const p = S.prog[day.dayIndex] || {};
-            return day.exercises.every((_, i) => p[i]);
-        }
-        function getAdj(di, ei, f, base) { return S.adj[di + '-' + ei + '-' + f] ?? base; }
-
-        function render() {
-            if (!S.plan) return;
-            const { weekPlan, tip, excludedCount } = S.plan;
-            const total = weekPlan.filter(d => !d.isRest).length;
-            const done = weekPlan.filter(d => !d.isRest && isDone(d)).length;
-            const totalEx = weekPlan.reduce((s, d) => s + d.exercises.length, 0);
-            const sel = weekPlan.find(d => d.dayIndex === S.selDay) || weekPlan.find(d => !d.isRest);
-            let h = `<div class="plan-header">
-    <p class="panel-title" style="margin:0">本周计划
-      ${excludedCount ? `<span class="warn-tag">已过滤 ${excludedCount} 个受限动作</span>` : ''}
-    </p>
-    <button class="regen-btn" onclick="genPlan()">重新生成</button>
-  </div>
-  <div class="stats">
-    <div class="stat"><div class="stat-val">${total}</div><div class="stat-lbl">训练天</div></div>
-    <div class="stat"><div class="stat-val">${done}/${total}</div><div class="stat-lbl">已完成</div></div>
-    <div class="stat"><div class="stat-val">${totalEx}</div><div class="stat-lbl">总动作</div></div>
-  </div>
-  <div class="daygrid">${weekPlan.map(d => {
-                const dn = isDone(d), isSel = d.dayIndex === S.selDay;
-                const cls = 'dc' + (d.isRest ? ' rest' : dn ? ' done' : isSel ? ' sel' : '');
-                const click = d.isRest ? '' : 'onclick="selectDay(' + d.dayIndex + ')"';
-                return `<div class="${cls}" ${click}><div class="dn">${DN[d.dayIndex]}</div><div class="dt">${d.isRest ? '休息' : d.workoutType}</div>${dn ? '<i class="ti ti-check" style="font-size:11px;color:#5dbe8a"></i>' : ''}</div>`;
-            }).join('')}</div>`;
-            if (sel && !sel.isRest) {
-                const pd = S.prog[sel.dayIndex] || {};
-                h += `<div class="wh"><span class="wh-title">${DN[sel.dayIndex]} · ${sel.workoutType}</span><span class="badge">${sel.duration}分钟</span></div>
-    <div class="exlist">${sel.exercises.map((ex, i) => {
-                    const exDone = pd[i];
-                    const sets = getAdj(sel.dayIndex, i, 's', ex.sets);
-                    const reps = getAdj(sel.dayIndex, i, 'r', ex.reps);
-                    return `<div class="exrow${exDone ? ' done-ex' : ''}">
-        <div><div class="exname">${ex.name}</div><div class="exnote">${ex.note}</div></div>
-        <div class="adjg">
-          <button class="ab" onclick="adj(${sel.dayIndex},${i},'s',-1)">-</button>
-          <span class="av">${sets}组</span>
-          <button class="ab" onclick="adj(${sel.dayIndex},${i},'s',1)">+</button>
-        </div>
-        <div class="adjg">
-          <button class="ab" onclick="adj(${sel.dayIndex},${i},'r',-1)">-</button>
-          <span class="av">${reps}${ex.unit}</span>
-          <button class="ab" onclick="adj(${sel.dayIndex},${i},'r',1)">+</button>
-        </div>
-        <button class="cb${exDone ? ' ck' : ''}" onclick="tog(${sel.dayIndex},${i})"><i class="ti ti-check"></i></button>
-      </div>`;
-                }).join('')}</div>`;
-            }
-            h += `<div class="tip"><i class="ti ti-bulb"></i><span>${tip}</span></div>`;
-            document.getElementById('main').innerHTML = h;
-        }
-
-        function selectDay(di) { S.selDay = di; saveAll(); render(); }
-        function tog(di, ei) {
-            if (!S.prog[di]) S.prog[di] = {};
-            S.prog[di][ei] = !S.prog[di][ei];
-            saveAll(); render();
-        }
-        function adj(di, ei, f, delta) {
-            const k = di + '-' + ei + '-' + f;
-            const day = S.plan.weekPlan.find(d => d.dayIndex === di);
-            const ex = day.exercises[ei];
-            const base = f === 's' ? ex.sets : ex.reps;
-            S.adj[k] = Math.max(1, (S.adj[k] ?? base) + delta);
-            saveAll(); render();
-        }
-
-        function applySettingsToUI() {
-            document.querySelectorAll('#g-goal .chip').forEach(b => b.classList.toggle('on', b.dataset.v === S.goal));
-            document.querySelectorAll('#g-level .chip').forEach(b => b.classList.toggle('on', b.dataset.v === S.level));
-            document.getElementById('sl-days').value = S.days;
-            document.getElementById('v-days').textContent = S.days + '天';
-            document.getElementById('sl-dur').value = S.dur;
-            document.getElementById('v-dur').textContent = S.dur + '分钟';
-            document.querySelectorAll('#g-equip .chip').forEach(b => b.classList.toggle('on', S.equip.includes(b.dataset.v)));
-            document.querySelectorAll('#g-focus .chip').forEach(b => b.classList.toggle('on', S.focus.includes(b.dataset.v)));
-            document.getElementById('limits').value = S.limits || '';
-        }
-
-        // ── UI bindings ──────────────────────────────────────────────
-        function single(id, key) {
-            document.getElementById(id).addEventListener('click', e => {
-                const b = e.target.closest('.chip'); if (!b) return;
-                document.querySelectorAll('#' + id + ' .chip').forEach(c => c.classList.remove('on'));
-                b.classList.add('on'); S[key] = b.dataset.v; saveSettings();
-            });
-        }
-        function multi(id, key) {
-            document.getElementById(id).addEventListener('click', e => {
-                const b = e.target.closest('.chip'); if (!b) return;
-                b.classList.toggle('on');
-                const v = b.dataset.v;
-                S[key] = S[key].includes(v) ? S[key].filter(x => x !== v) : [...S[key], v];
-                saveSettings();
-            });
-        }
-        single('g-goal', 'goal'); single('g-level', 'level');
-        multi('g-equip', 'equip'); multi('g-focus', 'focus');
-        document.getElementById('sl-days').addEventListener('input', e => { S.days = +e.target.value; document.getElementById('v-days').textContent = S.days + '天'; saveSettings(); });
-        document.getElementById('sl-dur').addEventListener('input', e => { S.dur = +e.target.value; document.getElementById('v-dur').textContent = S.dur + '分钟'; saveSettings(); });
-        document.getElementById('limits').addEventListener('input', e => { S.limits = e.target.value; saveSettings(); });
-    </script>
+    <div class="sync-toast" id="sync-toast"></div>
+    <script src="core.js"></script>
+    <script src="app.js"></script>
 </body>
 
 </html>
