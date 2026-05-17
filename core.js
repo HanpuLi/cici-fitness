@@ -381,7 +381,7 @@ h+=`<div class="wh">
 <span class="wh-title">${fmtDate(sel.date)} · ${sel.workoutType}</span>
 <span class="badge">${sel.duration}分钟</span>
 ${rest?`<span class="badge" style="background:var(--blue-bg);color:var(--blue);border-color:rgba(75,107,138,.25)">休息${rest}</span>`:''}
-${locked?'<span class="warn-tag">🔒 已锁定</span>':''}
+${locked?`<span class="warn-tag">🔒 已锁定</span>${sel.date===todayStr()?`<button class="regen-btn" style="margin-left:8px;font-size:10px;padding:2px 8px" onclick="unlockDate('${sel.date}')">解除锁定</button>`:''}`:''}
 </div>
 <div class="exlist">${sel.exercises.map((ex,i)=>{
 const done=pd[i];
@@ -431,6 +431,13 @@ const ex=day.exercises[ei];
 const base=f==='s'?ex.sets:ex.reps;
 S.adj[k]=Math.max(1,(S.adj[k]??base)+delta);
 saveState();render();
+}
+
+function unlockDate(date){
+if(confirm('解除锁定将清空本日的所有打卡记录，确定继续？')){
+delete S.prog[date];
+saveState();render();
+}
 }
 
 // ══ Drag to reorder ════════════════════════════════════
