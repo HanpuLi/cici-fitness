@@ -67,7 +67,7 @@
                 </div>
                 <p class="sec">每周训练天数</p>
                 <div class="srow">
-                    <input type="range" id="sl-days" min="2" max="6" step="1" value="3">
+                    <input type="range" id="sl-days" min="2" max="7" step="1" value="3">
                     <span class="sval" id="v-days">3天</span>
                 </div>
                 <p class="sec">每次时长</p>
@@ -96,12 +96,14 @@
             <div class="panel">
                 <p class="panel-title">数据管理</p>
                 <div class="export-row">
-                    <button class="exp-btn" onclick="exportJSON()">📦 导出 JSON</button>
+                    <button class="exp-btn" onclick="exportForAI()">🤖 AI 分析导出</button>
+                    <button class="exp-btn" onclick="exportJSON()">📦 备份 JSON</button>
                     <button class="exp-btn" onclick="exportCSV()">📄 导出 CSV</button>
-                    <label class="exp-btn" style="cursor:pointer">📥 导入 JSON<input type="file" accept=".json"
+                    <label class="exp-btn" style="cursor:pointer">📥 导入<input type="file" accept=".json"
                             onchange="importJSON(this)" style="display:none"></label>
                 </div>
             </div>
+
         </div>
 
         <!-- Tab: Journal -->
@@ -126,6 +128,22 @@
     </div>
 
     <div class="sync-toast" id="sync-toast"></div>
+
+    <!-- Exercise Detail Modal -->
+    <div id="ex-modal" class="ex-modal-overlay" onclick="closeExDetail()">
+        <div class="ex-modal-card" onclick="event.stopPropagation()">
+            <div class="ex-modal-hdr">
+                <h2 id="ex-modal-title" class="ex-modal-title"></h2>
+                <button class="ex-modal-close" onclick="closeExDetail()">&#10005;</button>
+            </div>
+            <div id="ex-modal-muscles" class="jentry-chips" style="margin-bottom:1rem"></div>
+            <p style="font-size:11px;font-weight:600;color:var(--ink3);margin-bottom:8px;letter-spacing:.06em">动作要点</p>
+            <div id="ex-modal-steps"></div>
+            <div id="ex-modal-tips" style="margin-top:10px"></div>
+            <div id="ex-modal-mistakes"></div>
+        </div>
+    </div>
+
     <script src="core.js"></script>
     <script src="app.js"></script>
 </body>

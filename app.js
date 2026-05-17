@@ -3,13 +3,13 @@
 // ══ State Persistence ════════════════════════════════════
 function saveState(){
 ls(K.settings,{goal:S.goal,level:S.level,days:S.days,dur:S.dur,equip:S.equip,focus:S.focus,limits:S.limits});
-if(S.plan)ls(K.plan,{plan:S.plan,selDay:S.selDay,prog:S.prog,adj:S.adj});
+if(S.plan)ls(K.plan,{plan:S.plan,selDate:S.selDate,prog:S.prog,adj:S.adj});
 }
 function loadState(){
 const s=lg(K.settings);
 if(s)Object.assign(S,s);
 const p=lg(K.plan);
-if(p){S.plan=p.plan;S.selDay=p.selDay||0;S.prog=p.prog||{};S.adj=p.adj||{}}
+if(p){S.plan=p.plan;S.selDate=p.selDate||todayStr();S.prog=p.prog||{};S.adj=p.adj||{}}
 LOG=lg(K.log)||[];
 applySettingsToUI();
 if(S.plan)render();
@@ -174,7 +174,24 @@ ${distEntries.length?`
 }
 
 // ══ Export / Import ══════════════════════════════════════
-function exportJSON(){
+function exportForAI(){
+const recent=LOG.slice(0,30);
+if(!recent.length){alert('暂无日志记录');return}
+const dist={};
+recent.forEach(l=>{if(l.exercises)l.exercises.forEach(ex=>{for(const[g,exs]of Object.entries(DB)){if(exs.find(e=>e.n===ex.name)){dist[g]=(dist[g]||0)+1;break}}})});
+const grpNames={chest:'胸',shoulder:'肩',back:'背',biceps:'二头',triceps:'三头',quads:'股四头',hamglutes:'臀腿',calves:'小腿',core:'核心',cardio:'有氧'};
+const distStr=Object.entries(dist).sort((a,b)=>b[1]-a[1]).map(([g,c])=>`${grpNames[g]||g}${c}组`).join('·');
+
+let logStr=recent.map(l=>{
+const exStr=l.exercises?l.exercises.map(e=>`${e.name} ${e.sets}×${e.reps}${e.unit}`).join(', '):'';
+return `- ${l.date} | ${l.workout} | ${l.duration||'?'}分钟\n  动作：${exStr}${l.note?'\n  备注：'+l.note:''}`;
+}).join('\n');
+
+const text=`【Cici 健身日志 - AI 分析请求】\n训练目标：${S.goal} | 水平：${S.level} | 器材：${S.equip.join('+')}\n近${recent.length}次训练：\n\n${logStr}\n\n肌群分布（近30天）：${distStr||'无数据'}\n\n请帮我分析：\n1. 训练计划是否均衡？哪个肌群训练不足？\n2. 根据我的目标（${S.goal}），有什么需要改进？\n3. 下阶段如何调整计划？`;
+const blob=new Blob([text],{type:'text/plain;charset=utf-8'});
+const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='fitness_ai_analysis_'+new Date().toISOString().split('T')[0]+'.txt';a.click();
+showToast('已导出 AI 分析文件');
+}
 const data={_meta:{version:1,exported:new Date().toISOString(),app:'Cici健身计划'}};
 Object.entries(K).forEach(([,key])=>{const v=lg(key);if(v!==null)data[key]=v});
 const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
