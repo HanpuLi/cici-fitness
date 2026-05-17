@@ -288,14 +288,26 @@ const locked={};
 if(S.plan){S.plan.days.forEach(d=>{if(isLocked(d))locked[d.date]=d;})}
 
 // Build 14-day calendar (2 weeks)
-const gap=Math.max(1,Math.floor(7/S.days));
+const patterns = {
+2: [1,0,0,1,0,0,0],
+3: [1,0,1,0,1,0,0],
+4: [1,1,0,1,1,0,0],
+5: [1,1,1,0,1,1,0],
+6: [1,1,1,1,1,1,0],
+7: [1,1,1,1,1,1,1]
+};
+const pattern = patterns[S.days] || patterns[3];
 const days=[];
 let splitIdx=0;
+
 for(let i=0;i<14;i++){
 const ds=addDays(startDate,i);
-if(locked[ds]){days.push(locked[ds]);continue;}
-// Only assign workout on training days within the pattern
-const isWorkout=(i%gap===0)&&splitIdx<splits.length*2;
+if(locked[ds]){
+days.push(locked[ds]);
+if(!locked[ds].isRest) splitIdx++;
+continue;
+}
+const isWorkout = pattern[i % 7] === 1;
 if(isWorkout){
 const split=splits[splitIdx%splits.length];
 splitIdx++;
