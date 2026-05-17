@@ -9,7 +9,8 @@ function loadState(){
 const s=lg(K.settings);
 if(s)Object.assign(S,s);
 const p=lg(K.plan);
-if(p){S.plan=p.plan;S.selDate=p.selDate||todayStr();S.prog=p.prog||{};S.adj=p.adj||{}}
+if(p&&p.plan&&p.plan.days){S.plan=p.plan;S.selDate=p.selDate||todayStr();S.prog=p.prog||{};S.adj=p.adj||{}}
+else{S.plan=null;}
 LOG=lg(K.log)||[];
 applySettingsToUI();
 if(S.plan)render();
