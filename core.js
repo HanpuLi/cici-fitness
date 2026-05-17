@@ -140,11 +140,37 @@ const SPLITS={
 ]};
 
 const SCHEMES={
-'减脂塑形':{sets:{初级:3,中级:4,高级:4},reps:{初级:15,中级:12,高级:12},rest:'45-60秒',cardioMin:15},
-'增肌力量':{sets:{初级:3,中级:4,高级:5},reps:{初级:10,中级:8,高级:6},rest:'90-120秒',cardioMin:0},
-'提升耐力':{sets:{初级:3,中级:3,高级:4},reps:{初级:20,中级:18,高级:15},rest:'30-45秒',cardioMin:20},
-'整体健康':{sets:{初级:3,中级:3,高级:4},reps:{初级:12,中级:12,高级:12},rest:'60-90秒',cardioMin:10},
-'灵活柔韧':{sets:{初级:3,中级:3,高级:3},reps:{初级:12,中级:12,高级:12},rest:'60秒',cardioMin:10},
+// sets/reps per level; timePerSet = rest+work time estimate; cardioMin = minimum cardio minutes
+'减脂塑形':{
+  sets:{初级:3,中级:4,高级:4},reps:{初级:15,中级:12,高级:12},
+  rest:'45-60秒',cardioMin:15,timePerSet:105, // 45s work + 60s rest
+  intensityNote:{初级:'轻中重量，感受肌肉燃烧感',中级:'中等重量，组间不超60秒',高级:'超级组搭配，保持心率'},
+  weightGuide:{初级:'约为最大力量的50-60%',中级:'约为最大力量的65-75%',高级:'约为最大力量的70-80%'}
+},
+'增肌力量':{
+  sets:{初级:3,中级:4,高级:5},reps:{初级:10,中级:8,高级:6},
+  rest:'90-120秒',cardioMin:0,timePerSet:180,
+  intensityNote:{初级:'能完成全程的重量，最后1-2个稍难',中级:'组间可感受轻微恢复',高级:'最后一组力竭，可借助辅助'},
+  weightGuide:{初级:'约为最大力量的65-70%',中级:'约为最大力量的75-80%',高级:'约为最大力量的85-90%'}
+},
+'提升耐力':{
+  sets:{初级:3,中级:3,高级:4},reps:{初级:20,中级:18,高级:15},
+  rest:'30-45秒',cardioMin:20,timePerSet:75,
+  intensityNote:{初级:'全程匀速，不追求重量',中级:'保持节奏，控制呼吸',高级:'缩短休息，挑战极限'},
+  weightGuide:{初级:'约为最大力量的40-50%',中级:'约为最大力量的50-60%',高级:'约为最大力量的60-65%'}
+},
+'整体健康':{
+  sets:{初级:3,中级:3,高级:4},reps:{初级:12,中级:12,高级:12},
+  rest:'60-90秒',cardioMin:10,timePerSet:135,
+  intensityNote:{初级:'以舒适为主，感受目标肌群',中级:'稳定发力，不借力',高级:'追求质量而非数量'},
+  weightGuide:{初级:'约为最大力量的55-65%',中级:'约为最大力量的65-70%',高级:'约为最大力量的70-80%'}
+},
+'灵活柔韧':{
+  sets:{初级:3,中级:3,高级:3},reps:{初级:12,中级:12,高级:12},
+  rest:'60秒',cardioMin:10,timePerSet:120,
+  intensityNote:{初级:'感受全幅度拉伸，不追求重量',中级:'控制离心阶段3-4秒',高级:'挑战单侧或增加幅度'},
+  weightGuide:{初级:'轻重量，全幅度优先',中级:'中等重量，注重控制',高级:'中等重量，离心优先'}
+},
 };
 const TIPS={
 '减脂塑形':'组间休息45-60秒保持心率。训练后补充蛋白质15-30g。热量缺口控制在300-500kcal/天，避免过度节食。',
@@ -155,29 +181,57 @@ const TIPS={
 };
 const DN=['周一','周二','周三','周四','周五','周六','周日'];
 
-// ══ Plan Generator (overhauled) ═════════════════════════
+// ══ Plan Generator ═══════════════════════════════════════
+// Derive how many exercises fit in session based on duration
+function calcTotalExercises(){
+const sch=SCHEMES[S.goal];
+const warmup=5,cooldown=5;
+const available=S.dur-warmup-cooldown;
+const exTime=sch.timePerSet*(sch.sets[S.level]||3)/60; // minutes per exercise
+return Math.max(4,Math.min(12,Math.floor(available/exTime)));
+}
+
 function pickExercises(split,excluded){
 const result=[],used=new Set();
 const sch=SCHEMES[S.goal];
 const sets=sch.sets[S.level],reps=sch.reps[S.level];
 const focusMap={'上肢':['chest','shoulder','back','biceps','triceps'],'下肢':['quads','hamglutes','calves'],'核心':['core'],'有氧':['cardio']};
+const totalTarget=calcTotalExercises();
+// Budget: distribute exercises across groups proportionally, focus groups get +1
+const favGroups=S.focus.length?S.focus.flatMap(f=>focusMap[f]||[]):[];
+const groupBudget={};
+const baseTotal=Object.values(split.pick).reduce((a,b)=>a+b,0);
+split.groups.forEach(g=>{
+let cnt=split.pick[g]||1;
+// Scale by duration ratio
+cnt=Math.round(cnt*(totalTarget/baseTotal));
+cnt=Math.max(1,cnt);
+// Focus groups get one extra exercise
+if(favGroups.includes(g))cnt=Math.min(cnt+1,cnt+1);
+// Goal: endurance/fat-loss → limit strength groups, add cardio
+if(S.goal==='提升耐力'&&g==='cardio')cnt=Math.max(cnt,2);
+if(S.goal==='增肌力量'&&g==='cardio')cnt=0;
+groupBudget[g]=cnt;
+});
 
 split.groups.forEach(grp=>{
-const count=split.pick[grp]||1;
+const count=groupBudget[grp]||0;
+if(!count)return;
 let pool=(DB[grp]||[]).filter(ex=>ex.eq.some(e=>S.equip.includes(e))&&!used.has(ex.n)&&!excluded.has(ex.n));
-// Filter by difficulty for beginners
-if(S.level==='初级') pool=pool.filter(ex=>ex.diff<=2);
-// Prioritize focused muscles
-if(S.focus.length){
-const favGroups=S.focus.flatMap(f=>focusMap[f]||[]);
-if(favGroups.includes(grp)) pool.sort(()=>Math.random()-.5);
-}else{
-for(let i=pool.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]]}
-}
+// Difficulty filter
+if(S.level==='初级')pool=pool.filter(ex=>ex.diff<=2);
+if(S.level==='高级')pool.sort((a,b)=>b.diff-a.diff);// prefer harder
+else{for(let i=pool.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]]}}
+// For focused groups, put compound moves first
+if(favGroups.includes(grp))pool.sort((a,b)=>(a.diff===b.diff?0:b.diff-a.diff));
 pool.slice(0,count).forEach(ex=>{
 used.add(ex.n);
 const isCardio=grp==='cardio',isTime=!!ex.u;
-result.push({name:ex.n,sets:isCardio?1:sets,reps:isCardio?Math.max(sch.cardioMin,10):(isTime?(S.level==='初级'?30:S.level==='中级'?45:60):reps),unit:isCardio?'分钟':(isTime?'秒':'次'),note:ex.note,group:grp});
+const exSets=isCardio?1:sets;
+const exReps=isCardio?Math.max(sch.cardioMin,10):(isTime?(S.level==='初级'?30:S.level==='中级'?45:60):reps);
+// Build coaching note combining technique + goal/level context
+const coaching=`${ex.note} — ${sch.intensityNote[S.level]}（${sch.weightGuide[S.level]}）`;
+result.push({name:ex.n,sets:exSets,reps:exReps,unit:isCardio?'分钟':(isTime?'秒':'次'),note:coaching,group:grp,diff:ex.diff});
 });
 });
 return result;

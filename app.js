@@ -37,7 +37,7 @@ if(id==='journal')renderLog();
 if(id==='stats-tab')renderStats();
 }
 
-// ══ Journal / Log ════════════════════════════════════════
+// ══ Journal / Log — Git-style timeline ═══════════════════
 function toggleLogHistory(){_logShowAll=!_logShowAll;renderLog()}
 
 function renderLog(){
@@ -47,22 +47,46 @@ const el=document.getElementById('log-list');
 if(!el)return;
 const cut=new Date();cut.setDate(cut.getDate()-14);
 const entries=_logShowAll?LOG:LOG.filter(x=>new Date(x.date)>=cut);
-if(!entries.length){el.innerHTML='<div class="empty"><p>暂无训练记录</p></div>';return}
-el.innerHTML=entries.map((x,idx)=>{
-const chips=[
-x.mood?`<span class="jchip mood">${x.mood}</span>`:'',
-`<span class="jchip done-c">${x.exerciseCount}个动作</span>`,
-`<span class="jchip">${x.duration}分钟</span>`
-].filter(Boolean).join('');
-return`<div class="jentry">
-<div style="display:flex;justify-content:space-between;align-items:center">
-<div><span class="jentry-date">${x.date}</span><span class="jentry-type">${x.workout}</span></div>
-<button class="jentry-del" onclick="delLog(${LOG.indexOf(x)})">删除</button>
-</div>
-<div class="jentry-chips">${chips}</div>
-${x.note?`<div class="jentry-note">${x.note}</div>`:''}
-${x.exercises?`<div style="margin-top:6px;font-size:11px;color:var(--ink3)">${x.exercises.map(e=>`${e.name} ${e.sets}×${e.reps}${e.unit}`).join(' · ')}</div>`:''}
-</div>`;}).join('');
+if(!entries.length){el.innerHTML='<div class="empty"><i class="ti ti-barbell" style="font-size:32px;opacity:.2"></i><p>完成训练后自动记录</p></div>';return}
+// Group by month for git-style headers
+const byMonth={};
+entries.forEach(x=>{const m=x.date.slice(0,7);if(!byMonth[m])byMonth[m]=[];byMonth[m].push(x)});
+let html='';
+Object.entries(byMonth).forEach(([month,items])=>{
+const[y,m]=month.split('-');
+html+=`<div class="tl-month">${y}年${parseInt(m)}月</div><div class="tl-wrap">`;
+items.forEach((x,i)=>{
+const isLast=i===items.length-1;
+const logIdx=LOG.indexOf(x);
+const mood=x.mood||'💪';
+html+=`
+<div class="tl-item">
+  <div class="tl-left">
+    <div class="tl-dot">${mood}</div>
+    ${isLast&&Object.keys(byMonth)[Object.keys(byMonth).length-1]===month?'':'<div class="tl-line"></div>'}
+  </div>
+  <div class="tl-card">
+    <div class="tl-card-hdr">
+      <div>
+        <span class="tl-date">${x.date}</span>
+        <span class="tl-type">${x.workout}</span>
+      </div>
+      <div style="display:flex;gap:6px;align-items:center">
+        <span class="jchip">${x.duration||'?'}分钟</span>
+        <button class="jentry-del" onclick="delLog(${logIdx})">×</button>
+      </div>
+    </div>
+    <div class="tl-chips">
+      <span class="jchip done-c">${x.exerciseCount||0}个动作完成</span>
+      ${x.exercises?x.exercises.slice(0,3).map(e=>`<span class="jchip">${e.name}</span>`).join('')+((x.exercises.length>3)?`<span class="jchip" style="opacity:.5">+${x.exercises.length-3}个</span>`:''):''}
+    </div>
+    ${x.note?`<div class="jentry-note">"${x.note}"</div>`:''}
+  </div>
+</div>`;
+});
+html+='</div>';
+});
+el.innerHTML=html;
 }
 
 function delLog(idx){
@@ -74,54 +98,78 @@ LOG.splice(idx,1);ls(K.log,LOG);renderLog();
 function renderStats(){
 const el=document.getElementById('stats-content');
 if(!el)return;
-
-// Streak calculation
-let streak=0;
 const today=new Date();
+
+// Streak
+let streak=0;
 for(let i=0;i<365;i++){
 const d=new Date(today);d.setDate(d.getDate()-i);
-const ds=d.toISOString().split('T')[0];
-if(LOG.find(l=>l.date===ds))streak++;
+if(LOG.find(l=>l.date===d.toISOString().split('T')[0]))streak++;
 else if(i>0)break;
 }
 
-// This month stats
-const thisMonth=today.getFullYear()+'-'+String(today.getMonth()+1).padStart(2,'0');
+// Month stats
+const thisMonth=today.toISOString().slice(0,7);
 const monthLogs=LOG.filter(l=>l.date.startsWith(thisMonth));
-const monthDays=monthLogs.length;
-const monthEx=monthLogs.reduce((s,l)=>s+(l.exerciseCount||0),0);
-
-// Weekly completion
-let weekDone=0,weekTotal=0;
-if(S.plan){
-S.plan.weekPlan.forEach(d=>{if(!d.isRest){weekTotal++;if(isDone(d))weekDone++}});
-}
+const weekDone=S.plan?S.plan.weekPlan.filter(d=>!d.isRest&&isDone(d)).length:0;
+const weekTotal=S.plan?S.plan.weekPlan.filter(d=>!d.isRest).length:0;
 const weekPct=weekTotal?Math.round(weekDone/weekTotal*100):0;
 
-// Muscle distribution
+// 12-week heatmap
+const logDates=new Set(LOG.map(l=>l.date));
+const heatCells=[];
+for(let i=83;i>=0;i--){
+const d=new Date(today);d.setDate(d.getDate()-i);
+const ds=d.toISOString().split('T')[0];
+heatCells.push({ds,active:logDates.has(ds),day:d.getDay()});
+}
+const heatHtml=heatCells.map(c=>{
+const isToday=c.ds===today.toISOString().split('T')[0];
+return`<div class="heat-cell${c.active?' heat-on':''}${isToday?' heat-today':''}" title="${c.ds}"></div>`;
+}).join('');
+
+// Muscle distribution with bar
 const dist={};
-LOG.slice(0,30).forEach(l=>{
+LOG.slice(0,60).forEach(l=>{
 if(l.exercises)l.exercises.forEach(ex=>{
-// Map exercise to group
 for(const[grp,exs]of Object.entries(DB)){
 if(exs.find(e=>e.n===ex.name)){dist[grp]=(dist[grp]||0)+1;break}}
 });
 });
-const distEntries=Object.entries(dist).sort((a,b)=>b[1]-a[1]);
 const grpNames={chest:'胸',shoulder:'肩',back:'背',biceps:'二头',triceps:'三头',quads:'股四头',hamglutes:'臀腿',calves:'小腿',core:'核心',cardio:'有氧'};
+const distEntries=Object.entries(dist).sort((a,b)=>b[1]-a[1]);
+const maxDist=distEntries[0]?.[1]||1;
 
 el.innerHTML=`
-<div class="streak-box"><div class="streak-num">${streak}</div><div class="streak-lbl">连续打卡天数</div></div>
+<div class="streak-box"><div class="streak-num">${streak}</div><div class="streak-lbl">🔥 连续打卡天数</div></div>
 <div class="panel">
-<p class="panel-title">本周完成率</p>
-<div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px"><span>${weekDone}/${weekTotal} 天</span><span style="font-weight:700;color:var(--terra)">${weekPct}%</span></div>
-<div class="progress-bar"><div class="progress-fill" style="width:${weekPct}%"></div></div>
+  <p class="panel-title" style="margin-bottom:.75rem">近12周训练热图</p>
+  <div class="heat-grid">${heatHtml}</div>
+  <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--ink3);margin-top:6px"><span>12周前</span><span>今天</span></div>
 </div>
 <div class="panel">
-<p class="panel-title">本月统计</p>
-<div class="stats"><div class="stat"><div class="stat-val">${monthDays}</div><div class="stat-lbl">训练天</div></div><div class="stat"><div class="stat-val">${monthEx}</div><div class="stat-lbl">完成动作</div></div><div class="stat"><div class="stat-val">${monthLogs.reduce((s,l)=>s+(l.duration||0),0)}</div><div class="stat-lbl">总分钟</div></div></div>
+  <p class="panel-title">本周完成率</p>
+  <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px"><span>${weekDone}/${weekTotal} 天</span><b style="color:var(--terra)">${weekPct}%</b></div>
+  <div class="progress-bar"><div class="progress-fill" style="width:${weekPct}%"></div></div>
 </div>
-${distEntries.length?`<div class="panel"><p class="panel-title">近30天训练分布</p>${distEntries.map(([g,c])=>`<div class="dist-row"><span>${grpNames[g]||g}</span><span class="dist-val">${c}组</span></div>`).join('')}</div>`:''}
+<div class="panel">
+  <p class="panel-title">本月</p>
+  <div class="stats">
+    <div class="stat"><div class="stat-val">${monthLogs.length}</div><div class="stat-lbl">训练天</div></div>
+    <div class="stat"><div class="stat-val">${monthLogs.reduce((s,l)=>s+(l.exerciseCount||0),0)}</div><div class="stat-lbl">完成动作</div></div>
+    <div class="stat"><div class="stat-val">${monthLogs.reduce((s,l)=>s+(l.duration||0),0)}</div><div class="stat-lbl">总分钟</div></div>
+  </div>
+</div>
+${distEntries.length?`
+<div class="panel">
+  <p class="panel-title">肌群训练量（近60天）</p>
+  ${distEntries.map(([g,c])=>`
+    <div class="dist-row">
+      <span style="min-width:52px">${grpNames[g]||g}</span>
+      <div class="dist-bar-wrap"><div class="dist-bar-fill" style="width:${Math.round(c/maxDist*100)}%"></div></div>
+      <span class="dist-val">${c}</span>
+    </div>`).join('')}
+</div>`:''}
 `;
 }
 
