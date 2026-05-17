@@ -276,12 +276,8 @@ const splits=SPLITS[S.days]||SPLITS[3];
 const excluded=getExcluded();
 const today=todayStr();
 
-// Determine start date: today if today has no checks, else tomorrow
-let startDate=today;
-if(S.plan){
-const todayDay=S.plan.days.find(d=>d.date===today);
-if(todayDay){const p=S.prog[today]||{};if(Object.values(p).some(Boolean))startDate=addDays(today,1);}
-}
+// Always start calendar from today
+const startDate=today;
 
 // Preserve locked days from existing plan
 const locked={};
