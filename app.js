@@ -325,4 +325,5 @@ document.getElementById('limits').addEventListener('input',e=>{S.limits=e.target
 
 // ══ Init ═════════════════════════════════════════════════
 loadState();
+renderAuthBtn(); // show login button immediately, don't wait for Firebase
 initFirebase();
