@@ -192,6 +192,7 @@ const blob=new Blob([text],{type:'text/plain;charset=utf-8'});
 const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='fitness_ai_analysis_'+new Date().toISOString().split('T')[0]+'.txt';a.click();
 showToast('已导出 AI 分析文件');
 }
+function exportJSON(){
 const data={_meta:{version:1,exported:new Date().toISOString(),app:'Cici健身计划'}};
 Object.entries(K).forEach(([,key])=>{const v=lg(key);if(v!==null)data[key]=v});
 const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
