@@ -49,6 +49,20 @@
         <div class="masthead-right" id="auth-btn"></div>
     </header>
 
+    <div id="universal-timer" class="timer-bar">
+        <div class="timer-progress" id="timer-progress"></div>
+        <div class="timer-content">
+            <div class="timer-left">
+                <i class="ti ti-clock"></i>
+                <span id="timer-time" style="font-family:var(--font-mono);font-size:18px;font-weight:700;letter-spacing:1px;margin-left:4px">00:00</span>
+                <span id="timer-label" style="font-size:11px;opacity:0.8;margin-left:8px;font-weight:500"></span>
+            </div>
+            <div class="timer-right">
+                <button class="timer-btn" onclick="stopTimer()"><i class="ti ti-x"></i> 结束</button>
+            </div>
+        </div>
+    </div>
+
     <div class="wrap">
         <div class="tabs-wrap">
             <div class="tabs">
@@ -73,14 +87,8 @@
         <div class="panel-tab" id="settings">
             <div class="panel">
                 <p class="panel-title">训练设置 <span class="saved-dot" id="saved-dot"></span></p>
-                <p class="sec">目标</p>
-                <div class="chips" id="g-goal">
-                    <button class="chip on" data-v="减脂塑形">减脂塑形</button>
-                    <button class="chip" data-v="增肌力量">增肌力量</button>
-                    <button class="chip" data-v="提升耐力">提升耐力</button>
-                    <button class="chip" data-v="整体健康">整体健康</button>
-                    <button class="chip" data-v="灵活柔韧">灵活柔韧</button>
-                </div>
+                <p class="sec" style="margin-top:0">专属目标：女性健康薄肌模式 (已锁定)</p>
+                
                 <p class="sec">当前水平</p>
                 <div class="chips" id="g-level">
                     <button class="chip on" data-v="初级">初级</button>
@@ -94,8 +102,8 @@
                 </div>
                 <p class="sec">每次时长</p>
                 <div class="srow">
-                    <input type="range" id="sl-dur" min="20" max="90" step="5" value="45">
-                    <span class="sval" id="v-dur">45分钟</span>
+                    <input type="range" id="sl-dur" min="20" max="90" step="5" value="60">
+                    <span class="sval" id="v-dur">60分钟</span>
                 </div>
                 <p class="sec">器材</p>
                 <div class="chips" id="g-equip">
@@ -106,6 +114,7 @@
                 </div>
                 <p class="sec">重点部位（可多选）</p>
                 <div class="chips" id="g-focus">
+                    <button class="chip on" data-v="均衡全身">均衡全身 (无偏好)</button>
                     <button class="chip" data-v="上肢">上肢</button>
                     <button class="chip" data-v="下肢">下肢</button>
                     <button class="chip" data-v="核心">核心</button>
@@ -113,16 +122,22 @@
                 </div>
                 <p class="sec">限制或注意</p>
                 <textarea id="limits" placeholder="例如：膝盖不适、肩伤、避免跳跃..."></textarea>
-                <button id="gen-btn" onclick="genPlan()">生成计划</button>
+                <div style="display:flex;gap:8px">
+                    <button id="gen-btn" onclick="genPlan()" style="flex:1">生成全新计划</button>
+                    <button id="recal-btn" onclick="recalibratePlan()" style="flex:1;display:none;background:var(--surface2);color:var(--ink);border:1px solid var(--border)">重排剩余天数</button>
+                </div>
             </div>
             <div class="panel">
                 <p class="panel-title">数据管理</p>
                 <div class="export-row">
-                    <button class="exp-btn" onclick="exportForAI()">🤖 AI 分析导出</button>
-                    <button class="exp-btn" onclick="exportJSON()">📦 备份 JSON</button>
-                    <button class="exp-btn" onclick="exportCSV()">📄 导出 CSV</button>
-                    <label class="exp-btn" style="cursor:pointer">📥 导入<input type="file" accept=".json"
+                    <button class="exp-btn" onclick="exportForAI()">AI 分析导出</button>
+                    <button class="exp-btn" onclick="exportJSON()">备份 JSON</button>
+                    <button class="exp-btn" onclick="exportCSV()">导出 CSV</button>
+                    <label class="exp-btn" style="cursor:pointer">导入<input type="file" accept=".json"
                             onchange="importJSON(this)" style="display:none"></label>
+                </div>
+                <div style="margin-top:12px;">
+                    <button class="exp-btn" onclick="clearAllData()" style="width:100%;color:var(--terra);border-color:var(--terra-br)">清空所有数据 (恢复出厂)</button>
                 </div>
             </div>
 

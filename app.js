@@ -2,21 +2,20 @@
 
 // ══ State Persistence ════════════════════════════════════
 function saveState(){
-ls(K.settings,{goal:S.goal,level:S.level,days:S.days,dur:S.dur,equip:S.equip,focus:S.focus,limits:S.limits});
-if(S.plan)ls(K.plan,{plan:S.plan,selDate:S.selDate,prog:S.prog,adj:S.adj});
+ls(K.settings,{goal:S.goal,level:S.level,days:S.days,dur:S.dur,equip:S.equip,focus:S.focus,limits:S.limits,volumeMultiplier:S.volumeMultiplier});
+if(S.plan)ls(K.plan,{plan:S.plan,selDate:S.selDate,prog:S.prog,adj:S.adj,unlockedDates:S.unlockedDates});
 }
 function loadState(){
 const s=lg(K.settings);
 if(s)Object.assign(S,s);
 const p=lg(K.plan);
-if(p&&p.plan&&p.plan.days){S.plan=p.plan;S.selDate=p.selDate||todayStr();S.prog=p.prog||{};S.adj=p.adj||{}}
+if(p&&p.plan&&p.plan.days){S.plan=p.plan;S.selDate=p.selDate||todayStr();S.prog=p.prog||{};S.adj=p.adj||{};S.unlockedDates=p.unlockedDates||[];}
 else{S.plan=null;}
 LOG=lg(K.log)||[];
 applySettingsToUI();
 if(S.plan)render();
 }
 function applySettingsToUI(){
-document.querySelectorAll('#g-goal .chip').forEach(b=>b.classList.toggle('on',b.dataset.v===S.goal));
 document.querySelectorAll('#g-level .chip').forEach(b=>b.classList.toggle('on',b.dataset.v===S.level));
 document.getElementById('sl-days').value=S.days;
 document.getElementById('v-days').textContent=S.days+'天';
@@ -25,6 +24,9 @@ document.getElementById('v-dur').textContent=S.dur+'分钟';
 document.querySelectorAll('#g-equip .chip').forEach(b=>b.classList.toggle('on',S.equip.includes(b.dataset.v)));
 document.querySelectorAll('#g-focus .chip').forEach(b=>b.classList.toggle('on',S.focus.includes(b.dataset.v)));
 document.getElementById('limits').value=S.limits||'';
+
+const rBtn = document.getElementById('recal-btn');
+if(rBtn) rBtn.style.display = S.plan ? 'block' : 'none';
 }
 
 // ══ Tabs ═════════════════════════════════════════════════
@@ -82,8 +84,8 @@ html+=`
     </div>
     ${x.note?`<div class="jentry-note">"${x.note}"</div>`:''}
     <div class="log-actions" style="margin-top:10px;border-top:1px solid var(--border);padding-top:8px">
-      <button class="log-act-btn" onclick="editLog(${logIdx})">📝 编辑</button>
-      <button class="log-act-btn del" onclick="delLog(${logIdx})">🗑️ 删除</button>
+      <button class="log-act-btn" onclick="editLog(${logIdx})">编辑</button>
+      <button class="log-act-btn del" onclick="delLog(${logIdx})">删除</button>
     </div>
   </div>
 </div>`;
@@ -95,7 +97,21 @@ el.innerHTML=html;
 
 function delLog(idx){
 if(!confirm('确定删除这条记录？'))return;
+const logEntry = LOG[idx];
+if (logEntry && S.prog[logEntry.date]) {
+    delete S.prog[logEntry.date];
+    saveState();
+}
 LOG.splice(idx,1);ls(K.log,LOG);renderLog();
+if(typeof render === 'function') render();
+if(typeof renderStats === 'function') renderStats();
+}
+
+function clearAllData() {
+if(confirm('⚠️ 警告：确定要清空所有计划、打卡记录和统计数据吗？此操作不可恢复！')){
+    localStorage.clear();
+    location.reload();
+}
 }
 
 // ══ Stats ════════════════════════════════════════════════
@@ -147,7 +163,7 @@ const distEntries=Object.entries(dist).sort((a,b)=>b[1]-a[1]);
 const maxDist=distEntries[0]?.[1]||1;
 
 el.innerHTML=`
-<div class="streak-box"><div class="streak-num">${streak}</div><div class="streak-lbl">🔥 连续打卡天数</div></div>
+<div class="streak-box"><div class="streak-num">${streak}</div><div class="streak-lbl">连续打卡天数</div></div>
 <div class="panel">
   <p class="panel-title" style="margin-bottom:.75rem">近12周训练热图</p>
   <div class="heat-grid">${heatHtml}</div>

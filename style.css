@@ -738,3 +738,52 @@ textarea:focus { border-color: var(--terra-br); }
 }
 .log-act-btn:hover { background: var(--surface2); color: var(--ink); }
 .log-act-btn.del:hover { color: var(--terra); }
+
+/* ══ Timer Bar ═════════════════════════════════════════ */
+.timer-bar {
+    position: fixed;
+    top: -100px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 90%;
+    max-width: 400px;
+    background: rgba(44, 40, 37, 0.85); /* var(--ink) */
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    color: #fff;
+    border-radius: 100px;
+    z-index: 2000;
+    overflow: hidden;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+    transition: top 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.timer-bar.show { top: 20px; }
+.timer-progress {
+    position: absolute;
+    top: 0; left: 0; bottom: 0;
+    background: rgba(198, 88, 56, 0.5); /* var(--terra) */
+    width: 0%;
+    transition: width 1s linear;
+    z-index: 1;
+}
+.timer-content {
+    position: relative; z-index: 2;
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 10px 20px;
+}
+.timer-left { display: flex; align-items: center; }
+.timer-btn {
+    background: rgba(255,255,255,0.15); border: none; color: #fff;
+    font-size: 11px; padding: 6px 12px; border-radius: 20px;
+    cursor: pointer; transition: background 0.2s;
+}
+.timer-btn:hover { background: rgba(255,255,255,0.25); }
+
+/* ══ Active Play Button ════════════════════════════════ */
+.act-play-btn {
+    background: transparent; border: 1px solid var(--terra); color: var(--terra);
+    border-radius: 20px; padding: 4px 10px; font-size: 10px; cursor: pointer;
+    display: inline-flex; align-items: center; gap: 4px; transition: all 0.2s;
+    margin-top: 6px;
+}
+.act-play-btn:hover { background: var(--terra); color: #fff; }

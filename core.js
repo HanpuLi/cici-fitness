@@ -7,7 +7,7 @@ function lg(k){try{const v=localStorage.getItem(k);return v?JSON.parse(v):null}c
 function ls(k,v){try{localStorage.setItem(k,JSON.stringify(v));schedulePush()}catch{}}
 
 // ══ State ════════════════════════════════════════════════
-const S={goal:'减脂塑形',level:'初级',days:3,dur:45,equip:['健身房全套'],focus:[],limits:'',plan:null,selDate:null,prog:{},adj:{}};
+const S={goal:'女性薄肌',level:'初级',days:3,dur:60,equip:['健身房全套'],focus:['均衡全身'],limits:'',plan:null,selDate:null,prog:{},adj:{},volumeMultiplier:1.0};
 let LOG=lg(K.log)||[];
 let _logShowAll=false;
 
@@ -147,7 +147,28 @@ cardio:[
 {n:'跳绳',eq:['无器材','健身房全套'],muscle:['心肺','小腿'],diff:1,note:'手腕发力，落地轻柔',u:'分钟'},
 {n:'开合跳',eq:['无器材','弹力带','哑铃','健身房全套'],muscle:['心肺'],diff:1,note:'膝关节微弯',u:'分钟'},
 {n:'波比跳',eq:['无器材'],muscle:['心肺','全身'],diff:2,note:'一个标准循环',u:'分钟'},
-]};
+],
+warmup:[
+{n:'全身动态热身 (开合跳)',eq:['无器材','弹力带','哑铃','健身房全套'],muscle:['全身'],diff:1,note:'落地轻柔，保持呼吸节奏',u:'秒'},
+{n:'肩关节环绕',eq:['无器材','弹力带','哑铃','健身房全套'],muscle:['上肢'],diff:1,note:'直臂或屈臂，大幅度画圆，前后各30秒',u:'秒'},
+{n:'扩胸运动',eq:['无器材','弹力带','哑铃','健身房全套'],muscle:['上肢'],diff:1,note:'感受胸肌拉伸，动作连贯不憋气',u:'秒'},
+{n:'徒手深蹲激活',eq:['无器材','弹力带','哑铃','健身房全套'],muscle:['下肢','全身'],diff:1,note:'臀部后坐，膝盖不内扣',u:'秒'},
+{n:'弓步转体',eq:['无器材','弹力带','哑铃','健身房全套'],muscle:['下肢','核心'],diff:1,note:'下蹲时呼气，躯干向大腿方向扭转',u:'秒'},
+{n:'高抬腿走',eq:['无器材','弹力带','哑铃','健身房全套'],muscle:['下肢','全身'],diff:1,note:'挺胸收腹，双手抱膝向上提拉',u:'秒'},
+{n:'登山者',eq:['无器材','弹力带','哑铃','健身房全套'],muscle:['核心','全身'],diff:2,note:'俯卧撑姿势，腹部收紧，交替提膝',u:'秒'},
+],
+stretch:[
+{n:'婴儿式背部拉伸',eq:['无器材','弹力带','哑铃','健身房全套'],muscle:['全身','核心'],diff:1,note:'臀部坐向脚后跟，双手前伸，深长呼吸',u:'秒'},
+{n:'胸部静态拉伸',eq:['无器材','弹力带','哑铃','健身房全套'],muscle:['上肢'],diff:1,note:'找一面墙，单臂微屈抵住，身体向反方向转',u:'秒'},
+{n:'肩后侧拉伸',eq:['无器材','弹力带','哑铃','健身房全套'],muscle:['上肢'],diff:1,note:'单臂水平伸直，另一只手将其压向胸口',u:'秒'},
+{n:'三头肌拉伸',eq:['无器材','弹力带','哑铃','健身房全套'],muscle:['上肢'],diff:1,note:'手臂上举屈肘，另一手将其向后拉',u:'秒'},
+{n:'股四头肌拉伸',eq:['无器材','弹力带','哑铃','健身房全套'],muscle:['下肢'],diff:1,note:'单腿站立，手抓脚踝拉向臀部',u:'秒'},
+{n:'腘绳肌/体前屈',eq:['无器材','弹力带','哑铃','健身房全套'],muscle:['下肢'],diff:1,note:'坐姿或站姿，双腿伸直，身体慢慢下压',u:'秒'},
+{n:'臀大肌拉伸',eq:['无器材','弹力带','哑铃','健身房全套'],muscle:['下肢'],diff:1,note:'仰卧，一腿架在另一腿膝盖上，双手抱腿拉向胸口',u:'秒'},
+{n:'髂胫束拉伸',eq:['无器材','弹力带','哑铃','健身房全套'],muscle:['下肢'],diff:1,note:'交叉腿站立，身体向后腿一侧侧倾',u:'秒'},
+{n:'腹部拉伸 (眼镜蛇式)',eq:['无器材','弹力带','哑铃','健身房全套'],muscle:['核心'],diff:1,note:'俯卧撑起上半身，骨盆贴地',u:'秒'},
+]
+};
 
 // ══ Split Templates ═════════════════════════════════════════
 // groups = 肌群组, pick = 每组多少个动作
@@ -199,47 +220,18 @@ const SPLITS={
 ],
 };
 // focusMap: 用户选择的重点→对应肌群组，上肢包括背部
-const FOCUS_MAP={'上肢':['chest','shoulder','back','biceps','triceps'],'下肢':['quads','hamglutes','calves'],'核心':['core'],'有氧':['cardio']};
+const FOCUS_MAP={'均衡全身':['chest','shoulder','back','biceps','triceps','quads','hamglutes','calves','core','cardio'],'上肢':['chest','shoulder','back','biceps','triceps'],'下肢':['quads','hamglutes','calves'],'核心':['core'],'有氧':['cardio']};
 
 const SCHEMES={
-// sets/reps per level; timePerSet = rest+work time estimate; cardioMin = minimum cardio minutes
-'减脂塑形':{
-  sets:{初级:3,中级:4,高级:4},reps:{初级:15,中级:12,高级:12},
-  rest:'45-60秒',cardioMin:15,timePerSet:105, // 45s work + 60s rest
-  intensityNote:{初级:'轻中重量，感受肌肉燃烧感',中级:'中等重量，组间不超60秒',高级:'超级组搭配，保持心率'},
-  weightGuide:{初级:'约为最大力量的50-60%',中级:'约为最大力量的65-75%',高级:'约为最大力量的70-80%'}
-},
-'增肌力量':{
-  sets:{初级:3,中级:4,高级:5},reps:{初级:10,中级:8,高级:6},
-  rest:'90-120秒',cardioMin:0,timePerSet:180,
-  intensityNote:{初级:'能完成全程的重量，最后1-2个稍难',中级:'组间可感受轻微恢复',高级:'最后一组力竭，可借助辅助'},
-  weightGuide:{初级:'约为最大力量的65-70%',中级:'约为最大力量的75-80%',高级:'约为最大力量的85-90%'}
-},
-'提升耐力':{
-  sets:{初级:3,中级:3,高级:4},reps:{初级:20,中级:18,高级:15},
-  rest:'30-45秒',cardioMin:20,timePerSet:75,
-  intensityNote:{初级:'全程匀速，不追求重量',中级:'保持节奏，控制呼吸',高级:'缩短休息，挑战极限'},
-  weightGuide:{初级:'约为最大力量的40-50%',中级:'约为最大力量的50-60%',高级:'约为最大力量的60-65%'}
-},
-'整体健康':{
-  sets:{初级:3,中级:3,高级:4},reps:{初级:12,中级:12,高级:12},
-  rest:'60-90秒',cardioMin:10,timePerSet:135,
-  intensityNote:{初级:'以舒适为主，感受目标肌群',中级:'稳定发力，不借力',高级:'追求质量而非数量'},
-  weightGuide:{初级:'约为最大力量的55-65%',中级:'约为最大力量的65-70%',高级:'约为最大力量的70-80%'}
-},
-'灵活柔韧':{
-  sets:{初级:3,中级:3,高级:3},reps:{初级:12,中级:12,高级:12},
-  rest:'60秒',cardioMin:10,timePerSet:120,
-  intensityNote:{初级:'感受全幅度拉伸，不追求重量',中级:'控制离心阶段3-4秒',高级:'挑战单侧或增加幅度'},
-  weightGuide:{初级:'轻重量，全幅度优先',中级:'中等重量，注重控制',高级:'中等重量，离心优先'}
-},
+'女性薄肌':{
+  sets:{初级:3,中级:4,高级:4},reps:{初级:15,中级:15,高级:20},
+  rest:'45-60秒',cardioMin:15,timePerSet:105,
+  intensityNote:{初级:'轻重量高次数，感受发力',中级:'控制离心，避免肌肉过度代偿',高级:'全程紧绷，不追求极限重量'},
+  weightGuide:{初级:'约为最大力量的40-50%',中级:'约为最大力量的50-60%',高级:'约为最大力量的55-65%'}
+}
 };
 const TIPS={
-'减脂塑形':'组间休息45-60秒保持心率。训练后补充蛋白质15-30g。热量缺口控制在300-500kcal/天，避免过度节食。',
-'增肌力量':'组间休息90-120秒确保恢复。训练后30分钟内补充蛋白质25-40g+碳水50-80g。保证充足睡眠7-8小时。',
-'提升耐力':'渐进增加有氧时长，每周增幅≤10%。注意补水，训练前后各补充300-500ml水。',
-'整体健康':'不要连续两天训练同一部位。每晚保证7-8小时睡眠，这是恢复的关键。',
-'灵活柔韧':'训练后进行10-15分钟静态拉伸，每个姿势保持30秒以上。可搭配泡沫轴放松。',
+'女性薄肌':'组间休息45-60秒保持心率。训练后必做拉伸避免肌肉结块。重点强化臀腿和核心线条。',
 };
 const DN=['周一','周二','周三','周四','周五','周六','周日'];
 
@@ -247,10 +239,12 @@ const DN=['周一','周二','周三','周四','周五','周六','周日'];
 // Derive how many exercises fit in session based on duration
 function calcTotalExercises(){
 const sch=SCHEMES[S.goal];
-const warmup=5,cooldown=5;
+const warmup=5,cooldown=10;
 const available=S.dur-warmup-cooldown;
 const exTime=sch.timePerSet*(sch.sets[S.level]||3)/60; // minutes per exercise
-return Math.max(4,Math.min(12,Math.floor(available/exTime)));
+let baseTarget = Math.max(2,Math.min(10,Math.floor(available/exTime)));
+if (S.volumeMultiplier) baseTarget = Math.round(baseTarget * S.volumeMultiplier);
+return Math.max(1, baseTarget);
 }
 
 function pickExercises(split,excluded){
@@ -263,6 +257,16 @@ const totalTarget=calcTotalExercises();
 const favGroups=S.focus.length?S.focus.flatMap(f=>focusMap[f]||[]):[];
 const groupBudget={};
 const baseTotal=Object.values(split.pick).reduce((a,b)=>a+b,0);
+
+// Add smart warmups based on split groups
+const wPool=(DB.warmup||[]).filter(ex=>!used.has(ex.n));
+const wGlobal = wPool.filter(e=>e.muscle.includes('全身'));
+const wSpecific = wPool.filter(e=>split.groups.some(g=>e.muscle.includes(g==='chest'||g==='back'||g==='shoulder'?'上肢':'下肢')));
+[...(wGlobal.slice(0,2)), ...(wSpecific.slice(0,2))].forEach(ex=>{
+    if(used.has(ex.n))return; used.add(ex.n);
+    result.push({name:ex.n,sets:1,reps:45,unit:'秒',note:ex.note,group:'warmup',diff:ex.diff,isWarmup:true});
+});
+
 split.groups.forEach(g=>{
 let cnt=split.pick[g]||1;
 // Scale by duration ratio
@@ -270,9 +274,6 @@ cnt=Math.round(cnt*(totalTarget/baseTotal));
 cnt=Math.max(1,cnt);
 // Focus groups get one extra exercise
 if(favGroups.includes(g))cnt=Math.min(cnt+1,cnt+1);
-// Goal: endurance/fat-loss → limit strength groups, add cardio
-if(S.goal==='提升耐力'&&g==='cardio')cnt=Math.max(cnt,2);
-if(S.goal==='增肌力量'&&g==='cardio')cnt=0;
 groupBudget[g]=cnt;
 });
 
@@ -296,6 +297,25 @@ const coaching=`${ex.note} — ${sch.intensityNote[S.level]}（${sch.weightGuide
 result.push({name:ex.n,sets:exSets,reps:exReps,unit:isCardio?'分钟':(isTime?'秒':'次'),note:coaching,group:grp,diff:ex.diff});
 });
 });
+
+// Always append cardio finisher if not a pure cardio day
+if(!split.groups.includes('cardio') && S.dur >= 45) {
+    const cPool = DB.cardio.filter(ex=>ex.eq.some(e=>S.equip.includes(e)));
+    if(cPool.length) {
+        const cEx = cPool[Math.floor(Math.random()*cPool.length)];
+        result.push({name:cEx.n,sets:1,reps:15,unit:'分钟',note:'薄肌有氧收尾 — 保持心率120-140，帮助肌肉拉长',group:'cardio',diff:cEx.diff});
+    }
+}
+
+// Add smart stretches
+const sPool=(DB.stretch||[]).filter(ex=>!used.has(ex.n));
+const sGlobal = sPool.filter(e=>e.muscle.includes('全身')||e.muscle.includes('核心'));
+const sSpecific = sPool.filter(e=>split.groups.some(g=>e.muscle.includes(g==='chest'||g==='back'||g==='shoulder'?'上肢':'下肢')));
+[...(sGlobal.slice(0,2)), ...(sSpecific.slice(0,3))].forEach(ex=>{
+    if(used.has(ex.n))return; used.add(ex.n);
+    result.push({name:ex.n,sets:1,reps:30,unit:'秒',note:ex.note,group:'stretch',diff:ex.diff,isStretch:true});
+});
+
 return result;
 }
 
@@ -308,27 +328,20 @@ function fmtDate(ds){const d=new Date(ds+'T00:00:00');return['周日','周一','
 
 // ══ Lock check ══════════════════════════════════════════
 function isLocked(day){
-// Past dates always locked
-if(day.date<todayStr())return true;
-// Today: locked if any exercise already checked
-if(day.date===todayStr()){const p=S.prog[day.date]||{};return Object.values(p).some(Boolean)}
-return false;
+// Locked only if a completed log exists for this date
+return LOG.some(l => l.date === day.date);
 }
 
 // ══ Plan Generator (calendar) ═══════════════════════════
-function genPlan(){
+function genPlan(isRecalibrate = false){
 const splits=SPLITS[S.days]||SPLITS[3];
 const excluded=getExcluded();
 const today=todayStr();
 
-// Always start calendar from today
-const startDate=today;
+// If recalibrating, keep the original start date to preserve the calendar view.
+// Otherwise, start a fresh 14-day cycle from today.
+const startDate = (isRecalibrate && S.plan && S.plan.days.length > 0) ? S.plan.days[0].date : today;
 
-// Preserve locked days from existing plan
-const locked={};
-if(S.plan){S.plan.days.forEach(d=>{if(isLocked(d))locked[d.date]=d;})}
-
-// Build 14-day calendar (2 weeks)
 const patterns = {
 2: [1,0,0,1,0,0,0],
 3: [1,0,1,0,1,0,0],
@@ -341,14 +354,33 @@ const pattern = patterns[S.days] || patterns[3];
 const days=[];
 let splitIdx=0;
 
+// Determine which days to preserve exactly as they were
+const preserve = {};
+if (S.plan) {
+    for (let d of S.plan.days) {
+        // When regenerating completely (not recalibrate), preserve only locked days
+        // When recalibrating, preserve ALL past days, AND today if it has progress or is explicitly locked
+        const hasProgress = (d.date === today && Object.values(S.prog[today] || {}).some(Boolean));
+        if (!isRecalibrate) {
+            if (isLocked(d)) preserve[d.date] = d;
+        } else {
+            if (d.date < today || hasProgress || isLocked(d)) preserve[d.date] = d;
+        }
+    }
+}
+
 for(let i=0;i<14;i++){
 const ds=addDays(startDate,i);
-if(locked[ds]){
-days.push(locked[ds]);
-if(!locked[ds].isRest) splitIdx++;
+if(preserve[ds]){
+days.push(preserve[ds]);
+if(!preserve[ds].isRest) splitIdx++;
 continue;
 }
-const isWorkout = pattern[i % 7] === 1;
+
+const dObj = new Date(ds+'T12:00:00');
+const dow = (dObj.getDay() + 6) % 7; // 0=Mon, 6=Sun
+const isWorkout = pattern[dow] === 1;
+
 if(isWorkout){
 const split=splits[splitIdx%splits.length];
 splitIdx++;
@@ -363,8 +395,16 @@ S.plan={days,tip:TIPS[S.goal],rest:sch.rest,excludedCount:excluded.size};
 // Select today or first workout
 const todayDay=days.find(d=>d.date===today);
 S.selDate=todayDay?today:(days.find(d=>!d.isRest)?.date||today);
-saveState();render();
+saveState();
+if (typeof applySettingsToUI === 'function') applySettingsToUI();
+render();
 showTab('today',document.querySelector('.tab'));
+}
+
+function recalibratePlan() {
+    if (!S.plan) return;
+    genPlan(true);
+    showToast('已保留历史记录，重排本周剩余天数');
 }
 
 // ══ Render ══════════════════════════════════════════════
@@ -421,8 +461,8 @@ const locked=isLocked(sel),pd=S.prog[sel.date]||{};
 h+=`<div class="wh">
 <span class="wh-title">${fmtDate(sel.date)} · ${sel.workoutType}</span>
 <span class="badge">${sel.duration}分钟</span>
-${rest?`<span class="badge" style="background:var(--blue-bg);color:var(--blue);border-color:rgba(75,107,138,.25)">休息${rest}</span>`:''}
-${locked?`<span class="warn-tag">🔒 已锁定</span>${sel.date===todayStr()?`<button class="regen-btn" style="margin-left:8px;font-size:10px;padding:2px 8px" onclick="unlockDate('${sel.date}')">解除锁定</button>`:''}`:''}
+${!locked?`<button class="regen-btn" style="margin-left:auto;font-size:10px;padding:2px 8px" onclick="startTimer(45, '组间休息')">45s</button><button class="regen-btn" style="margin-left:4px;font-size:10px;padding:2px 8px" onclick="startTimer(60, '组间休息')">60s</button>`:''}
+${locked?`<span class="warn-tag">已锁定</span>${sel.date===todayStr()?`<button class="regen-btn" style="margin-left:8px;font-size:10px;padding:2px 8px" onclick="unlockDate('${sel.date}')">解除锁定</button>`:''}`:''}
 </div>
 <div class="exlist">${sel.exercises.map((ex,i)=>{
 const done=pd[i];
@@ -432,6 +472,7 @@ return`<div class="exrow${done?' done-ex':''}">
 <div style="flex:1;min-width:0">
 <div class="exname" onclick="showExDetail('${ex.name}')" style="cursor:pointer">${ex.name} <i class="ti ti-info-circle" style="font-size:11px;opacity:.4;vertical-align:middle"></i></div>
 <div class="exnote">${ex.note}</div>
+${(ex.unit==='秒'||ex.unit==='分钟') && !locked ? `<button class="act-play-btn" onclick="startTimer(${ex.unit==='分钟'?reps*60:reps}, '${ex.name}')">计时</button>` : ''}
 </div>
 ${!locked?`
 <div class="adjg"><button class="ab" onclick="adj('${sel.date}',${i},'s',-1)">-</button><span class="av">${sets}组</span><button class="ab" onclick="adj('${sel.date}',${i},'s',1)">+</button></div>
@@ -440,7 +481,7 @@ ${!locked?`
 `:`<span class="av" style="opacity:.5">${sets}×${reps}${ex.unit}</span>`}
 </div>`;}).join('')}</div>`;
 }else if(sel&&sel.isRest){
-h+=`<div class="tip" style="text-align:center;padding:2rem">😴 休息日 — 好好恢复，明天继续</div>`;
+h+=`<div class="tip" style="text-align:center;padding:2rem">休息日 — 好好恢复，明天继续</div>`;
 }
 h+=`<div class="tip">${tip}</div>`;
 document.getElementById('main').innerHTML=h;
@@ -449,6 +490,66 @@ initTouchDrag();
 
 // ══ Interactions ════════════════════════════════════════
 function selectDate(ds){S.selDate=ds;saveState();render()}
+
+// ══ Timer System ═════════════════════════════════════════
+let _timerInterval=null;
+let _audioCtx=null;
+
+function playDing() {
+    if(!_audioCtx) {
+        _audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if(_audioCtx.state === 'suspended') _audioCtx.resume();
+    const osc = _audioCtx.createOscillator();
+    const gain = _audioCtx.createGain();
+    osc.connect(gain);
+    gain.connect(_audioCtx.destination);
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(880, _audioCtx.currentTime); // A5
+    osc.frequency.exponentialRampToValueAtTime(440, _audioCtx.currentTime + 0.5); // Drop to A4
+    gain.gain.setValueAtTime(1, _audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, _audioCtx.currentTime + 1.5);
+    osc.start();
+    osc.stop(_audioCtx.currentTime + 1.5);
+}
+
+function startTimer(seconds, label="休息中") {
+    clearInterval(_timerInterval);
+    const bar = document.getElementById('universal-timer');
+    const timeEl = document.getElementById('timer-time');
+    const lblEl = document.getElementById('timer-label');
+    const prog = document.getElementById('timer-progress');
+    if(!bar) return;
+    
+    lblEl.innerText = label;
+    bar.classList.add('show');
+    
+    let total = seconds;
+    let remain = seconds;
+    
+    function update() {
+        const m = Math.floor(remain / 60);
+        const s = remain % 60;
+        timeEl.innerText = String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
+        prog.style.width = ((total - remain) / total * 100) + '%';
+        
+        if (remain <= 0) {
+            clearInterval(_timerInterval);
+            playDing();
+            setTimeout(() => { bar.classList.remove('show'); }, 3000);
+        }
+        remain--;
+    }
+    
+    update();
+    _timerInterval = setInterval(update, 1000);
+}
+
+function stopTimer() {
+    clearInterval(_timerInterval);
+    const bar = document.getElementById('universal-timer');
+    if(bar) bar.classList.remove('show');
+}
 
 let _pendingRpeDate = null;
 let _pendingRpeDay = null;
@@ -497,18 +598,28 @@ function submitRPE(rpe, isSkip=false) {
         // New log mode
         const day = _pendingRpeDay;
         const date = _pendingRpeDate;
+        
+        // Auto-volume adjustment: if not all checked, reduce future volume
+        const checkedCount = Object.keys(S.prog[date] || {}).filter(k=>S.prog[date][k]).length;
+        const totalEx = day.exercises.length;
+        if (checkedCount < totalEx) {
+            S.volumeMultiplier = Math.max(0.5, (S.volumeMultiplier || 1.0) * 0.9);
+            showToast(`未全部完成。已自动微调下次计划的训练容量`);
+        } else {
+            showToast(isSkip ? `训练完成。` : `训练完成。RPE ${actualRpe}/10`);
+        }
+
         LOG.unshift({
             date: date,
             workout: day.workoutType,
             duration: day.duration,
-            exerciseCount: day.exercises.length,
+            exerciseCount: checkedCount, // Record actual completed
             rpe: actualRpe,
             exercises: day.exercises.map((ex,i)=>({name:ex.name,sets:getAdj(date,i,'s',ex.sets),reps:getAdj(date,i,'r',ex.reps),unit:ex.unit})),
             mood: moods[actualRpe-1]||'💪',
             note: note
         });
         ls(K.log,LOG);
-        showToast(isSkip ? `🎉 训练完成！` : `🎉 训练完成！RPE ${actualRpe}/10`);
     }
     
     if(noteEl) noteEl.value = '';
@@ -551,8 +662,7 @@ saveState();render();
 }
 
 function unlockDate(date){
-if(confirm('解除锁定将清空本日的所有打卡记录，确定继续？')){
-delete S.prog[date];
+if(confirm('确定要解除锁定吗？\n您的动作勾选记录将被保留，但此日的日记和疲劳度将被重置。')){
 const logIdx = LOG.findIndex(l => l.date === date);
 if (logIdx > -1) {
   LOG.splice(logIdx, 1);
@@ -658,7 +768,7 @@ const EX_DETAIL = {
   '上斜哑铃卧推': {
     muscles: ['胸大肌上束', '三角肌前束'],
     steps: ['卧推凳调至上斜30-45度', '哑铃从锁骨正上方开始', '缓慢下放至胸部外侧', '向上推起并略微向中间聚拢'],
-    tips: ['30度最侧重上胸，角度过大容易代偿到肩膀'],
+    tips: ['30度主要侧重上胸，角度过大容易代偿到肩膀'],
     mistakes: ['腰部过度拱起（把上斜做成了平胸）', '推起路线偏向腹部']
   },
   '下斜杠铃卧推': {
@@ -713,7 +823,7 @@ const EX_DETAIL = {
     muscles: ['胸大肌', '肱三头肌', '核心'],
     steps: ['双手撑地，略宽于肩', '收紧核心，身体从头到脚跟呈一条直线', '屈肘下放身体，直至胸部贴近地面', '向上推起至手臂伸直'],
     tips: ['初学者可以采用膝盖着地的退阶做法', '双手距离越宽越练胸，越窄越练三头'],
-    mistakes: ['塌腰（最常见错误，损伤腰椎）', '臀部撅得太高']
+    mistakes: ['塌腰（常见错误，损伤腰椎）', '臀部撅得太高']
   },
 
   // === 肩部 (Shoulder) ===
@@ -732,7 +842,7 @@ const EX_DETAIL = {
   '器械推举': {
     muscles: ['三角肌前束'],
     steps: ['调整座椅，使把手与肩同高', '背部紧贴靠垫', '向上推起把手，缓慢回放'],
-    tips: ['器械轨迹固定，非常适合力竭组', '注意力集中在三角肌收缩上'],
+    tips: ['器械轨迹固定，适合力竭组', '注意力集中在三角肌收缩上'],
     mistakes: ['身体离开靠背向前倾']
   },
   '史密斯肩推': {
@@ -792,7 +902,7 @@ const EX_DETAIL = {
   '面拉': {
     muscles: ['三角肌后束', '肩袖肌群'],
     steps: ['将滑轮调至眼睛高度，换上双头绳索', '双手握住绳子两端，退后一步', '将绳索拉向面部两侧，同时向外旋开双手（像展示肱二头肌）', '控制回放'],
-    tips: ['这是改善圆肩驼背和维持肩部健康的最佳动作之一', '重量不需要很大，关键是外旋的动作'],
+    tips: ['这是改善圆肩驼背和维持肩部健康的优秀动作之一', '重量不需要很大，关键是外旋的动作'],
     mistakes: ['向下拉向胸口（变成了划船）', '手肘低于手腕']
   },
 
@@ -806,7 +916,7 @@ const EX_DETAIL = {
   '助力引体向上机': {
     muscles: ['背阔肌'],
     steps: ['调整配重（注意：配重越重，动作越轻松）', '双膝跪在垫板上，双手宽握', '背部发力将身体拉起', '控制速度缓慢下落'],
-    tips: ['这是无法完成自重引体向上时的最佳退阶动作'],
+    tips: ['这是无法完成自重引体向上时的优秀退阶动作'],
     mistakes: ['下放速度太快被垫板弹起']
   },
   '高位下拉': {
@@ -824,13 +934,13 @@ const EX_DETAIL = {
   'T把划船': {
     muscles: ['背阔肌厚度', '中背'],
     steps: ['双脚跨立在T把上方，屈髋屈膝俯身', '双手握住把手，保持背部平直', '将把手拉向胸腹交界处', '缓慢下放至手臂伸直'],
-    tips: ['这个动作能上很大重量，刺激背部厚度极佳', '可以选择宽把或窄把'],
-    mistakes: ['弓背（极其危险）', '站得太直变成了耸肩']
+    tips: ['这个动作能上很大重量，刺激背部厚度理想', '可以选择宽把或窄把'],
+    mistakes: ['弓背（存在安全隐患）', '站得太直变成了耸肩']
   },
   '杠铃斜板划船': {
     muscles: ['中背', '菱形肌'],
     steps: ['将上斜板调至30-45度，胸口贴靠在板上', '双手持哑铃或杠铃', '向后上方拉起重量，挤压肩背', '控制回放'],
-    tips: ['去除了下背部的压力和身体借力，是孤立训练背部的极佳动作'],
+    tips: ['去除了下背部的压力和身体借力，是孤立训练背部的理想动作'],
     mistakes: ['胸口离开垫板借力', '耸肩']
   },
   '哑铃单臂划船': {
@@ -848,13 +958,13 @@ const EX_DETAIL = {
   '绳索直臂下压': {
     muscles: ['背阔肌'],
     steps: ['面对高位绳索站立，双手握住直杆或绳子，手臂微屈', '臀部微翘，身体前倾', '保持手臂角度不变，向下压至大腿前方', '缓慢控制上升，感受背阔肌完全拉伸'],
-    tips: ['非常好的背部孤立动作，用来找背阔肌发力感或作为收尾充血'],
+    tips: ['好的背部孤立动作，用来找背阔肌发力感或作为收尾充血'],
     mistakes: ['向下压的过程中弯曲手肘（变成了三头肌下压）', '身体上下起伏借力']
   },
   '直臂下压机': {
     muscles: ['背阔肌', '前锯肌'],
     steps: ['坐姿，手肘抵在器械的靠垫上', '利用背阔肌的力量将机器往下压至腹部', '缓慢回放'],
-    tips: ['这是复刻经典的Nautilus Pullover器械，对背阔肌刺激无与伦比'],
+    tips: ['这是复刻经典的Nautilus Pullover器械，对背阔肌刺激显著'],
     mistakes: ['双手用力握把手代替手肘发力']
   },
   '山羊挺身': {
@@ -866,7 +976,7 @@ const EX_DETAIL = {
   '弹力带划船': {
     muscles: ['中背', '菱形肌'],
     steps: ['坐在地上，双腿伸直，将弹力带绕过脚底', '双手抓住弹力带两端，挺胸', '向后拉至腰侧，挤压肩胛骨', '缓慢放回'],
-    tips: ['居家练背的绝佳选择', '拉得越短，阻力越大'],
+    tips: ['居家练背的优秀选择', '拉得越短，阻力越大'],
     mistakes: ['弓背驼背']
   },
 
@@ -886,7 +996,7 @@ const EX_DETAIL = {
   '牧师椅杠铃弯举': {
     muscles: ['肱二头肌下部'],
     steps: ['坐在牧师椅上，腋窝卡住靠垫顶端', '大臂平铺在斜板上', '向下放至手臂接近伸直，然后弯举向上'],
-    tips: ['靠垫防止了手臂和身体的移动，是极好的孤立动作', '不要下放到关节完全锁死，保持一点张力'],
+    tips: ['靠垫防止了手臂和身体的移动，是优秀的孤立动作', '不要下放到关节完全锁死，保持一点张力'],
     mistakes: ['起身离开座位借力']
   },
   '器械弯举': {
@@ -898,7 +1008,7 @@ const EX_DETAIL = {
   '集中弯举': {
     muscles: ['肱二头肌肌峰'],
     steps: ['坐在凳子上，双腿分开', '单手持哑铃，将手肘内侧抵在同侧大腿内侧', '孤立二头肌进行弯举，顶端用力挤压', '缓慢下放'],
-    tips: ['这被认为是塑造二头肌"山峰"的最佳动作', '专注在每一次顶峰收缩'],
+    tips: ['这被认为是塑造二头肌"山峰"的优秀动作', '专注在每一次顶峰收缩'],
     mistakes: ['用大腿向上顶手肘借力']
   },
   '斜板哑铃弯举': {
@@ -941,7 +1051,7 @@ const EX_DETAIL = {
   '绳索过头臂屈伸': {
     muscles: ['肱三头肌长头'],
     steps: ['背对高位或低位绳索，双手抓住绳索从后脑勺上方穿过', '身体微向前倾', '大臂固定在耳朵两侧，将小臂向前上方伸直', '控制下放，感受三头肌被充分拉伸'],
-    tips: ['三头肌长头在手臂抬高时被拉长，这个动作能提供最佳的长头刺激'],
+    tips: ['三头肌长头在手臂抬高时被拉长，这个动作能提供优秀的长头刺激'],
     mistakes: ['大臂跟随小臂一起上下摆动']
   },
   '哑铃臂屈伸': {
@@ -965,13 +1075,13 @@ const EX_DETAIL = {
   '助力双杠臂屈伸': {
     muscles: ['肱三头肌'],
     steps: ['调整配重（越重越容易），将膝盖或脚掌放在托板上', '平稳地下放和推起'],
-    tips: ['非常好的新手退阶动作，可以专注于三头肌的发力'],
+    tips: ['好的新手退阶动作，可以专注于三头肌的发力'],
     mistakes: ['借着托板的弹力向上跳']
   },
   '窄距杠铃卧推': {
     muscles: ['肱三头肌', '胸大肌内侧'],
     steps: ['仰卧在卧推凳上，双手握距与肩同宽或略窄', '将杠铃下放至胸骨下部，大臂紧贴着身体两侧滑下', '用力推起至手臂伸直'],
-    tips: ['这是增加三头肌块头的王牌动作，可以使用较大重量', '握距不要太窄（不要两手碰在一起），否则会伤手腕'],
+    tips: ['这是增加三头肌维度的经典动作，可以使用较大重量', '握距不要太窄（不要两手碰在一起），否则会伤手腕'],
     mistakes: ['手肘向两侧打开（变成了普通卧推）']
   },
   '仰卧臂屈伸': {
@@ -991,7 +1101,7 @@ const EX_DETAIL = {
   '颈前杠铃深蹲': {
     muscles: ['股四头肌', '核心'],
     steps: ['将杠铃架在锁骨和前三角肌上，双手交叉或手指托住', '躯干保持绝对直立', '下蹲至最深处，推起'],
-    tips: ['这个变式对股四头肌和核心的刺激远大于传统深蹲', '背部不适者的绝佳替代动作'],
+    tips: ['这个变式对股四头肌和核心的刺激远大于传统深蹲', '背部不适者的优秀替代动作'],
     mistakes: ['手肘往下掉导致杠铃滑落', '身体前倾']
   },
   '史密斯深蹲': {
@@ -1004,12 +1114,12 @@ const EX_DETAIL = {
     muscles: ['股四头肌', '臀大肌'],
     steps: ['躺在座椅上，背部完全贴合靠背', '双脚放在踏板中央，解开安全栓', '缓慢控制踏板下落，直到膝盖呈90度', '用脚跟发力将踏板推起'],
     tips: ['脚放得越高，越刺激臀部/腘绳肌；脚放得越低，越刺激股四头肌', '双脚间距宽练内侧，窄练外侧'],
-    mistakes: ['推到顶点时膝盖完全锁死反曲（极其危险，容易断腿）', '下落太深导致下背部离开靠背受压']
+    mistakes: ['推到顶点时膝盖完全锁死反曲（存在安全隐患）', '下落太深导致下背部离开靠背受压']
   },
   '钟摆深蹲': {
     muscles: ['股四头肌'],
     steps: ['背部紧贴机器靠板，肩膀顶住垫子', '缓慢下蹲，机器会带着你做一个向后下方的圆弧轨迹', '推起至初始位置'],
-    tips: ['这台机器能提供极致的股四头肌孤立刺激，而且对腰椎极其友好', '可以蹲得非常深'],
+    tips: ['这台机器能提供充分的股四头肌孤立刺激，而且对腰椎友好', '可以蹲得深'],
     mistakes: ['脚踩的位置不对导致脚跟抬起']
   },
   '哈克深蹲': {
@@ -1021,13 +1131,13 @@ const EX_DETAIL = {
   '腿屈伸': {
     muscles: ['股四头肌'],
     steps: ['坐在器械上，调整靠背使膝盖对准机器的转轴', '脚踝挡板放在小腿下端', '用力将小腿向上踢平，在顶点收缩停留1-2秒', '缓慢控制回放'],
-    tips: ['孤立股四头肌雕刻线条的最佳动作，适合放在腿部训练最后', '脚尖向外侧重内侧头，脚尖向内侧重外侧头'],
+    tips: ['孤立股四头肌雕刻线条的优秀动作，适合放在腿部训练最后', '脚尖向外侧重内侧头，脚尖向内侧重外侧头'],
     mistakes: ['重量过大导致身体从座位上弹起', '完全不用力回放，让配重片砸下']
   },
   '保加利亚分腿蹲': {
     muscles: ['股四头肌', '臀大肌'],
     steps: ['双手持哑铃，背对长凳站立，将一只脚的脚背搭在凳子上', '另一只脚向前迈出合适距离', '下蹲至前侧大腿与地面平行，后侧膝盖几乎触地', '前脚脚跟发力推起'],
-    tips: ['上半身直立更侧重股四头肌；上半身稍微前倾更侧重臀大肌', '单腿动作能极好地改善左右不平衡'],
+    tips: ['上半身直立更侧重股四头肌；上半身稍微前倾更侧重臀大肌', '单腿动作能有效地改善左右不平衡'],
     mistakes: ['前脚站得太近，导致膝盖过度超脚尖且脚跟离地', '后脚用力蹬']
   },
   '哑铃弓步蹲': {
@@ -1039,7 +1149,7 @@ const EX_DETAIL = {
   '高脚杯深蹲': {
     muscles: ['股四头肌', '臀大肌', '核心'],
     steps: ['双手捧住一个哑铃或壶铃放在胸前', '双脚与肩同宽，保持挺胸，下蹲至手肘触碰膝盖内侧', '站起'],
-    tips: ['重量在身前会自动强迫你保持背部直立，是新手学习深蹲的最佳入门动作'],
+    tips: ['重量在身前会自动强迫你保持背部直立，是新手学习深蹲的优秀入门动作'],
     mistakes: ['哑铃远离身体，导致手臂和肩膀过早疲劳', '弯腰驼背']
   },
 
@@ -1058,7 +1168,7 @@ const EX_DETAIL = {
   '臀推': {
     muscles: ['臀大肌', '腘绳肌'],
     steps: ['肩胛骨下角靠在长凳边缘，杠铃横跨在髋骨处（垫上海绵垫）', '双脚踩实地面，与肩同宽，小腿在顶端应垂直于地面', '下巴微收，用臀部发力将髋部向上推起', '顶端用力夹紧臀部停留1-2秒', '缓慢控制下落'],
-    tips: ['这是目前公认发展臀部体积的最佳动作', '保持下巴微收看向前方，有助于防止腰椎超伸'],
+    tips: ['这是目前公认发展臀部体积的优秀动作', '保持下巴微收看向前方，有助于防止腰椎超伸'],
     mistakes: ['推到顶端时过度挺腰（用腰椎代偿）', '脚放得太远（腘绳肌发力多）或太近（股四发力多）']
   },
   '史密斯臀推': {
@@ -1082,7 +1192,7 @@ const EX_DETAIL = {
   '站姿单腿弯举机': {
     muscles: ['腘绳肌'],
     steps: ['站立在器械上，一侧大腿前侧贴紧靠垫，脚踝钩住挡板', '单腿向后上方弯曲', '控制回放'],
-    tips: ['单腿动作，能很好地感受到肌肉的收缩，适合改善两侧不平衡'],
+    tips: ['单腿动作，能有效地感受到肌肉的收缩，适合改善两侧不平衡'],
     mistakes: ['身体过度前倾']
   },
   '绳索后踢腿': {
@@ -1100,13 +1210,13 @@ const EX_DETAIL = {
   '臀桥': {
     muscles: ['臀大肌', '核心'],
     steps: ['仰卧在地垫上，双膝弯曲，脚掌平放地面', '收紧核心，脚跟发力将骨盆向上推，直到肩膀、髋部、膝盖呈一条直线', '在最高点用力夹紧臀部，缓慢下放'],
-    tips: ['这是一个极佳的新手动作和热身激活核心动作', '想增加难度可以单腿做，或者在髋部放哑铃'],
+    tips: ['这是一个理想的新手动作和热身激活核心动作', '想增加难度可以单腿做，或者在髋部放哑铃'],
     mistakes: ['推得过高导致腰部过度反弓']
   },
   '弹力带蚌式开合': {
     muscles: ['臀中肌'],
     steps: ['将迷你弹力带套在膝盖上方，侧卧在垫子上，双膝微屈并拢', '双脚保持接触，像蚌壳一样打开上方的膝盖', '顶端停顿，缓慢闭合'],
-    tips: ['深蹲硬拉前的绝佳热身动作，能激活臀部稳定肌群，防止膝盖内扣'],
+    tips: ['深蹲硬拉前的优秀热身动作，能激活臀部稳定肌群，防止膝盖内扣'],
     mistakes: ['打开膝盖时，骨盆跟着向后翻转（应保持骨盆垂直于地面不动）']
   },
 
@@ -1114,7 +1224,7 @@ const EX_DETAIL = {
   '站姿提踵': {
     muscles: ['腓肠肌（小腿肚）'],
     steps: ['前脚掌踩在台阶或提踵机踏板上，脚跟悬空', '最大幅度地下放脚跟，感受小腿后侧深度拉伸', '用力踮起脚尖到最高点，停顿1-2秒强烈收缩', '控制回放'],
-    tips: ['小腿肌肉对全幅度（特别是拉伸感）非常敏感，一定要下放到最低点'],
+    tips: ['小腿肌肉对全幅度（特别是拉伸感）敏感，一定要下放到最低点'],
     mistakes: ['只做上半程动作', '像弹簧一样利用跟腱弹性快速弹跳']
   },
   '史密斯提踵': {
@@ -1126,7 +1236,7 @@ const EX_DETAIL = {
   '腿举机提踵': {
     muscles: ['腓肠肌'],
     steps: ['躺在倒蹬机上，双腿伸直但不锁死', '将双脚下移，只让前脚掌踩在踏板下边缘', '仅转动脚踝，用前脚掌将踏板推起', '缓慢控制踏板回落拉伸小腿'],
-    tips: ['非常安全的大重量小腿训练方法，腰部完全无压力'],
+    tips: ['安全的大重量小腿训练方法，腰部完全无压力'],
     mistakes: ['膝盖弯曲借力', '脚滑落（存在一定危险，一定要穿防滑鞋垫好脚位）']
   },
   '坐姿提踵': {
@@ -1152,7 +1262,7 @@ const EX_DETAIL = {
   '坐姿卷腹机': {
     muscles: ['腹直肌'],
     steps: ['坐在器械上，双手抓住上方把手或将手肘放在靠垫上', '双脚固定', '呼气，腹部发力将上半身向前下方卷曲', '控制速度回放'],
-    tips: ['机器能让你方便地增加负重，是让腹肌块头变大的好工具', '保持背部微拱起，不要挺直背部压'],
+    tips: ['机器能让你方便地增加负重，是让腹肌维度变大的好工具', '保持背部微拱起，不要挺直背部压'],
     mistakes: ['用手臂用力拉把手代替腹部发力']
   },
   '悬挂抬腿': {
@@ -1188,13 +1298,13 @@ const EX_DETAIL = {
   '死虫式': {
     muscles: ['核心稳定肌群', '腹横肌'],
     steps: ['仰卧，双臂指向上方天花板，双腿屈膝抬起至大腿垂直地面（像四脚朝天的虫子）', '收紧核心，下背部死死贴住地面', '缓慢伸直左腿并向后伸直右臂，直到几乎触地', '收回，换另一侧交替进行'],
-    tips: ['这是一个极其安全的动作，非常适合康复和唤醒深层核心', '关键点：下背部绝不能离开地面哪怕一毫米'],
+    tips: ['这是一个安全的动作，适合康复和唤醒深层核心', '关键点：下背部绝不能离开地面哪怕一毫米'],
     mistakes: ['动作过快', '背部拱起离开地面']
   },
   '腹轮': {
     muscles: ['核心全身', '背阔肌'],
     steps: ['双膝跪在软垫上，双手握住健腹轮的把手', '收紧腹肌，稍微含胸（像一只生气的猫）', '缓慢向前推出滚轮，直至身体完全伸展但未触地', '利用腹肌的收缩将身体拉回初始跪姿'],
-    tips: ['极具挑战性的动作！如果在极限位置拉不回来，可以直接向前趴下', '熟练后可以尝试站姿推腹轮（地狱难度）'],
+    tips: ['挑战性较高，注意安全。', '熟练后可以尝试站姿推腹轮（高难度）'],
     mistakes: ['推出时腰椎塌陷反弓（极易拉伤腰部）', '回拉时先往后坐大腿，而不是用腹部发力']
   },
   '侧平板支撑': {
@@ -1208,7 +1318,7 @@ const EX_DETAIL = {
   '跑步机慢跑': {
     muscles: ['心肺功能', '下肢耐力'],
     steps: ['以较慢的配速（如5km/h）快走3-5分钟热身', '将速度提升至慢跑状态（如7-9km/h）', '保持匀速呼吸，维持设定时间', '最后3-5分钟降速慢走以冷却心率'],
-    tips: ['可以设置1-2%的坡度，以弥补室内没有风阻的差异，更接近户外真实跑步体验', '心率保持在最大心率的65-75%为极佳的燃脂区间'],
+    tips: ['可以设置1-2%的坡度，以弥补室内没有风阻的差异，更接近户外真实跑步体验', '心率保持在最大心率的65-75%为理想的燃脂区间'],
     mistakes: ['双手紧抓跑步机扶手', '步伐太大导致脚跟重重落地']
   },
   '弧形跑步机': {
@@ -1220,26 +1330,26 @@ const EX_DETAIL = {
   '划船机': {
     muscles: ['心肺功能', '背部', '腿部', '全身80%的肌肉'],
     steps: ['坐在滑座上，双脚绑好，双手握住把手', '【拉起顺序】：先用力蹬直双腿，然后躯干稍微向后倾斜，最后手臂拉向胸下', '【回放顺序】：先伸直手臂，然后躯干前倾，最后屈膝滑回'],
-    tips: ['这大概是健身房里效率最高、对关节冲击最小的全身有氧器械', '记住口诀："腿-背-手，手-背-腿"'],
+    tips: ['这是健身房里效率最高、对关节冲击最小的全身有氧器械', '记住口诀："腿-背-手，手-背-腿"'],
     mistakes: ['顺序错乱（腿还没伸直手就拉了）', '弯腰驼背']
   },
   '风阻划船机': {
     muscles: ['心肺功能', '爆发力', '全身'],
     steps: ['动作与普通划船机一致', '主要区别在于：你拉得越快、用力越猛，风扇产生的阻力就越大'],
-    tips: ['非常适合做HIIT（高强度间歇训练），例如：全力划30秒，慢划30秒，重复10组'],
+    tips: ['适合做HIIT（高强度间歇训练），例如：全力划30秒，慢划30秒，重复10组'],
     mistakes: ['阻力挡位设置过高（通常推荐调在3-5挡之间即可模拟真实划水感）']
   },
   '椭圆机': {
     muscles: ['心肺功能'],
     steps: ['站上脚踏板，双手握住移动把手', '开始同步协调手脚的推拉运动', '保持上半身直立，核心微收紧'],
-    tips: ['这是一个"零冲击"的有氧运动，非常适合体重较大者或有膝盖伤病的人群保护关节', '可以尝试倒着踩，能更多刺激到臀部和腘绳肌'],
+    tips: ['这是一个"零冲击"的有氧运动，适合体重较大者或有膝盖伤病的人群保护关节', '可以尝试倒着踩，能更多刺激到臀部和腘绳肌'],
     mistakes: ['身体瘫软地趴在控制面板上', '阻力设为0，只是随着惯性空转']
   },
   '骑行机': {
     muscles: ['心肺功能', '股四头肌'],
-    steps: ['调整座椅高度：当你的一侧脚踏踩到最低点时，该侧膝盖应该有极轻微的弯曲', '设置好阻力，开始平稳踩踏', '保持上半身稳定，不左右摇晃'],
+    steps: ['调整座椅高度：当你的一侧脚踏踩到最低点时，该侧膝盖应该有轻微的弯曲', '设置好阻力，开始平稳踩踏', '保持上半身稳定，不左右摇晃'],
     tips: ['坐姿骑行（有靠背的那种）对腰椎最友好，适合大体重人群'],
-    mistakes: ['座椅调得太低，导致膝盖一直弯着受力（极其伤膝盖）']
+    mistakes: ['座椅调得太低，导致膝盖一直弯着受力（容易损伤膝盖）']
   },
   '动感单车': {
     muscles: ['心肺功能', '下肢肌群'],
@@ -1250,25 +1360,25 @@ const EX_DETAIL = {
   '攀爬机': {
     muscles: ['心肺功能', '臀大肌', '股四头肌'],
     steps: ['踏上楼梯踏板，按下开始键，台阶开始下降', '保持挺胸抬头，像爬楼梯一样交替向上迈步', '全脚掌着地，主动用臀部和大腿发力踩下台阶'],
-    tips: ['又称"有氧之王"，燃脂效率极高，同时能很好地锻炼到臀腿肌肉', '尽量不要死死抓着扶手借力'],
+    tips: ['又称"有氧之王"，燃脂效率较高，同时能有效地锻炼到臀腿肌肉', '尽量不要死死抓着扶手借力'],
     mistakes: ['上半身瘫倒在控制台上，踮着脚尖走']
   },
   '跳绳': {
     muscles: ['心肺功能', '小腿', '肩部耐力'],
     steps: ['双手握住手柄，绳子在脚后跟', '手腕发力转动绳子', '绳子从头上转过时，前脚掌轻轻弹跳跃过', '保持平稳的呼吸和节奏'],
-    tips: ['跳跃的高度只需要刚好让绳子通过即可，切勿跳得太高', '是非常好的便携式高强度有氧运动'],
+    tips: ['跳跃的高度只需要刚好让绳子通过即可，切勿跳得太高', '是好的便携式高强度有氧运动'],
     mistakes: ['整个手臂大幅度抡圈（应该用手腕转）', '脚跟着地重重砸向地面']
   },
   '开合跳': {
     muscles: ['心肺功能', '全身协调性'],
     steps: ['站立，双脚并拢，双手自然下垂', '向上跳起，同时双脚向两侧张开，双手举过头顶击掌或靠近', '再次跳起，双脚并拢，双手放回体侧', '快速连续进行'],
-    tips: ['膝盖始终保持微屈，起到缓冲作用', '这是绝佳的训练前热身动作，能快速升高心率和体温'],
+    tips: ['膝盖始终保持微屈，起到缓冲作用', '这是优秀的训练前热身动作，能快速升高心率和体温'],
     mistakes: ['跳跃落地时膝盖关节完全锁死笔直']
   },
   '波比跳': {
     muscles: ['心肺功能', '爆发力', '全身绝大部分肌群'],
     steps: ['站立姿势开始，下蹲，双手撑在地面上', '双腿向后跳，呈高位平板支撑姿势', '（可选）做一个标准的俯卧撑', '双腿向前跳回深蹲姿势', '向上用力跳起，双手在头顶击掌'],
-    tips: ['公认的"地狱级"燃脂动作，能瞬间把心率拉爆', '如果是新手，可以去掉俯卧撑，以及把双腿"跳"向后改为"走"向后以降低难度'],
+    tips: ['公认的"高强度"燃脂动作，能快速提升心率', '如果是新手，可以去掉俯卧撑，以及把双腿"跳"向后改为"走"向后以降低难度'],
     mistakes: ['在平板支撑阶段腰部严重塌陷', '落地没有缓冲，脚砸地面']
   }
 };
@@ -1286,8 +1396,8 @@ const mistakes=info?.mistakes||[];
 document.getElementById('ex-modal-title').textContent=name;
 document.getElementById('ex-modal-muscles').innerHTML=muscles.map(m=>`<span class="jchip">${m}</span>`).join('');
 document.getElementById('ex-modal-steps').innerHTML=steps.map((s,i)=>`<div class="ex-step"><span class="ex-step-n">${i+1}</span><span>${s}</span></div>`).join('');
-document.getElementById('ex-modal-tips').innerHTML=tips.length?tips.map(t=>`<div class="ex-tip">💡 ${t}</div>`).join(''):'';
-document.getElementById('ex-modal-mistakes').innerHTML=mistakes.length?`<p style="font-size:11px;font-weight:600;color:var(--terra);margin:8px 0 4px">常见错误</p>`+mistakes.map(m=>`<div class="ex-tip" style="border-color:var(--terra-br);color:var(--terra)">⚠️ ${m}</div>`).join(''):'';
+document.getElementById('ex-modal-tips').innerHTML=tips.length?tips.map(t=>`<div class="ex-tip">${t}</div>`).join(''):'';
+document.getElementById('ex-modal-mistakes').innerHTML=mistakes.length?`<p style="font-size:11px;font-weight:600;color:var(--terra);margin:8px 0 4px">常见错误</p>`+mistakes.map(m=>`<div class="ex-tip" style="border-color:var(--terra-br);color:var(--terra)">${m}</div>`).join(''):'';
 document.getElementById('ex-modal').classList.add('open');
 }
 function closeExDetail(){document.getElementById('ex-modal').classList.remove('open');}
