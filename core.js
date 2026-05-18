@@ -450,23 +450,95 @@ initTouchDrag();
 // ══ Interactions ════════════════════════════════════════
 function selectDate(ds){S.selDate=ds;saveState();render()}
 
+let _pendingRpeDate = null;
+let _pendingRpeDay = null;
+let _editingLogIdx = null;
+
+function closeRpeModal(){
+    document.getElementById('rpe-modal').classList.remove('open');
+    _pendingRpeDate = null;
+    _pendingRpeDay = null;
+    _editingLogIdx = null;
+}
+
+function editLog(idx) {
+    const l = LOG[idx];
+    if (!l) return;
+    _pendingRpeDate = l.date;
+    _pendingRpeDay = null;
+    _editingLogIdx = idx;
+    
+    document.getElementById('rpe-modal-title').innerText = '编辑记录 (' + l.date.slice(5) + ')';
+    document.getElementById('rpe-modal-desc').innerText = '更新您的疲劳度评估和备注信息';
+    const noteEl = document.getElementById('rpe-note');
+    if(noteEl) noteEl.value = l.note || '';
+    
+    document.getElementById('rpe-modal').classList.add('open');
+}
+
+function submitRPE(rpe, isSkip=false) {
+    if(!_pendingRpeDate) {
+        closeRpeModal();
+        return;
+    }
+    const noteEl = document.getElementById('rpe-note');
+    const note = noteEl ? noteEl.value.trim() : '';
+    const actualRpe = isSkip ? 6 : rpe;
+    const moods=['😴','😌','😌','🙂','🙂','💪','💪','🔥','🔥','😵'];
+    
+    if (_editingLogIdx !== null) {
+        // Edit mode
+        LOG[_editingLogIdx].rpe = actualRpe;
+        LOG[_editingLogIdx].mood = moods[actualRpe-1]||'💪';
+        LOG[_editingLogIdx].note = note;
+        ls(K.log,LOG);
+        showToast('已更新记录');
+    } else if (_pendingRpeDay) {
+        // New log mode
+        const day = _pendingRpeDay;
+        const date = _pendingRpeDate;
+        LOG.unshift({
+            date: date,
+            workout: day.workoutType,
+            duration: day.duration,
+            exerciseCount: day.exercises.length,
+            rpe: actualRpe,
+            exercises: day.exercises.map((ex,i)=>({name:ex.name,sets:getAdj(date,i,'s',ex.sets),reps:getAdj(date,i,'r',ex.reps),unit:ex.unit})),
+            mood: moods[actualRpe-1]||'💪',
+            note: note
+        });
+        ls(K.log,LOG);
+        showToast(isSkip ? `🎉 训练完成！` : `🎉 训练完成！RPE ${actualRpe}/10`);
+    }
+    
+    if(noteEl) noteEl.value = '';
+    
+    // Reset modal text back to default for next time
+    document.getElementById('rpe-modal-title').innerText = '今日疲劳度评估';
+    document.getElementById('rpe-modal-desc').innerText = '打分将影响后续 AI 给出的重量调整建议';
+    
+    closeRpeModal();
+    saveState();render();
+    if(typeof renderStats === 'function') renderStats(); // Refresh stats view
+    if(typeof renderLog === 'function') renderLog(); // Refresh log view
+}
+
 function tog(date,ei){
-if(!S.prog[date])S.prog[date]={};
-S.prog[date][ei]=!S.prog[date][ei];
-const day=S.plan.days.find(d=>d.date===date);
-if(day&&isDone(day)){
-const exists=LOG.find(l=>l.date===date&&l.workout===day.workoutType);
-if(!exists){
-const rpeStr=prompt('训练完成！请评价今天的训练强度 (1-10)：\n1-3 轻松  4-6 适中  7-8 吃力  9-10 极限','6');
-const rpe=Math.max(1,Math.min(10,parseInt(rpeStr)||6));
-const moods=['😴','😌','😌','🙂','🙂','💪','💪','🔥','🔥','😵'];
-LOG.unshift({date,workout:day.workoutType,duration:day.duration,exerciseCount:day.exercises.length,rpe,
-exercises:day.exercises.map((ex,i)=>({name:ex.name,sets:getAdj(date,i,'s',ex.sets),reps:getAdj(date,i,'r',ex.reps),unit:ex.unit})),mood:moods[rpe-1]||'💪',note:''});
-ls(K.log,LOG);
-showToast(`🎉 训练完成！RPE ${rpe}/10`);
-}
-}
-saveState();render();
+    if(!S.prog[date])S.prog[date]={};
+    S.prog[date][ei]=!S.prog[date][ei];
+    saveState();render();
+    
+    const day=S.plan.days.find(d=>d.date===date);
+    if(day&&isDone(day)){
+        const exists=LOG.find(l=>l.date===date&&l.workout===day.workoutType);
+        if(!exists){
+            _pendingRpeDate = date;
+            _pendingRpeDay = day;
+            setTimeout(() => {
+                document.getElementById('rpe-modal').classList.add('open');
+            }, 100);
+        }
+    }
 }
 
 function adj(date,ei,f,delta){
@@ -481,7 +553,13 @@ saveState();render();
 function unlockDate(date){
 if(confirm('解除锁定将清空本日的所有打卡记录，确定继续？')){
 delete S.prog[date];
+const logIdx = LOG.findIndex(l => l.date === date);
+if (logIdx > -1) {
+  LOG.splice(logIdx, 1);
+  ls(K.log, LOG);
+}
 saveState();render();
+if(typeof renderStats === 'function') renderStats(); // Refresh stats view
 }
 }
 
@@ -513,25 +591,52 @@ showToast('已交换训练顺序');
 function dragEnd(){_dragSrc=null;document.querySelectorAll('.dragging').forEach(el=>el.classList.remove('dragging'));}
 
 // ══ Touch drag (mobile) ═════════════════════════════════
-let _touchSrc=null,_touchEl=null;
+let _touchSrc=null,_touchEl=null,_touchClone=null;
+let _dragStartPt={x:0,y:0};
 function initTouchDrag(){
-const grid=document.getElementById('cal-grid');if(!grid)return;
-grid.addEventListener('touchstart',e=>{
-const dc=e.target.closest('.dc[draggable]');if(!dc)return;
-_touchSrc=dc.getAttribute('onclick')?.match(/selectDate\('([^']+)'\)/)?.[1]||null;
-_touchEl=dc;dc.classList.add('dragging');
-},{passive:true});
-grid.addEventListener('touchend',e=>{
-if(!_touchSrc){return}
-const touch=e.changedTouches[0];
-const target=document.elementFromPoint(touch.clientX,touch.clientY)?.closest('.dc');
-if(target&&target!==_touchEl){
-const tDate=target.getAttribute('onclick')?.match(/selectDate\('([^']+)'\)/)?.[1];
-if(tDate)dragDrop({preventDefault(){}},tDate);
-}
-if(_touchEl)_touchEl.classList.remove('dragging');
-_touchSrc=null;_touchEl=null;
-},{passive:true});
+    const grid=document.getElementById('cal-grid');if(!grid)return;
+    grid.addEventListener('touchstart',e=>{
+        const dc=e.target.closest('.dc[draggable]');if(!dc)return;
+        if(dc.classList.contains('locked')) return;
+        _touchSrc=dc.getAttribute('onclick')?.match(/selectDate\('([^']+)'\)/)?.[1]||null;
+        _touchEl=dc;dc.classList.add('dragging');
+        const touch = e.touches[0];
+        _dragStartPt = {x: touch.clientX, y: touch.clientY};
+        
+        const rect = dc.getBoundingClientRect();
+        _touchClone = dc.cloneNode(true);
+        _touchClone.classList.add('touch-clone');
+        _touchClone.style.width = rect.width + 'px';
+        _touchClone.style.height = rect.height + 'px';
+        _touchClone.style.left = rect.left + 'px';
+        _touchClone.style.top = rect.top + 'px';
+        document.body.appendChild(_touchClone);
+    },{passive:false});
+    
+    grid.addEventListener('touchmove',e=>{
+        if(!_touchClone) return;
+        e.preventDefault();
+        const touch = e.touches[0];
+        const dx = touch.clientX - _dragStartPt.x;
+        const dy = touch.clientY - _dragStartPt.y;
+        const rect = _touchEl.getBoundingClientRect();
+        _touchClone.style.left = (rect.left + dx) + 'px';
+        _touchClone.style.top = (rect.top + dy) + 'px';
+    },{passive:false});
+    
+    grid.addEventListener('touchend',e=>{
+        if(!_touchSrc){return}
+        if(_touchClone) _touchClone.style.display = 'none';
+        const touch=e.changedTouches[0];
+        const target=document.elementFromPoint(touch.clientX,touch.clientY)?.closest('.dc');
+        if(target&&target!==_touchEl){
+            const tDate=target.getAttribute('onclick')?.match(/selectDate\('([^']+)'\)/)?.[1];
+            if(tDate)dragDrop({preventDefault(){}},tDate);
+        }
+        if(_touchEl)_touchEl.classList.remove('dragging');
+        if(_touchClone) _touchClone.remove();
+        _touchSrc=null;_touchEl=null;_touchClone=null;
+    },{passive:true});
 }
 
 // ══ Exercise Detail Modal ═══════════════════════════════

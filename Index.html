@@ -151,6 +151,30 @@
 
     <div class="sync-toast" id="sync-toast"></div>
 
+    <div id="rpe-modal" class="ex-modal-overlay" onclick="if(event.target===this)closeRpeModal()">
+        <div class="ex-modal-card" style="text-align:center" onclick="event.stopPropagation()">
+            <h3 id="rpe-modal-title" style="margin-bottom:8px;font-family:var(--font-display);font-size:20px;color:var(--ink)">今日疲劳度评估</h3>
+            <p id="rpe-modal-desc" style="margin-bottom:20px;font-size:13px;color:var(--ink3)">打分将影响后续 AI 给出的重量调整建议</p>
+            
+            <div class="rpe-grid">
+                <button class="rpe-btn rpe-low" onclick="submitRPE(1)"><div class="rpe-val">1</div><div class="rpe-lbl">毫无感觉</div></button>
+                <button class="rpe-btn rpe-low" onclick="submitRPE(2)"><div class="rpe-val">2</div><div class="rpe-lbl">极度轻松</div></button>
+                <button class="rpe-btn rpe-low" onclick="submitRPE(3)"><div class="rpe-val">3</div><div class="rpe-lbl">轻松</div></button>
+                <button class="rpe-btn rpe-mid" onclick="submitRPE(4)"><div class="rpe-val">4</div><div class="rpe-lbl">略感疲劳</div></button>
+                <button class="rpe-btn rpe-mid" onclick="submitRPE(5)"><div class="rpe-val">5</div><div class="rpe-lbl">适中</div></button>
+                <button class="rpe-btn rpe-mid" onclick="submitRPE(6)"><div class="rpe-val">6</div><div class="rpe-lbl">正常训练</div></button>
+                <button class="rpe-btn rpe-high" onclick="submitRPE(7)"><div class="rpe-val">7</div><div class="rpe-lbl">偏难</div></button>
+                <button class="rpe-btn rpe-high" onclick="submitRPE(8)"><div class="rpe-val">8</div><div class="rpe-lbl">困难</div></button>
+                <button class="rpe-btn rpe-max" onclick="submitRPE(9)"><div class="rpe-val">9</div><div class="rpe-lbl">极限</div></button>
+                <button class="rpe-btn rpe-max" onclick="submitRPE(10)"><div class="rpe-val">10</div><div class="rpe-lbl">力竭</div></button>
+            </div>
+            
+            <textarea id="rpe-note" class="rpe-note-input" placeholder="有什么想记录的？（选填，如：今天状态不好、卧推加了5kg）"></textarea>
+            
+            <button class="btn btn-out" style="width:100%;margin-top:16px;font-size:13px" onclick="submitRPE(6, true)">跳过</button>
+        </div>
+    </div>
+
     <!-- Exercise Detail Modal -->
     <div id="ex-modal" class="ex-modal-overlay" onclick="closeExDetail()">
         <div class="ex-modal-card" onclick="event.stopPropagation()">

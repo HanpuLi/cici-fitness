@@ -74,7 +74,6 @@ html+=`
       </div>
       <div style="display:flex;gap:6px;align-items:center">
         <span class="jchip">${x.duration||'?'}分钟</span>
-        <button class="jentry-del" onclick="delLog(${logIdx})">×</button>
       </div>
     </div>
     <div class="tl-chips">
@@ -82,6 +81,10 @@ html+=`
       ${x.exercises?x.exercises.slice(0,3).map(e=>`<span class="jchip">${e.name}</span>`).join('')+((x.exercises.length>3)?`<span class="jchip" style="opacity:.5">+${x.exercises.length-3}个</span>`:''):''}
     </div>
     ${x.note?`<div class="jentry-note">"${x.note}"</div>`:''}
+    <div class="log-actions" style="margin-top:10px;border-top:1px solid var(--border);padding-top:8px">
+      <button class="log-act-btn" onclick="editLog(${logIdx})">📝 编辑</button>
+      <button class="log-act-btn del" onclick="delLog(${logIdx})">🗑️ 删除</button>
+    </div>
   </div>
 </div>`;
 });
