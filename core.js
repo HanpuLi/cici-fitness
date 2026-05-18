@@ -7,7 +7,7 @@ function lg(k){try{const v=localStorage.getItem(k);return v?JSON.parse(v):null}c
 function ls(k,v){try{localStorage.setItem(k,JSON.stringify(v));schedulePush()}catch{}}
 
 // ══ State ════════════════════════════════════════════════
-const S={goal:'减脂塑形',level:'初级',days:3,dur:45,equip:['健身房全套'],focus:[],limits:'',plan:null,selDay:0,prog:{},adj:{}};
+const S={goal:'减脂塑形',level:'初级',days:3,dur:45,equip:['健身房全套'],focus:[],limits:'',plan:null,selDate:null,prog:{},adj:{}};
 let LOG=lg(K.log)||[];
 let _logShowAll=false;
 

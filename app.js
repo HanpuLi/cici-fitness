@@ -112,8 +112,10 @@ else if(i>0)break;
 // Month stats
 const thisMonth=today.toISOString().slice(0,7);
 const monthLogs=LOG.filter(l=>l.date.startsWith(thisMonth));
-const weekDone=S.plan?S.plan.weekPlan.filter(d=>!d.isRest&&isDone(d)).length:0;
-const weekTotal=S.plan?S.plan.weekPlan.filter(d=>!d.isRest).length:0;
+const today7=new Date();today7.setDate(today7.getDate()-7);const t7str=today7.toISOString().split('T')[0];
+const weekDays=S.plan?S.plan.days.filter(d=>!d.isRest&&d.date>=t7str&&d.date<=today.toISOString().split('T')[0]):[];
+const weekDone=weekDays.filter(d=>isDone(d)).length;
+const weekTotal=weekDays.length;
 const weekPct=weekTotal?Math.round(weekDone/weekTotal*100):0;
 
 // 12-week heatmap
