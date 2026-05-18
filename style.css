@@ -24,6 +24,29 @@
     --font-body: 'EB Garamond', 'Noto Serif CJK SC', 'Songti SC', Georgia, serif;
 }
 
+@media (prefers-color-scheme: dark) {
+    :root {
+        --bg: #22201d;
+        --surface: #2b2926;
+        --surface2: #36332f;
+        --border: #45423c;
+        --border2: #57534c;
+        --ink: #e7e5df;
+        --ink2: #b0aba3;
+        --ink3: #827e77;
+        --terra: #e07858;
+        --terra-bg: rgba(224,120,88,.12);
+        --terra-br: rgba(224,120,88,.3);
+        --sage: #6ba88a;
+        --sage-bg: rgba(107,168,138,.12);
+        --sage-br: rgba(107,168,138,.3);
+        --amber: #d1945a;
+        --amber-bg: rgba(209,148,90,.12);
+        --blue: #7b9cbf;
+        --blue-bg: rgba(123,156,191,.12);
+    }
+}
+
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {

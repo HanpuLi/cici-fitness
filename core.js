@@ -255,10 +255,11 @@ result.push({name:ex.n,sets:exSets,reps:exReps,unit:isCardio?'分钟':(isTime?'�
 return result;
 }
 
-// ══ Calendar helpers ════════════════════════════════════
-function todayStr(){return new Date().toISOString().split('T')[0]}
-function dateStr(d){return d.toISOString().split('T')[0]}
-function addDays(base,n){const d=new Date(base);d.setDate(d.getDate()+n);return dateStr(d)}
+// ══ Calendar helpers (local timezone) ═══════════════════
+function _pad(n){return String(n).padStart(2,'0')}
+function todayStr(){const d=new Date();return `${d.getFullYear()}-${_pad(d.getMonth()+1)}-${_pad(d.getDate())}`}
+function dateStr(d){return `${d.getFullYear()}-${_pad(d.getMonth()+1)}-${_pad(d.getDate())}`}
+function addDays(base,n){const d=new Date(base+'T12:00:00');d.setDate(d.getDate()+n);return dateStr(d)}
 function fmtDate(ds){const d=new Date(ds+'T00:00:00');return['周日','周一','周二','周三','周四','周五','周六'][d.getDay()]+'·'+(d.getMonth()+1)+'/'+(d.getDate())}
 
 // ══ Lock check ══════════════════════════════════════════
@@ -399,6 +400,7 @@ h+=`<div class="tip" style="text-align:center;padding:2rem">😴 休息日 — �
 }
 h+=`<div class="tip">${tip}</div>`;
 document.getElementById('main').innerHTML=h;
+initTouchDrag();
 }
 
 // ══ Interactions ════════════════════════════════════════
@@ -411,10 +413,13 @@ const day=S.plan.days.find(d=>d.date===date);
 if(day&&isDone(day)){
 const exists=LOG.find(l=>l.date===date&&l.workout===day.workoutType);
 if(!exists){
-LOG.unshift({date,workout:day.workoutType,duration:day.duration,exerciseCount:day.exercises.length,
-exercises:day.exercises.map((ex,i)=>({name:ex.name,sets:getAdj(date,i,'s',ex.sets),reps:getAdj(date,i,'r',ex.reps),unit:ex.unit})),mood:'💪',note:''});
+const rpeStr=prompt('训练完成！请评价今天的训练强度 (1-10)：\n1-3 轻松  4-6 适中  7-8 吃力  9-10 极限','6');
+const rpe=Math.max(1,Math.min(10,parseInt(rpeStr)||6));
+const moods=['😴','😌','😌','🙂','🙂','💪','💪','🔥','🔥','😵'];
+LOG.unshift({date,workout:day.workoutType,duration:day.duration,exerciseCount:day.exercises.length,rpe,
+exercises:day.exercises.map((ex,i)=>({name:ex.name,sets:getAdj(date,i,'s',ex.sets),reps:getAdj(date,i,'r',ex.reps),unit:ex.unit})),mood:moods[rpe-1]||'💪',note:''});
 ls(K.log,LOG);
-showToast('🎉 训练完成！已自动记录');
+showToast(`🎉 训练完成！RPE ${rpe}/10`);
 }
 }
 saveState();render();
@@ -462,6 +467,28 @@ saveState();render();
 showToast('已交换训练顺序');
 }
 function dragEnd(){_dragSrc=null;document.querySelectorAll('.dragging').forEach(el=>el.classList.remove('dragging'));}
+
+// ══ Touch drag (mobile) ═════════════════════════════════
+let _touchSrc=null,_touchEl=null;
+function initTouchDrag(){
+const grid=document.getElementById('cal-grid');if(!grid)return;
+grid.addEventListener('touchstart',e=>{
+const dc=e.target.closest('.dc[draggable]');if(!dc)return;
+_touchSrc=dc.getAttribute('onclick')?.match(/selectDate\('([^']+)'\)/)?.[1]||null;
+_touchEl=dc;dc.classList.add('dragging');
+},{passive:true});
+grid.addEventListener('touchend',e=>{
+if(!_touchSrc){return}
+const touch=e.changedTouches[0];
+const target=document.elementFromPoint(touch.clientX,touch.clientY)?.closest('.dc');
+if(target&&target!==_touchEl){
+const tDate=target.getAttribute('onclick')?.match(/selectDate\('([^']+)'\)/)?.[1];
+if(tDate)dragDrop({preventDefault(){}},tDate);
+}
+if(_touchEl)_touchEl.classList.remove('dragging');
+_touchSrc=null;_touchEl=null;
+},{passive:true});
+}
 
 // ══ Exercise Detail Modal ═══════════════════════════════
 // Detail data inline - key exercises with full breakdown
