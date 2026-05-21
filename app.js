@@ -1,5 +1,30 @@
 // ══ app.js — Auth, Sync, Journal, Stats, UI ═════════════
 
+// ══ Dark/Light Mode Toggle ═══════════════════════════════
+(function initTheme(){
+    const saved = localStorage.getItem('fit_theme');
+    if (saved === 'dark') { document.documentElement.classList.add('dark'); document.documentElement.classList.remove('light'); }
+    else if (saved === 'light') { document.documentElement.classList.add('light'); document.documentElement.classList.remove('dark'); }
+    // else: follow system (no class needed)
+    updateThemeBtn();
+})();
+
+function toggleTheme(){
+    const html = document.documentElement;
+    const isDark = html.classList.contains('dark') || (!html.classList.contains('light') && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    if (isDark) { html.classList.remove('dark'); html.classList.add('light'); localStorage.setItem('fit_theme', 'light'); }
+    else { html.classList.remove('light'); html.classList.add('dark'); localStorage.setItem('fit_theme', 'dark'); }
+    updateThemeBtn();
+}
+
+function updateThemeBtn(){
+    const btn = document.getElementById('theme-btn');
+    if (!btn) return;
+    const html = document.documentElement;
+    const isDark = html.classList.contains('dark') || (!html.classList.contains('light') && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    btn.textContent = isDark ? '☀️' : '🌙';
+}
+
 // ══ State Persistence ════════════════════════════════════
 function saveState(){
 ls(K.settings,{goal:S.goal,level:S.level,days:S.days,dur:S.dur,equip:S.equip,focus:S.focus,limits:S.limits,volumeMultiplier:S.volumeMultiplier});
