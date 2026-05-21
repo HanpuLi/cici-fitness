@@ -328,7 +328,9 @@ function fmtDate(ds){const d=new Date(ds+'T00:00:00');return['周日','周一','
 
 // ══ Lock check ══════════════════════════════════════════
 function isLocked(day){
-// Locked if a completed log exists AND the date has NOT been explicitly unlocked
+// Today is NEVER locked — you should always be able to edit today's workout
+if (day.date === todayStr()) return false;
+// Only past dates can be locked
 if (!S.unlockedDates) S.unlockedDates = [];
 if (S.unlockedDates.includes(day.date)) return false;
 return LOG.some(l => l.date === day.date);
