@@ -7,7 +7,7 @@ function lg(k){try{const v=localStorage.getItem(k);return v?JSON.parse(v):null}c
 function ls(k,v){try{localStorage.setItem(k,JSON.stringify(v));schedulePush()}catch{}}
 
 // ══ State ════════════════════════════════════════════════
-const S={goal:'女性薄肌',level:'初级',days:3,dur:60,equip:['健身房全套'],focus:['均衡全身'],limits:'',plan:null,selDate:null,prog:{},adj:{},weights:{},volumeMultiplier:1.0};
+const S={goal:'女性薄肌',level:'初级',days:3,dur:60,equip:['健身房全套'],focus:['均衡全身'],limits:'',plan:null,selDate:null,prog:{},adj:{},weights:{},volumeMultiplier:1.0,restDur:45};
 let LOG=lg(K.log)||[];
 let W_HIST=lg(K.wh)||{};
 let PR_LIST=lg('fit_pr')||[]; // {date,exercise,weight,prev}
@@ -557,7 +557,7 @@ const sugW=needsWt?suggestWeight(ex.name):null;
 const dispW=curW!==null?curW:(sugW??'');
 return`<div class="exrow${done?' done-ex':''}">
 <div style="flex:1;min-width:0">
-<div class="exname" onclick="showExDetail('${ex.name}')" style="cursor:pointer">${ex.name} <i class="ti ti-info-circle" style="font-size:11px;opacity:.4;vertical-align:middle"></i>${!locked&&!ex.isWarmup&&!ex.isStretch?` <span class="swap-btn" onclick="event.stopPropagation();swapExercise('${sel.date}',${i})" title="替换动作">🔄</span>`:''}</div>
+<div class="exname" onclick="showExDetail('${ex.name}')" style="cursor:pointer">${ex.name}${needsWt&&W_HIST[ex.name]&&W_HIST[ex.name].length>0&&(curW||0)>=Math.max(...W_HIST[ex.name].map(h=>h.weight))?` <span title="个人纪录" style="font-size:10px">🏆</span>`:''} <i class="ti ti-info-circle" style="font-size:11px;opacity:.4;vertical-align:middle"></i>${!locked&&!ex.isWarmup&&!ex.isStretch?` <span class="swap-btn" onclick="event.stopPropagation();swapExercise('${sel.date}',${i})" title="替换动作">🔄</span>`:''}</div>
 <div class="exnote">${ex.note}</div>
 ${needsWt&&!locked?`<div class="wt-row">
 <input type="number" class="wt-input" value="${dispW||''}" placeholder="${sugW||''}" onchange="setWeight('${sel.date}',${i},+this.value)" step="0.5" min="0">
@@ -757,8 +757,8 @@ function tog(date,ei){
     
     // Auto rest timer when checking off an exercise (not unchecking)
     const day=S.plan.days.find(d=>d.date===date);
-    if(S.prog[date][ei] && !isDone(day)){
-        startTimer(45, '组间休息');
+    if(S.prog[date][ei] && !isDone(day) && (S.restDur||45) > 0){
+        startTimer(S.restDur||45, '组间休息');
     }
     
     if(day&&isDone(day)){
@@ -786,8 +786,44 @@ const used=sel.exercises.map(e=>e.name);
 const excluded=getExcluded();
 const alts=DB[group].filter(e=>e.n!==ex.name&&!used.includes(e.n)&&!excluded.has(e.n)&&S.equip.some(eq=>!e.eq||e.eq.includes(eq)));
 if(!alts.length){showToast('没有更多替代动作');return}
-const alt=alts[Math.floor(Math.random()*alts.length)];
+// Show choice modal
+const diffLabel=['','★','★★','★★★'];
+let modal=document.getElementById('swap-modal');
+if(!modal){
+modal=document.createElement('div');
+modal.id='swap-modal';
+modal.className='ex-modal-overlay';
+modal.onclick=e=>{if(e.target===modal){modal.classList.remove('open')}};
+document.body.appendChild(modal);
+}
+modal.innerHTML=`<div class="ex-modal-card" onclick="event.stopPropagation()">
+<div class="ex-modal-hdr">
+<span class="ex-modal-title">替换动作</span>
+<button class="ex-modal-close" onclick="document.getElementById('swap-modal').classList.remove('open')">✕</button>
+</div>
+<p style="font-size:12px;color:var(--ink3);margin-bottom:12px">当前: ${ex.name} → 选择替代</p>
+<div style="display:flex;flex-direction:column;gap:6px">
+${alts.map((alt,idx)=>`<button class="swap-option" onclick="doSwap('${date}',${ei},${idx})">
+<div style="display:flex;justify-content:space-between;align-items:center">
+<span style="font-weight:600;font-size:13px">${alt.n}</span>
+<span style="font-size:10px;color:var(--amber)">${diffLabel[alt.diff||1]}</span>
+</div>
+<div style="font-size:11px;color:var(--ink3);text-align:left;margin-top:2px">${alt.note||''}</div>
+${W_HIST[alt.n]?`<div style="font-size:10px;color:var(--sage);margin-top:2px">上次 ${W_HIST[alt.n][W_HIST[alt.n].length-1].weight}kg</div>`:''}
+</button>`).join('')}
+</div>
+</div>`;
+modal.classList.add('open');
+// Store alts for doSwap
+window._swapAlts=alts;
+}
+
+function doSwap(date,ei,altIdx){
+const alt=window._swapAlts[altIdx];
+const sel=S.plan.days.find(d=>d.date===date);
+const ex=sel.exercises[ei];
 sel.exercises[ei]={name:alt.n,note:alt.note||'',sets:ex.sets,reps:alt.u==='秒'?30:(alt.u==='分钟'?1:ex.reps),unit:alt.u||'次',isWarmup:false,isStretch:false};
+document.getElementById('swap-modal').classList.remove('open');
 saveState();render();
 showToast(`已替换为 ${alt.n}`);
 }

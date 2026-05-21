@@ -349,6 +349,20 @@ textarea:focus { border-color: var(--terra-br); }
 }
 .swap-btn:hover { opacity: 1; }
 
+/* ══ Swap Option (modal) ════════════════════════════════ */
+.swap-option {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+    cursor: pointer;
+    text-align: left;
+    font-family: var(--font-body);
+    transition: all .15s;
+}
+.swap-option:hover { background: var(--surface2); border-color: var(--terra-br); }
+
 /* ══ Stats Grid ═══════════════════════════════════════ */
 .stats { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin-bottom: 1.25rem; }
 .stat {
