@@ -107,8 +107,15 @@ if(typeof render === 'function') render();
 if(typeof renderStats === 'function') renderStats();
 }
 
-function clearAllData() {
-if(confirm('⚠️ 警告：确定要清空所有计划、打卡记录和统计数据吗？此操作不可恢复！')){
+async function clearAllData() {
+if(confirm('⚠️ 警告：确定要清空所有计划、打卡记录和统计数据吗？此操作不可恢复！（包括云端数据）')){
+    // 1. Stop realtime sync so cloud data doesn't flood back
+    if(_unsub){_unsub();_unsub=null}
+    // 2. Delete cloud data if logged in
+    if(_db && _user){
+        try{ await _db.collection('users').doc(_user.uid).delete(); }catch(e){ console.warn('Cloud clear failed:',e); }
+    }
+    // 3. Clear local
     localStorage.clear();
     location.reload();
 }
