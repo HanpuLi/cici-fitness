@@ -243,7 +243,7 @@ const grpNames={chest:'胸',shoulder:'肩',back:'背',biceps:'二头',triceps:'�
 const distStr=Object.entries(dist).sort((a,b)=>b[1]-a[1]).map(([g,c])=>`${grpNames[g]||g}${c}组`).join('·');
 
 let logStr=recent.map(l=>{
-const exStr=l.exercises?l.exercises.map(e=>`${e.name} ${e.sets}×${e.reps}${e.unit}`).join(', '):'';
+const exStr=l.exercises?l.exercises.map(e=>`${e.name}${e.weight?' '+e.weight+'kg':''} ${e.sets}×${e.reps}${e.unit}`).join(', '):'';
 return `- ${l.date} | ${l.workout} | ${l.duration||'?'}分钟${l.rpe?' | RPE '+l.rpe+'/10':''}\n  动作：${exStr}${l.note?'\n  备注：'+l.note:''}`;
 }).join('\n');
 
@@ -260,8 +260,11 @@ const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=
 }
 function exportCSV(){
 if(!LOG.length){alert('暂无日志记录');return}
-const rows=['日期,训练类型,时长(分钟),动作数,感受,备注'];
-LOG.forEach(x=>rows.push(`${x.date},"${x.workout}",${x.duration},${x.exerciseCount},"${x.mood||''}","${(x.note||'').replace(/"/g,'""')}"`));
+const rows=['日期,训练类型,时长(分钟),动作数,RPE,感受,动作详情,备注'];
+LOG.forEach(x=>{
+const exDetail=x.exercises?x.exercises.map(e=>`${e.name}${e.weight?' '+e.weight+'kg':''} ${e.sets}x${e.reps}${e.unit}`).join('; '):'';
+rows.push(`${x.date},"${x.workout}",${x.duration},${x.exerciseCount},${x.rpe||''},"${x.mood||''}","${exDetail}","${(x.note||'').replace(/"/g,'""')}"`);
+});
 const blob=new Blob(['\uFEFF'+rows.join('\n')],{type:'text/csv;charset=utf-8'});
 const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='fitness_'+new Date().toISOString().split('T')[0]+'.csv';a.click();
 }
