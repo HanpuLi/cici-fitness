@@ -338,6 +338,17 @@ textarea:focus { border-color: var(--terra-br); }
 .wt-hint { font-size: 10px; color: var(--ink3); }
 .wt-sug { font-size: 10px; color: var(--sage); font-weight: 600; }
 
+/* ══ Swap Button ═════════════════════════════════════════ */
+.swap-btn {
+    font-size: 11px;
+    cursor: pointer;
+    opacity: .3;
+    transition: opacity .2s;
+    vertical-align: middle;
+    margin-left: 2px;
+}
+.swap-btn:hover { opacity: 1; }
+
 /* ══ Stats Grid ═══════════════════════════════════════ */
 .stats { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin-bottom: 1.25rem; }
 .stat {

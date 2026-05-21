@@ -10,6 +10,7 @@ function ls(k,v){try{localStorage.setItem(k,JSON.stringify(v));schedulePush()}ca
 const S={goal:'女性薄肌',level:'初级',days:3,dur:60,equip:['健身房全套'],focus:['均衡全身'],limits:'',plan:null,selDate:null,prog:{},adj:{},weights:{},volumeMultiplier:1.0};
 let LOG=lg(K.log)||[];
 let W_HIST=lg(K.wh)||{};
+let PR_LIST=lg('fit_pr')||[]; // {date,exercise,weight,prev}
 let _logShowAll=false;
 
 // ══ Limits ═══════════════════════════════════════════════
@@ -345,6 +346,20 @@ return S.weights[date+'-'+ei]||null;
 function setWeight(date,ei,val){
 if(!S.weights) S.weights={};
 S.weights[date+'-'+ei]=val;
+// PR check
+if(val>0){
+const sel=S.plan?.days?.find(d=>d.date===date);
+if(sel&&sel.exercises[ei]){
+const exName=sel.exercises[ei].name;
+const hist=W_HIST[exName];
+if(hist&&hist.length>0){
+const maxPrev=Math.max(...hist.map(h=>h.weight));
+if(val>maxPrev){
+showToast(`🏆 ${exName} 新纪录！${val}kg`);
+PR_LIST.unshift({date,exercise:exName,weight:val,prev:maxPrev});
+if(PR_LIST.length>50)PR_LIST=PR_LIST.slice(0,50);
+ls('fit_pr',PR_LIST);
+}}}}
 saveState();
 }
 function getLastWeight(exName){
@@ -542,7 +557,7 @@ const sugW=needsWt?suggestWeight(ex.name):null;
 const dispW=curW!==null?curW:(sugW??'');
 return`<div class="exrow${done?' done-ex':''}">
 <div style="flex:1;min-width:0">
-<div class="exname" onclick="showExDetail('${ex.name}')" style="cursor:pointer">${ex.name} <i class="ti ti-info-circle" style="font-size:11px;opacity:.4;vertical-align:middle"></i></div>
+<div class="exname" onclick="showExDetail('${ex.name}')" style="cursor:pointer">${ex.name} <i class="ti ti-info-circle" style="font-size:11px;opacity:.4;vertical-align:middle"></i>${!locked&&!ex.isWarmup&&!ex.isStretch?` <span class="swap-btn" onclick="event.stopPropagation();swapExercise('${sel.date}',${i})" title="替换动作">🔄</span>`:''}</div>
 <div class="exnote">${ex.note}</div>
 ${needsWt&&!locked?`<div class="wt-row">
 <input type="number" class="wt-input" value="${dispW||''}" placeholder="${sugW||''}" onchange="setWeight('${sel.date}',${i},+this.value)" step="0.5" min="0">
@@ -740,7 +755,12 @@ function tog(date,ei){
     S.prog[date][ei]=!S.prog[date][ei];
     saveState();render();
     
+    // Auto rest timer when checking off an exercise (not unchecking)
     const day=S.plan.days.find(d=>d.date===date);
+    if(S.prog[date][ei] && !isDone(day)){
+        startTimer(45, '组间休息');
+    }
+    
     if(day&&isDone(day)){
         const exists=LOG.find(l=>l.date===date&&l.workout===day.workoutType);
         if(!exists){
@@ -751,6 +771,25 @@ function tog(date,ei){
             }, 100);
         }
     }
+}
+
+// ══ Exercise Swap ════════════════════════════════════════
+function swapExercise(date,ei){
+const sel=S.plan.days.find(d=>d.date===date);
+if(!sel)return;
+const ex=sel.exercises[ei];
+if(ex.isWarmup||ex.isStretch){showToast('热身/拉伸不支持替换');return}
+let group=null;
+for(const[g,exs]of Object.entries(DB)){if(exs.find(e=>e.n===ex.name)){group=g;break}}
+if(!group){showToast('找不到替代动作');return}
+const used=sel.exercises.map(e=>e.name);
+const excluded=getExcluded();
+const alts=DB[group].filter(e=>e.n!==ex.name&&!used.includes(e.n)&&!excluded.has(e.n)&&S.equip.some(eq=>!e.eq||e.eq.includes(eq)));
+if(!alts.length){showToast('没有更多替代动作');return}
+const alt=alts[Math.floor(Math.random()*alts.length)];
+sel.exercises[ei]={name:alt.n,note:alt.note||'',sets:ex.sets,reps:alt.u==='秒'?30:(alt.u==='分钟'?1:ex.reps),unit:alt.u||'次',isWarmup:false,isStretch:false};
+saveState();render();
+showToast(`已替换为 ${alt.n}`);
 }
 
 function adj(date,ei,f,delta){
