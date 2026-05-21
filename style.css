@@ -311,6 +311,32 @@ textarea:focus { border-color: var(--terra-br); }
 }
 #gen-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 16px rgba(198,88,56,.3); }
 
+/* ══ Weight Input ════════════════════════════════════════ */
+.wt-row {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    margin-top: 4px;
+}
+.wt-input {
+    width: 56px;
+    padding: 3px 4px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 12px;
+    font-family: var(--font-body);
+    background: var(--bg);
+    color: var(--ink);
+    text-align: center;
+    outline: none;
+    transition: border-color .2s;
+}
+.wt-input:focus { border-color: var(--terra-br); }
+.wt-input::placeholder { color: var(--ink3); font-size: 10px; }
+.wt-unit { font-size: 11px; color: var(--ink3); font-weight: 600; }
+.wt-hint { font-size: 10px; color: var(--ink3); }
+.wt-sug { font-size: 10px; color: var(--sage); font-weight: 600; }
+
 /* ══ Stats Grid ═══════════════════════════════════════ */
 .stats { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin-bottom: 1.25rem; }
 .stat {

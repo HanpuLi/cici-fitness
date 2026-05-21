@@ -2,13 +2,14 @@
 const firebaseConfig={apiKey:"AIzaSyB12HcJxsqqmWoih3wnfpyqu9LDzEE9nXs",authDomain:"cici-fitness.firebaseapp.com",projectId:"cici-fitness",storageBucket:"cici-fitness.firebasestorage.app",messagingSenderId:"375793627351",appId:"1:375793627351:web:f2dbfd8e107206417f4092",measurementId:"G-ZHCCRWZ57P"};
 
 // ══ Storage Layer ════════════════════════════════════════
-const K={settings:'fit_s1',plan:'fit_p1',prog:'fit_pr1',log:'fit_log1',adj:'fit_adj1'};
+const K={settings:'fit_s1',plan:'fit_p1',prog:'fit_pr1',log:'fit_log1',adj:'fit_adj1',wh:'fit_wh1'};
 function lg(k){try{const v=localStorage.getItem(k);return v?JSON.parse(v):null}catch{return null}}
 function ls(k,v){try{localStorage.setItem(k,JSON.stringify(v));schedulePush()}catch{}}
 
 // ══ State ════════════════════════════════════════════════
-const S={goal:'女性薄肌',level:'初级',days:3,dur:60,equip:['健身房全套'],focus:['均衡全身'],limits:'',plan:null,selDate:null,prog:{},adj:{},volumeMultiplier:1.0};
+const S={goal:'女性薄肌',level:'初级',days:3,dur:60,equip:['健身房全套'],focus:['均衡全身'],limits:'',plan:null,selDate:null,prog:{},adj:{},weights:{},volumeMultiplier:1.0};
 let LOG=lg(K.log)||[];
+let W_HIST=lg(K.wh)||{};
 let _logShowAll=false;
 
 // ══ Limits ═══════════════════════════════════════════════
@@ -336,6 +337,32 @@ if (S.unlockedDates.includes(day.date)) return false;
 return LOG.some(l => l.date === day.date);
 }
 
+// ══ Weight Tracking ═════════════════════════════════════
+function getWeight(date,ei){
+if(!S.weights) S.weights={};
+return S.weights[date+'-'+ei]||null;
+}
+function setWeight(date,ei,val){
+if(!S.weights) S.weights={};
+S.weights[date+'-'+ei]=val;
+saveState();
+}
+function getLastWeight(exName){
+const hist=W_HIST[exName];
+if(!hist||!hist.length)return null;
+return hist[hist.length-1];
+}
+function suggestWeight(exName){
+const last=getLastWeight(exName);
+if(!last)return null;
+const w=last.weight, rpe=last.rpe||6;
+// RPE-based progression for 女性薄肌
+if(rpe<=4) return Math.round((w+2.5)*2)/2; // Too easy → +2.5kg
+if(rpe<=6) return Math.round((w+1)*2)/2;   // Moderate → +1kg
+if(rpe<=8) return w;                         // Good → same weight
+return Math.max(0.5, Math.round((w-1)*2)/2); // Hard/max → -1kg
+}
+
 // ══ Plan Generator (calendar) ═══════════════════════════
 function genPlan(isRecalibrate = false){
 const splits=SPLITS[S.days]||SPLITS[3];
@@ -472,10 +499,22 @@ ${locked?`<span class="warn-tag">已锁定</span><button class="regen-btn" style
 const done=pd[i];
 const sets=getAdj(sel.date,i,'s',ex.sets);
 const reps=getAdj(sel.date,i,'r',ex.reps);
+const needsWt=ex.unit==='次'&&!ex.isWarmup&&!ex.isStretch;
+const curW=getWeight(sel.date,i);
+const lastW=needsWt?getLastWeight(ex.name):null;
+const sugW=needsWt?suggestWeight(ex.name):null;
+const dispW=curW||(sugW??'');
 return`<div class="exrow${done?' done-ex':''}">
 <div style="flex:1;min-width:0">
 <div class="exname" onclick="showExDetail('${ex.name}')" style="cursor:pointer">${ex.name} <i class="ti ti-info-circle" style="font-size:11px;opacity:.4;vertical-align:middle"></i></div>
 <div class="exnote">${ex.note}</div>
+${needsWt&&!locked?`<div class="wt-row">
+<input type="number" class="wt-input" value="${dispW||''}" placeholder="${lastW?lastW.weight+'kg':'重量 kg'}" onchange="setWeight('${sel.date}',${i},+this.value)" step="0.5" min="0">
+<span class="wt-unit">kg</span>
+${lastW?`<span class="wt-hint">上次 ${lastW.weight}kg</span>`:''}
+${sugW&&lastW&&sugW!==lastW.weight?`<span class="wt-sug">→ 建议 ${sugW}kg</span>`:''}
+</div>`:''}
+${needsWt&&locked&&lastW?`<span class="wt-hint" style="margin-top:2px;display:block">${curW||lastW.weight}kg</span>`:''}
 ${(ex.unit==='秒'||ex.unit==='分钟') && !locked ? `<button class="act-play-btn" onclick="startTimer(${ex.unit==='分钟'?reps*60:reps}, '${ex.name}')">计时</button>` : ''}
 </div>
 ${!locked?`
@@ -619,11 +658,22 @@ function submitRPE(rpe, isSkip=false) {
             duration: day.duration,
             exerciseCount: checkedCount, // Record actual completed
             rpe: actualRpe,
-            exercises: day.exercises.map((ex,i)=>({name:ex.name,sets:getAdj(date,i,'s',ex.sets),reps:getAdj(date,i,'r',ex.reps),unit:ex.unit})),
+            exercises: day.exercises.map((ex,i)=>({name:ex.name,sets:getAdj(date,i,'s',ex.sets),reps:getAdj(date,i,'r',ex.reps),unit:ex.unit,weight:getWeight(date,i)||null})),
             mood: moods[actualRpe-1]||'💪',
             note: note
         });
         ls(K.log,LOG);
+        
+        // Save weight history per exercise
+        day.exercises.forEach((ex,i)=>{
+            const w=getWeight(date,i);
+            if(w&&w>0&&!ex.isWarmup&&!ex.isStretch&&ex.unit==='次'){
+                if(!W_HIST[ex.name])W_HIST[ex.name]=[];
+                W_HIST[ex.name].push({date,weight:w,rpe:actualRpe});
+                if(W_HIST[ex.name].length>50)W_HIST[ex.name]=W_HIST[ex.name].slice(-50);
+            }
+        });
+        ls(K.wh,W_HIST);
         
         // Re-lock: remove from unlockedDates if it was previously unlocked
         if(S.unlockedDates && S.unlockedDates.includes(date)){
