@@ -328,7 +328,9 @@ function fmtDate(ds){const d=new Date(ds+'T00:00:00');return['周日','周一','
 
 // ══ Lock check ══════════════════════════════════════════
 function isLocked(day){
-// Locked only if a completed log exists for this date
+// Locked if a completed log exists AND the date has NOT been explicitly unlocked
+if (!S.unlockedDates) S.unlockedDates = [];
+if (S.unlockedDates.includes(day.date)) return false;
 return LOG.some(l => l.date === day.date);
 }
 
@@ -462,7 +464,7 @@ h+=`<div class="wh">
 <span class="wh-title">${fmtDate(sel.date)} · ${sel.workoutType}</span>
 <span class="badge">${sel.duration}分钟</span>
 ${!locked?`<button class="regen-btn" style="margin-left:auto;font-size:10px;padding:2px 8px" onclick="startTimer(45, '组间休息')">45s</button><button class="regen-btn" style="margin-left:4px;font-size:10px;padding:2px 8px" onclick="startTimer(60, '组间休息')">60s</button>`:''}
-${locked?`<span class="warn-tag">已锁定</span>${sel.date===todayStr()?`<button class="regen-btn" style="margin-left:8px;font-size:10px;padding:2px 8px" onclick="unlockDate('${sel.date}')">解除锁定</button>`:''}`:''}
+${locked?`<span class="warn-tag">已锁定</span><button class="regen-btn" style="margin-left:8px;font-size:10px;padding:2px 8px" onclick="unlockDate('${sel.date}')">解除锁定</button>`:''}
 </div>
 <div class="exlist">${sel.exercises.map((ex,i)=>{
 const done=pd[i];
@@ -620,6 +622,11 @@ function submitRPE(rpe, isSkip=false) {
             note: note
         });
         ls(K.log,LOG);
+        
+        // Re-lock: remove from unlockedDates if it was previously unlocked
+        if(S.unlockedDates && S.unlockedDates.includes(date)){
+            S.unlockedDates = S.unlockedDates.filter(d => d !== date);
+        }
     }
     
     if(noteEl) noteEl.value = '';
@@ -635,6 +642,10 @@ function submitRPE(rpe, isSkip=false) {
 }
 
 function tog(date,ei){
+    // If date is locked, do nothing (safety guard)
+    const dayCheck = S.plan.days.find(d=>d.date===date);
+    if(dayCheck && isLocked(dayCheck)) return;
+    
     if(!S.prog[date])S.prog[date]={};
     S.prog[date][ei]=!S.prog[date][ei];
     saveState();render();
@@ -662,14 +673,12 @@ saveState();render();
 }
 
 function unlockDate(date){
-if(confirm('确定要解除锁定吗？\n您的动作勾选记录将被保留，但此日的日记和疲劳度将被重置。')){
-const logIdx = LOG.findIndex(l => l.date === date);
-if (logIdx > -1) {
-  LOG.splice(logIdx, 1);
-  ls(K.log, LOG);
-}
-saveState();render();
-if(typeof renderStats === 'function') renderStats(); // Refresh stats view
+if(confirm('确定要解除锁定吗？\n您的动作勾选记录将被保留，但此日将变为可编辑状态。')){
+    if(!S.unlockedDates) S.unlockedDates = [];
+    if(!S.unlockedDates.includes(date)) S.unlockedDates.push(date);
+    saveState();render();
+    if(typeof renderStats === 'function') renderStats();
+    showToast('已解锁 ' + fmtDate(date));
 }
 }
 
@@ -1380,6 +1389,102 @@ const EX_DETAIL = {
     steps: ['站立姿势开始，下蹲，双手撑在地面上', '双腿向后跳，呈高位平板支撑姿势', '（可选）做一个标准的俯卧撑', '双腿向前跳回深蹲姿势', '向上用力跳起，双手在头顶击掌'],
     tips: ['公认的"高强度"燃脂动作，能快速提升心率', '如果是新手，可以去掉俯卧撑，以及把双腿"跳"向后改为"走"向后以降低难度'],
     mistakes: ['在平板支撑阶段腰部严重塌陷', '落地没有缓冲，脚砸地面']
+  },
+  '全身动态热身 (开合跳)': {
+    muscles: ['全身'],
+    steps: ['双脚并拢站立，双手自然下垂', '跳起时双脚向外张开，同时双手从身体两侧上举并在头顶击掌', '再次跳起，双脚合拢，双手收回身体两侧', '保持轻快的节奏，均匀呼吸'],
+    tips: ['落地时保持膝盖微屈，前脚掌先着地，起到缓冲作用', '核心收紧，保持上半身挺直'],
+    mistakes: ['全脚掌或脚跟重重砸地', '动作过于僵硬，憋气']
+  },
+  '肩关节环绕': {
+    muscles: ['三角肌', '肩袖肌群'],
+    steps: ['站立，双臂自然下垂或微微抬起', '以肩关节为轴，缓慢向前画大圆环绕约15秒', '随后反方向向后画大圆环绕约15秒'],
+    tips: ['动作要连贯、缓慢，感受肩胛骨的活动', '幅度可以由小到大逐渐增加'],
+    mistakes: ['速度过快导致肩关节弹响', '耸肩借力']
+  },
+  '扩胸运动': {
+    muscles: ['胸大肌', '三角肌前束'],
+    steps: ['站立，双臂曲肘平抬至胸前', '随着吸气，将双臂用力向后振，扩张胸部', '呼气，收回双臂至胸前', '可以结合上下交替振臂动作'],
+    tips: ['向后振时能明显感觉到胸肌的拉伸感', '背部肩胛骨有相向挤压的感觉'],
+    mistakes: ['腰部过度反折代偿', '用力过猛拉伤韧带']
+  },
+  '徒手深蹲激活': {
+    muscles: ['股四头肌', '臀大肌'],
+    steps: ['双脚与肩同宽，脚尖微向外八', '臀部向后下方坐下，像要坐在一张椅子上', '下蹲至大腿与地面平行或略低，背部保持平直', '脚后跟发力站起，恢复站立姿势'],
+    tips: ['下蹲时膝盖的朝向要与脚尖一致', '重心应保持在脚掌偏后跟的位置'],
+    mistakes: ['膝盖严重内扣', '弯腰驼背']
+  },
+  '弓步转体': {
+    muscles: ['股四头肌', '臀大肌', '腹外斜肌'],
+    steps: ['双脚并拢站立，单脚向前迈出一大步', '下蹲至前侧大腿平行地面，后侧膝盖微触地或悬空', '双手合十伸向前方，躯干向迈出腿的一侧旋转', '转回正前方，前脚蹬地退回起始位置，换腿重复'],
+    tips: ['旋转时目光跟随双手移动，增加脊柱旋转幅度', '动作要稳定、缓慢'],
+    mistakes: ['前膝超过脚尖过多导致脚跟抬起', '身体摇晃失去平衡']
+  },
+  '高抬腿走': {
+    muscles: ['髂腰肌', '臀大肌', '下肢肌群'],
+    steps: ['保持直立，双手可以叉腰或在身前', '抬起一侧膝盖，尽量贴近胸部', '双手可抱住膝盖向上拉伸一秒，然后放下', '交替另一侧腿，可以原地进行或行进间进行'],
+    tips: ['核心收紧，支撑腿保持伸直', '抬腿时呼气，放下时吸气'],
+    mistakes: ['上半身过度后仰去迎合膝盖']
+  },
+  '登山者': {
+    muscles: ['核心肌群', '髋屈肌'],
+    steps: ['呈标准俯卧撑姿势起始，双手略宽于肩，身体呈一条直线', '收紧腹部，将一侧膝盖迅速提至胸下', '快速将腿收回原位，同时另一侧膝盖提至胸下', '左右交替，保持较快的节奏连续进行'],
+    tips: ['想象你在原地水平爬山，尽量保持臀部高度不变', '目光看向双手前方一点的地面，保持颈部自然'],
+    mistakes: ['臀部撅得过高', '腰部严重塌陷受力']
+  },
+  '婴儿式背部拉伸': {
+    muscles: ['背阔肌', '竖脊肌'],
+    steps: ['双膝跪地，臀部向后坐在脚后跟上', '上半身向前趴下，额头触地', '双臂向前尽力伸展，手掌贴地', '保持姿势，深长地呼吸，每次呼气时感受背部放松'],
+    tips: ['如果额头碰不到地，可以垫一个瑜伽砖或毛巾', '想象手指在向前爬行，拉长整个背部'],
+    mistakes: ['臀部抬起离开了脚后跟过多']
+  },
+  '胸部静态拉伸': {
+    muscles: ['胸大肌', '三角肌前束'],
+    steps: ['找一面墙或门框，侧身站立', '将一侧小臂和手掌平贴在墙面上，大臂与地面平行（呈90度）', '身体缓慢向反方向（向外）旋转，直到胸部有明显的拉伸感', '保持30秒，然后换另一侧'],
+    tips: ['可以通过调整手肘的高度（偏高或偏低）来拉伸胸大肌的不同纤维', '保持均匀呼吸，不要过度疼痛'],
+    mistakes: ['身体过度前倾而不是旋转', '耸肩']
+  },
+  '肩后侧拉伸': {
+    muscles: ['三角肌后束', '菱形肌'],
+    steps: ['站立或坐姿，抬起一侧手臂使其横过胸前，与地面平行', '用另一只手钩住该手臂的手肘后侧', '轻轻向胸口方向施加压力，感受肩膀后侧的拉伸', '保持30秒后换边'],
+    tips: ['被拉伸的手臂尽量保持伸直但不要死锁关节', '拉伸时保持肩膀下沉，不要耸起'],
+    mistakes: ['身体跟着手臂一起旋转，失去了相对拉伸力']
+  },
+  '三头肌拉伸': {
+    muscles: ['肱三头肌'],
+    steps: ['站立或坐立，挺胸收腹', '将一侧手臂向上举起，贴近耳朵，然后弯曲手肘，手掌去触摸后背肩胛骨中间', '用另一只手握住弯曲的手肘，向后、向内轻轻按压', '感受大臂后侧的拉伸，保持30秒后换边'],
+    tips: ['头不要低，可以微微向后靠在手臂上，增加拉伸感'],
+    mistakes: ['过度弓背', '低头驼背']
+  },
+  '股四头肌拉伸': {
+    muscles: ['股四头肌', '髂腰肌'],
+    steps: ['单腿站立，可以单手扶墙保持平衡', '另一只手抓住同侧脚的脚踝，向臀部方向拉', '将脚跟贴近臀部，同时微微将髋部向前顶', '保持30秒后换腿'],
+    tips: ['拉伸腿的膝盖应尽量与支撑腿靠拢，不要向外打开', '身体直立，不要为了拉脚踝而过度弯腰'],
+    mistakes: ['腰椎过度前凸（骨盆前倾）去代偿伸髋']
+  },
+  '腘绳肌/体前屈': {
+    muscles: ['腘绳肌', '小腿三头肌'],
+    steps: ['站立，双脚并拢或与髋同宽', '保持双腿伸直（膝盖不锁死），从髋部开始折叠上半身', '双手顺着双腿慢慢向下滑，尽量去触摸脚趾或地面', '在最底端放松头部和颈椎，保持自然呼吸30秒'],
+    tips: ['重点是骨盆的翻转（屁股向天空翻），而不是背部弯曲', '感觉大腿后侧有强烈拉伸感即可，不要求必须摸到地'],
+    mistakes: ['膝盖完全锁死反曲', '强行弯腰低头去够地面']
+  },
+  '臀大肌拉伸': {
+    muscles: ['臀大肌', '梨状肌'],
+    steps: ['仰卧在瑜伽垫上，双膝弯曲，脚踩地', '将一侧脚踝架在另一侧腿的膝盖正下方（呈阿拉伯数字4的形状）', '双手抱住支撑腿的大腿后侧，缓慢向胸口方向拉', '感受架起腿一侧的臀部深层拉伸，保持30秒换边'],
+    tips: ['尽量让肩膀和头部放松贴在地面上', '如果抱不到大腿，可以用毛巾套住大腿借力'],
+    mistakes: ['过度抬头导致脖子酸痛']
+  },
+  '髂胫束拉伸': {
+    muscles: ['髂胫束', '阔筋膜张肌'],
+    steps: ['站立姿势，将要拉伸的一侧腿从另一条腿的后方交叉过去', '保持双脚踩实地面', '将一侧手臂上举，身体向没有拉伸腿的那一侧侧倾', '感受大腿外侧到腰部的拉伸感，保持30秒换边'],
+    tips: ['重心尽量放在后方那条腿的脚外侧', '可以通过扶墙增加稳定性'],
+    mistakes: ['身体前倾，失去了侧面的拉伸力']
+  },
+  '腹部拉伸 (眼镜蛇式)': {
+    muscles: ['腹直肌'],
+    steps: ['俯卧在垫子上，双腿并拢伸直，脚背贴地', '双手放在胸部两侧的地板上，手指朝前', '吸气，双臂慢慢用力推起上半身，直到双臂伸直或微屈', '头微仰看向天花板，骨盆尽量保持贴在地面'],
+    tips: ['收紧臀部可以有效保护下背部', '如果腰椎感觉压迫，可以将手肘撑地（人面狮身式）代替'],
+    mistakes: ['耸肩把头缩在肩膀里', '骨盆过度离开地面']
   }
 };
 
@@ -1389,7 +1494,7 @@ const info=EX_DETAIL[name];
 let dbEx=null;
 for(const exs of Object.values(DB)){const f=exs.find(e=>e.n===name);if(f){dbEx=f;break}}
 const muscles=info?.muscles||(dbEx?.muscle?.map(m=>m)||['—']);
-const steps=info?.steps||['详见动作说明'];
+const steps=info?.steps||[dbEx?.note || '暂无详细步骤'];
 const tips=info?.tips||[];
 const mistakes=info?.mistakes||[];
 
