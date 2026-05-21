@@ -28,13 +28,13 @@ function updateThemeBtn(){
 // ══ State Persistence ════════════════════════════════════
 function saveState(){
 ls(K.settings,{goal:S.goal,level:S.level,days:S.days,dur:S.dur,equip:S.equip,focus:S.focus,limits:S.limits,volumeMultiplier:S.volumeMultiplier});
-if(S.plan)ls(K.plan,{plan:S.plan,selDate:S.selDate,prog:S.prog,adj:S.adj,unlockedDates:S.unlockedDates});
+if(S.plan)ls(K.plan,{plan:S.plan,selDate:S.selDate,prog:S.prog,adj:S.adj,weights:S.weights,unlockedDates:S.unlockedDates});
 }
 function loadState(){
 const s=lg(K.settings);
 if(s)Object.assign(S,s);
 const p=lg(K.plan);
-if(p&&p.plan&&p.plan.days){S.plan=p.plan;S.selDate=p.selDate||todayStr();S.prog=p.prog||{};S.adj=p.adj||{};S.unlockedDates=p.unlockedDates||[];}
+if(p&&p.plan&&p.plan.days){S.plan=p.plan;S.selDate=p.selDate||todayStr();S.prog=p.prog||{};S.adj=p.adj||{};S.weights=p.weights||{};S.unlockedDates=p.unlockedDates||[];}
 else{S.plan=null;}
 LOG=lg(K.log)||[];
 applySettingsToUI();
