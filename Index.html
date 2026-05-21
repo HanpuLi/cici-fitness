@@ -125,6 +125,14 @@
                 </div>
                 <p class="sec">限制或注意</p>
                 <textarea id="limits" placeholder="例如：膝盖不适、肩伤、避免跳跃..."></textarea>
+                <p class="sec">组间休息时长</p>
+                <div class="chips" id="g-rest">
+                    <button class="chip" data-v="30">30秒</button>
+                    <button class="chip on" data-v="45">45秒</button>
+                    <button class="chip" data-v="60">60秒</button>
+                    <button class="chip" data-v="90">90秒</button>
+                    <button class="chip" data-v="0">关闭</button>
+                </div>
                 <div style="display:flex;gap:8px">
                     <button id="gen-btn" onclick="genPlan()" style="flex:1">生成全新计划</button>
                     <button id="recal-btn" onclick="recalibratePlan()" style="flex:1;display:none;background:var(--surface2);color:var(--ink);border:1px solid var(--border)">重排剩余天数</button>

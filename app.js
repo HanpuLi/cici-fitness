@@ -27,7 +27,7 @@ function updateThemeBtn(){
 
 // ══ State Persistence ════════════════════════════════════
 function saveState(){
-ls(K.settings,{goal:S.goal,level:S.level,days:S.days,dur:S.dur,equip:S.equip,focus:S.focus,limits:S.limits,volumeMultiplier:S.volumeMultiplier});
+ls(K.settings,{goal:S.goal,level:S.level,days:S.days,dur:S.dur,equip:S.equip,focus:S.focus,limits:S.limits,volumeMultiplier:S.volumeMultiplier,restDur:S.restDur});
 if(S.plan)ls(K.plan,{plan:S.plan,selDate:S.selDate,prog:S.prog,adj:S.adj,weights:S.weights,unlockedDates:S.unlockedDates});
 }
 function loadState(){
@@ -49,6 +49,7 @@ document.getElementById('v-dur').textContent=S.dur+'分钟';
 document.querySelectorAll('#g-equip .chip').forEach(b=>b.classList.toggle('on',S.equip.includes(b.dataset.v)));
 document.querySelectorAll('#g-focus .chip').forEach(b=>b.classList.toggle('on',S.focus.includes(b.dataset.v)));
 document.getElementById('limits').value=S.limits||'';
+document.querySelectorAll('#g-rest .chip').forEach(b=>b.classList.toggle('on',+b.dataset.v===(S.restDur??45)));
 
 const rBtn = document.getElementById('recal-btn');
 if(rBtn) rBtn.style.display = S.plan ? 'block' : 'none';
@@ -441,6 +442,14 @@ saveState();
 }
 single('g-level','level');
 multi('g-equip','equip');multi('g-focus','focus');
+(function(){
+const el=document.getElementById('g-rest');if(!el)return;
+el.addEventListener('click',e=>{
+const b=e.target.closest('.chip');if(!b)return;
+document.querySelectorAll('#g-rest .chip').forEach(c=>c.classList.remove('on'));
+b.classList.add('on');S.restDur=+b.dataset.v;saveState();
+});
+})();
 document.getElementById('sl-days').addEventListener('input',e=>{S.days=+e.target.value;document.getElementById('v-days').textContent=S.days+'天';saveState()});
 document.getElementById('sl-dur').addEventListener('input',e=>{S.dur=+e.target.value;document.getElementById('v-dur').textContent=S.dur+'分钟';saveState()});
 document.getElementById('limits').addEventListener('input',e=>{S.limits=e.target.value;saveState()});
