@@ -22,6 +22,7 @@
     --radius-sm: 8px;
     --font-display: 'EB Garamond', 'Noto Serif CJK SC', 'Songti SC', Georgia, serif;
     --font-body: 'EB Garamond', 'Noto Serif CJK SC', 'Songti SC', Georgia, serif;
+    --font-mono: 'SF Mono', 'Menlo', 'Consolas', monospace;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -788,7 +789,7 @@ textarea:focus { border-color: var(--terra-br); }
 .rpe-lbl { font-size: 10px; font-weight: 500; opacity: .8; line-height: 1.1; }
 
 .rpe-low { background: var(--sage-bg); color: var(--sage); border: 1px solid var(--sage); }
-.rpe-mid { background: #fdf5e6; color: #d4a373; border: 1px solid #faedcd; }
+.rpe-mid { background: var(--amber-bg); color: var(--amber); border: 1px solid rgba(166,101,44,.25); }
 .rpe-high { background: var(--terra-bg); color: var(--terra); border: 1px solid var(--terra-br); }
 .rpe-max { background: var(--terra); color: #fff; }
 
