@@ -264,6 +264,7 @@ _toastTimer=setTimeout(()=>el.classList.remove('show'),3500);
 // ══ Firebase Auth & Cloud Sync ═══════════════════════════
 const CLOUD_KEYS=Object.values(K);
 let _db=null,_user=null,_pushTimer=null,_pushing=false,_unsub=null;
+let _localDirty=false; // When true, local changes are pending push — block cloud-to-local sync
 
 function initFirebase(){
 try{
@@ -290,7 +291,7 @@ function renderAuthBtn(){
 const el=document.getElementById('auth-btn');if(!el)return;
 if(_user){
 const name=_user.displayName?_user.displayName.split(' ')[0]:'已登录';
-const photo=_user.photoURL?`<img src="${_user.photoURL}" class="auth-avatar" alt="">`:' 👤';
+const photo=_user.photoURL?`<img src="${_user.photoURL}" class="auth-avatar" alt="">`:'👤';
 el.innerHTML=`<div class="auth-pill-left">${photo}<span style="font-size:12px">${name}</span></div><div class="auth-pill-sync" id="sync-pill">✓</div><button class="auth-pill-signout" onclick="signOutUser()">退出</button>`;
 }else{
 el.innerHTML=`<button class="auth-sign-in" onclick="signInGoogle()">🔐 登录同步</button>`;
@@ -302,6 +303,11 @@ if(!_db||!_user)return;
 if(_unsub)_unsub();
 _unsub=_db.collection('users').doc(_user.uid).onSnapshot(doc=>{
 if(!doc.exists)return;
+// If local changes are pending push, do NOT let cloud overwrite them
+if(_localDirty){
+    console.log('[sync] skipped cloud→local: local changes pending push');
+    return;
+}
 let changed=false;
 Object.entries(doc.data()).forEach(([k,v])=>{
 const lv=localStorage.getItem(k);
@@ -310,12 +316,13 @@ if(lv!==cv){try{localStorage.setItem(k,cv);changed=true}catch{}}
 });
 if(changed){loadState();renderLog();showToast('☁ 已从云端同步')}
 },e=>console.warn('Sync error:',e));
-// Initial push
+// Initial push — send local data up first so cloud has latest
 setTimeout(()=>pushToCloud(),1000);
 }
 
 function schedulePush(){
 if(!_db||!_user)return;
+_localDirty=true; // Block cloud-to-local until push completes
 clearTimeout(_pushTimer);
 _pushTimer=setTimeout(pushToCloud,2000);
 }
@@ -327,9 +334,10 @@ const data={};
 CLOUD_KEYS.forEach(k=>{const v=localStorage.getItem(k);if(v!==null){try{data[k]=JSON.parse(v)}catch{data[k]=v}}});
 try{
 await _db.collection('users').doc(_user.uid).set(data,{merge:true});
+_localDirty=false; // Push succeeded — safe to accept cloud updates again
 const pill=document.getElementById('sync-pill');
 if(pill){pill.textContent='✓';pill.className='auth-pill-sync ok'}
-}catch(e){console.warn('Push failed:',e)}
+}catch(e){console.warn('Push failed:',e);_localDirty=false}
 _pushing=false;
 }
 
