@@ -539,7 +539,7 @@ const needsWt=ex.unit==='次'&&!ex.isWarmup&&!ex.isStretch;
 const curW=getWeight(sel.date,i);
 const lastW=needsWt?getLastWeight(ex.name):null;
 const sugW=needsWt?suggestWeight(ex.name):null;
-const dispW=curW||(sugW??'');
+const dispW=curW!==null?curW:(sugW??'');
 return`<div class="exrow${done?' done-ex':''}">
 <div style="flex:1;min-width:0">
 <div class="exname" onclick="showExDetail('${ex.name}')" style="cursor:pointer">${ex.name} <i class="ti ti-info-circle" style="font-size:11px;opacity:.4;vertical-align:middle"></i></div>
@@ -685,6 +685,8 @@ function submitRPE(rpe, isSkip=false) {
             S.volumeMultiplier = Math.max(0.5, (S.volumeMultiplier || 1.0) * 0.9);
             showToast(`未全部完成，已调整后续训练量`);
         } else {
+            // Recovery: gradually restore volume if consistently completing all exercises
+            if((S.volumeMultiplier||1.0) < 1.0) S.volumeMultiplier = Math.min(1.0, (S.volumeMultiplier||1.0) * 1.05);
             showToast(isSkip ? `训练完成。` : `训练完成。RPE ${actualRpe}/10`);
         }
 
