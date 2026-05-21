@@ -328,7 +328,8 @@ _pushing=false;
 
 // ══ UI Bindings ══════════════════════════════════════════
 function single(id,key){
-document.getElementById(id).addEventListener('click',e=>{
+const el=document.getElementById(id);if(!el)return;
+el.addEventListener('click',e=>{
 const b=e.target.closest('.chip');if(!b)return;
 document.querySelectorAll('#'+id+' .chip').forEach(c=>c.classList.remove('on'));
 b.classList.add('on');S[key]=b.dataset.v;saveState();
@@ -336,7 +337,8 @@ const dot=document.getElementById('saved-dot');dot.classList.add('show');setTime
 });
 }
 function multi(id,key){
-document.getElementById(id).addEventListener('click',e=>{
+const el=document.getElementById(id);if(!el)return;
+el.addEventListener('click',e=>{
 const b=e.target.closest('.chip');if(!b)return;
 b.classList.toggle('on');
 const v=b.dataset.v;
@@ -344,7 +346,7 @@ S[key]=S[key].includes(v)?S[key].filter(x=>x!==v):[...S[key],v];
 saveState();
 });
 }
-single('g-goal','goal');single('g-level','level');
+single('g-level','level');
 multi('g-equip','equip');multi('g-focus','focus');
 document.getElementById('sl-days').addEventListener('input',e=>{S.days=+e.target.value;document.getElementById('v-days').textContent=S.days+'天';saveState()});
 document.getElementById('sl-dur').addEventListener('input',e=>{S.dur=+e.target.value;document.getElementById('v-dur').textContent=S.dur+'分钟';saveState()});
