@@ -352,11 +352,47 @@ const hist=W_HIST[exName];
 if(!hist||!hist.length)return null;
 return hist[hist.length-1];
 }
+
+// Default weight recommendation based on exercise type + difficulty level
+function getDefaultWeight(exName){
+const n=exName;
+// Equipment type detection
+const isBarbell=n.includes('杠铃')||n.includes('硬拉')||n.includes('深蹲杠');
+const isDumbbell=n.includes('哑铃');
+const isCable=n.includes('绳索')||n.includes('缆绳')||n.includes('下拉')||n.includes('夹胸');
+const isSmith=n.includes('史密斯');
+// Muscle group detection
+const isLeg=n.includes('腿')||n.includes('臀')||n.includes('股')||n.includes('深蹲')||n.includes('硬拉')||n.includes('腿举');
+const isBack=n.includes('划船')||n.includes('引体')||n.includes('下拉')||n.includes('背');
+const isChest=n.includes('卧推')||n.includes('飞鸟')||n.includes('夹胸')||n.includes('推胸');
+const isShoulder=n.includes('肩')||n.includes('推举')||n.includes('侧平举')||n.includes('前平举');
+const isArm=n.includes('弯举')||n.includes('二头')||n.includes('三头')||n.includes('臂屈伸');
+// Base weight by equipment and level
+const bases={
+'初级':{barbell:15,dumbbell:2.5,cable:5,smith:15,other:4},
+'中级':{barbell:25,dumbbell:6,cable:10,smith:25,other:8},
+'高级':{barbell:40,dumbbell:10,cable:15,smith:40,other:12}
+};
+const b=bases[S.level]||bases['初级'];
+let w;
+if(isBarbell)w=b.barbell;
+else if(isDumbbell)w=b.dumbbell;
+else if(isCable)w=b.cable;
+else if(isSmith)w=b.smith;
+else w=b.other;
+// Adjust by muscle group size
+if(isLeg)w*=1.4;
+else if(isBack||isChest)w*=1.0;
+else if(isShoulder)w*=0.7;
+else if(isArm)w*=0.6;
+return Math.round(w*2)/2;
+}
+
 function suggestWeight(exName){
 const last=getLastWeight(exName);
-if(!last)return null;
+if(!last) return getDefaultWeight(exName); // No history → use level-based default
 const w=last.weight, rpe=last.rpe||6;
-// RPE-based progression for 女性薄肌
+// RPE-based progression
 if(rpe<=4) return Math.round((w+2.5)*2)/2; // Too easy → +2.5kg
 if(rpe<=6) return Math.round((w+1)*2)/2;   // Moderate → +1kg
 if(rpe<=8) return w;                         // Good → same weight
@@ -509,10 +545,10 @@ return`<div class="exrow${done?' done-ex':''}">
 <div class="exname" onclick="showExDetail('${ex.name}')" style="cursor:pointer">${ex.name} <i class="ti ti-info-circle" style="font-size:11px;opacity:.4;vertical-align:middle"></i></div>
 <div class="exnote">${ex.note}</div>
 ${needsWt&&!locked?`<div class="wt-row">
-<input type="number" class="wt-input" value="${dispW||''}" placeholder="${lastW?lastW.weight+'kg':'重量 kg'}" onchange="setWeight('${sel.date}',${i},+this.value)" step="0.5" min="0">
+<input type="number" class="wt-input" value="${dispW||''}" placeholder="${sugW||''}" onchange="setWeight('${sel.date}',${i},+this.value)" step="0.5" min="0">
 <span class="wt-unit">kg</span>
-${lastW?`<span class="wt-hint">上次 ${lastW.weight}kg</span>`:''}
-${sugW&&lastW&&sugW!==lastW.weight?`<span class="wt-sug">→ 建议 ${sugW}kg</span>`:''}
+${lastW?`<span class="wt-hint">上次 ${lastW.weight}kg</span>`:`<span class="wt-sug">建议 ${sugW||'?'}kg</span>`}
+${sugW&&lastW&&sugW!==lastW.weight?`<span class="wt-sug">→ ${sugW}kg</span>`:''}
 </div>`:''}
 ${needsWt&&locked&&lastW?`<span class="wt-hint" style="margin-top:2px;display:block">${curW||lastW.weight}kg</span>`:''}
 ${(ex.unit==='秒'||ex.unit==='分钟') && !locked ? `<button class="act-play-btn" onclick="startTimer(${ex.unit==='分钟'?reps*60:reps}, '${ex.name}')">计时</button>` : ''}
@@ -647,7 +683,7 @@ function submitRPE(rpe, isSkip=false) {
         const totalEx = day.exercises.length;
         if (checkedCount < totalEx) {
             S.volumeMultiplier = Math.max(0.5, (S.volumeMultiplier || 1.0) * 0.9);
-            showToast(`未全部完成。已自动微调下次计划的训练容量`);
+            showToast(`未全部完成，已调整后续训练量`);
         } else {
             showToast(isSkip ? `训练完成。` : `训练完成。RPE ${actualRpe}/10`);
         }
@@ -685,7 +721,7 @@ function submitRPE(rpe, isSkip=false) {
     
     // Reset modal text back to default for next time
     document.getElementById('rpe-modal-title').innerText = '今日疲劳度评估';
-    document.getElementById('rpe-modal-desc').innerText = '打分将影响后续 AI 给出的重量调整建议';
+    document.getElementById('rpe-modal-desc').innerText = '选择最接近你今天训练感受的分数';
     
     closeRpeModal();
     saveState();render();
