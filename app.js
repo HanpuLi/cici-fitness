@@ -143,6 +143,7 @@ if(confirm('⚠️ 警告：确定要清空所有计划、打卡记录和统计�
     // 3. Clear local (including weight history)
     localStorage.clear();
     W_HIST={};
+    PR_LIST=[];
     location.reload();
 }
 }
@@ -229,6 +230,54 @@ ${distEntries.length?`
       <div class="dist-bar-wrap"><div class="dist-bar-fill" style="width:${Math.round(c/maxDist*100)}%"></div></div>
       <span class="dist-val">${c}</span>
     </div>`).join('')}
+</div>`:''}
+${(()=>{
+const wtEx=Object.entries(W_HIST).filter(([,h])=>h.length>=2).sort((a,b)=>b[1].length-a[1].length).slice(0,6);
+if(!wtEx.length)return '';
+return `<div class="panel">
+  <p class="panel-title">重量进步</p>
+  ${wtEx.map(([name,hist])=>{
+    const max=Math.max(...hist.map(h=>h.weight));
+    const min=Math.min(...hist.map(h=>h.weight));
+    const range=max-min||1;
+    const first=hist[0].weight;
+    const last=hist[hist.length-1].weight;
+    const delta=last-first;
+    const recent=hist.slice(-12);
+    return `<div style="margin-bottom:14px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+        <span style="font-size:12px;font-weight:600">${name}</span>
+        <span style="font-size:11px;font-weight:600;color:${delta>0?'var(--sage)':delta<0?'var(--terra)':'var(--ink3)'}">${delta>0?'+':''}${delta}kg</span>
+      </div>
+      <div style="display:flex;gap:2px;height:28px;align-items:flex-end">
+        ${recent.map(h=>{
+          const pct=range>0?((h.weight-min)/range*70+30):50;
+          return `<div style="flex:1;background:var(--terra);border-radius:2px 2px 0 0;height:${pct}%;opacity:.7" title="${h.date}: ${h.weight}kg"></div>`;
+        }).join('')}
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:9px;color:var(--ink3);margin-top:2px">
+        <span>${recent[0]?.date?.slice(5)||''}</span>
+        <span>${last}kg</span>
+      </div>
+    </div>`;
+  }).join('')}
+</div>`;
+})()}
+${PR_LIST.length?`
+<div class="panel">
+  <p class="panel-title">\ud83c\udfc6 个人纪录</p>
+  ${PR_LIST.slice(0,10).map(pr=>`
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border);font-size:12px">
+      <div>
+        <span style="font-weight:600">${pr.exercise}</span>
+        <span style="color:var(--ink3);margin-left:6px">${pr.date}</span>
+      </div>
+      <div>
+        <span style="color:var(--ink3);text-decoration:line-through;margin-right:4px">${pr.prev}kg</span>
+        <span style="font-weight:700;color:var(--terra)">${pr.weight}kg</span>
+      </div>
+    </div>
+  `).join('')}
 </div>`:''}
 `;
 }
