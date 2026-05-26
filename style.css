@@ -20,9 +20,9 @@
     --blue-bg: rgba(75,107,138,.08);
     --radius: 12px;
     --radius-sm: 8px;
-    --font-display: 'EB Garamond', 'Noto Serif CJK SC', 'Songti SC', Georgia, serif;
-    --font-body: 'EB Garamond', 'Noto Serif CJK SC', 'Songti SC', Georgia, serif;
-    --font-mono: 'SF Mono', 'Menlo', 'Consolas', monospace;
+    --font-display: 'ZCOOL XiaoWei', 'Cormorant Garamond', 'Noto Serif SC', 'Songti SC', Georgia, serif;
+    --font-body: 'Noto Serif SC', 'Outfit', system-ui, -apple-system, sans-serif;
+    --font-mono: 'DM Mono', 'SF Mono', 'Menlo', 'Consolas', monospace;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -145,10 +145,18 @@ body::after {
     border-radius: 50%;
     display: flex; align-items: center; justify-content: center;
     font-family: var(--font-display);
-    font-size: 20px; font-weight: 700;
+    font-size: 22px; font-weight: 700;
     box-shadow: 2px 2px 0 rgba(0,0,0,.12);
     transform: rotate(-6deg);
+    transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.3s, background-color 0.3s;
+    cursor: pointer;
+    user-select: none;
     flex-shrink: 0;
+}
+.masthead-seal:hover {
+    transform: scale(1.12) rotate(6deg);
+    background: var(--terra);
+    box-shadow: 0 4px 10px rgba(198,88,56,.3);
 }
 .masthead h1 {
     font-family: var(--font-display);
