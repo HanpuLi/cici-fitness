@@ -909,3 +909,129 @@ textarea:focus { border-color: var(--terra-br); }
     margin-top: 6px;
 }
 .act-play-btn:hover { background: var(--terra); color: #fff; }
+
+/* ══ Calendar Navigation ══════════════════════════════════ */
+.cal-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+    gap: 8px;
+}
+.cal-nav-btn {
+    display: flex; align-items: center; gap: 4px;
+    padding: 5px 12px;
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    background: transparent;
+    color: var(--ink2);
+    font-size: 11px; font-weight: 500;
+    font-family: var(--font-body);
+    cursor: pointer;
+    transition: all .18s;
+    white-space: nowrap;
+}
+.cal-nav-btn:hover { background: var(--surface2); color: var(--ink); border-color: var(--border2); }
+.cal-nav-btn:disabled { opacity: .3; cursor: default; pointer-events: none; }
+.cal-nav-btn.today-btn {
+    background: var(--terra-bg);
+    border-color: var(--terra-br);
+    color: var(--terra);
+    font-weight: 600;
+}
+.cal-nav-btn.today-btn:hover { background: var(--terra); color: #fff; }
+.cal-nav-label {
+    font-family: var(--font-display);
+    font-size: 13px; font-weight: 700;
+    color: var(--ink);
+    text-align: center;
+    flex: 1;
+    white-space: nowrap;
+}
+
+/* Historical day card in calendar */
+.dc.historical {
+    background: var(--blue-bg);
+    border-color: rgba(75,107,138,.2);
+    border-style: solid;
+}
+.dc.historical .dn { color: var(--blue); }
+.dc.historical .dt { color: var(--blue); font-size: 9px; }
+.dc.no-data {
+    background: transparent;
+    border-style: dashed;
+    opacity: .35;
+    cursor: default;
+}
+
+/* ══ Clickable Heatmap ════════════════════════════════════ */
+.heat-cell.heat-on {
+    cursor: pointer;
+    transition: background .2s, transform .15s, box-shadow .15s;
+}
+.heat-cell.heat-on:hover {
+    transform: scale(1.35);
+    box-shadow: 0 2px 8px rgba(62,125,82,.3);
+    z-index: 2;
+    position: relative;
+}
+
+/* ══ History Detail Modal ═════════════════════════════════ */
+.hist-detail-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+.hist-detail-date {
+    font-family: var(--font-display);
+    font-size: 18px; font-weight: 800;
+    color: var(--ink);
+}
+.hist-detail-meta {
+    display: flex; gap: 8px; flex-wrap: wrap;
+    margin-bottom: 14px;
+}
+.hist-detail-chip {
+    font-size: 11px; padding: 3px 10px;
+    border-radius: 10px;
+    font-weight: 600;
+    border: 1px solid;
+}
+.hist-detail-chip.type { background: var(--terra-bg); color: var(--terra); border-color: var(--terra-br); }
+.hist-detail-chip.dur { background: var(--blue-bg); color: var(--blue); border-color: rgba(75,107,138,.25); }
+.hist-detail-chip.rpe { background: var(--amber-bg); color: var(--amber); border-color: rgba(166,101,44,.25); }
+.hist-detail-chip.mood { background: var(--sage-bg); color: var(--sage); border-color: var(--sage-br); }
+.hist-detail-exercises {
+    display: flex; flex-direction: column; gap: 0;
+}
+.hist-ex-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+}
+.hist-ex-row:last-child { border-bottom: none; }
+.hist-ex-name { font-weight: 600; color: var(--ink); }
+.hist-ex-detail {
+    font-size: 11px; color: var(--ink3);
+    display: flex; align-items: center; gap: 8px;
+}
+.hist-ex-weight {
+    font-weight: 700; color: var(--terra);
+    font-family: var(--font-display);
+}
+.hist-note {
+    margin-top: 14px; padding: 10px 12px;
+    background: var(--surface2);
+    border-radius: var(--radius-sm);
+    font-size: 12px; color: var(--ink2);
+    font-style: italic; line-height: 1.6;
+    border-left: 3px solid var(--amber);
+}
+.hist-empty {
+    text-align: center; padding: 2rem 1rem;
+    color: var(--ink3); font-size: 13px;
+}

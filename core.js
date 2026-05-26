@@ -7,17 +7,18 @@ function lg(k){try{const v=localStorage.getItem(k);return v?JSON.parse(v):null}c
 function ls(k,v){try{localStorage.setItem(k,JSON.stringify(v));schedulePush()}catch{}}
 
 // ══ State ════════════════════════════════════════════════
-const S={goal:'女性薄肌',level:'初级',days:3,dur:60,equip:['健身房全套'],focus:['均衡全身'],limits:'',plan:null,selDate:null,prog:{},adj:{},weights:{},volumeMultiplier:1.0,restDur:45};
+const S={goal:'女性薄肌',level:'初级',days:3,dur:60,equip:['健身房全套'],focus:['均衡全身'],limits:'',plan:null,selDate:null,prog:{},adj:{},weights:{},volumeMultiplier:1.0,restDur:45,swimLevel:'入门'};
 let LOG=lg(K.log)||[];
 let W_HIST=lg(K.wh)||{};
 let PR_LIST=lg('fit_pr')||[]; // {date,exercise,weight,prev}
 let _logShowAll=false;
+let _calWeekOffset=0;
 
 // ══ Limits ═══════════════════════════════════════════════
 const LIMIT_RULES=[
 {kw:['膝','膝盖','膝关节'],exclude:['杠铃深蹲','史密斯深蹲','腿举','哑铃弓步蹲','跳蹲','跳绳','开合跳','壶铃摆动']},
-{kw:['肩','肩膀','肩关节'],exclude:['杠铃推举','哑铃肩推','侧平举','直立划船','双杠臂屈伸']},
-{kw:['腰','腰椎','腰背'],exclude:['传统硬拉','罗马尼亚硬拉','俯身划船','早安式体前屈']},
+{kw:['肩','肩膀','肩关节'],exclude:['杠铃推举','哑铃肩推','侧平举','直立划船','双杠臂屈伸','自由泳划臂+侧头呼吸','自由泳完整配合']},
+{kw:['腰','腰椎','腰背'],exclude:['传统硬拉','罗马尼亚硬拉','俯身划船','早安式体前屈','壶铃摆动']},
 {kw:['颈','颈椎'],exclude:['高位下拉','杠铃推举']},
 {kw:['跳','跳跃'],exclude:['跳绳','开合跳','跳蹲','波比跳']},
 {kw:['手腕','腕'],exclude:['杠铃卧推','杠铃弯举','俯卧撑','腹轮']},
@@ -49,7 +50,7 @@ shoulder:[
 {n:'史密斯肩推',eq:['健身房全套'],muscle:['前束','中束'],diff:1,note:'固定轨迹，适合大重量冲刺'},
 {n:'侧平举',eq:['哑铃','健身房全套'],muscle:['中束'],diff:1,note:'小拇指略高于大拇指，肘微弯'},
 {n:'坐姿侧平举机',eq:['健身房全套'],muscle:['中束'],diff:1,note:'小臂固定在挡板上，侧抬起'},
-{n:'绳索侧平举',eq:['健身房全套'],muscle:['中束'],diff:1,note:'单臂交替，保持张力'},
+{n:'绳索侧平举',eq:['健身房全套'],muscle:['中束'],diff:1,note:'单臂交替，保持张力',bi:true},
 {n:'哑铃前平举',eq:['哑铃','健身房全套'],muscle:['前束'],diff:1,note:'双手交替或同时向前平举'},
 {n:'绳索前平举',eq:['健身房全套'],muscle:['前束'],diff:1,note:'背对绳索，从胯部向前拉起'},
 {n:'杠铃直立划船',eq:['健身房全套'],muscle:['中束','斜方肌'],diff:2,note:'宽握，手肘向上提拉至胸口'},
@@ -64,7 +65,8 @@ back:[
 {n:'坐姿划船',eq:['健身房全套','弹力带'],muscle:['中背','菱形'],diff:1,note:'肘贴身后拉，挤压肩胛骨'},
 {n:'T把划船',eq:['健身房全套'],muscle:['中背','背阔'],diff:2,note:'双脚跨立，背部保持平直'},
 {n:'杠铃斜板划船',eq:['健身房全套'],muscle:['中背'],diff:1,note:'胸贴上斜板，孤立背部发力'},
-{n:'哑铃单臂划船',eq:['哑铃','健身房全套'],muscle:['背阔'],diff:1,note:'拉至腰部，感受背阔收缩'},
+{n:'哑铃单臂划船',eq:['哑铃','健身房全套'],muscle:['背阔'],diff:1,note:'拉至腰部，感受背阔收缩',bi:true},
+{n:'器械上背划船',eq:['健身房全套'],muscle:['上背','菱形'],diff:1,note:'挺胸，手肘向后拉，挤压肩胛骨中间'},
 {n:'俯身划船',eq:['哑铃','健身房全套'],muscle:['中背'],diff:2,note:'背部平行地面，核心稳定'},
 {n:'绳索直臂下压',eq:['健身房全套'],muscle:['背阔'],diff:1,note:'手臂微弯，感受背阔肌'},
 {n:'直臂下压机',eq:['健身房全套'],muscle:['背阔'],diff:1,note:'手肘贴着靠垫向下压'},
@@ -76,7 +78,7 @@ biceps:[
 {n:'哑铃弯举',eq:['哑铃','健身房全套'],muscle:['二头'],diff:1,note:'交替进行，不借力'},
 {n:'牧师椅杠铃弯举',eq:['健身房全套'],muscle:['二头'],diff:2,note:'腋窝卡住垫板，避免身体借力'},
 {n:'器械弯举',eq:['健身房全套'],muscle:['二头'],diff:1,note:'孤立二头，手肘固定在垫子上'},
-{n:'集中弯举',eq:['哑铃','健身房全套'],muscle:['二头肌峰'],diff:1,note:'坐姿，手肘抵在大腿内侧'},
+{n:'集中弯举',eq:['哑铃','健身房全套'],muscle:['二头肌峰'],diff:1,note:'坐姿，手肘抵在大腿内侧',bi:true},
 {n:'斜板哑铃弯举',eq:['哑铃','健身房全套'],muscle:['二头长头'],diff:2,note:'上斜椅靠背，拉长二头肌收缩'},
 {n:'锤式弯举',eq:['哑铃','健身房全套'],muscle:['肱肌','前臂'],diff:1,note:'中立握姿，感受外侧发力'},
 {n:'绳索弯举',eq:['健身房全套'],muscle:['二头'],diff:1,note:'顶峰收缩停留1秒'},
@@ -87,7 +89,7 @@ triceps:[
 {n:'器械三头下压',eq:['健身房全套'],muscle:['三头'],diff:1,note:'坐姿，双手握把向下推'},
 {n:'绳索过头臂屈伸',eq:['健身房全套'],muscle:['三头长头'],diff:1,note:'背对龙门架，绳索从头后拉起'},
 {n:'哑铃臂屈伸',eq:['哑铃','健身房全套'],muscle:['三头'],diff:1,note:'肘朝天花板，只动前臂'},
-{n:'俯身单臂哑铃臂屈伸',eq:['哑铃','健身房全套'],muscle:['三头'],diff:1,note:'上臂贴紧躯干，向后伸直小臂'},
+{n:'俯身单臂哑铃臂屈伸',eq:['哑铃','健身房全套'],muscle:['三头'],diff:1,note:'上臂贴紧躯干，向后伸直小臂',bi:true},
 {n:'双杠臂屈伸',eq:['健身房全套'],muscle:['三头','胸'],diff:3,note:'身体直立偏重三头'},
 {n:'助力双杠臂屈伸',eq:['健身房全套'],muscle:['三头'],diff:1,note:'利用辅助托板完成动作'},
 {n:'窄距杠铃卧推',eq:['健身房全套'],muscle:['三头','胸'],diff:2,note:'握距与肩同宽，手肘贴紧身体'},
@@ -101,9 +103,10 @@ quads:[
 {n:'钟摆深蹲',eq:['健身房全套'],muscle:['股四头'],diff:2,note:'机器轨迹类似深蹲，背部全程贴紧'},
 {n:'哈克深蹲',eq:['健身房全套'],muscle:['股四头'],diff:2,note:'背部贴紧靠垫'},
 {n:'腿屈伸',eq:['健身房全套'],muscle:['股四头'],diff:1,note:'顶端收缩停留1秒'},
-{n:'保加利亚分腿蹲',eq:['哑铃','健身房全套'],muscle:['股四头','臀'],diff:2,note:'后脚搭在凳子上，重心在前方腿'},
-{n:'哑铃弓步蹲',eq:['哑铃','健身房全套'],muscle:['股四头','臀'],diff:1,note:'步幅适中，前膝不超脚尖'},
+{n:'保加利亚分腿蹲',eq:['哑铃','健身房全套'],muscle:['股四头','臀'],diff:2,note:'后脚搭在凳子上，重心在前方腿',bi:true},
+{n:'哑铃弓步蹲',eq:['哑铃','健身房全套'],muscle:['股四头','臀'],diff:1,note:'步幅适中，前膝不超脚尖',bi:true},
 {n:'高脚杯深蹲',eq:['哑铃','无器材'],muscle:['股四头','臀'],diff:1,note:'哑铃贴胸，挺胸下蹲'},
+{n:'壶铃高脚杯深蹲',eq:['壶铃','健身房全套'],muscle:['股四头','臀'],diff:1,note:'双手托壶铃贴胸，挺胸下蹲，动作更自然'},
 ],
 hamglutes:[
 {n:'罗马尼亚硬拉',eq:['哑铃','健身房全套'],muscle:['腘绳','臀'],diff:2,note:'微屈膝，臀部后推，感受后侧拉伸'},
@@ -112,11 +115,13 @@ hamglutes:[
 {n:'史密斯臀推',eq:['健身房全套'],muscle:['臀'],diff:1,note:'比杠铃更容易设置和控制'},
 {n:'腿弯举',eq:['健身房全套'],muscle:['腘绳'],diff:1,note:'俯卧，控制回放'},
 {n:'坐姿腿弯举',eq:['健身房全套'],muscle:['腘绳'],diff:1,note:'背贴靠垫，双腿用力向下压'},
-{n:'站姿单腿弯举机',eq:['健身房全套'],muscle:['腘绳'],diff:1,note:'单腿轮流向后上方弯曲'},
-{n:'绳索后踢腿',eq:['健身房全套'],muscle:['臀大肌'],diff:1,note:'脚套上把手，向后上方踢出'},
+{n:'站姿单腿弯举机',eq:['健身房全套'],muscle:['腘绳'],diff:1,note:'单腿轮流向后上方弯曲',bi:true},
+{n:'绳索后踢腿',eq:['健身房全套'],muscle:['臀大肌'],diff:1,note:'脚套上把手，向后上方踢出',bi:true},
 {n:'器械外展机',eq:['健身房全套'],muscle:['臀中肌'],diff:1,note:'坐姿向外打开双腿'},
+{n:'器械内收机',eq:['健身房全套'],muscle:['内收肌'],diff:1,note:'坐姿向内夹拢双腿'},
+{n:'壶铃摆动',eq:['壶铃','健身房全套'],muscle:['臀','腘绳','核心'],diff:1,note:'髋部爆发式前推，手臂只是挂钩'},
 {n:'臀桥',eq:['无器材','弹力带'],muscle:['臀'],diff:1,note:'顶端停留，感受臀部发力'},
-{n:'弹力带蚌式开合',eq:['弹力带','无器材'],muscle:['臀中'],diff:1,note:'侧卧，膝盖打开'},
+{n:'弹力带蚌式开合',eq:['弹力带','无器材'],muscle:['臀中'],diff:1,note:'侧卧，膝盖打开',bi:true},
 ],
 calves:[
 {n:'站姿提踵',eq:['无器材','哑铃','健身房全套'],muscle:['小腿'],diff:1,note:'全幅度，顶端停顿1秒'},
@@ -135,7 +140,7 @@ core:[
 {n:'绳索伐木',eq:['健身房全套'],muscle:['腹斜'],diff:1,note:'高位绳索拉至对侧膝盖外侧，如砍树'},
 {n:'死虫式',eq:['无器材','健身房全套'],muscle:['核心稳定'],diff:1,note:'下背全程贴地'},
 {n:'腹轮',eq:['健身房全套'],muscle:['核心'],diff:3,note:'初级跪姿，进阶站姿'},
-{n:'侧平板支撑',eq:['无器材','健身房全套'],muscle:['腹斜'],diff:1,note:'每侧各做',u:'秒'},
+{n:'侧平板支撑',eq:['无器材','健身房全套'],muscle:['腹斜'],diff:1,note:'每侧各做',u:'秒',bi:true},
 ],
 cardio:[
 {n:'跑步机慢跑',eq:['健身房全套'],muscle:['心肺'],diff:1,note:'心率维持最大心率65-75%',u:'分钟'},
@@ -149,25 +154,45 @@ cardio:[
 {n:'跳绳',eq:['无器材','健身房全套'],muscle:['心肺','小腿'],diff:1,note:'手腕发力，落地轻柔',u:'分钟'},
 {n:'开合跳',eq:['无器材','弹力带','哑铃','健身房全套'],muscle:['心肺'],diff:1,note:'膝关节微弯',u:'分钟'},
 {n:'波比跳',eq:['无器材'],muscle:['心肺','全身'],diff:2,note:'一个标准循环',u:'分钟'},
+{n:'上肢功率车',eq:['健身房全套'],muscle:['心肺','上肢'],diff:1,note:'用双臂驱动，对肩和手臂有额外刺激',u:'分钟'},
+],
+swimming:[
+// ── 入门级 (diff:1) — 水性+蛙泳基础 ──
+{n:'水中行走热身',eq:['泳池'],muscle:['全身'],diff:1,note:'沿池边行走，适应水温和浮力，活动四肢',u:'分钟',swimPhase:'warmup'},
+{n:'水中呼吸练习',eq:['泳池'],muscle:['心肺'],diff:1,note:'站立吸气→脸入水用鼻子吐泡泡→抬头，循环节奏',u:'分钟',swimPhase:'tech'},
+{n:'扶边蛙泳腿练习',eq:['泳池'],muscle:['下肢','心肺'],diff:1,note:'口诀：收翻蹬夹。扶池边专注腿部动作，脚踝外翻勾起是关键',u:'分钟',swimPhase:'tech'},
+{n:'蹬壁滑行练习',eq:['泳池'],muscle:['核心','全身'],diff:1,note:'蹬壁出发，全身绷紧流线型，感受水流推动滑行',u:'分钟',swimPhase:'tech'},
+{n:'蛙泳手部划水练习',eq:['泳池'],muscle:['上肢','心肺'],diff:1,note:'浅水站立，手臂向两侧外划→向内抱水→前伸，配合抬头吸气',u:'分钟',swimPhase:'tech'},
+{n:'蛙泳完整配合',eq:['泳池'],muscle:['全身','心肺'],diff:1,note:'划手→抬头吸气→收腿→蹬夹滑行。先划手后蹬腿，不要同时动',u:'分钟',swimPhase:'main'},
+{n:'水中漫步放松',eq:['泳池'],muscle:['全身'],diff:1,note:'慢速水中行走或缓慢踢水，让肌肉放松恢复',u:'分钟',swimPhase:'cooldown'},
+// ── 进阶级 (diff:2) — 蛙泳巩固+耐力 ──
+{n:'蛙泳连续游',eq:['泳池'],muscle:['全身','心肺'],diff:2,note:'25-50m连续游，关注节奏和蹬腿后的滑行感',u:'分钟',swimPhase:'main'},
+{n:'蛙泳间歇训练',eq:['泳池'],muscle:['心肺','全身'],diff:2,note:'25m×4-6组，每组之间池边休息30-45秒',u:'分钟',swimPhase:'main'},
+{n:'踩水练习',eq:['泳池'],muscle:['全身','核心'],diff:2,note:'深水区保持头部在水面以上，与蛙泳腿相通的自救基本功',u:'分钟',swimPhase:'tech'},
+{n:'蹬壁转身练习',eq:['泳池'],muscle:['核心','全身'],diff:2,note:'游到池边后蹬壁掉头继续游，不停顿，练流畅性',u:'分钟',swimPhase:'tech'},
+// ── 挑战级 (diff:3) — 自由泳入门 ──
+{n:'自由泳打腿练习',eq:['泳池'],muscle:['下肢','核心'],diff:3,note:'扶边或蹬壁，髋部发力上下打水，膝盖微屈脚踝放松',u:'分钟',swimPhase:'tech'},
+{n:'自由泳划臂+侧头呼吸',eq:['泳池'],muscle:['上肢','心肺'],diff:3,note:'浅水站立/行走中练习划臂和侧头换气的配合',u:'分钟',swimPhase:'tech'},
+{n:'自由泳完整配合',eq:['泳池'],muscle:['全身','心肺'],diff:3,note:'短距离尝试完整自由泳，手脚交替+侧头呼吸',u:'分钟',swimPhase:'main'},
 ],
 warmup:[
-{n:'全身动态热身 (开合跳)',eq:['无器材','弹力带','哑铃','健身房全套'],muscle:['全身'],diff:1,note:'落地轻柔，保持呼吸节奏',u:'秒'},
-{n:'肩关节环绕',eq:['无器材','弹力带','哑铃','健身房全套'],muscle:['上肢'],diff:1,note:'直臂或屈臂，大幅度画圆，前后各30秒',u:'秒'},
-{n:'扩胸运动',eq:['无器材','弹力带','哑铃','健身房全套'],muscle:['上肢'],diff:1,note:'感受胸肌拉伸，动作连贯不憋气',u:'秒'},
-{n:'徒手深蹲激活',eq:['无器材','弹力带','哑铃','健身房全套'],muscle:['下肢','全身'],diff:1,note:'臀部后坐，膝盖不内扣',u:'秒'},
-{n:'弓步转体',eq:['无器材','弹力带','哑铃','健身房全套'],muscle:['下肢','核心'],diff:1,note:'下蹲时呼气，躯干向大腿方向扭转',u:'秒'},
-{n:'高抬腿走',eq:['无器材','弹力带','哑铃','健身房全套'],muscle:['下肢','全身'],diff:1,note:'挺胸收腹，双手抱膝向上提拉',u:'秒'},
-{n:'登山者',eq:['无器材','弹力带','哑铃','健身房全套'],muscle:['核心','全身'],diff:2,note:'俯卧撑姿势，腹部收紧，交替提膝',u:'秒'},
+{n:'全身动态热身 (开合跳)',eq:['无器材','弹力带','哑铃','壶铃','健身房全套'],muscle:['全身'],diff:1,note:'落地轻柔，保持呼吸节奏',u:'秒',warmupSec:45},
+{n:'肩关节环绕',eq:['无器材','弹力带','哑铃','壶铃','健身房全套'],muscle:['上肢'],diff:1,note:'直臂或屈臂，大幅度画圆，前后各30秒',u:'秒',warmupSec:60},
+{n:'扩胸运动',eq:['无器材','弹力带','哑铃','壶铃','健身房全套'],muscle:['上肢'],diff:1,note:'感受胸肌拉伸，动作连贯不憋气',u:'秒',warmupSec:30},
+{n:'徒手深蹲激活',eq:['无器材','弹力带','哑铃','壶铃','健身房全套'],muscle:['下肢','全身'],diff:1,note:'臀部后坐，膝盖不内扣',u:'秒',warmupSec:45},
+{n:'弓步转体',eq:['无器材','弹力带','哑铃','壶铃','健身房全套'],muscle:['下肢','核心'],diff:1,note:'下蹲时呼气，躯干向大腿方向扭转',u:'秒',warmupSec:45,bi:true},
+{n:'高抬腿走',eq:['无器材','弹力带','哑铃','壶铃','健身房全套'],muscle:['下肢','全身'],diff:1,note:'挺胸收腹，双手抱膝向上提拉',u:'秒',warmupSec:45},
+{n:'登山者',eq:['无器材','弹力带','哑铃','壶铃','健身房全套'],muscle:['核心','全身'],diff:2,note:'俯卧撑姿势，腹部收紧，交替提膝',u:'秒',warmupSec:30},
 ],
 stretch:[
 {n:'婴儿式背部拉伸',eq:['无器材','弹力带','哑铃','健身房全套'],muscle:['全身','核心'],diff:1,note:'臀部坐向脚后跟，双手前伸，深长呼吸',u:'秒'},
-{n:'胸部静态拉伸',eq:['无器材','弹力带','哑铃','健身房全套'],muscle:['上肢'],diff:1,note:'找一面墙，单臂微屈抵住，身体向反方向转',u:'秒'},
-{n:'肩后侧拉伸',eq:['无器材','弹力带','哑铃','健身房全套'],muscle:['上肢'],diff:1,note:'单臂水平伸直，另一只手将其压向胸口',u:'秒'},
-{n:'三头肌拉伸',eq:['无器材','弹力带','哑铃','健身房全套'],muscle:['上肢'],diff:1,note:'手臂上举屈肘，另一手将其向后拉',u:'秒'},
-{n:'股四头肌拉伸',eq:['无器材','弹力带','哑铃','健身房全套'],muscle:['下肢'],diff:1,note:'单腿站立，手抓脚踝拉向臀部',u:'秒'},
-{n:'腘绳肌/体前屈',eq:['无器材','弹力带','哑铃','健身房全套'],muscle:['下肢'],diff:1,note:'坐姿或站姿，双腿伸直，身体慢慢下压',u:'秒'},
-{n:'臀大肌拉伸',eq:['无器材','弹力带','哑铃','健身房全套'],muscle:['下肢'],diff:1,note:'仰卧，一腿架在另一腿膝盖上，双手抱腿拉向胸口',u:'秒'},
-{n:'髂胫束拉伸',eq:['无器材','弹力带','哑铃','健身房全套'],muscle:['下肢'],diff:1,note:'交叉腿站立，身体向后腿一侧侧倾',u:'秒'},
+{n:'胸部静态拉伸',eq:['无器材','弹力带','哑铃','壶铃','健身房全套'],muscle:['上肢'],diff:1,note:'找一面墙，单臂微屈抵住，身体向反方向转',u:'秒',bi:true},
+{n:'肩后侧拉伸',eq:['无器材','弹力带','哑铃','壶铃','健身房全套'],muscle:['上肢'],diff:1,note:'单臂水平伸直，另一只手将其压向胸口',u:'秒',bi:true},
+{n:'三头肌拉伸',eq:['无器材','弹力带','哑铃','壶铃','健身房全套'],muscle:['上肢'],diff:1,note:'手臂上举屈肘，另一手将其向后拉',u:'秒',bi:true},
+{n:'股四头肌拉伸',eq:['无器材','弹力带','哑铃','壶铃','健身房全套'],muscle:['下肢'],diff:1,note:'单腿站立，手抓脚踝拉向臀部',u:'秒',bi:true},
+{n:'腘绳肌/体前屈',eq:['无器材','弹力带','哑铃','壶铃','健身房全套'],muscle:['下肢'],diff:1,note:'坐姿或站姿，双腿伸直，身体慢慢下压',u:'秒'},
+{n:'臀大肌拉伸',eq:['无器材','弹力带','哑铃','壶铃','健身房全套'],muscle:['下肢'],diff:1,note:'仰卧，一腿架在另一腿膝盖上，双手抱腿拉向胸口',u:'秒',bi:true},
+{n:'髂胫束拉伸',eq:['无器材','弹力带','哑铃','壶铃','健身房全套'],muscle:['下肢'],diff:1,note:'交叉腿站立，身体向后腿一侧侧倾',u:'秒',bi:true},
 {n:'腹部拉伸 (眼镜蛇式)',eq:['无器材','弹力带','哑铃','健身房全套'],muscle:['核心'],diff:1,note:'俯卧撑起上半身，骨盆贴地',u:'秒'},
 ]
 };
@@ -222,7 +247,7 @@ const SPLITS={
 ],
 };
 // focusMap: 用户选择的重点→对应肌群组，上肢包括背部
-const FOCUS_MAP={'均衡全身':['chest','shoulder','back','biceps','triceps','quads','hamglutes','calves','core','cardio'],'上肢':['chest','shoulder','back','biceps','triceps'],'下肢':['quads','hamglutes','calves'],'核心':['core'],'有氧':['cardio']};
+const FOCUS_MAP={'均衡全身':['chest','shoulder','back','biceps','triceps','quads','hamglutes','calves','core','cardio'],'上肢':['chest','shoulder','back','biceps','triceps'],'下肢':['quads','hamglutes','calves'],'核心':['core'],'有氧':['cardio'],'游泳':['swimming','core','back']};
 
 const SCHEMES={
 '女性薄肌':{
@@ -235,7 +260,33 @@ const SCHEMES={
 const TIPS={
 '女性薄肌':'组间休息45-60秒保持心率。训练后必做拉伸避免肌肉结块。重点强化臀腿和核心线条。',
 };
+const SWIM_TIPS={
+'入门':'蛙泳腿口诀：收翻蹬夹。每次蹬腿后享受2-3秒滑行，不要急着做下一个动作。扶池边是你最好的练习伙伴。',
+'进阶':'好的蛙泳70%时间在滑行。关注节奏而非速度，累了就加长滑行而不是加快频率。',
+'挑战':'自由泳呼吸的秘诀：不是转头，而是转动整个身体。先用蛙泳热身，再切换到自由泳练习。'
+};
 const DN=['周一','周二','周三','周四','周五','周六','周日'];
+
+// ══ Swim Milestones ════════════════════════════════════════
+const SWIM_MILESTONES=[
+{count:1,icon:'🏊',title:'初次下水',desc:'完成第一次游泳训练！'},
+{count:3,icon:'💧',title:'水性初具',desc:'已完成 3 次游泳训练'},
+{count:5,icon:'🐠',title:'小鱼儿',desc:'已完成 5 次游泳训练'},
+{count:10,icon:'🧜‍♀️',title:'水中小达人',desc:'已完成 10 次游泳训练！'},
+{count:20,icon:'🏅',title:'泳池常客',desc:'已完成 20 次游泳训练'},
+{count:30,icon:'🌊',title:'乘风破浪',desc:'已完成 30 次游泳训练！'},
+{count:50,icon:'🧜',title:'美人鱼',desc:'已完成 50 次游泳训练！！'},
+];
+let SWIM_LOG=lg('fit_swim')||{count:0,milestones:[]};
+function checkSwimMilestone(){
+SWIM_LOG.count=(SWIM_LOG.count||0)+1;
+const m=SWIM_MILESTONES.find(ms=>ms.count===SWIM_LOG.count);
+if(m){
+SWIM_LOG.milestones.push({...m,date:todayStr()});
+setTimeout(()=>showToast(`${m.icon} 游泳成就解锁：${m.title}！`),500);
+}
+ls('fit_swim',SWIM_LOG);
+}
 
 // ══ Plan Generator ═══════════════════════════════════════
 // Derive how many exercises fit in session based on duration
@@ -266,7 +317,7 @@ const wGlobal = wPool.filter(e=>e.muscle.includes('全身'));
 const wSpecific = wPool.filter(e=>split.groups.some(g=>e.muscle.includes(g==='chest'||g==='back'||g==='shoulder'?'上肢':'下肢')));
 [...(wGlobal.slice(0,2)), ...(wSpecific.slice(0,2))].forEach(ex=>{
     if(used.has(ex.n))return; used.add(ex.n);
-    result.push({name:ex.n,sets:1,reps:45,unit:'秒',note:ex.note,group:'warmup',diff:ex.diff,isWarmup:true});
+    result.push({name:ex.n,sets:1,reps:ex.warmupSec||45,unit:'秒',note:ex.note,group:'warmup',diff:ex.diff,isWarmup:true,bi:!!ex.bi});
 });
 
 split.groups.forEach(g=>{
@@ -296,7 +347,7 @@ const exSets=isCardio?1:sets;
 const exReps=isCardio?Math.max(sch.cardioMin,10):(isTime?(S.level==='初级'?30:S.level==='中级'?45:60):reps);
 // Build coaching note combining technique + goal/level context
 const coaching=`${ex.note} — ${sch.intensityNote[S.level]}（${sch.weightGuide[S.level]}）`;
-result.push({name:ex.n,sets:exSets,reps:exReps,unit:isCardio?'分钟':(isTime?'秒':'次'),note:coaching,group:grp,diff:ex.diff});
+result.push({name:ex.n,sets:exSets,reps:exReps,unit:isCardio?'分钟':(isTime?'秒':'次'),note:coaching,group:grp,diff:ex.diff,bi:!!ex.bi});
 });
 });
 
@@ -315,7 +366,7 @@ const sGlobal = sPool.filter(e=>e.muscle.includes('全身')||e.muscle.includes('
 const sSpecific = sPool.filter(e=>split.groups.some(g=>e.muscle.includes(g==='chest'||g==='back'||g==='shoulder'?'上肢':'下肢')));
 [...(sGlobal.slice(0,2)), ...(sSpecific.slice(0,3))].forEach(ex=>{
     if(used.has(ex.n))return; used.add(ex.n);
-    result.push({name:ex.n,sets:1,reps:30,unit:'秒',note:ex.note,group:'stretch',diff:ex.diff,isStretch:true});
+    result.push({name:ex.n,sets:1,reps:30,unit:'秒',note:ex.note,group:'stretch',diff:ex.diff,isStretch:true,bi:!!ex.bi});
 });
 
 return result;
@@ -368,63 +419,172 @@ if(!hist||!hist.length)return null;
 return hist[hist.length-1];
 }
 
+// ══ Weight Rounding by Equipment Type ═══════════════════
+function _isDumbbell(n){return n.includes('哑铃')||n.includes('壶铃')}
+function _isBarbell(n){return n.includes('杠铃')||n.includes('硬拉')||n.includes('史密斯')}
+function roundWeight(w, exName){
+    if(_isBarbell(exName)) return Math.round(w/2.5)*2.5; // 杠铃: 2.5kg倍数
+    return Math.round(w); // 哑铃/壶铃/器械/绳索: 整数kg
+}
+function getWeightStep(exName){
+    if(_isBarbell(exName)) return 2.5;
+    return 1;
+}
+
 // Default weight recommendation based on exercise type + difficulty level
 function getDefaultWeight(exName){
 const n=exName;
-// Equipment type detection
-const isBarbell=n.includes('杠铃')||n.includes('硬拉')||n.includes('深蹲杠');
-const isDumbbell=n.includes('哑铃');
-const isCable=n.includes('绳索')||n.includes('缆绳')||n.includes('下拉')||n.includes('夹胸');
-const isSmith=n.includes('史密斯');
-// Muscle group detection
-const isLeg=n.includes('腿')||n.includes('臀')||n.includes('股')||n.includes('深蹲')||n.includes('硬拉')||n.includes('腿举');
-const isBack=n.includes('划船')||n.includes('引体')||n.includes('下拉')||n.includes('背');
-const isChest=n.includes('卧推')||n.includes('飞鸟')||n.includes('夹胸')||n.includes('推胸');
-const isShoulder=n.includes('肩')||n.includes('推举')||n.includes('侧平举')||n.includes('前平举');
-const isArm=n.includes('弯举')||n.includes('二头')||n.includes('三头')||n.includes('臂屈伸');
-// Base weight by equipment and level
-const bases={
-'初级':{barbell:15,dumbbell:2.5,cable:5,smith:15,other:4},
-'中级':{barbell:25,dumbbell:6,cable:10,smith:25,other:8},
-'高级':{barbell:40,dumbbell:10,cable:15,smith:40,other:12}
-};
-const b=bases[S.level]||bases['初级'];
-let w;
-if(isBarbell)w=b.barbell;
-else if(isDumbbell)w=b.dumbbell;
-else if(isCable)w=b.cable;
-else if(isSmith)w=b.smith;
-else w=b.other;
-// Adjust by muscle group size
-if(isLeg)w*=1.4;
-else if(isBack||isChest)w*=1.0;
-else if(isShoulder)w*=0.7;
-else if(isArm)w*=0.6;
-return Math.round(w*2)/2;
+
+// ── Equipment detection (name + DB fallback) ──
+const isBarbell=_isBarbell(n);
+const _dbEx=(()=>{for(const exs of Object.values(DB)){const f=exs.find(e=>e.n===n);if(f)return f}return null})();
+const isDumbbell=n.includes('哑铃')||n.includes('壶铃')||n.includes('高脚杯')||(_dbEx&&_dbEx.eq.some(e=>e==='哑铃'||e==='壶铃'));
+const isCable=n.includes('绳索')||n.includes('缆绳');
+
+// ── Movement category detection ──
+// 下肢复合 (Squat/Deadlift/Leg Press/Hip Thrust)
+const isLegCompound=n.includes('深蹲')||n.includes('硬拉')||n.includes('臀推')||n.includes('腿举')||n.includes('提踵');
+// 上肢推 (Bench Press — 卧推类)
+const isUpperPush=n.includes('卧推');
+// 过头推 (Overhead Press — 推举/肩推, 比卧推轻)
+const isOverhead=n.includes('推举')||n.includes('肩推');
+// 上肢拉 (Row/Pulldown)
+const isUpperPull=n.includes('划船')||n.includes('引体')||n.includes('下拉')||n.includes('直立划船');
+// 小肌群孤立 (Curl/Extension/Lateral Raise)
+const isIsolation=n.includes('弯举')||n.includes('臂屈伸')||n.includes('侧平举')||n.includes('前平举')||n.includes('飞鸟')||n.includes('夹胸');
+// 其他腿部/臀部
+const isLeg=isLegCompound||n.includes('腿')||n.includes('臀')||n.includes('股')||n.includes('弓步');
+
+// ── 杠铃/史密斯: 按动作类型 × 等级 ──
+if(isBarbell){
+  // 基础值: 标准杠=20kg空杆, EZ杆/短杆=10kg
+  const bases={
+    legCompound: {初级:20,中级:30,高级:40},  // 深蹲/硬拉/臀推: 最低=空杆20kg
+    upperPush:   {初级:20,中级:25,高级:35},  // 卧推: 最低=空杆20kg
+    overhead:    {初级:15,中级:20,高级:30},  // 推举/肩推: 可用短杆15kg起
+    upperPull:   {初级:15,中级:20,高级:30},  // 划船/直立划船
+    isolation:   {初级:10,中级:15,高级:20},  // 弯举: EZ杆10kg起
+    other:       {初级:15,中级:20,高级:30}   // 兜底
+  };
+  let cat='other';
+  if(isLegCompound)cat='legCompound';
+  else if(isUpperPush)cat='upperPush';
+  else if(isOverhead)cat='overhead';
+  else if(isUpperPull)cat='upperPull';
+  else if(isIsolation)cat='isolation';
+  return roundWeight(bases[cat][S.level]||bases[cat]['初级'], n);
+}
+
+// ── 哑铃/壶铃: 整数kg, 按肌群大小微调 ──
+if(isDumbbell){
+  const dbases={初级:2,中级:5,高级:8};
+  let w=dbases[S.level]||2;
+  if(isLeg)w=Math.round(w*1.5);
+  else if(isIsolation)w=Math.max(1,Math.round(w*0.6));
+  return roundWeight(w, n);
+}
+
+// ── 绳索: 整数kg ──
+if(isCable){
+  const cbases={初级:5,中级:10,高级:15};
+  let w=cbases[S.level]||5;
+  if(isLeg)w=Math.round(w*1.5);
+  else if(isIsolation)w=Math.max(2,Math.round(w*0.7));
+  return roundWeight(w, n);
+}
+
+// ── 器械 (坐姿推胸机/腿屈伸/etc): 整数kg ──
+const mbases={初级:5,中级:10,高级:15};
+let w=mbases[S.level]||5;
+if(isLeg)w=Math.round(w*1.5);
+else if(isIsolation)w=Math.max(2,Math.round(w*0.7));
+return roundWeight(w, n);
 }
 
 function suggestWeight(exName){
 const last=getLastWeight(exName);
-if(!last) return getDefaultWeight(exName); // No history → use level-based default
+if(!last) return getDefaultWeight(exName);
 const w=last.weight, rpe=last.rpe||6;
+const step=getWeightStep(exName);
 // RPE-based progression
-if(rpe<=4) return Math.round((w+2.5)*2)/2; // Too easy → +2.5kg
-if(rpe<=6) return Math.round((w+1)*2)/2;   // Moderate → +1kg
-if(rpe<=8) return w;                         // Good → same weight
-return Math.max(0.5, Math.round((w-1)*2)/2); // Hard/max → -1kg
+if(rpe<=4) return roundWeight(w+step*2, exName); // Too easy → +2 steps
+if(rpe<=6) return roundWeight(w+step, exName);   // Moderate → +1 step
+if(rpe<=8) return w;                              // Good → same weight
+return Math.max(step, roundWeight(w-step, exName)); // Hard/max → -1 step
+}
+// ══ Swimming Plan Generator ═════════════════════════════
+function pickSwimExercises(){
+const level=S.swimLevel||'入门';
+const excluded=getExcluded();
+const maxDiff=level==='入门'?1:level==='进阶'?2:3;
+const pool=(DB.swimming||[]).filter(ex=>ex.diff<=maxDiff&&!excluded.has(ex.n));
+const result=[];
+// Phase order: warmup → tech → main → cooldown
+const phases=['warmup','tech','main','cooldown'];
+const phaseTimes={warmup:5,tech:level==='入门'?25:level==='进阶'?20:20,main:level==='入门'?15:level==='进阶'?20:20,cooldown:5};
+phases.forEach(phase=>{
+const pExs=pool.filter(ex=>ex.swimPhase===phase);
+// Shuffle within phase for variety
+for(let i=pExs.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[pExs[i],pExs[j]]=[pExs[j],pExs[i]]}
+// Pick exercises: warmup/cooldown = 1, tech = up to 3-4, main = up to 2
+const pick=phase==='warmup'?1:phase==='cooldown'?1:phase==='tech'?Math.min(pExs.length,level==='入门'?4:3):Math.min(pExs.length,2);
+const totalTime=phaseTimes[phase];
+pExs.slice(0,pick).forEach((ex,i)=>{
+const mins=Math.max(3,Math.round(totalTime/pick));
+result.push({name:ex.n,sets:1,reps:mins,unit:'分钟',note:ex.note,group:'swimming',diff:ex.diff,isWarmup:phase==='warmup',isStretch:phase==='cooldown',bi:false,swimPhase:phase});
+});
+});
+return result;
 }
 
 // ══ Plan Generator (calendar) ═══════════════════════════
+
+// Scientific ratio: strength-primary + swim cross-training
+// (strength is always >= swim, because user's goal is 女性薄肌)
+const SWIM_SPLIT={
+2:{gym:1,swim:1},
+3:{gym:2,swim:1},
+4:{gym:3,swim:1},
+5:{gym:3,swim:2},
+6:{gym:4,swim:2},
+7:{gym:4,swim:3},
+};
+
+// Weekly patterns: G=gym, S=swim, R=rest
+// Principles: alternate gym/swim when possible, avoid swim right after upper body day
+const COMBO_PATTERNS={
+'1+1':['G','R','R','S','R','R','R'],
+'2+1':['G','R','S','R','G','R','R'],
+'3+1':['G','S','R','G','R','G','R'],
+'2+2':['G','S','R','G','S','R','R'],
+'3+2':['G','S','G','R','G','S','R'],
+'4+2':['G','G','S','G','G','S','R'],
+'4+3':['G','S','G','S','G','S','G'],
+};
+
 function genPlan(isRecalibrate = false){
-const splits=SPLITS[S.days]||SPLITS[3];
+_skipAutoRegen=false; // Reset so future auto-regen can trigger
+const hasPool=S.equip.includes('泳池');
 const excluded=getExcluded();
 const today=todayStr();
 
-// If recalibrating, keep the original start date to preserve the calendar view.
-// Otherwise, start a fresh 14-day cycle from today.
-const startDate = (isRecalibrate && S.plan && S.plan.days.length > 0) ? S.plan.days[0].date : today;
+// Determine gym vs swim day counts
+let gymPerWeek=S.days, swimPerWeek=0;
+if(hasPool){
+const sp=SWIM_SPLIT[S.days]||{gym:Math.max(2,S.days-1),swim:1};
+gymPerWeek=sp.gym; swimPerWeek=sp.swim;
+}
 
-const patterns = {
+// Select the correct split template based on GYM days (not total)
+const splits=SPLITS[gymPerWeek]||SPLITS[3];
+
+// Build weekly pattern
+let pattern;
+if(hasPool){
+const key=gymPerWeek+'+'+swimPerWeek;
+pattern=(COMBO_PATTERNS[key]||COMBO_PATTERNS['3+2']).map(c=>c==='G'?1:c==='S'?2:0);
+}else{
+const gymPatterns = {
 2: [1,0,0,1,0,0,0],
 3: [1,0,1,0,1,0,0],
 4: [1,1,0,1,1,0,0],
@@ -432,7 +592,13 @@ const patterns = {
 6: [1,1,1,1,1,1,0],
 7: [1,1,1,1,1,1,1]
 };
-const pattern = patterns[S.days] || patterns[3];
+pattern = gymPatterns[S.days] || gymPatterns[3];
+}
+
+// If recalibrating, keep the original start date to preserve the calendar view.
+// Otherwise, start a fresh 14-day cycle from today.
+const startDate = (isRecalibrate && S.plan && S.plan.days.length > 0) ? S.plan.days[0].date : today;
+
 const days=[];
 let splitIdx=0;
 
@@ -440,8 +606,6 @@ let splitIdx=0;
 const preserve = {};
 if (S.plan) {
     for (let d of S.plan.days) {
-        // When regenerating completely (not recalibrate), preserve only locked days
-        // When recalibrating, preserve ALL past days, AND today if it has progress or is explicitly locked
         const hasProgress = (d.date === today && Object.values(S.prog[today] || {}).some(Boolean));
         if (!isRecalibrate) {
             if (isLocked(d)) preserve[d.date] = d;
@@ -455,26 +619,37 @@ for(let i=0;i<14;i++){
 const ds=addDays(startDate,i);
 if(preserve[ds]){
 days.push(preserve[ds]);
-if(!preserve[ds].isRest) splitIdx++;
+// Only increment splitIdx for gym days (not swim, not rest)
+if(!preserve[ds].isRest && !preserve[ds].isSwimDay) splitIdx++;
 continue;
 }
 
 const dObj = new Date(ds+'T12:00:00');
 const dow = (dObj.getDay() + 6) % 7; // 0=Mon, 6=Sun
-const isWorkout = pattern[dow] === 1;
+const dayType = pattern[dow]; // 0=rest, 1=gym, 2=swim
 
-if(isWorkout){
+if(dayType===1){
+// Gym day
 const split=splits[splitIdx%splits.length];
 splitIdx++;
 days.push({date:ds,isRest:false,workoutType:split.type,duration:S.dur,exercises:pickExercises(split,excluded)});
+}else if(dayType===2){
+// Swim day
+days.push({date:ds,isRest:false,isSwimDay:true,workoutType:'🏊 游泳训练',duration:50,exercises:pickSwimExercises()});
 }else{
 days.push({date:ds,isRest:true,workoutType:'休息',duration:0,exercises:[]});
 }
 }
 
 const sch=SCHEMES[S.goal];
-S.plan={days,tip:TIPS[S.goal],rest:sch.rest,excludedCount:excluded.size};
-// Select today or first workout
+const isSwimPlan=hasPool&&swimPerWeek>0;
+let tipText=TIPS[S.goal];
+if(isSwimPlan){
+tipText+=`\n🏊 ${SWIM_TIPS[S.swimLevel||'入门']}\n📊 本周安排：${gymPerWeek}天力量 + ${swimPerWeek}天游泳`;
+}
+S.plan={days,tip:tipText,rest:sch.rest,excludedCount:excluded.size};
+// Reset calendar view offset and select today
+_calWeekOffset=0;
 const todayDay=days.find(d=>d.date===today);
 S.selDate=todayDay?today:(days.find(d=>!d.isRest)?.date||today);
 saveState();
@@ -498,84 +673,146 @@ return day.exercises.every((_,i)=>p[i]);
 function getAdj(date,ei,f,base){return S.adj[date+'-'+ei+'-'+f]??base}
 
 let _dragSrc=null;
+let _skipAutoRegen=false;
 
 function render(){
 if(!S.plan)return;
-const{days,tip,rest,excludedCount}=S.plan;
+const{days:planDays,tip,rest,excludedCount}=S.plan;
 const today=todayStr();
-const workoutDays=days.filter(d=>!d.isRest);
+const workoutDays=planDays.filter(d=>!d.isRest);
 const doneDays=workoutDays.filter(d=>isDone(d));
-const sel=days.find(d=>d.date===S.selDate)||days.find(d=>!d.isRest)||days[0];
 
-// Stats row
-let h=`<div class="plan-header"><p class="panel-title" style="margin:0">训练计划${excludedCount?`<span class="warn-tag">已过滤${excludedCount}个受限动作</span>`:''}</p><button class="regen-btn" onclick="genPlan()">重新生成</button></div>
+const planStart=planDays[0]?.date||today;
+const planEnd=planDays[planDays.length-1]?.date||today;
+// Auto-regenerate if plan has expired (today is past the last plan day)
+if(today>planEnd && !_skipAutoRegen){
+  _skipAutoRegen=true; // prevent infinite loop during this render cycle
+  genPlan(false); // fresh plan from today (recalibrate would reuse old expired startDate)
+  return;
+}
+// Auto-select today if it's in the plan
+if(S.selDate<today && planDays.find(d=>d.date===today)){
+  S.selDate=today;
+}
+const viewStart=addDays(planStart,_calWeekOffset*7);
+const viewEnd=addDays(viewStart,13);
+const visibleDays=[];
+for(let i=0;i<14;i++){
+  const ds=addDays(viewStart,i);
+  const planDay=planDays.find(d=>d.date===ds);
+  if(planDay){visibleDays.push({...planDay,_src:'plan'})}
+  else{
+    const logE=LOG.find(l=>l.date===ds);
+    if(logE){visibleDays.push({date:ds,isRest:false,_src:'log',workoutType:logE.workout,duration:logE.duration,exercises:(logE.exercises||[]).map(e=>({name:e.name,sets:e.sets,reps:e.reps,unit:e.unit,weight:e.weight,note:''})),_logEntry:logE})}
+    else{visibleDays.push({date:ds,isRest:true,_src:'empty',workoutType:'\u2014',exercises:[]})}
+  }
+}
+let sel=visibleDays.find(d=>d.date===S.selDate);
+if(!sel)sel=visibleDays.find(d=>d.date===today)||visibleDays.find(d=>!d.isRest)||visibleDays[0];
+// Check if today is in the current view
+const todayInView=visibleDays.some(d=>d.date===today);
+const isCurrentView=todayInView;
+
+let h=`<div class="plan-header"><p class="panel-title" style="margin:0">\u8bad\u7ec3\u8ba1\u5212${excludedCount?`<span class="warn-tag">\u5df2\u8fc7\u6ee4${excludedCount}\u4e2a\u53d7\u9650\u52a8\u4f5c</span>`:''}</p><button class="regen-btn" onclick="genPlan()">\u91cd\u65b0\u751f\u6210</button></div>
 <div class="stats">
-<div class="stat"><div class="stat-val">${workoutDays.length}</div><div class="stat-lbl">计划天</div></div>
-<div class="stat"><div class="stat-val">${doneDays.length}/${workoutDays.length}</div><div class="stat-lbl">已完成</div></div>
-<div class="stat"><div class="stat-val">${workoutDays.reduce((s,d)=>s+d.exercises.length,0)}</div><div class="stat-lbl">总动作</div></div>
+<div class="stat"><div class="stat-val">${workoutDays.length}</div><div class="stat-lbl">\u8ba1\u5212\u5929</div></div>
+<div class="stat"><div class="stat-val">${doneDays.length}/${workoutDays.length}</div><div class="stat-lbl">\u5df2\u5b8c\u6210</div></div>
+<div class="stat"><div class="stat-val">${workoutDays.reduce((s,d)=>s+d.exercises.length,0)}</div><div class="stat-lbl">\u603b\u52a8\u4f5c</div></div>
 </div>`;
 
-// Calendar grid (14 days)
+const vsFmt=viewStart.slice(5).replace('-','/');
+const veFmt=viewEnd.slice(5).replace('-','/');
+h+=`<div class="cal-nav">
+<button class="cal-nav-btn" onclick="calPrev()"><i class="ti ti-chevron-left" style="font-size:12px"></i> \u4e0a\u4e24\u5468</button>
+${!isCurrentView?`<button class="cal-nav-btn today-btn" onclick="calGoToday()">\u56de\u5230\u4eca\u5929</button>`:''}
+<span class="cal-nav-label">${vsFmt} \u2014 ${veFmt}</span>
+<button class="cal-nav-btn" onclick="calNext()" ${isCurrentView?'disabled':''}> \u4e0b\u4e24\u5468 <i class="ti ti-chevron-right" style="font-size:12px"></i></button>
+</div>`;
+
 h+=`<div class="cal-scroll"><div class="daygrid" id="cal-grid">`;
-days.forEach(d=>{
-const locked=isLocked(d),done=isDone(d),isSel=d.date===S.selDate,isToday=d.date===today;
+visibleDays.forEach(d=>{
+const isPlan=d._src==='plan',isLog=d._src==='log',isNone=d._src==='empty';
+const locked=isPlan&&isLocked(d);
+const done=isPlan?isDone(d):isLog;
+const isSel=d.date===(sel?.date);
+const isToday=d.date===today;
 let cls='dc';
-if(d.isRest)cls+=' rest';
-else if(done)cls+=' done';
-else if(isSel)cls+=' sel';
+if(isNone)cls+=' no-data';
+else if(isLog&&!isPlan)cls+=' historical';
+else if(d.isRest&&isPlan)cls+=' rest';
+else if(done&&isPlan)cls+=' done';
 if(isToday)cls+=' today';
 if(locked&&!d.isRest)cls+=' locked';
-const drag=(!d.isRest&&!locked)?`draggable="true" ondragstart="dragStart(event,'${d.date}')" ondragover="dragOver(event)" ondrop="dragDrop(event,'${d.date}')" ondragend="dragEnd()"`:
-(!d.isRest&&locked?`ondragover="dragOver(event)" ondrop="dragDrop(event,'${d.date}')"`:'' );
-const click=`onclick="selectDate('${d.date}')"`;
+if(isSel&&!isNone&&!(d.isRest&&isPlan))cls+=' sel';
+const drag=(isPlan&&!d.isRest&&!locked)?`draggable="true" ondragstart="dragStart(event,'${d.date}')" ondragover="dragOver(event)" ondrop="dragDrop(event,'${d.date}')" ondragend="dragEnd()"`:
+(isPlan&&!d.isRest&&locked?`ondragover="dragOver(event)" ondrop="dragDrop(event,'${d.date}')"`:'' );
+const click=isNone?'':`onclick="selectDate('${d.date}')"`;
 h+=`<div class="${cls}" ${drag} ${click}>
 <div class="dn">${fmtDate(d.date)}</div>
-<div class="dt">${d.isRest?'休息':d.workoutType}</div>
-${done?'<i class="ti ti-check" style="font-size:10px;color:#3e7d52"></i>':''}
+<div class="dt">${d.isRest?(isPlan?'\u4f11\u606f':'\u2014'):d.workoutType}</div>
+${done&&isPlan?'<i class="ti ti-check" style="font-size:10px;color:#3e7d52"></i>':''}
+${isLog&&!isPlan?'<i class="ti ti-check" style="font-size:10px;color:var(--blue)"></i>':''}
 ${locked&&!d.isRest?'<i class="ti ti-lock" style="font-size:9px;color:var(--ink3)"></i>':''}
 </div>`;
 });
 h+=`</div></div>`;
 
-// Selected day detail
 if(sel&&!sel.isRest){
-const locked=isLocked(sel),pd=S.prog[sel.date]||{};
-h+=`<div class="wh">
-<span class="wh-title">${fmtDate(sel.date)} · ${sel.workoutType}</span>
-<span class="badge">${sel.duration}分钟</span>
-${!locked?`<button class="regen-btn" style="margin-left:auto;font-size:10px;padding:2px 8px" onclick="startTimer(45, '组间休息')">45s</button><button class="regen-btn" style="margin-left:4px;font-size:10px;padding:2px 8px" onclick="startTimer(60, '组间休息')">60s</button>`:''}
-${locked?`<span class="warn-tag">已锁定</span><button class="regen-btn" style="margin-left:8px;font-size:10px;padding:2px 8px" onclick="unlockDate('${sel.date}')">解除锁定</button>`:''}
+  if(sel._src==='log'&&!planDays.find(dd=>dd.date===sel.date)){
+    const lg=sel._logEntry;
+    h+=`<div class="wh"><span class="wh-title">${fmtDate(sel.date)} \u00b7 ${sel.workoutType}</span><span class="badge">${sel.duration||'?'}\u5206\u949f</span><span class="warn-tag" style="background:var(--blue-bg);color:var(--blue);border-color:rgba(75,107,138,.25)">\u5386\u53f2\u8bb0\u5f55</span></div>`;
+    if(lg&&lg.exercises&&lg.exercises.length){
+      h+=`<div class="hist-detail-meta">`;
+      if(lg.rpe)h+=`<span class="hist-detail-chip rpe">RPE ${lg.rpe}/10</span>`;
+      if(lg.mood)h+=`<span class="hist-detail-chip mood">${lg.mood}</span>`;
+      h+=`<span class="hist-detail-chip dur">${lg.exerciseCount||lg.exercises.length}\u4e2a\u52a8\u4f5c</span></div>`;
+      h+=`<div class="hist-detail-exercises">`;
+      lg.exercises.forEach(ex=>{
+        h+=`<div class="hist-ex-row"><span class="hist-ex-name" onclick="showExDetail('${ex.name}')" style="cursor:pointer">${ex.name} <i class="ti ti-info-circle" style="font-size:11px;opacity:.4"></i></span><span class="hist-ex-detail"><span>${ex.sets||'?'}\u00d7${ex.reps||'?'}${ex.unit||'\u6b21'}</span>${ex.weight?`<span class="hist-ex-weight">${ex.weight}kg</span>`:''}</span></div>`;
+      });
+      h+=`</div>`;
+    }else{h+=`<div class="hist-empty">\u8be5\u65e5\u8bad\u7ec3\u8be6\u60c5\u4e0d\u53ef\u7528</div>`}
+    if(lg&&lg.note)h+=`<div class="hist-note">"${lg.note}"</div>`;
+  }else{
+    const locked=isLocked(sel),pd=S.prog[sel.date]||{};
+    const _isSwimDay=!!sel.isSwimDay;
+    h+=`<div class="wh">
+<span class="wh-title">${fmtDate(sel.date)} \u00b7 ${sel.workoutType}</span>
+<span class="badge">${sel.duration}\u5206\u949f</span>
+${_isSwimDay?`<span class="badge" style="background:rgba(59,130,246,.12);color:#3b82f6">${S.swimLevel||'\u5165\u95e8'}</span>`:''}
+${!locked&&!_isSwimDay?`<button class="regen-btn" style="margin-left:auto;font-size:10px;padding:2px 8px" onclick="startTimer(45, '\u7ec4\u95f4\u4f11\u606f')">45s</button><button class="regen-btn" style="margin-left:4px;font-size:10px;padding:2px 8px" onclick="startTimer(60, '\u7ec4\u95f4\u4f11\u606f')">60s</button>`:''}
+${locked?`<span class="warn-tag">\u5df2\u9501\u5b9a</span><button class="regen-btn" style="margin-left:8px;font-size:10px;padding:2px 8px" onclick="unlockDate('${sel.date}')">\u89e3\u9664\u9501\u5b9a</button>`:''}
 </div>
 <div class="exlist">${sel.exercises.map((ex,i)=>{
 const done=pd[i];
 const sets=getAdj(sel.date,i,'s',ex.sets);
 const reps=getAdj(sel.date,i,'r',ex.reps);
-const needsWt=ex.unit==='次'&&!ex.isWarmup&&!ex.isStretch;
+const needsWt=ex.unit==='\u6b21'&&!ex.isWarmup&&!ex.isStretch;
 const curW=getWeight(sel.date,i);
 const lastW=needsWt?getLastWeight(ex.name):null;
 const sugW=needsWt?suggestWeight(ex.name):null;
 const dispW=curW!==null?curW:(sugW??'');
-return`<div class="exrow${done?' done-ex':''}">
-<div style="flex:1;min-width:0">
-<div class="exname" onclick="showExDetail('${ex.name}')" style="cursor:pointer">${ex.name}${needsWt&&W_HIST[ex.name]&&W_HIST[ex.name].length>0&&(curW||0)>=Math.max(...W_HIST[ex.name].map(h=>h.weight))?` <span title="个人纪录" style="font-size:10px">🏆</span>`:''} <i class="ti ti-info-circle" style="font-size:11px;opacity:.4;vertical-align:middle"></i>${!locked&&!ex.isWarmup&&!ex.isStretch?` <span class="swap-btn" onclick="event.stopPropagation();swapExercise('${sel.date}',${i})" title="替换动作">🔄</span>`:''}</div>
-<div class="exnote">${ex.note}</div>
+return`<div class="exrow${done?' done-ex':''}"><div style="flex:1;min-width:0">
+<div class="exname" onclick="showExDetail('${ex.name}')" style="cursor:pointer">${ex.name}${needsWt&&W_HIST[ex.name]&&W_HIST[ex.name].length>0&&(curW||0)>=Math.max(...W_HIST[ex.name].map(h=>h.weight))?` <span title="\u4e2a\u4eba\u7eaa\u5f55" style="font-size:10px">\ud83c\udfc6</span>`:''} <i class="ti ti-info-circle" style="font-size:11px;opacity:.4;vertical-align:middle"></i>${!locked&&!ex.isWarmup&&!ex.isStretch?` <span class="swap-btn" onclick="event.stopPropagation();swapExercise('${sel.date}',${i})" title="\u66ff\u6362\u52a8\u4f5c">\ud83d\udd04</span>`:''}</div>
+<div class="exnote">${ex.note}${ex.bi?' ⚡️ 左右各做一遍算1组':''}</div>
 ${needsWt&&!locked?`<div class="wt-row">
-<input type="number" class="wt-input" value="${dispW||''}" placeholder="${sugW||''}" onchange="setWeight('${sel.date}',${i},+this.value)" step="0.5" min="0">
+<input type="number" class="wt-input" value="${dispW||''}" placeholder="${sugW||''}" onchange="setWeight('${sel.date}',${i},+this.value)" step="${getWeightStep(ex.name)}" min="0">
 <span class="wt-unit">kg</span>
-${lastW?`<span class="wt-hint">上次 ${lastW.weight}kg</span>`:`<span class="wt-sug">建议 ${sugW||'?'}kg</span>`}
-${sugW&&lastW&&sugW!==lastW.weight?`<span class="wt-sug">→ ${sugW}kg</span>`:''}
+${lastW?`<span class="wt-hint">\u4e0a\u6b21 ${lastW.weight}kg</span>`:`<span class="wt-sug">\u5efa\u8bae ${sugW||'?'}kg</span>`}
+${sugW&&lastW&&sugW!==lastW.weight?`<span class="wt-sug">\u2192 ${sugW}kg</span>`:''}
 </div>`:''}
 ${needsWt&&locked&&lastW?`<span class="wt-hint" style="margin-top:2px;display:block">${curW||lastW.weight}kg</span>`:''}
-${(ex.unit==='秒'||ex.unit==='分钟') && !locked ? `<button class="act-play-btn" onclick="startTimer(${ex.unit==='分钟'?reps*60:reps}, '${ex.name}')">计时</button>` : ''}
+${(ex.unit==='\u79d2'||ex.unit==='\u5206\u949f') && !locked ? `<button class="act-play-btn" onclick="startTimer(${ex.unit==='\u5206\u949f'?reps*60:reps}, '${ex.name}')">\u8ba1\u65f6</button>` : ''}
 </div>
 ${!locked?`
-<div class="adjg"><button class="ab" onclick="adj('${sel.date}',${i},'s',-1)">-</button><span class="av">${sets}组</span><button class="ab" onclick="adj('${sel.date}',${i},'s',1)">+</button></div>
-<div class="adjg"><button class="ab" onclick="adj('${sel.date}',${i},'r',-1)">-</button><span class="av">${reps}${ex.unit}</span><button class="ab" onclick="adj('${sel.date}',${i},'r',1)">+</button></div>
+<div class="adjg"><button class="ab" onclick="adj('${sel.date}',${i},'s',-1)">-</button><span class="av">${sets}\u7ec4</span><button class="ab" onclick="adj('${sel.date}',${i},'s',1)">+</button></div>
+<div class="adjg"><button class="ab" onclick="adj('${sel.date}',${i},'r',-1)">-</button><span class="av">${reps}${ex.unit}${ex.bi?'/每侧':''}</span><button class="ab" onclick="adj('${sel.date}',${i},'r',1)">+</button></div>
 <button class="cb${done?' ck':''}" onclick="tog('${sel.date}',${i})"><i class="ti ti-check"></i></button>
-`:`<span class="av" style="opacity:.5">${sets}×${reps}${ex.unit}</span>`}
+`:`<span class="av" style="opacity:.5">${sets}\u00d7${reps}${ex.unit}${ex.bi?'/每侧':''}</span>`}
 </div>`;}).join('')}</div>`;
+  }
 }else if(sel&&sel.isRest){
-h+=`<div class="tip" style="text-align:center;padding:2rem">休息日 — 好好恢复，明天继续</div>`;
+h+=`<div class="tip" style="text-align:center;padding:2rem">\u4f11\u606f\u65e5 \u2014 \u597d\u597d\u6062\u590d\uff0c\u660e\u5929\u7ee7\u7eed</div>`;
 }
 h+=`<div class="tip">${tip}</div>`;
 document.getElementById('main').innerHTML=h;
@@ -692,28 +929,35 @@ function submitRPE(rpe, isSkip=false) {
         // New log mode
         const day = _pendingRpeDay;
         const date = _pendingRpeDate;
+        const _dayIsSwim = !!day.isSwimDay;
         
         // Auto-volume adjustment: if not all checked, reduce future volume
+        // (Skip for swim days — swim doesn't affect gym volume)
         const checkedCount = Object.keys(S.prog[date] || {}).filter(k=>S.prog[date][k]).length;
         const totalEx = day.exercises.length;
-        if (checkedCount < totalEx) {
-            S.volumeMultiplier = Math.max(0.5, (S.volumeMultiplier || 1.0) * 0.9);
-            showToast(`未全部完成，已调整后续训练量`);
+        if (!_dayIsSwim) {
+            if (checkedCount < totalEx) {
+                S.volumeMultiplier = Math.max(0.5, (S.volumeMultiplier || 1.0) * 0.9);
+                showToast(`未全部完成，已调整后续训练量`);
+            } else {
+                if((S.volumeMultiplier||1.0) < 1.0) S.volumeMultiplier = Math.min(1.0, (S.volumeMultiplier||1.0) * 1.05);
+                showToast(isSkip ? `训练完成。` : `训练完成。RPE ${actualRpe}/10`);
+            }
         } else {
-            // Recovery: gradually restore volume if consistently completing all exercises
-            if((S.volumeMultiplier||1.0) < 1.0) S.volumeMultiplier = Math.min(1.0, (S.volumeMultiplier||1.0) * 1.05);
-            showToast(isSkip ? `训练完成。` : `训练完成。RPE ${actualRpe}/10`);
+            showToast(isSkip ? `🏊 游泳训练完成！` : `🏊 游泳完成。RPE ${actualRpe}/10`);
+            checkSwimMilestone();
         }
 
         LOG.unshift({
             date: date,
             workout: day.workoutType,
             duration: day.duration,
-            exerciseCount: checkedCount, // Record actual completed
+            exerciseCount: checkedCount,
             rpe: actualRpe,
             exercises: day.exercises.map((ex,i)=>({name:ex.name,sets:getAdj(date,i,'s',ex.sets),reps:getAdj(date,i,'r',ex.reps),unit:ex.unit,weight:getWeight(date,i)||null})),
             mood: moods[actualRpe-1]||'💪',
-            note: note
+            note: note,
+            isSwimDay: _dayIsSwim
         });
         ls(K.log,LOG);
         
@@ -756,8 +1000,9 @@ function tog(date,ei){
     saveState();render();
     
     // Auto rest timer when checking off an exercise (not unchecking)
+    // Skip auto timer for swim days (swimming is continuous, not set-based)
     const day=S.plan.days.find(d=>d.date===date);
-    if(S.prog[date][ei] && !isDone(day) && (S.restDur||45) > 0){
+    if(S.prog[date][ei] && !isDone(day) && (S.restDur||45) > 0 && !day.isSwimDay){
         startTimer(S.restDur||45, '组间休息');
     }
     
@@ -766,6 +1011,11 @@ function tog(date,ei){
         if(!exists){
             _pendingRpeDate = date;
             _pendingRpeDay = day;
+            // Customize RPE modal for swim days
+            if(day.isSwimDay){
+                document.getElementById('rpe-modal-title').innerText = '🏊 游泳训练完成！';
+                document.getElementById('rpe-modal-desc').innerText = '评估今天游泳的累计程度';
+            }
             setTimeout(() => {
                 document.getElementById('rpe-modal').classList.add('open');
             }, 100);
@@ -779,6 +1029,22 @@ const sel=S.plan.days.find(d=>d.date===date);
 if(!sel)return;
 const ex=sel.exercises[ei];
 if(ex.isWarmup||ex.isStretch){showToast('热身/拉伸不支持替换');return}
+// Swimming exercises: only swap within same phase
+const isSwimEx=ex.group==='swimming'||ex.swimPhase;
+if(isSwimEx){
+const phase=ex.swimPhase;
+const maxDiff=S.swimLevel==='入门'?1:S.swimLevel==='进阶'?2:3;
+const excluded=getExcluded();
+const used=sel.exercises.map(e=>e.name);
+const alts=(DB.swimming||[]).filter(e=>e.swimPhase===phase&&e.n!==ex.name&&!used.includes(e.n)&&!excluded.has(e.n)&&e.diff<=maxDiff);
+if(!alts.length){showToast('该阶段没有更多替代动作');return}
+window._swapAlts=alts;
+const diffLabel=['','★','★★','★★★'];
+let modal=document.getElementById('swap-modal');
+if(!modal){modal=document.createElement('div');modal.id='swap-modal';modal.className='ex-modal-overlay';modal.onclick=e=>{if(e.target===modal){modal.classList.remove('open')}};document.body.appendChild(modal)}
+modal.innerHTML=`<div class="ex-modal-card" onclick="event.stopPropagation()"><div class="ex-modal-hdr"><span class="ex-modal-title">替换动作</span><button class="ex-modal-close" onclick="document.getElementById('swap-modal').classList.remove('open')">✕</button></div><p style="font-size:12px;color:var(--ink3);margin-bottom:12px">当前: ${ex.name} → 选择替代</p><div style="display:flex;flex-direction:column;gap:6px">${alts.map((alt,idx)=>`<button class="swap-option" onclick="doSwap('${date}',${ei},${idx})"><div style="display:flex;justify-content:space-between;align-items:center"><span style="font-weight:600;font-size:13px">${alt.n}</span><span style="font-size:10px;color:var(--amber)">${diffLabel[alt.diff||1]}</span></div><div style="font-size:11px;color:var(--ink3);text-align:left;margin-top:2px">${alt.note||''}</div></button>`).join('')}</div></div>`;
+modal.classList.add('open');return;
+}
 let group=null;
 for(const[g,exs]of Object.entries(DB)){if(exs.find(e=>e.n===ex.name)){group=g;break}}
 if(!group){showToast('找不到替代动作');return}
@@ -822,7 +1088,7 @@ function doSwap(date,ei,altIdx){
 const alt=window._swapAlts[altIdx];
 const sel=S.plan.days.find(d=>d.date===date);
 const ex=sel.exercises[ei];
-sel.exercises[ei]={name:alt.n,note:alt.note||'',sets:ex.sets,reps:alt.u==='秒'?30:(alt.u==='分钟'?1:ex.reps),unit:alt.u||'次',isWarmup:false,isStretch:false};
+sel.exercises[ei]={name:alt.n,note:alt.note||'',sets:ex.sets,reps:alt.u==='秒'?30:(alt.u==='分钟'?1:ex.reps),unit:alt.u||'次',isWarmup:false,isStretch:false,bi:!!alt.bi};
 document.getElementById('swap-modal').classList.remove('open');
 saveState();render();
 showToast(`已替换为 ${alt.n}`);
@@ -1563,7 +1829,7 @@ const EX_DETAIL = {
   },
   '肩关节环绕': {
     muscles: ['三角肌', '肩袖肌群'],
-    steps: ['站立，双臂自然下垂或微微抬起', '以肩关节为轴，缓慢向前画大圆环绕约15秒', '随后反方向向后画大圆环绕约15秒'],
+    steps: ['站立，双臂自然下垂或微微抬起', '以肩关节为轴，缓慢向前画大圆环绕约30秒', '随后反方向向后画大圆环绕约30秒'],
     tips: ['动作要连贯、缓慢，感受肩胛骨的活动', '幅度可以由小到大逐渐增加'],
     mistakes: ['速度过快导致肩关节弹响', '耸肩借力']
   },
@@ -1650,6 +1916,122 @@ const EX_DETAIL = {
     steps: ['俯卧在垫子上，双腿并拢伸直，脚背贴地', '双手放在胸部两侧的地板上，手指朝前', '吸气，双臂慢慢用力推起上半身，直到双臂伸直或微屈', '头微仰看向天花板，骨盆尽量保持贴在地面'],
     tips: ['收紧臀部可以有效保护下背部', '如果腰椎感觉压迫，可以将手肘撑地（人面狮身式）代替'],
     mistakes: ['耸肩把头缩在肩膀里', '骨盆过度离开地面']
+  },
+  '器械内收机': {
+    muscles: ['内收肌群', '大腿内侧'],
+    steps: ['坐在器械上，背部贴紧靠背，双腿分开放在挡板外侧', '双手握住两侧扶手，收紧核心', '用大腿内侧力量向内夹拢双腿，顺端收缩停留 1-2 秒', '缓慢控制向外打开，不要完全放松'],
+    tips: ['与器械外展机配对使用，平衡内外侧肌肉发展', '对应 Tecnogym Adductor 器械'],
+    mistakes: ['用惯性夹合而不是肌肉发力', '配重片碘碰产生擞击']
+  },
+  '器械上背划船': {
+    muscles: ['上背', '菱形肌', '中旜形肌'],
+    steps: ['坐在器械上，胸部贴紧前方靠垂，双手握住把手', '手肘向后上方拉起，挤压肩胛骨中间', '顾峰收缩停留 1 秒', '缓慢控制回放至手臂伸直'],
+    tips: ['与高位下拉、坐姿划船不同，这个动作主要孤立上背和菱形肌', '对应 Tecnogym Upper Back 器械'],
+    mistakes: ['身体后仰借力', '仅用手臂拉而不是背部发力']
+  },
+  '壶铃摆动': {
+    muscles: ['臀大肌', '腘绳肌', '核心肌群'],
+    steps: ['双脚略宽于肩，脚尖微向外，双手握住壶铃把手', '髋部后推，让壶铃从胯间向后摆动', '臀部爆发式向前推，将壶铃用惯性摆至胸口高度', '用臀部和核心控制下落，重复'],
+    tips: ['壶铃摆动是髋部铰链动作，手臂只是“挂钩”不主动发力', '对臀部和后侧链激活效果极佳'],
+    mistakes: ['用手臂抑或肩膀向前拉壶铃', '弯腰驼背而不是髋部后推', '膝盖过度前推变成了深蹲']
+  },
+  '壶铃高脚杯深蹲': {
+    muscles: ['股四头肌', '臀大肌'],
+    steps: ['双手托住壶铃的球部，贴在胸前', '双脚略宽于肩，脚尖微外八', '保持挺胸，臀部向后下方坐下，类似坐在一张不存在的椅子上', '下蹲至大腿平行地面或更低，用脚后跟发力站起'],
+    tips: ['壶铃的球部形状让双手托住更自然舒适，比哑铃版本更容易上手', '适合初学者和热身激活'],
+    mistakes: ['胡盖内扣', '重心前移到脚掌前部']
+  },
+  '上肢功率车': {
+    muscles: ['心肺功能', '三角肌', '胱二头肌', '胸大肌'],
+    steps: ['坐在器械上，调整座椅高度，使手把在胸口高度', '双手交替採踏手把，类似爬楼梯但用手臂驱动', '保持稳定的节奏，核心收紧', '可调节阻力和转速'],
+    tips: ['对应 Tecnogym Excite Top 器械', '上肢为主的有氧训练，适合下肢受伤时替代'],
+    mistakes: ['只用手掊不用手臂发力', '坐姿弯腰驼背']
+  },
+
+  // === 游泳 (Swimming) ===
+  '水中行走热身': {
+    muscles: ['全身肌群', '心肺适应'],
+    steps: ['下水后先在浅水区沿池边慢走', '双臂在水中自然前后摆动，感受水的阻力', '逐渐加快步伐，可以加入抬膝走或侧步走', '持续3-5分钟，让身体适应水温和浮力'],
+    tips: ['不要急着游，让身体充分适应水温能防止抽筋', '水中行走本身就是很好的全身热身，水的阻力会让心率自然上升'],
+    mistakes: ['直接跳入水中开始游（容易抽筋）', '在深水区行走（初学者应在浅水区）']
+  },
+  '水中呼吸练习': {
+    muscles: ['呼吸肌群', '心肺功能'],
+    steps: ['站在浅水区，水深到胸部', '用嘴深吸一口气，然后将脸部没入水中', '在水中通过鼻子缓慢持续地吐出气泡，直到完全吐完', '抬头出水面，用嘴迅速吸气，重复循环'],
+    tips: ['口诀：嘴吸鼻吐。这是所有泳姿的呼吸基础', '吐气要缓慢持续，不要一下子全吐完', '节奏感很重要：水中吐3秒，出水吸1秒'],
+    mistakes: ['在水中憋气不吐（导致下一次换气来不及）', '用嘴在水中吐气（容易呛水）', '抬头太高太急']
+  },
+  '扶边蛙泳腿练习': {
+    muscles: ['股四头肌', '腘绳肌', '小腿', '臀大肌'],
+    steps: ['双手扶住池边，身体俯卧浮在水面上', '收腿：小腿向臀部方向折叠，脚跟靠近臀部', '翻脚：脚踝向外翻，脚尖向外侧勾起（"锄头脚"）——这是获得推力的关键！', '蹬夹：向后斜下方圆弧形蹬出，然后双腿快速并拢，脚尖绷直', '感受蹬夹后身体被推动向前滑行的感觉'],
+    tips: ['四字口诀：收、翻、蹬、夹', '脚踝外翻（勾脚）是最关键的一步，很多初学者忘记翻脚导致蹬不动水', '可以先在岸上趴在长凳边缘反复练习，感受勾脚动作', '蹬出后要有一个滑行停顿，不要连续不停地收蹬'],
+    mistakes: ['忘记翻脚（脚尖不勾起，像自由泳一样蹬，完全没有推力）', '收腿时膝盖向外打开太多（应该是小腿折叠，膝盖基本不动）', '蹬完后没有滑行，马上又开始收腿']
+  },
+  '蹬壁滑行练习': {
+    muscles: ['核心肌群', '全身流线型控制'],
+    steps: ['面朝泳池方向，一只脚踩在池壁上', '双手合十向前伸直，夹住头部两侧', '深吸气，身体绷紧呈流线型', '用脚用力蹬离池壁，像一支箭一样向前滑行', '保持姿态不动，感受水流推动身体，直到自然停下'],
+    tips: ['全身要像一根"棍子"一样笔直绷紧，这就是游泳中最重要的"流线型"', '头部不要抬起看前方，夹在两臂之间，看池底', '蹬得越用力+身体越绷紧=滑得越远'],
+    mistakes: ['蹬壁后身体松垮（像一团面条，滑不动）', '头抬起看前方（破坏流线型，增加阻力）', '双腿分开']
+  },
+  '蛙泳手部划水练习': {
+    muscles: ['三角肌', '胸大肌', '背阔肌'],
+    steps: ['站在浅水区，弯腰使肩膀入水，双手前伸合拢', '双手向两侧外划，掌心向外，不要超过肩宽', '手掌转向内，向内"抱水"，同时抬头出水面迅速吸气', '双手快速向前并拢伸直，头入水，恢复初始位置'],
+    tips: ['手的划水范围不要太大，向两侧打开到肩宽即可', '抱水（向内收）和抬头吸气是同时进行的', '手向前伸直的动作要快，这样可以减少阻力'],
+    mistakes: ['手划得太大（超过肩宽很多，像在扒水）', '手向后划（应该是向两侧再向内，不是向后拉）', '抬头太高（只需要嘴巴出水面就够了）']
+  },
+  '蛙泳完整配合': {
+    muscles: ['全身肌群', '心肺耐力'],
+    steps: ['从蹬壁滑行姿势开始', '双手开始向外划水，同时抬头换气', '在手向内抱水的同时，开始收腿（小腿向臀部折叠）', '手向前伸直入水的瞬间，用力蹬夹腿', '蹬腿后保持流线型滑行2-3秒，再进入下一个循环'],
+    tips: ['核心口诀：划手→抬头吸气→收腿→蹬夹滑行', '最重要的原则：先划手，后蹬腿。手脚不能同时动！', '每次蹬腿后要享受滑行，不要像踩水一样不停动', '初学者可以"划一次手，蹬一次腿，滑行数两秒"来控制节奏'],
+    mistakes: ['手脚同时动（互相抵消推力，游不动）', '不滑行就连续做动作（迅速耗尽体力）', '把头抬得很高（增加下半身下沉的阻力）']
+  },
+  '水中漫步放松': {
+    muscles: ['全身', '心肺恢复'],
+    steps: ['在浅水区慢速行走或轻柔踢水', '双臂在水中缓慢划动，不需要用力', '调整呼吸，深长呼气让心率逐渐恢复', '可以配合简单的水中拉伸动作'],
+    tips: ['这是训练结束的重要环节，帮助肌肉放松和排乳酸', '可以做一些水中的肩部和腿部拉伸'],
+    mistakes: ['训练完直接上岸不做放松']
+  },
+  '蛙泳连续游': {
+    muscles: ['全身肌群', '心肺耐力'],
+    steps: ['从蹬壁出发，进入完整蛙泳配合', '保持稳定的划手-蹬腿-滑行节奏', '每次蹬腿后充分利用滑行，节省体力', '游到对面池边后蹬壁转身继续'],
+    tips: ['连续游的关键是节奏而不是速度，保持从容的节奏', '关注滑行时间：好的蛙泳70%的时间都在滑行', '如果觉得累，加长滑行时间而不是加快动作频率'],
+    mistakes: ['为了快而加速手脚频率（反而更累更慢）', '不敢把头放入水中导致始终仰头游']
+  },
+  '蛙泳间歇训练': {
+    muscles: ['心肺功能', '无氧耐力', '全身'],
+    steps: ['从池边出发，以较快速度游完25米', '到达对面池边后停下休息30-45秒', '再次出发游25米', '重复4-6组'],
+    tips: ['间歇训练能高效提升心肺能力和游泳专项体能', '休息时不要上岸，扶着池边做几次深呼吸即可', '随着能力提升，可以缩短休息时间或增加距离到50米'],
+    mistakes: ['休息时间太长（失去间歇效果）', '每一趟都用全力冲刺（应保持7-8成力即可）']
+  },
+  '踩水练习': {
+    muscles: ['核心肌群', '腿部耐力'],
+    steps: ['在深水区（确保旁边有池边可扶），身体直立', '双腿做类似蛙泳腿的动作：交替向外蹬水', '双手在水面附近轻轻划水辅助保持平衡', '保持头部在水面以上，正常呼吸'],
+    tips: ['踩水和蛙泳腿非常相似，学会蛙泳腿后踩水就容易了', '这是游泳中最重要的自救技能', '不要紧张，身体越放松越容易浮起来', '刚开始练习时请确保旁边有池边可以随时抓住'],
+    mistakes: ['身体过度紧张导致下沉', '动作幅度太大消耗过多体力', '在没有安全保障的深水区独自练习']
+  },
+  '蹬壁转身练习': {
+    muscles: ['核心', '腿部爆发力'],
+    steps: ['游到池边时，一只手先触壁', '身体紧贴池壁蜷缩，双脚踩上池壁', '转身面向游来的方向，蹬壁出发', '进入流线型滑行后开始正常游进'],
+    tips: ['开放式转身（非翻滚转身），适合初学者', '触壁后动作要紧凑，尽量减少停留时间', '蹬壁力度要大，利用好这段"免费加速"'],
+    mistakes: ['在池边停留太久再出发', '蹬壁后身体不绷紧，浪费了惯性']
+  },
+  '自由泳打腿练习': {
+    muscles: ['臀大肌', '股四头肌', '核心'],
+    steps: ['双手扶住池边，身体俯卧浮在水面', '双腿伸直，从髋部发力上下交替打水', '膝盖保持微屈，不要大幅度弯曲', '脚踝放松，像鞭子的末端一样自然摆动', '打水幅度控制在30-40厘米'],
+    tips: ['打腿的力量来自髋部（大腿根部），不是膝盖', '脚踝越放松，打水越有效率', '水花不应该太大，高效的打腿水花很小'],
+    mistakes: ['膝盖大幅度弯曲（像蹬自行车一样踢水）', '脚踝僵硬（水阻极大，打不动水）', '只在水面以上打水（应该是水下为主）']
+  },
+  '自由泳划臂+侧头呼吸': {
+    muscles: ['背阔肌', '三角肌', '核心旋转'],
+    steps: ['站在浅水区，弯腰使肩膀入水', '单臂向前伸直，另一只手在体侧', '前伸的手向下向后划水，同时身体向划水手一侧微微转动', '划水手到体侧时，身体随之旋转，将嘴巴转到水面以上换气', '换完气后手举过头顶向前入水，开始另一侧'],
+    tips: ['呼吸的秘诀：不是转头，而是转动整个身体（身体旋转带动头部）', '嘴巴只需要一半露出水面就能吸气', '先在站立状态下反复练习划臂+转头呼吸的配合'],
+    mistakes: ['抬头呼吸（应该是侧头/转体呼吸）', '只转头不转身（容易脖子酸）', '划水时手臂越过中线（应该是直线向后划）']
+  },
+  '自由泳完整配合': {
+    muscles: ['全身肌群', '心肺耐力'],
+    steps: ['蹬壁出发，进入流线型滑行', '开始交替划臂，配合连续打腿', '每划2-3次手臂换一次气（侧头呼吸）', '保持身体水平，核心收紧'],
+    tips: ['初学者建议先游短距离（10-15米），不要急于游全程', '呼吸是自由泳最大的挑战，不要着急，慢慢来', '如果觉得呛水，可以回到蛙泳调整后再尝试'],
+    mistakes: ['头一直抬在水面上（应该大部分时间脸在水中）', '手脚动作不协调（先专注于放松地划水，不要用蛮力）', '因为紧张而加快频率（越快越乱，应该放慢节奏）']
   }
 };
 
@@ -1671,4 +2053,31 @@ document.getElementById('ex-modal-mistakes').innerHTML=mistakes.length?`<p style
 document.getElementById('ex-modal').classList.add('open');
 }
 function closeExDetail(){document.getElementById('ex-modal').classList.remove('open');}
+
+function calPrev(){_calWeekOffset-=2;render()}
+function calNext(){if(_calWeekOffset<0){_calWeekOffset=Math.min(0,_calWeekOffset+2);render()}}
+function calGoToday(){_calWeekOffset=0;S.selDate=todayStr();saveState();render()}
+
+function showHistoryDetail(dateStr){
+const entries=LOG.filter(l=>l.date===dateStr);
+const modal=document.getElementById('hist-modal');
+const content=document.getElementById('hist-modal-content');
+if(!modal||!content)return;
+const d=new Date(dateStr+'T00:00:00');
+const dayName=['\u5468\u65e5','\u5468\u4e00','\u5468\u4e8c','\u5468\u4e09','\u5468\u56db','\u5468\u4e94','\u5468\u516d'][d.getDay()];
+const dateFmt=`${d.getFullYear()}\u5e74${d.getMonth()+1}\u6708${d.getDate()}\u65e5 ${dayName}`;
+if(!entries.length){content.innerHTML=`<div class="hist-detail-header"><span class="hist-detail-date">${dateFmt}</span><button class="ex-modal-close" onclick="closeHistModal()">\u2715</button></div><div class="hist-empty">\u8be5\u65e5\u6682\u65e0\u8bad\u7ec3\u8bb0\u5f55</div>`;modal.classList.add('open');return}
+let html=`<div class="hist-detail-header"><span class="hist-detail-date">${dateFmt}</span><button class="ex-modal-close" onclick="closeHistModal()">\u2715</button></div>`;
+entries.forEach(entry=>{
+html+=`<div class="hist-detail-meta"><span class="hist-detail-chip type">${entry.workout||'\u8bad\u7ec3'}</span><span class="hist-detail-chip dur">${entry.duration||'?'}\u5206\u949f</span>${entry.rpe?`<span class="hist-detail-chip rpe">RPE ${entry.rpe}/10</span>`:''}${entry.mood?`<span class="hist-detail-chip mood">${entry.mood}</span>`:''}</div>`;
+if(entry.exercises&&entry.exercises.length){
+html+=`<div class="hist-detail-exercises">`;
+entry.exercises.forEach(ex=>{html+=`<div class="hist-ex-row"><span class="hist-ex-name" onclick="showExDetail('${ex.name}')" style="cursor:pointer">${ex.name} <i class="ti ti-info-circle" style="font-size:11px;opacity:.4"></i></span><span class="hist-ex-detail"><span>${ex.sets||'?'}\u00d7${ex.reps||'?'}${ex.unit||'\u6b21'}</span>${ex.weight?`<span class="hist-ex-weight">${ex.weight}kg</span>`:''}</span></div>`});
+html+=`</div>`}
+if(entry.note)html+=`<div class="hist-note">"${entry.note}"</div>`;
+});
+content.innerHTML=html;modal.classList.add('open');
+}
+function closeHistModal(){document.getElementById('hist-modal').classList.remove('open')}
+
 
