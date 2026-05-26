@@ -27,7 +27,7 @@ function updateThemeBtn(){
 
 // ══ State Persistence ════════════════════════════════════
 function saveState(){
-ls(K.settings,{goal:S.goal,level:S.level,days:S.days,dur:S.dur,equip:S.equip,focus:S.focus,limits:S.limits,volumeMultiplier:S.volumeMultiplier,restDur:S.restDur});
+ls(K.settings,{goal:S.goal,level:S.level,days:S.days,dur:S.dur,equip:S.equip,focus:S.focus,limits:S.limits,volumeMultiplier:S.volumeMultiplier,restDur:S.restDur,swimLevel:S.swimLevel});
 if(S.plan)ls(K.plan,{plan:S.plan,selDate:S.selDate,prog:S.prog,adj:S.adj,weights:S.weights,unlockedDates:S.unlockedDates});
 }
 function loadState(){
@@ -50,9 +50,24 @@ document.querySelectorAll('#g-equip .chip').forEach(b=>b.classList.toggle('on',S
 document.querySelectorAll('#g-focus .chip').forEach(b=>b.classList.toggle('on',S.focus.includes(b.dataset.v)));
 document.getElementById('limits').value=S.limits||'';
 document.querySelectorAll('#g-rest .chip').forEach(b=>b.classList.toggle('on',+b.dataset.v===(S.restDur??45)));
+document.querySelectorAll('#g-swim-level .chip').forEach(b=>b.classList.toggle('on',b.dataset.v===(S.swimLevel||'入门')));
+const swimPanel=document.getElementById('swim-settings');
+if(swimPanel) swimPanel.style.display=S.equip.includes('泳池')?'block':'none';
+updateSwimBreakdown();
 
 const rBtn = document.getElementById('recal-btn');
 if(rBtn) rBtn.style.display = S.plan ? 'block' : 'none';
+}
+
+function updateSwimBreakdown(){
+const el=document.getElementById('swim-breakdown');
+if(!el) return;
+const hasPool=S.equip.includes('泳池');
+if(!hasPool){el.style.display='none';return;}
+el.style.display='block';
+const sp=SWIM_SPLIT[S.days]||{gym:Math.max(2,S.days-1),swim:1};
+const rest=7-S.days;
+el.innerHTML=`🏋️ ${sp.gym}天力量 + 🏊 ${sp.swim}天游泳${rest>0?` + 😴 ${rest}天休息`:''}`;
 }
 
 // ══ Tabs ═════════════════════════════════════════════════
@@ -182,7 +197,7 @@ heatCells.push({ds,active:logDates.has(ds),day:d.getDay()});
 }
 const heatHtml=heatCells.map(c=>{
 const isToday=c.ds===today.toISOString().split('T')[0];
-return`<div class="heat-cell${c.active?' heat-on':''}${isToday?' heat-today':''}" title="${c.ds}"></div>`;
+return`<div class="heat-cell${c.active?' heat-on':''}${isToday?' heat-today':''}" title="${c.ds}" ${c.active?`onclick="showHistoryDetail('${c.ds}')"`:''} ></div>`;
 }).join('');
 
 // Muscle distribution with bar
@@ -193,7 +208,7 @@ for(const[grp,exs]of Object.entries(DB)){
 if(exs.find(e=>e.n===ex.name)){dist[grp]=(dist[grp]||0)+1;break}}
 });
 });
-const grpNames={chest:'胸',shoulder:'肩',back:'背',biceps:'二头',triceps:'三头',quads:'股四头',hamglutes:'臀腿',calves:'小腿',core:'核心',cardio:'有氧'};
+const grpNames={chest:'胸',shoulder:'肩',back:'背',biceps:'二头',triceps:'三头',quads:'股四头',hamglutes:'臀腿',calves:'小腿',core:'核心',cardio:'有氧',swimming:'游泳'};
 const distEntries=Object.entries(dist).sort((a,b)=>b[1]-a[1]);
 const maxDist=distEntries[0]?.[1]||1;
 
@@ -280,6 +295,37 @@ ${PR_LIST.length?`
     </div>
   `).join('')}
 </div>`:''}
+${(()=>{
+if(!SWIM_LOG||!SWIM_LOG.count) return '';
+const swimCount=SWIM_LOG.count;
+const swimLogs=LOG.filter(l=>l.isSwimDay);
+const thisMonthSwim=swimLogs.filter(l=>l.date.startsWith(today.toISOString().slice(0,7)));
+const totalSwimMin=swimLogs.reduce((s,l)=>s+(l.duration||0),0);
+const nextMs=SWIM_MILESTONES.find(m=>m.count>swimCount);
+const unlockedMs=(SWIM_LOG.milestones||[]).slice().reverse();
+return `<div class="panel">
+  <p class="panel-title">🏊 游泳成就</p>
+  <div class="stats">
+    <div class="stat"><div class="stat-val">${swimCount}</div><div class="stat-lbl">总游泳次数</div></div>
+    <div class="stat"><div class="stat-val">${thisMonthSwim.length}</div><div class="stat-lbl">本月游泳</div></div>
+    <div class="stat"><div class="stat-val">${totalSwimMin}</div><div class="stat-lbl">总游泳分钟</div></div>
+  </div>
+  ${nextMs?`<div style="margin-top:12px;padding:8px 12px;background:var(--surface2);border-radius:8px;font-size:12px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+      <span>下一成就: ${nextMs.icon} ${nextMs.title}</span>
+      <span style="font-weight:600;color:var(--terra)">${swimCount}/${nextMs.count}</span>
+    </div>
+    <div class="progress-bar"><div class="progress-fill" style="width:${Math.round(swimCount/nextMs.count*100)}%"></div></div>
+  </div>`:'<div style="margin-top:8px;text-align:center;font-size:12px;color:var(--sage)">🧜 所有成就已解锁！</div>'}
+  ${unlockedMs.length?`<div style="margin-top:10px">
+    ${unlockedMs.map(m=>`<div style="display:flex;align-items:center;gap:8px;padding:4px 0;font-size:12px;border-bottom:1px solid var(--border)">
+      <span style="font-size:16px">${m.icon}</span>
+      <div style="flex:1"><span style="font-weight:600">${m.title}</span><span style="color:var(--ink3);margin-left:6px;font-size:11px">${m.desc}</span></div>
+      <span style="font-size:10px;color:var(--ink3)">${m.date||''}</span>
+    </div>`).join('')}
+  </div>`:''}
+</div>`;
+})()}
 `;
 }
 
@@ -289,7 +335,7 @@ const recent=LOG.slice(0,30);
 if(!recent.length){alert('暂无日志记录');return}
 const dist={};
 recent.forEach(l=>{if(l.exercises)l.exercises.forEach(ex=>{for(const[g,exs]of Object.entries(DB)){if(exs.find(e=>e.n===ex.name)){dist[g]=(dist[g]||0)+1;break}}})});
-const grpNames={chest:'胸',shoulder:'肩',back:'背',biceps:'二头',triceps:'三头',quads:'股四头',hamglutes:'臀腿',calves:'小腿',core:'核心',cardio:'有氧'};
+const grpNames={chest:'胸',shoulder:'肩',back:'背',biceps:'二头',triceps:'三头',quads:'股四头',hamglutes:'臀腿',calves:'小腿',core:'核心',cardio:'有氧',swimming:'游泳'};
 const distStr=Object.entries(dist).sort((a,b)=>b[1]-a[1]).map(([g,c])=>`${grpNames[g]||g}${c}组`).join('·');
 
 let logStr=recent.map(l=>{
@@ -450,7 +496,26 @@ document.querySelectorAll('#g-rest .chip').forEach(c=>c.classList.remove('on'));
 b.classList.add('on');S.restDur=+b.dataset.v;saveState();
 });
 })();
-document.getElementById('sl-days').addEventListener('input',e=>{S.days=+e.target.value;document.getElementById('v-days').textContent=S.days+'天';saveState()});
+// Swim level selector
+(function(){
+const el=document.getElementById('g-swim-level');if(!el)return;
+el.addEventListener('click',e=>{
+const b=e.target.closest('.chip');if(!b)return;
+document.querySelectorAll('#g-swim-level .chip').forEach(c=>c.classList.remove('on'));
+b.classList.add('on');S.swimLevel=b.dataset.v;saveState();
+const dot=document.getElementById('saved-dot');dot.classList.add('show');setTimeout(()=>dot.classList.remove('show'),1200);
+});
+})();
+// Show/hide swim settings when 泳池 equipment is toggled
+const _origEquipEl=document.getElementById('g-equip');
+if(_origEquipEl){
+_origEquipEl.addEventListener('click',()=>{
+const swimPanel=document.getElementById('swim-settings');
+if(swimPanel) swimPanel.style.display=S.equip.includes('泳池')?'block':'none';
+updateSwimBreakdown();
+});
+}
+document.getElementById('sl-days').addEventListener('input',e=>{S.days=+e.target.value;document.getElementById('v-days').textContent=S.days+'天';saveState();updateSwimBreakdown()});
 document.getElementById('sl-dur').addEventListener('input',e=>{S.dur=+e.target.value;document.getElementById('v-dur').textContent=S.dur+'分钟';saveState()});
 document.getElementById('limits').addEventListener('input',e=>{S.limits=e.target.value;saveState()});
 

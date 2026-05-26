@@ -103,6 +103,7 @@
                     <input type="range" id="sl-days" min="2" max="7" step="1" value="3">
                     <span class="sval" id="v-days">3天</span>
                 </div>
+                <div id="swim-breakdown" style="display:none;font-size:11px;color:var(--ink3);margin:-4px 0 8px;padding:4px 8px;background:var(--surface2);border-radius:6px"></div>
                 <p class="sec">每次时长</p>
                 <div class="srow">
                     <input type="range" id="sl-dur" min="20" max="90" step="5" value="60">
@@ -112,9 +113,67 @@
                 <div class="chips" id="g-equip">
                     <button class="chip" data-v="无器材">无器材</button>
                     <button class="chip" data-v="弹力带">弹力带</button>
+                    <button class="chip" data-v="壶铃">壶铃</button>
                     <button class="chip" data-v="哑铃">哑铃</button>
                     <button class="chip on" data-v="健身房全套">健身房全套</button>
+                    <button class="chip" data-v="泳池">泳池 🏊</button>
                 </div>
+<div class="tecnogym-ref" style="margin:8px 0 4px">
+    <details>
+        <summary style="font-size:11px;color:var(--ink3);cursor:pointer;user-select:none">📋 Tecnogym 设备对照表（点击展开）</summary>
+        <div style="font-size:11px;color:var(--ink3);margin-top:8px;line-height:1.8;padding:8px 12px;background:var(--surface2);border-radius:8px">
+            <p style="font-weight:600;margin:0 0 4px;color:var(--ink2)">力量器械 (Plurima / Selection / Biostrength)</p>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:2px 12px">
+                <span>Chest Press → 坐姿推胸机</span>
+                <span>Shoulder Press → 器械推举</span>
+                <span>Pectoral → 器械夹胸</span>
+                <span>Reverse Fly → 反向飞鸟机</span>
+                <span>Lat Machine → 高位下拉</span>
+                <span>Low Row → 坐姿划船</span>
+                <span>Upper Back → 器械上背划船</span>
+                <span>Leg Press → 倒蹬机</span>
+                <span>Leg Extension → 腿屈伸</span>
+                <span>Leg Curl → 腿弯举/坐姿腿弯举</span>
+                <span>Adductor → 器械内收机</span>
+                <span>Abductor → 器械外展机</span>
+                <span>Arm Curl → 器械弯举</span>
+                <span>Arm Extension → 器械三头下压</span>
+                <span>Delts Machine → 坐姿侧平举机</span>
+                <span>Multi Hip → 绳索后踢腿</span>
+                <span>Abdominal → 坐姿卷腹机</span>
+                <span>Lower Back → 山羊挺身</span>
+            </div>
+            <p style="font-weight:600;margin:10px 0 4px;color:var(--ink2)">有氧器械 (Excite / Skill)</p>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:2px 12px">
+                <span>Excite Run → 跑步机慢跑</span>
+                <span>Skillmill → 弧形跑步机</span>
+                <span>Synchro/Vario → 椭圆机</span>
+                <span>Excite Bike → 骑行机</span>
+                <span>Skillbike → 动感单车</span>
+                <span>Excite Climb → 攀爬机</span>
+                <span>Skillrow → 划船机</span>
+                <span>Excite Top → 上肢功率车</span>
+            </div>
+            <p style="font-weight:600;margin:10px 0 4px;color:var(--ink2)">自由重量 & 配件</p>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:2px 12px">
+                <span>Dumbbells → 哑铃动作</span>
+                <span>Kettlebells → 壶铃动作</span>
+                <span>Bench → 卧推凳动作</span>
+                <span>Bands → 弹力带动作</span>
+            </div>
+            <p style="margin:8px 0 0;font-size:10px;opacity:.7">✅ 选择「健身房全套」已覆盖 Tecnogym Plurima / Selection / Biostrength / Excite / Skill 全系列</p>
+        </div>
+    </details>
+</div>
+<div id="swim-settings" style="display:none">
+                <p class="sec">游泳水平 🏊</p>
+                <div class="chips" id="g-swim-level">
+                    <button class="chip on" data-v="入门">入门（水性+蛙泳基础）</button>
+                    <button class="chip" data-v="进阶">进阶（蛙泳巩固+耐力）</button>
+                    <button class="chip" data-v="挑战">挑战（+自由泳入门）</button>
+                </div>
+                <p style="font-size:11px;color:var(--ink3);margin-top:4px">游泳等级独立于健身等级，可单独调节进度</p>
+</div>
                 <p class="sec">重点部位（可多选）</p>
                 <div class="chips" id="g-focus">
                     <button class="chip on" data-v="均衡全身">均衡全身 (无偏好)</button>
@@ -122,6 +181,7 @@
                     <button class="chip" data-v="下肢">下肢</button>
                     <button class="chip" data-v="核心">核心</button>
                     <button class="chip" data-v="有氧">有氧</button>
+                    <button class="chip" data-v="游泳">游泳</button>
                 </div>
                 <p class="sec">限制或注意</p>
                 <textarea id="limits" placeholder="例如：膝盖不适、肩伤、避免跳跃..."></textarea>
@@ -213,6 +273,13 @@
             <div id="ex-modal-steps"></div>
             <div id="ex-modal-tips" style="margin-top:10px"></div>
             <div id="ex-modal-mistakes"></div>
+        </div>
+    </div>
+
+    <!-- History Detail Modal -->
+    <div id="hist-modal" class="ex-modal-overlay" onclick="closeHistModal()">
+        <div class="ex-modal-card" onclick="event.stopPropagation()">
+            <div id="hist-modal-content"></div>
         </div>
     </div>
 
