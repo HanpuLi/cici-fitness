@@ -1,5 +1,5 @@
-const CACHE='cici-fitness-v9';
-const ASSETS=['./Index.html','./core.js','./app.js','./style.css','./manifest.json'];
+const CACHE='cici-fitness-v10';
+const ASSETS=['./Index.html','./core.js','./app.js','./style.css','./manifest.json','./icon.svg'];
 self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch',e=>{

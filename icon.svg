@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <defs>
+    <linearGradient id="bg-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#c65838" />
+      <stop offset="100%" stop-color="#e89075" />
+    </linearGradient>
+    <style>
+      .text-mi {
+        font-family: 'ZCOOL XiaoWei', 'Noto Serif SC', 'Songti SC', 'SimSun', serif;
+        font-weight: 700;
+        fill: #f7f4ee;
+        text-anchor: middle;
+        dominant-baseline: central;
+      }
+    </style>
+  </defs>
+  <!-- Beautiful circular seal background -->
+  <circle cx="50" cy="50" r="48" fill="url(#bg-grad)" />
+  
+  <!-- Elegant '咪' character logo -->
+  <text x="50" y="49" font-size="52" class="text-mi">咪</text>
+</svg>
