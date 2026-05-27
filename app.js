@@ -1,4 +1,5 @@
 // ══ app.js — Auth, Sync, Journal, Stats, UI ═════════════
+let _initialLoad = true;
 
 // ══ Dark/Light Mode Toggle ═══════════════════════════════
 (function initTheme(){
@@ -37,7 +38,7 @@ const p=lg(K.plan);
 if(p&&p.plan&&p.plan.days){
     S.plan=p.plan;
     S.selDate=p.selDate||todayStr();
-    if(S.selDate<todayStr() && S.plan.days.some(d=>d.date===todayStr())){
+    if(_initialLoad && S.selDate<todayStr() && S.plan.days.some(d=>d.date===todayStr())){
         S.selDate=todayStr();
     }
     S.prog=p.prog||{};
@@ -49,6 +50,7 @@ else{S.plan=null;}
 LOG=lg(K.log)||[];
 applySettingsToUI();
 if(S.plan)render();
+_initialLoad = false;
 }
 function applySettingsToUI(){
 document.querySelectorAll('#g-level .chip').forEach(b=>b.classList.toggle('on',b.dataset.v===S.level));
