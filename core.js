@@ -1038,26 +1038,154 @@ function selectDate(ds){
     render();
 }
 
-// ══ Timer System ═════════════════════════════════════════
+// ══ Timer System & Premium Audio Synthesizers ════════════
 let _timerInterval=null;
 let _audioCtx=null;
 
-function playDing() {
+function _getAudioCtx() {
     if(!_audioCtx) {
         _audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     }
     if(_audioCtx.state === 'suspended') _audioCtx.resume();
-    const osc = _audioCtx.createOscillator();
-    const gain = _audioCtx.createGain();
-    osc.connect(gain);
-    gain.connect(_audioCtx.destination);
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(880, _audioCtx.currentTime); // A5
-    osc.frequency.exponentialRampToValueAtTime(440, _audioCtx.currentTime + 0.5); // Drop to A4
-    gain.gain.setValueAtTime(1, _audioCtx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.01, _audioCtx.currentTime + 1.5);
-    osc.start();
-    osc.stop(_audioCtx.currentTime + 1.5);
+    return _audioCtx;
+}
+
+// Premium Audio 1: Rest End (Singing Bowl / Metallic Bell Chime)
+function playDing() {
+    try {
+        const ctx = _getAudioCtx();
+        const now = ctx.currentTime;
+        
+        // Multi-oscillator harmonic synthesis for rich metallic sound
+        const base = 440; // A4
+        const harmonics = [1.0, 1.5, 2.0, 2.61, 3.2, 4.1];
+        const gains = [0.25, 0.15, 0.08, 0.05, 0.03, 0.02];
+        
+        harmonics.forEach((ratio, i) => {
+            const osc = ctx.createOscillator();
+            const gainNode = ctx.createGain();
+            
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(base * ratio, now);
+            
+            // Add subtle pitch vibrato to the fundamental to simulate singing bowl resonance
+            if (i === 0) {
+                const lfo = ctx.createOscillator();
+                const lfoGain = ctx.createGain();
+                lfo.frequency.value = 5.5; // 5.5 Hz vibrato
+                lfoGain.gain.value = 2.5;
+                lfo.connect(lfoGain);
+                lfoGain.connect(osc.frequency);
+                lfo.start(now);
+                lfo.stop(now + 2.5);
+            }
+            
+            // Smooth bell envelope (instant attack, long organic decay)
+            gainNode.gain.setValueAtTime(0, now);
+            gainNode.gain.linearRampToValueAtTime(gains[i], now + 0.02);
+            gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 2.5 - (ratio * 0.15));
+            
+            osc.connect(gainNode);
+            gainNode.connect(ctx.destination);
+            
+            osc.start(now);
+            osc.stop(now + 2.5);
+        });
+    } catch(e) { console.warn('Audio failed:', e); }
+}
+
+// Premium Audio 2: Rest Start (Warm Vibraphone Chime)
+function playRestStartSound() {
+    try {
+        const ctx = _getAudioCtx();
+        const now = ctx.currentTime;
+        
+        const freqs = [523.25, 659.25]; // C5 + E5 major third
+        freqs.forEach((f, index) => {
+            const osc = ctx.createOscillator();
+            const gainNode = ctx.createGain();
+            const filter = ctx.createBiquadFilter();
+            
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(f, now);
+            
+            // Soft wood-like attack and warm decay
+            gainNode.gain.setValueAtTime(0, now);
+            gainNode.gain.linearRampToValueAtTime(0.12, now + 0.04 + index * 0.02);
+            gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.7 + index * 0.1);
+            
+            filter.type = 'lowpass';
+            filter.frequency.setValueAtTime(1000, now); // Cut harsh high end
+            
+            osc.connect(gainNode);
+            gainNode.connect(filter);
+            filter.connect(ctx.destination);
+            
+            osc.start(now);
+            osc.stop(now + 0.9);
+        });
+    } catch(e) { console.warn('Audio failed:', e); }
+}
+
+// Premium Audio 3: Exercise Complete (Tactile Pluck / Water Bubble)
+function playExerciseDoneSound() {
+    try {
+        const ctx = _getAudioCtx();
+        const now = ctx.currentTime;
+        
+        const osc = ctx.createOscillator();
+        const gainNode = ctx.createGain();
+        
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(580, now);
+        osc.frequency.exponentialRampToValueAtTime(1160, now + 0.07); // Smooth upward slide
+        
+        gainNode.gain.setValueAtTime(0, now);
+        gainNode.gain.linearRampToValueAtTime(0.1, now + 0.01);
+        gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.12);
+        
+        osc.connect(gainNode);
+        gainNode.connect(ctx.destination);
+        
+        osc.start(now);
+        osc.stop(now + 0.15);
+    } catch(e) { console.warn('Audio failed:', e); }
+}
+
+// Premium Audio 4: Workout Complete Fanfare (Acoustic Arpeggio Harp)
+function playWorkoutCompleteSound() {
+    try {
+        const ctx = _getAudioCtx();
+        const now = ctx.currentTime;
+        
+        // Ascending major C chord
+        const notes = [261.63, 329.63, 392.00, 523.25, 659.25, 783.99, 1046.50];
+        notes.forEach((freq, i) => {
+            const osc = ctx.createOscillator();
+            const gainNode = ctx.createGain();
+            const filter = ctx.createBiquadFilter();
+            
+            osc.type = 'triangle'; // Soft, rounded tone
+            const noteStart = now + i * 0.08;
+            
+            osc.frequency.setValueAtTime(freq, noteStart);
+            
+            gainNode.gain.setValueAtTime(0, now);
+            gainNode.gain.setValueAtTime(0, noteStart);
+            gainNode.gain.linearRampToValueAtTime(0.08, noteStart + 0.04);
+            gainNode.gain.exponentialRampToValueAtTime(0.001, noteStart + 0.6);
+            
+            filter.type = 'lowpass';
+            filter.frequency.setValueAtTime(1400, now);
+            
+            osc.connect(gainNode);
+            gainNode.connect(filter);
+            filter.connect(ctx.destination);
+            
+            osc.start(noteStart);
+            osc.stop(noteStart + 0.7);
+        });
+    } catch(e) { console.warn('Audio failed:', e); }
 }
 
 function startTimer(seconds, label="休息中") {
@@ -1070,6 +1198,7 @@ function startTimer(seconds, label="休息中") {
     
     lblEl.innerText = label;
     bar.classList.add('show');
+    playRestStartSound();
     
     let total = seconds;
     let remain = seconds;
@@ -1210,6 +1339,7 @@ function submitRPE(rpe, isSkip=false) {
         if(S.unlockedDates && S.unlockedDates.includes(date)){
             S.unlockedDates = S.unlockedDates.filter(d => d !== date);
         }
+        playWorkoutCompleteSound();
     }
     
     if(noteEl) noteEl.value = '';
@@ -1250,6 +1380,11 @@ function tog(date,ei){
     
     if(!S.prog[date])S.prog[date]={};
     S.prog[date][ei]=!S.prog[date][ei];
+    
+    if (S.prog[date][ei]) {
+        playExerciseDoneSound();
+    }
+    
     saveState();render();
     
     // Auto rest timer when checking off an exercise (not unchecking)
