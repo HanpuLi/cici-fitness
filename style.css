@@ -1060,3 +1060,71 @@ textarea:focus { border-color: var(--terra-br); }
     text-align: center; padding: 2rem 1rem;
     color: var(--ink3); font-size: 13px;
 }
+
+/* ══ Workout Complete / End Early Buttons ══════════════ */
+.btn-complete-workout, .btn-end-workout-early {
+    width: 100%;
+    padding: 12px 18px;
+    font-size: 13px;
+    font-weight: 700;
+    font-family: var(--font-body);
+    letter-spacing: .06em;
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: all 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    text-transform: uppercase;
+}
+
+/* Complete workout (Green/Sage theme) */
+.btn-complete-workout {
+    background: linear-gradient(135deg, #468c5c, var(--sage));
+    color: #f7f4ee;
+    border: none;
+    box-shadow: 0 4px 12px var(--sage-bg), inset 0 1px 1px rgba(255,255,255,0.15);
+}
+.btn-complete-workout:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(62,125,82,0.35), inset 0 1px 1px rgba(255,255,255,0.2);
+    filter: brightness(1.08);
+}
+.btn-complete-workout:active {
+    transform: translateY(0);
+}
+
+/* End early (Warm clay/Neutral theme) */
+.btn-end-workout-early {
+    background: var(--surface2);
+    color: var(--ink2);
+    border: 1px solid var(--border);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.02);
+}
+.btn-end-workout-early:hover {
+    background: var(--border);
+    color: var(--ink);
+    border-color: var(--border2);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+}
+.btn-end-workout-early:active {
+    transform: translateY(0);
+}
+
+/* ══ Strikethrough style for skipped exercises ═════════ */
+.hist-ex-row.hist-ex-undone {
+    opacity: 0.45 !important;
+}
+.hist-ex-row.hist-ex-undone .hist-ex-name {
+    text-decoration: line-through;
+    color: var(--ink3);
+}
+.jchip.undone {
+    opacity: 0.4;
+    text-decoration: line-through;
+    background: transparent;
+    border-color: var(--border);
+}
+

@@ -383,10 +383,12 @@ function fmtDate(ds){const d=new Date(ds+'T00:00:00');return['周日','周一','
 function isLocked(day){
 // Today is NEVER locked — you should always be able to edit today's workout
 if (day.date === todayStr()) return false;
+// If it is a future date, it's not locked
+if (day.date > todayStr()) return false;
 // Only past dates can be locked
 if (!S.unlockedDates) S.unlockedDates = [];
 if (S.unlockedDates.includes(day.date)) return false;
-return LOG.some(l => l.date === day.date);
+return true;
 }
 
 // ══ Weight Tracking ═════════════════════════════════════
@@ -600,7 +602,6 @@ pattern = gymPatterns[S.days] || gymPatterns[3];
 const startDate = (isRecalibrate && S.plan && S.plan.days.length > 0) ? S.plan.days[0].date : today;
 
 const days=[];
-let splitIdx=0;
 
 // Determine which days to preserve exactly as they were
 const preserve = {};
@@ -615,12 +616,44 @@ if (S.plan) {
     }
 }
 
+// Determine start split index based on the last workout done or preserved
+let startSplitIdx = 0;
+let lastGymWorkoutType = null;
+
+if (isRecalibrate && S.plan) {
+    const sortedPreserved = Object.values(preserve).sort((a,b) => a.date.localeCompare(b.date));
+    for (let j = sortedPreserved.length - 1; j >= 0; j--) {
+        const d = sortedPreserved[j];
+        if (!d.isRest && !d.isSwimDay) {
+            lastGymWorkoutType = d.workoutType;
+            break;
+        }
+    }
+}
+if (!lastGymWorkoutType && LOG.length > 0) {
+    const lastLog = LOG.find(l => !l.isSwimDay && l.workout !== '休息' && l.workout !== '🏊 游泳训练');
+    if (lastLog) {
+        lastGymWorkoutType = lastLog.workout;
+    }
+}
+if (lastGymWorkoutType) {
+    const idx = splits.findIndex(s => s.type === lastGymWorkoutType);
+    if (idx !== -1) {
+        startSplitIdx = (idx + 1) % splits.length;
+    } else {
+        const idxSub = splits.findIndex(s => s.type.includes(lastGymWorkoutType) || lastGymWorkoutType.includes(s.type.slice(0, 4)));
+        if (idxSub !== -1) {
+            startSplitIdx = (idxSub + 1) % splits.length;
+        }
+    }
+}
+
+let generatedGymCount = 0;
+
 for(let i=0;i<14;i++){
 const ds=addDays(startDate,i);
 if(preserve[ds]){
 days.push(preserve[ds]);
-// Only increment splitIdx for gym days (not swim, not rest)
-if(!preserve[ds].isRest && !preserve[ds].isSwimDay) splitIdx++;
 continue;
 }
 
@@ -630,8 +663,8 @@ const dayType = pattern[dow]; // 0=rest, 1=gym, 2=swim
 
 if(dayType===1){
 // Gym day
-const split=splits[splitIdx%splits.length];
-splitIdx++;
+const split=splits[(startSplitIdx + generatedGymCount) % splits.length];
+generatedGymCount++;
 days.push({date:ds,isRest:false,workoutType:split.type,duration:S.dur,exercises:pickExercises(split,excluded)});
 }else if(dayType===2){
 // Swim day
@@ -667,6 +700,7 @@ function recalibratePlan() {
 // ══ Render ══════════════════════════════════════════════
 function isDone(day){
 if(!day||!day.exercises.length)return false;
+if(LOG.some(l => l.date === day.date))return true;
 const p=S.prog[day.date]||{};
 return day.exercises.every((_,i)=>p[i]);
 }
@@ -768,7 +802,8 @@ if(sel&&!sel.isRest){
       h+=`<span class="hist-detail-chip dur">${lg.exerciseCount||lg.exercises.length}\u4e2a\u52a8\u4f5c</span></div>`;
       h+=`<div class="hist-detail-exercises">`;
       lg.exercises.forEach(ex=>{
-        h+=`<div class="hist-ex-row"><span class="hist-ex-name" onclick="showExDetail('${ex.name}')" style="cursor:pointer">${ex.name} <i class="ti ti-info-circle" style="font-size:11px;opacity:.4"></i></span><span class="hist-ex-detail"><span>${ex.sets||'?'}\u00d7${ex.reps||'?'}${ex.unit||'\u6b21'}</span>${ex.weight?`<span class="hist-ex-weight">${ex.weight}kg</span>`:''}</span></div>`;
+        const isExDone = ex.done !== false;
+        h+=`<div class="hist-ex-row${!isExDone?' hist-ex-undone':''}"><span class="hist-ex-name" onclick="showExDetail('${ex.name}')" style="cursor:pointer; ${!isExDone?'text-decoration:line-through;opacity:.6':''}">${ex.name} <i class="ti ti-info-circle" style="font-size:11px;opacity:.4"></i></span><span class="hist-ex-detail"><span>${ex.sets||'?'}\u00d7${ex.reps||'?'}${ex.unit||'\u6b21'}</span>${ex.weight?`<span class="hist-ex-weight">${ex.weight}kg</span>`:''}</span></div>`;
       });
       h+=`</div>`;
     }else{h+=`<div class="hist-empty">\u8be5\u65e5\u8bad\u7ec3\u8be6\u60c5\u4e0d\u53ef\u7528</div>`}
@@ -810,6 +845,18 @@ ${!locked?`
 <button class="cb${done?' ck':''}" onclick="tog('${sel.date}',${i})"><i class="ti ti-check"></i></button>
 `:`<span class="av" style="opacity:.5">${sets}\u00d7${reps}${ex.unit}${ex.bi?'/每侧':''}</span>`}
 </div>`;}).join('')}</div>`;
+
+    const alreadyLogged = LOG.some(l=>l.date===sel.date&&l.workout===sel.workoutType);
+    if (!locked && !sel.isRest && !alreadyLogged) {
+        const checkedCount = Object.keys(S.prog[sel.date] || {}).filter(k=>S.prog[sel.date][k]).length;
+        const btnText = checkedCount === sel.exercises.length ? '完成训练并打卡' : '结束训练并打卡';
+        const btnCls = checkedCount === sel.exercises.length ? 'btn-complete-workout' : 'btn-end-workout-early';
+        h += `<div class="workout-action-bar" style="margin-top:16px;display:flex;justify-content:center;width:100%">
+            <button class="${btnCls}" onclick="endWorkoutEarly('${sel.date}')">
+                <i class="ti ti-checklist" style="margin-right:6px"></i>${btnText}
+            </button>
+        </div>`;
+    }
   }
 }else if(sel&&sel.isRest){
 h+=`<div class="tip" style="text-align:center;padding:2rem">\u4f11\u606f\u65e5 \u2014 \u597d\u597d\u6062\u590d\uff0c\u660e\u5929\u7ee7\u7eed</div>`;
@@ -954,7 +1001,14 @@ function submitRPE(rpe, isSkip=false) {
             duration: day.duration,
             exerciseCount: checkedCount,
             rpe: actualRpe,
-            exercises: day.exercises.map((ex,i)=>({name:ex.name,sets:getAdj(date,i,'s',ex.sets),reps:getAdj(date,i,'r',ex.reps),unit:ex.unit,weight:getWeight(date,i)||null})),
+            exercises: day.exercises.map((ex,i)=>({
+                name:ex.name,
+                sets:getAdj(date,i,'s',ex.sets),
+                reps:getAdj(date,i,'r',ex.reps),
+                unit:ex.unit,
+                weight:getWeight(date,i)||null,
+                done: !!(S.prog[date] && S.prog[date][i])
+            })),
             mood: moods[actualRpe-1]||'💪',
             note: note,
             isSwimDay: _dayIsSwim
@@ -988,6 +1042,25 @@ function submitRPE(rpe, isSkip=false) {
     saveState();render();
     if(typeof renderStats === 'function') renderStats(); // Refresh stats view
     if(typeof renderLog === 'function') renderLog(); // Refresh log view
+}
+
+function endWorkoutEarly(date){
+    const day = S.plan.days.find(d=>d.date===date);
+    if(!day) return;
+    const checkedCount = Object.keys(S.prog[date] || {}).filter(k=>S.prog[date][k]).length;
+    const totalEx = day.exercises.length;
+    
+    let confirmMsg = '确定结束今日训练并打卡记录吗？';
+    if (checkedCount < totalEx) {
+        confirmMsg = `您完成了 ${checkedCount}/${totalEx} 个动作。确定要提前结束训练并打卡记录吗？\n（未完成的动作将不会被勾选，系统将记录实际完成情况）`;
+    }
+    if(confirm(confirmMsg)){
+        _pendingRpeDate = date;
+        _pendingRpeDay = day;
+        document.getElementById('rpe-modal-title').innerText = checkedCount < totalEx ? '训练提前结束打卡' : '训练完成打卡';
+        document.getElementById('rpe-modal-desc').innerText = `已完成 ${checkedCount}/${totalEx} 个动作，请评估今日的疲劳度：`;
+        document.getElementById('rpe-modal').classList.add('open');
+    }
 }
 
 function tog(date,ei){
