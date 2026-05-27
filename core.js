@@ -748,6 +748,71 @@ function recalibratePlan() {
     showToast('已保留历史记录，重排本周剩余天数');
 }
 
+function autoAlignPlan() {
+    if (!S.plan || !S.plan.days || !S.plan.days.length) return;
+    const today = todayStr();
+    
+    // Determine splits
+    const hasPool = S.equip.includes('泳池');
+    let gymPerWeek = S.days;
+    if (hasPool) {
+        const sp = SWIM_SPLIT[S.days] || {gym: Math.max(2, S.days - 1), swim: 1};
+        gymPerWeek = sp.gym;
+    }
+    const splits = SPLITS[gymPerWeek] || SPLITS[3];
+    
+    // 1. Find last completed gym workout type
+    let lastCompletedType = null;
+    
+    const pastDays = S.plan.days.filter(d => d.date < today);
+    const sortedPast = pastDays.sort((a,b) => a.date.localeCompare(b.date));
+    for (let j = sortedPast.length - 1; j >= 0; j--) {
+        const d = sortedPast[j];
+        if (!d.isRest && !d.isSwimDay && isDone(d)) {
+            lastCompletedType = d.workoutType;
+            break;
+        }
+    }
+    
+    if (!lastCompletedType && typeof LOG !== 'undefined' && LOG.length > 0) {
+        const lastLog = LOG.find(l => !l.isSwimDay && l.workout !== '休息' && l.workout !== '🏊 游泳训练');
+        if (lastLog) {
+            lastCompletedType = lastLog.workout;
+        }
+    }
+    
+    // 2. Determine expected workout type for the first future gym day
+    let expectedType = null;
+    if (lastCompletedType) {
+        const idx = splits.findIndex(s => s.type === lastCompletedType || s.type.includes(lastCompletedType) || lastCompletedType.includes(s.type.slice(0, 4)));
+        if (idx !== -1) {
+            expectedType = splits[(idx + 1) % splits.length].type;
+        }
+    }
+    if (!expectedType) {
+        expectedType = splits[0].type;
+    }
+    
+    // 3. Find first future gym day
+    const firstFutureGymDay = S.plan.days.find(d => d.date >= today && !d.isRest && !d.isSwimDay);
+    
+    if (firstFutureGymDay) {
+        const scheduledType = firstFutureGymDay.workoutType;
+        const match = (scheduledType === expectedType || scheduledType.includes(expectedType) || expectedType.includes(scheduledType.slice(0, 4)));
+        if (!match) {
+            console.log(`[Auto-Align] Missed workouts detected. Scheduled today: ${scheduledType}, Expected: ${expectedType}. Recalibrating...`);
+            if (!window._isAutoAligning) {
+                window._isAutoAligning = true;
+                try {
+                    genPlan(true);
+                } finally {
+                    window._isAutoAligning = false;
+                }
+            }
+        }
+    }
+}
+
 // ══ Render ══════════════════════════════════════════════
 function isDone(day){
 if(!day||!day.exercises.length)return false;
