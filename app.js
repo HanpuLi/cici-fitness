@@ -29,7 +29,8 @@ function updateThemeBtn(){
 // ══ State Persistence ════════════════════════════════════
 function saveState(){
 ls(K.settings,{goal:S.goal,level:S.level,days:S.days,dur:S.dur,equip:S.equip,focus:S.focus,limits:S.limits,volumeMultiplier:S.volumeMultiplier,restDur:S.restDur,swimLevel:S.swimLevel});
-if(S.plan)ls(K.plan,{plan:S.plan,selDate:S.selDate,prog:S.prog,adj:S.adj,weights:S.weights,unlockedDates:S.unlockedDates});
+if(S.plan)ls(K.plan,{plan:S.plan,prog:S.prog,adj:S.adj,weights:S.weights,unlockedDates:S.unlockedDates});
+localStorage.setItem('fit_selDate', S.selDate || '');
 }
 function loadState(){
 const s=lg(K.settings);
@@ -37,7 +38,7 @@ if(s)Object.assign(S,s);
 const p=lg(K.plan);
 if(p&&p.plan&&p.plan.days){
     S.plan=p.plan;
-    S.selDate=p.selDate||todayStr();
+    S.selDate=localStorage.getItem('fit_selDate') || p.selDate || todayStr();
     if(_initialLoad && S.selDate<todayStr() && S.plan.days.some(d=>d.date===todayStr())){
         S.selDate=todayStr();
     }
