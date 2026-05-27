@@ -625,7 +625,7 @@ if (isRecalibrate && S.plan) {
     const sortedPreserved = Object.values(preserve).sort((a,b) => a.date.localeCompare(b.date));
     for (let j = sortedPreserved.length - 1; j >= 0; j--) {
         const d = sortedPreserved[j];
-        if (!d.isRest && !d.isSwimDay) {
+        if (!d.isRest && !d.isSwimDay && isDone(d)) {
             lastGymWorkoutType = d.workoutType;
             break;
         }
