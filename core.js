@@ -1014,7 +1014,6 @@ ${!locked?`
       }
     }
   }
-}
 }else if(sel&&sel.isRest){
 h+=`<div class="tip" style="text-align:center;padding:2rem">\u4f11\u606f\u65e5 \u2014 \u597d\u597d\u6062\u590d\uff0c\u660e\u5929\u7ee7\u7eed</div>`;
 }
