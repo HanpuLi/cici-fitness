@@ -1050,141 +1050,213 @@ function _getAudioCtx() {
     return _audioCtx;
 }
 
-// Premium Audio 1: Rest End (Singing Bowl / Metallic Bell Chime)
+// Premium Audio 1: Rest End (Soft Tibetan Singing Bowl)
 function playDing() {
     try {
         const ctx = _getAudioCtx();
         const now = ctx.currentTime;
         
-        // Multi-oscillator harmonic synthesis for rich metallic sound
-        const base = 440; // A4
-        const harmonics = [1.0, 1.5, 2.0, 2.61, 3.2, 4.1];
-        const gains = [0.25, 0.15, 0.08, 0.05, 0.03, 0.02];
+        // Spatial Delay for bowl echo
+        const delayNode = ctx.createDelay();
+        delayNode.delayTime.value = 0.45;
+        const feedback = ctx.createGain();
+        feedback.gain.value = 0.35;
+        delayNode.connect(feedback);
+        feedback.connect(delayNode);
         
-        harmonics.forEach((ratio, i) => {
+        const filter = ctx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(750, now);
+        
+        // D4 Fundamental (293.66 Hz) and physical metallic overtones
+        const base = 293.66;
+        const overtones = [1.0, 1.98, 2.92, 4.05]; // slightly detuned from integers to sound natural
+        const gains = [0.15, 0.08, 0.04, 0.02];
+        
+        overtones.forEach((ratio, i) => {
             const osc = ctx.createOscillator();
-            const gainNode = ctx.createGain();
+            const oscGain = ctx.createGain();
             
             osc.type = 'sine';
             osc.frequency.setValueAtTime(base * ratio, now);
             
-            // Add subtle pitch vibrato to the fundamental to simulate singing bowl resonance
+            // Gentle felt mallet attack (0.08s) and long resonant decay
+            oscGain.gain.setValueAtTime(0, now);
+            oscGain.gain.linearRampToValueAtTime(gains[i], now + 0.08);
+            oscGain.gain.exponentialRampToValueAtTime(0.0001, now + 3.0 - (ratio * 0.2));
+            
+            // Tremolo (beating frequency) on the fundamental for the authentic singing bowl sound
             if (i === 0) {
-                const lfo = ctx.createOscillator();
-                const lfoGain = ctx.createGain();
-                lfo.frequency.value = 5.5; // 5.5 Hz vibrato
-                lfoGain.gain.value = 2.5;
-                lfo.connect(lfoGain);
-                lfoGain.connect(osc.frequency);
-                lfo.start(now);
-                lfo.stop(now + 2.5);
+                const tremolo = ctx.createOscillator();
+                const tremGain = ctx.createGain();
+                tremolo.frequency.value = 4.2; // 4.2 Hz beating
+                tremGain.gain.value = 0.04;
+                
+                tremolo.connect(tremGain);
+                tremGain.connect(oscGain.gain);
+                
+                tremolo.start(now);
+                tremolo.stop(now + 3.0);
             }
             
-            // Smooth bell envelope (instant attack, long organic decay)
-            gainNode.gain.setValueAtTime(0, now);
-            gainNode.gain.linearRampToValueAtTime(gains[i], now + 0.02);
-            gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 2.5 - (ratio * 0.15));
-            
-            osc.connect(gainNode);
-            gainNode.connect(ctx.destination);
+            osc.connect(oscGain);
+            oscGain.connect(filter);
             
             osc.start(now);
-            osc.stop(now + 2.5);
+            osc.stop(now + 3.0);
         });
+        
+        filter.connect(ctx.destination);
+        filter.connect(delayNode);
+        delayNode.connect(ctx.destination);
     } catch(e) { console.warn('Audio failed:', e); }
 }
 
-// Premium Audio 2: Rest Start (Warm Vibraphone Chime)
+// Premium Audio 2: Rest Start (Gentle Ambient Flute / Soft Wind Swell)
 function playRestStartSound() {
     try {
         const ctx = _getAudioCtx();
         const now = ctx.currentTime;
         
-        const freqs = [523.25, 659.25]; // C5 + E5 major third
-        freqs.forEach((f, index) => {
+        // Reverb/Delay line
+        const delayNode = ctx.createDelay();
+        delayNode.delayTime.value = 0.35;
+        const feedbackNode = ctx.createGain();
+        feedbackNode.gain.value = 0.3;
+        delayNode.connect(feedbackNode);
+        feedbackNode.connect(delayNode);
+        
+        const filter = ctx.createBiquadFilter();
+        filter.type = 'lowpass';
+        // Sweep filter from warm/dark 200Hz to 600Hz
+        filter.frequency.setValueAtTime(200, now);
+        filter.frequency.exponentialRampToValueAtTime(600, now + 0.25);
+        
+        // Calm chord: A3 (220 Hz) + E4 (329.63 Hz) + A4 (440 Hz)
+        const notes = [220, 329.63, 440];
+        const gains = [0.06, 0.05, 0.03];
+        
+        notes.forEach((freq, idx) => {
             const osc = ctx.createOscillator();
-            const gainNode = ctx.createGain();
-            const filter = ctx.createBiquadFilter();
+            const oscGain = ctx.createGain();
             
             osc.type = 'sine';
-            osc.frequency.setValueAtTime(f, now);
+            osc.frequency.setValueAtTime(freq, now);
             
-            // Soft wood-like attack and warm decay
-            gainNode.gain.setValueAtTime(0, now);
-            gainNode.gain.linearRampToValueAtTime(0.12, now + 0.04 + index * 0.02);
-            gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.7 + index * 0.1);
+            // Gentle breath-like rise (0.18s attack) and long release
+            oscGain.gain.setValueAtTime(0, now);
+            oscGain.gain.linearRampToValueAtTime(gains[idx], now + 0.18);
+            oscGain.gain.exponentialRampToValueAtTime(0.0001, now + 1.2);
             
-            filter.type = 'lowpass';
-            filter.frequency.setValueAtTime(1000, now); // Cut harsh high end
-            
-            osc.connect(gainNode);
-            gainNode.connect(filter);
-            filter.connect(ctx.destination);
+            osc.connect(oscGain);
+            oscGain.connect(filter);
             
             osc.start(now);
-            osc.stop(now + 0.9);
+            osc.stop(now + 1.5);
         });
+        
+        filter.connect(ctx.destination);
+        filter.connect(delayNode);
+        delayNode.connect(ctx.destination);
     } catch(e) { console.warn('Audio failed:', e); }
 }
 
-// Premium Audio 3: Exercise Complete (Tactile Pluck / Water Bubble)
+// Premium Audio 3: Exercise Complete (Soft Kalimba / Warm Harp Pluck)
 function playExerciseDoneSound() {
     try {
         const ctx = _getAudioCtx();
         const now = ctx.currentTime;
         
-        const osc = ctx.createOscillator();
-        const gainNode = ctx.createGain();
+        // Use a Delay node for warm space resonance
+        const delayNode = ctx.createDelay();
+        delayNode.delayTime.value = 0.15; // 150ms slapback
+        const feedbackNode = ctx.createGain();
+        feedbackNode.gain.value = 0.25; // soft echo
         
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(580, now);
-        osc.frequency.exponentialRampToValueAtTime(1160, now + 0.07); // Smooth upward slide
+        delayNode.connect(feedbackNode);
+        feedbackNode.connect(delayNode);
         
-        gainNode.gain.setValueAtTime(0, now);
-        gainNode.gain.linearRampToValueAtTime(0.1, now + 0.01);
-        gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.12);
+        // Lowpass filter to ensure absolute warm, round sound (no harsh beeps)
+        const filter = ctx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(650, now); // very warm cutoff
         
-        osc.connect(gainNode);
-        gainNode.connect(ctx.destination);
+        // Main warm tones: Kalimba E5 (659.25 Hz) + B5 (987.77 Hz, soft fifth)
+        const notes = [659.25, 987.77];
+        const gains = [0.08, 0.03];
         
-        osc.start(now);
-        osc.stop(now + 0.15);
+        notes.forEach((freq, idx) => {
+            const osc = ctx.createOscillator();
+            const oscGain = ctx.createGain();
+            
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(freq, now);
+            
+            // Soft kalimba envelope: tiny attack (0.015s), exponential decay
+            oscGain.gain.setValueAtTime(0, now);
+            oscGain.gain.linearRampToValueAtTime(gains[idx], now + 0.015);
+            oscGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.35);
+            
+            osc.connect(oscGain);
+            oscGain.connect(filter);
+            
+            osc.start(now);
+            osc.stop(now + 0.5);
+        });
+        
+        filter.connect(ctx.destination);
+        filter.connect(delayNode);
+        delayNode.connect(ctx.destination);
     } catch(e) { console.warn('Audio failed:', e); }
 }
 
-// Premium Audio 4: Workout Complete Fanfare (Acoustic Arpeggio Harp)
+// Premium Audio 4: Workout Complete (Soft Dreamy Arpeggio Cascade)
 function playWorkoutCompleteSound() {
     try {
         const ctx = _getAudioCtx();
         const now = ctx.currentTime;
         
-        // Ascending major C chord
-        const notes = [261.63, 329.63, 392.00, 523.25, 659.25, 783.99, 1046.50];
+        // Lush space delay
+        const delayNode = ctx.createDelay();
+        delayNode.delayTime.value = 0.3;
+        const feedback = ctx.createGain();
+        feedback.gain.value = 0.4; // rich tail
+        delayNode.connect(feedback);
+        feedback.connect(delayNode);
+        
+        const filter = ctx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(900, now); // warm cutoff
+        
+        // Ascending D Major 9th chord: D4 (293.66), F#4 (369.99), A4 (440.00), C#5 (554.37), E5 (659.25), A5 (880.00)
+        const notes = [293.66, 369.99, 440.00, 554.37, 659.25, 880.00];
+        const gainVal = 0.05;
+        
         notes.forEach((freq, i) => {
             const osc = ctx.createOscillator();
-            const gainNode = ctx.createGain();
-            const filter = ctx.createBiquadFilter();
+            const oscGain = ctx.createGain();
             
-            osc.type = 'triangle'; // Soft, rounded tone
-            const noteStart = now + i * 0.08;
+            osc.type = 'sine';
+            const noteStart = now + i * 0.12; // gentle cascade
             
             osc.frequency.setValueAtTime(freq, noteStart);
             
-            gainNode.gain.setValueAtTime(0, now);
-            gainNode.gain.setValueAtTime(0, noteStart);
-            gainNode.gain.linearRampToValueAtTime(0.08, noteStart + 0.04);
-            gainNode.gain.exponentialRampToValueAtTime(0.001, noteStart + 0.6);
+            // Soft attack and release
+            oscGain.gain.setValueAtTime(0, now);
+            oscGain.gain.setValueAtTime(0, noteStart);
+            oscGain.gain.linearRampToValueAtTime(gainVal, noteStart + 0.05);
+            oscGain.gain.exponentialRampToValueAtTime(0.0001, noteStart + 0.8);
             
-            filter.type = 'lowpass';
-            filter.frequency.setValueAtTime(1400, now);
-            
-            osc.connect(gainNode);
-            gainNode.connect(filter);
-            filter.connect(ctx.destination);
+            osc.connect(oscGain);
+            oscGain.connect(filter);
             
             osc.start(noteStart);
-            osc.stop(noteStart + 0.7);
+            osc.stop(noteStart + 1.2);
         });
+        
+        filter.connect(ctx.destination);
+        filter.connect(delayNode);
+        delayNode.connect(ctx.destination);
     } catch(e) { console.warn('Audio failed:', e); }
 }
 
