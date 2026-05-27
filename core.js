@@ -1050,214 +1050,206 @@ function _getAudioCtx() {
     return _audioCtx;
 }
 
-// Premium Audio 1: Rest End (Soft Tibetan Singing Bowl)
+// ── Shared: create a simple convolution reverb impulse ──
+function _makeReverb(ctx, decay, len) {
+    const rate = ctx.sampleRate;
+    const length = rate * len;
+    const impulse = ctx.createBuffer(2, length, rate);
+    for (let ch = 0; ch < 2; ch++) {
+        const data = impulse.getChannelData(ch);
+        for (let i = 0; i < length; i++) {
+            data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / length, decay);
+        }
+    }
+    const conv = ctx.createConvolver();
+    conv.buffer = impulse;
+    return conv;
+}
+
+// ── Shared: noise burst exciter (like a mallet or pluck) ──
+function _noiseExcite(ctx, duration) {
+    const len = Math.floor(ctx.sampleRate * duration);
+    const buf = ctx.createBuffer(1, len, ctx.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) {
+        data[i] = (Math.random() * 2 - 1) * (1 - i / len);
+    }
+    const src = ctx.createBufferSource();
+    src.buffer = buf;
+    return src;
+}
+
+// Sound 1: Rest timer ended — gentle singing bowl
+// Uses noise excitation → bandpass resonance to model a struck metal bowl
 function playDing() {
     try {
         const ctx = _getAudioCtx();
         const now = ctx.currentTime;
+        const masterGain = ctx.createGain();
+        masterGain.gain.setValueAtTime(0.3, now);
         
-        // Spatial Delay for bowl echo
-        const delayNode = ctx.createDelay();
-        delayNode.delayTime.value = 0.45;
-        const feedback = ctx.createGain();
-        feedback.gain.value = 0.35;
-        delayNode.connect(feedback);
-        feedback.connect(delayNode);
+        const reverb = _makeReverb(ctx, 2.5, 2.5);
+        const dryGain = ctx.createGain();
+        dryGain.gain.value = 0.6;
+        const wetGain = ctx.createGain();
+        wetGain.gain.value = 0.4;
         
-        const filter = ctx.createBiquadFilter();
-        filter.type = 'lowpass';
-        filter.frequency.setValueAtTime(750, now);
+        masterGain.connect(dryGain);
+        dryGain.connect(ctx.destination);
+        masterGain.connect(reverb);
+        reverb.connect(wetGain);
+        wetGain.connect(ctx.destination);
         
-        // D4 Fundamental (293.66 Hz) and physical metallic overtones
-        const base = 293.66;
-        const overtones = [1.0, 1.98, 2.92, 4.05]; // slightly detuned from integers to sound natural
-        const gains = [0.15, 0.08, 0.04, 0.02];
+        // Bowl resonant frequencies (D4 and inharmonic partials)
+        const freqs = [293.66, 440, 587.33, 880];
+        const qVals = [200, 150, 120, 80];
+        const levels = [1.0, 0.5, 0.3, 0.15];
         
-        overtones.forEach((ratio, i) => {
-            const osc = ctx.createOscillator();
-            const oscGain = ctx.createGain();
+        freqs.forEach((f, i) => {
+            const exciter = _noiseExcite(ctx, 0.02);
+            const bp = ctx.createBiquadFilter();
+            bp.type = 'bandpass';
+            bp.frequency.value = f;
+            bp.Q.value = qVals[i];
             
-            osc.type = 'sine';
-            osc.frequency.setValueAtTime(base * ratio, now);
+            const env = ctx.createGain();
+            env.gain.setValueAtTime(levels[i], now);
+            env.gain.exponentialRampToValueAtTime(0.001, now + 2.8);
             
-            // Gentle felt mallet attack (0.08s) and long resonant decay
-            oscGain.gain.setValueAtTime(0, now);
-            oscGain.gain.linearRampToValueAtTime(gains[i], now + 0.08);
-            oscGain.gain.exponentialRampToValueAtTime(0.0001, now + 3.0 - (ratio * 0.2));
-            
-            // Tremolo (beating frequency) on the fundamental for the authentic singing bowl sound
-            if (i === 0) {
-                const tremolo = ctx.createOscillator();
-                const tremGain = ctx.createGain();
-                tremolo.frequency.value = 4.2; // 4.2 Hz beating
-                tremGain.gain.value = 0.04;
-                
-                tremolo.connect(tremGain);
-                tremGain.connect(oscGain.gain);
-                
-                tremolo.start(now);
-                tremolo.stop(now + 3.0);
-            }
-            
-            osc.connect(oscGain);
-            oscGain.connect(filter);
-            
-            osc.start(now);
-            osc.stop(now + 3.0);
+            exciter.connect(bp);
+            bp.connect(env);
+            env.connect(masterGain);
+            exciter.start(now);
         });
-        
-        filter.connect(ctx.destination);
-        filter.connect(delayNode);
-        delayNode.connect(ctx.destination);
-    } catch(e) { console.warn('Audio failed:', e); }
+    } catch(e) { console.warn('Audio:', e); }
 }
 
-// Premium Audio 2: Rest Start (Gentle Ambient Flute / Soft Wind Swell)
+// Sound 2: Rest timer starts — soft wind chime tinkle
 function playRestStartSound() {
     try {
         const ctx = _getAudioCtx();
         const now = ctx.currentTime;
+        const masterGain = ctx.createGain();
+        masterGain.gain.setValueAtTime(0.2, now);
         
-        // Reverb/Delay line
-        const delayNode = ctx.createDelay();
-        delayNode.delayTime.value = 0.35;
-        const feedbackNode = ctx.createGain();
-        feedbackNode.gain.value = 0.3;
-        delayNode.connect(feedbackNode);
-        feedbackNode.connect(delayNode);
+        const reverb = _makeReverb(ctx, 3, 1.5);
+        const dryGain = ctx.createGain();
+        dryGain.gain.value = 0.5;
+        const wetGain = ctx.createGain();
+        wetGain.gain.value = 0.5;
         
-        const filter = ctx.createBiquadFilter();
-        filter.type = 'lowpass';
-        // Sweep filter from warm/dark 200Hz to 600Hz
-        filter.frequency.setValueAtTime(200, now);
-        filter.frequency.exponentialRampToValueAtTime(600, now + 0.25);
+        masterGain.connect(dryGain);
+        dryGain.connect(ctx.destination);
+        masterGain.connect(reverb);
+        reverb.connect(wetGain);
+        wetGain.connect(ctx.destination);
         
-        // Calm chord: A3 (220 Hz) + E4 (329.63 Hz) + A4 (440 Hz)
-        const notes = [220, 329.63, 440];
-        const gains = [0.06, 0.05, 0.03];
+        // Two gentle chime notes staggered
+        const chimes = [
+            { freq: 1318.5, delay: 0, q: 300, vol: 0.6, decay: 0.9 },
+            { freq: 1760,   delay: 0.08, q: 250, vol: 0.35, decay: 0.7 },
+        ];
         
-        notes.forEach((freq, idx) => {
-            const osc = ctx.createOscillator();
-            const oscGain = ctx.createGain();
+        chimes.forEach(c => {
+            const exciter = _noiseExcite(ctx, 0.008);
+            const bp = ctx.createBiquadFilter();
+            bp.type = 'bandpass';
+            bp.frequency.value = c.freq;
+            bp.Q.value = c.q;
             
-            osc.type = 'sine';
-            osc.frequency.setValueAtTime(freq, now);
+            const env = ctx.createGain();
+            env.gain.setValueAtTime(0, now);
+            env.gain.setValueAtTime(c.vol, now + c.delay);
+            env.gain.exponentialRampToValueAtTime(0.001, now + c.delay + c.decay);
             
-            // Gentle breath-like rise (0.18s attack) and long release
-            oscGain.gain.setValueAtTime(0, now);
-            oscGain.gain.linearRampToValueAtTime(gains[idx], now + 0.18);
-            oscGain.gain.exponentialRampToValueAtTime(0.0001, now + 1.2);
-            
-            osc.connect(oscGain);
-            oscGain.connect(filter);
-            
-            osc.start(now);
-            osc.stop(now + 1.5);
+            exciter.connect(bp);
+            bp.connect(env);
+            env.connect(masterGain);
+            exciter.start(now + c.delay);
         });
-        
-        filter.connect(ctx.destination);
-        filter.connect(delayNode);
-        delayNode.connect(ctx.destination);
-    } catch(e) { console.warn('Audio failed:', e); }
+    } catch(e) { console.warn('Audio:', e); }
 }
 
-// Premium Audio 3: Exercise Complete (Soft Kalimba / Warm Harp Pluck)
+// Sound 3: Exercise checked off — soft marimba tap
 function playExerciseDoneSound() {
     try {
         const ctx = _getAudioCtx();
         const now = ctx.currentTime;
+        const masterGain = ctx.createGain();
+        masterGain.gain.setValueAtTime(0.25, now);
         
-        // Use a Delay node for warm space resonance
-        const delayNode = ctx.createDelay();
-        delayNode.delayTime.value = 0.15; // 150ms slapback
-        const feedbackNode = ctx.createGain();
-        feedbackNode.gain.value = 0.25; // soft echo
+        const reverb = _makeReverb(ctx, 4, 0.6);
+        const dryGain = ctx.createGain();
+        dryGain.gain.value = 0.65;
+        const wetGain = ctx.createGain();
+        wetGain.gain.value = 0.35;
         
-        delayNode.connect(feedbackNode);
-        feedbackNode.connect(delayNode);
+        masterGain.connect(dryGain);
+        dryGain.connect(ctx.destination);
+        masterGain.connect(reverb);
+        reverb.connect(wetGain);
+        wetGain.connect(ctx.destination);
         
-        // Lowpass filter to ensure absolute warm, round sound (no harsh beeps)
-        const filter = ctx.createBiquadFilter();
-        filter.type = 'lowpass';
-        filter.frequency.setValueAtTime(650, now); // very warm cutoff
+        // Marimba: noise excitation → narrow resonance at G5
+        const exciter = _noiseExcite(ctx, 0.012);
+        const bp = ctx.createBiquadFilter();
+        bp.type = 'bandpass';
+        bp.frequency.value = 784;
+        bp.Q.value = 250;
         
-        // Main warm tones: Kalimba E5 (659.25 Hz) + B5 (987.77 Hz, soft fifth)
-        const notes = [659.25, 987.77];
-        const gains = [0.08, 0.03];
+        const env = ctx.createGain();
+        env.gain.setValueAtTime(0.8, now);
+        env.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
         
-        notes.forEach((freq, idx) => {
-            const osc = ctx.createOscillator();
-            const oscGain = ctx.createGain();
-            
-            osc.type = 'sine';
-            osc.frequency.setValueAtTime(freq, now);
-            
-            // Soft kalimba envelope: tiny attack (0.015s), exponential decay
-            oscGain.gain.setValueAtTime(0, now);
-            oscGain.gain.linearRampToValueAtTime(gains[idx], now + 0.015);
-            oscGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.35);
-            
-            osc.connect(oscGain);
-            oscGain.connect(filter);
-            
-            osc.start(now);
-            osc.stop(now + 0.5);
-        });
-        
-        filter.connect(ctx.destination);
-        filter.connect(delayNode);
-        delayNode.connect(ctx.destination);
-    } catch(e) { console.warn('Audio failed:', e); }
+        exciter.connect(bp);
+        bp.connect(env);
+        env.connect(masterGain);
+        exciter.start(now);
+    } catch(e) { console.warn('Audio:', e); }
 }
 
-// Premium Audio 4: Workout Complete (Soft Dreamy Arpeggio Cascade)
+// Sound 4: Workout complete — ascending kalimba arpeggio with shimmer
 function playWorkoutCompleteSound() {
     try {
         const ctx = _getAudioCtx();
         const now = ctx.currentTime;
+        const masterGain = ctx.createGain();
+        masterGain.gain.setValueAtTime(0.22, now);
         
-        // Lush space delay
-        const delayNode = ctx.createDelay();
-        delayNode.delayTime.value = 0.3;
-        const feedback = ctx.createGain();
-        feedback.gain.value = 0.4; // rich tail
-        delayNode.connect(feedback);
-        feedback.connect(delayNode);
+        const reverb = _makeReverb(ctx, 2, 2.5);
+        const dryGain = ctx.createGain();
+        dryGain.gain.value = 0.45;
+        const wetGain = ctx.createGain();
+        wetGain.gain.value = 0.55;
         
-        const filter = ctx.createBiquadFilter();
-        filter.type = 'lowpass';
-        filter.frequency.setValueAtTime(900, now); // warm cutoff
+        masterGain.connect(dryGain);
+        dryGain.connect(ctx.destination);
+        masterGain.connect(reverb);
+        reverb.connect(wetGain);
+        wetGain.connect(ctx.destination);
         
-        // Ascending D Major 9th chord: D4 (293.66), F#4 (369.99), A4 (440.00), C#5 (554.37), E5 (659.25), A5 (880.00)
-        const notes = [293.66, 369.99, 440.00, 554.37, 659.25, 880.00];
-        const gainVal = 0.05;
+        // Pentatonic scale: C5, D5, E5, G5, A5, C6
+        const notes = [523.25, 587.33, 659.25, 783.99, 880, 1046.5];
         
         notes.forEach((freq, i) => {
-            const osc = ctx.createOscillator();
-            const oscGain = ctx.createGain();
+            const t = now + i * 0.14;
+            const exciter = _noiseExcite(ctx, 0.01);
+            const bp = ctx.createBiquadFilter();
+            bp.type = 'bandpass';
+            bp.frequency.value = freq;
+            bp.Q.value = 280;
             
-            osc.type = 'sine';
-            const noteStart = now + i * 0.12; // gentle cascade
+            const env = ctx.createGain();
+            env.gain.setValueAtTime(0, now);
+            env.gain.setValueAtTime(0.7, t);
+            env.gain.exponentialRampToValueAtTime(0.001, t + 0.8);
             
-            osc.frequency.setValueAtTime(freq, noteStart);
-            
-            // Soft attack and release
-            oscGain.gain.setValueAtTime(0, now);
-            oscGain.gain.setValueAtTime(0, noteStart);
-            oscGain.gain.linearRampToValueAtTime(gainVal, noteStart + 0.05);
-            oscGain.gain.exponentialRampToValueAtTime(0.0001, noteStart + 0.8);
-            
-            osc.connect(oscGain);
-            oscGain.connect(filter);
-            
-            osc.start(noteStart);
-            osc.stop(noteStart + 1.2);
+            exciter.connect(bp);
+            bp.connect(env);
+            env.connect(masterGain);
+            exciter.start(t);
         });
-        
-        filter.connect(ctx.destination);
-        filter.connect(delayNode);
-        delayNode.connect(ctx.destination);
-    } catch(e) { console.warn('Audio failed:', e); }
+    } catch(e) { console.warn('Audio:', e); }
 }
 
 function startTimer(seconds, label="休息中") {
