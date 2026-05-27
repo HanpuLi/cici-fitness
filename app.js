@@ -121,7 +121,7 @@ html+=`
     </div>
     <div class="tl-chips">
       <span class="jchip done-c">${x.exerciseCount||0}个动作完成</span>
-      ${x.exercises?x.exercises.slice(0,4).map(e=>`<span class="jchip">${e.name}${e.weight?` ${e.weight}kg`:''}</span>`).join('')+((x.exercises.length>4)?`<span class="jchip" style="opacity:.5">+${x.exercises.length-4}个</span>`:''):''}
+      ${x.exercises?x.exercises.slice(0,4).map(e=>`<span class="jchip${e.done===false?' undone':''}">${e.name}${e.weight?` ${e.weight}kg`:''}</span>`).join('')+((x.exercises.length>4)?`<span class="jchip" style="opacity:.5">+${x.exercises.length-4}个</span>`:''):''}
     </div>
     ${x.note?`<div class="jentry-note">"${x.note}"</div>`:''}
     <div class="log-actions" style="margin-top:10px;border-top:1px solid var(--border);padding-top:8px">
