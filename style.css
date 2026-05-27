@@ -1128,3 +1128,65 @@ textarea:focus { border-color: var(--terra-br); }
     border-color: var(--border);
 }
 
+/* ══ Plan Intensity Assessment Card ════════════════════ */
+.intensity-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 14px;
+    border-radius: var(--radius-sm);
+    font-size: 12px;
+    margin-bottom: 1.25rem;
+    border: 1px solid transparent;
+    transition: all 0.25s ease;
+    animation: revealUp 0.6s cubic-bezier(0.22, 1, 0.36, 1) 0.08s both;
+}
+.intensity-title {
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--ink);
+}
+.intensity-desc {
+    color: var(--ink2);
+    font-size: 11px;
+}
+
+/* Over/Exceeds */
+.intensity-card.intensity-over {
+    background: var(--terra-bg);
+    border-color: var(--terra-br);
+}
+.intensity-card.intensity-over .intensity-title {
+    color: var(--terra);
+}
+
+/* Under/Too Easy */
+.intensity-card.intensity-under {
+    background: var(--blue-bg);
+    border-color: rgba(75,107,138,.25);
+}
+.intensity-card.intensity-under .intensity-title {
+    color: var(--blue);
+}
+
+/* Balanced/Appropriate */
+.intensity-card.intensity-balanced {
+    background: var(--sage-bg);
+    border-color: var(--sage-br);
+}
+.intensity-card.intensity-balanced .intensity-title {
+    color: var(--sage);
+}
+
+/* None/No logs */
+.intensity-card.intensity-none {
+    background: var(--surface2);
+    border-color: var(--border);
+}
+.intensity-card.intensity-none .intensity-title {
+    color: var(--ink3);
+}
+
+
