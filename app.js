@@ -3,27 +3,59 @@ let _initialLoad = true;
 
 // ══ Dark/Light Mode Toggle ═══════════════════════════════
 (function initTheme(){
-    const saved = localStorage.getItem('fit_theme');
-    if (saved === 'dark') { document.documentElement.classList.add('dark'); document.documentElement.classList.remove('light'); }
-    else if (saved === 'light') { document.documentElement.classList.add('light'); document.documentElement.classList.remove('dark'); }
-    // else: follow system (no class needed)
-    updateThemeBtn();
+    const saved = localStorage.getItem('fit_theme') || 'system';
+    applyTheme(saved);
+    // Sync theme button icon if system preference changes
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+        if ((localStorage.getItem('fit_theme') || 'system') === 'system') {
+            applyTheme('system');
+        }
+    });
 })();
 
-function toggleTheme(){
+function applyTheme(theme) {
     const html = document.documentElement;
-    const isDark = html.classList.contains('dark') || (!html.classList.contains('light') && window.matchMedia('(prefers-color-scheme: dark)').matches);
-    if (isDark) { html.classList.remove('dark'); html.classList.add('light'); localStorage.setItem('fit_theme', 'light'); }
-    else { html.classList.remove('light'); html.classList.add('dark'); localStorage.setItem('fit_theme', 'dark'); }
-    updateThemeBtn();
+    if (theme === 'dark') {
+        html.classList.add('dark');
+        html.classList.remove('light');
+    } else if (theme === 'light') {
+        html.classList.add('light');
+        html.classList.remove('dark');
+    } else {
+        html.classList.remove('dark', 'light');
+    }
+    updateThemeBtn(theme);
 }
 
-function updateThemeBtn(){
+function toggleTheme(){
+    const current = localStorage.getItem('fit_theme') || 'system';
+    let next = 'system';
+    if (current === 'system') {
+        const isSystemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        next = isSystemDark ? 'light' : 'dark';
+    } else if (current === 'light') {
+        next = 'dark';
+    } else {
+        next = 'system';
+    }
+    localStorage.setItem('fit_theme', next);
+    applyTheme(next);
+}
+
+function updateThemeBtn(theme){
     const btn = document.getElementById('theme-btn');
     if (!btn) return;
-    const html = document.documentElement;
-    const isDark = html.classList.contains('dark') || (!html.classList.contains('light') && window.matchMedia('(prefers-color-scheme: dark)').matches);
-    btn.textContent = isDark ? '☀️' : '🌙';
+    const current = theme || localStorage.getItem('fit_theme') || 'system';
+    if (current === 'system') {
+        btn.textContent = '🌓';
+        btn.title = '跟随系统 (点击切换)';
+    } else if (current === 'light') {
+        btn.textContent = '☀️';
+        btn.title = '浅色模式 (点击切换)';
+    } else {
+        btn.textContent = '🌙';
+        btn.title = '深色模式 (点击切换)';
+    }
 }
 
 // ══ State Persistence ════════════════════════════════════

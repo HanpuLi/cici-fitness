@@ -4172,23 +4172,54 @@ ${hrts.length ? `🌡 HRT阶段：${hrts.join(' -> ')}\n` : ''}
 
         // ══ Dark Mode Toggle ══════════════════════════════════════════
         function initTheme() {
-            const saved = localStorage.getItem('sk_theme');
-            if (saved === 'dark') { document.documentElement.classList.add('dark'); document.documentElement.classList.remove('light'); }
-            else if (saved === 'light') { document.documentElement.classList.add('light'); document.documentElement.classList.remove('dark'); }
-            updateThemeIcon();
+            const saved = localStorage.getItem('sk_theme') || 'system';
+            applyTheme(saved);
+            window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+                if ((localStorage.getItem('sk_theme') || 'system') === 'system') {
+                    applyTheme('system');
+                }
+            });
+        }
+        function applyTheme(theme) {
+            const html = document.documentElement;
+            if (theme === 'dark') {
+                html.classList.add('dark');
+                html.classList.remove('light');
+            } else if (theme === 'light') {
+                html.classList.add('light');
+                html.classList.remove('dark');
+            } else {
+                html.classList.remove('dark', 'light');
+            }
+            updateThemeIcon(theme);
         }
         function toggleTheme() {
-            const html = document.documentElement;
-            const isDark = html.classList.contains('dark') || (!html.classList.contains('light') && window.matchMedia('(prefers-color-scheme: dark)').matches);
-            if (isDark) { html.classList.remove('dark'); html.classList.add('light'); localStorage.setItem('sk_theme', 'light'); }
-            else { html.classList.remove('light'); html.classList.add('dark'); localStorage.setItem('sk_theme', 'dark'); }
-            updateThemeIcon();
+            const current = localStorage.getItem('sk_theme') || 'system';
+            let next = 'system';
+            if (current === 'system') {
+                const isSystemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                next = isSystemDark ? 'light' : 'dark';
+            } else if (current === 'light') {
+                next = 'dark';
+            } else {
+                next = 'system';
+            }
+            localStorage.setItem('sk_theme', next);
+            applyTheme(next);
         }
-        function updateThemeIcon() {
+        function updateThemeIcon(theme) {
             const btn = document.getElementById('theme-toggle'); if (!btn) return;
-            const html = document.documentElement;
-            const isDark = html.classList.contains('dark') || (!html.classList.contains('light') && window.matchMedia('(prefers-color-scheme: dark)').matches);
-            btn.textContent = isDark ? '☀️' : '🌙';
+            const current = theme || localStorage.getItem('sk_theme') || 'system';
+            if (current === 'system') {
+                btn.textContent = '🌓';
+                btn.title = '跟随系统 (点击切换)';
+            } else if (current === 'light') {
+                btn.textContent = '☀️';
+                btn.title = '浅色模式 (点击切换)';
+            } else {
+                btn.textContent = '🌙';
+                btn.title = '深色模式 (点击切换)';
+            }
         }
         initTheme();
 
