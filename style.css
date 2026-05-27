@@ -858,7 +858,7 @@ textarea:focus { border-color: var(--terra-br); }
 /* ══ Calendar scroll ═══════════════════════════════════ */
 .cal-scroll { overflow-x: auto; margin-bottom: 1rem; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
 .cal-scroll::-webkit-scrollbar { display: none; }
-.dc.today { outline: 2px solid var(--terra); outline-offset: 1px; }
+.dc.today { box-shadow: 0 0 0 1px var(--bg), 0 0 0 3px var(--terra); }
 .dc.locked { opacity: .7; cursor: default; }
 .dc.locked:hover { background: var(--surface); border-color: var(--border); }
 .dc.dragging { opacity: .4; transform: scale(.96); }
