@@ -34,7 +34,17 @@ function loadState(){
 const s=lg(K.settings);
 if(s)Object.assign(S,s);
 const p=lg(K.plan);
-if(p&&p.plan&&p.plan.days){S.plan=p.plan;S.selDate=p.selDate||todayStr();S.prog=p.prog||{};S.adj=p.adj||{};S.weights=p.weights||{};S.unlockedDates=p.unlockedDates||[];}
+if(p&&p.plan&&p.plan.days){
+    S.plan=p.plan;
+    S.selDate=p.selDate||todayStr();
+    if(S.selDate<todayStr() && S.plan.days.some(d=>d.date===todayStr())){
+        S.selDate=todayStr();
+    }
+    S.prog=p.prog||{};
+    S.adj=p.adj||{};
+    S.weights=p.weights||{};
+    S.unlockedDates=p.unlockedDates||[];
+}
 else{S.plan=null;}
 LOG=lg(K.log)||[];
 applySettingsToUI();

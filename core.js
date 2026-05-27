@@ -774,10 +774,6 @@ if(today>planEnd && !_skipAutoRegen){
   genPlan(false); // fresh plan from today (recalibrate would reuse old expired startDate)
   return;
 }
-// Auto-select today if it's in the plan
-if(S.selDate<today && planDays.find(d=>d.date===today)){
-  S.selDate=today;
-}
 const viewStart=addDays(planStart,_calWeekOffset*7);
 const viewEnd=addDays(viewStart,13);
 const visibleDays=[];
