@@ -51,6 +51,7 @@ else{S.plan=null;}
 LOG=lg(K.log)||[];
 applySettingsToUI();
 if(S.plan)render();
+if(S.plan && typeof autoAlignPlan==='function') autoAlignPlan();
 _initialLoad = false;
 }
 function applySettingsToUI(){
