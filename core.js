@@ -691,6 +691,56 @@ render();
 showTab('today',document.querySelector('.tab'));
 }
 
+function assessPlanIntensity(){
+    const gymLogs = LOG.filter(l => !l.isSwimDay && l.workout !== '休息' && l.workout !== '🏊 游泳训练').slice(0, 3);
+    if (!gymLogs.length) {
+        return {
+            status: '评估中',
+            desc: '打卡 1 天后开始自动评估强度',
+            icon: '🔍',
+            cls: 'intensity-none'
+        };
+    }
+    
+    let totalRpe = 0;
+    let totalExLogged = 0;
+    let totalExPlanned = 0;
+    let hasHighRpe = 0;
+    
+    gymLogs.forEach(l => {
+        totalRpe += (l.rpe || 6);
+        totalExLogged += (l.exerciseCount || 0);
+        totalExPlanned += (l.exercises ? l.exercises.length : (l.exerciseCount || 6));
+        if (l.rpe >= 8) hasHighRpe++;
+    });
+    
+    const avgRpe = totalRpe / gymLogs.length;
+    const completionRate = totalExPlanned > 0 ? (totalExLogged / totalExPlanned) : 1.0;
+    
+    if (avgRpe >= 7.5 || hasHighRpe >= 2 || completionRate < 0.85) {
+        return {
+            status: '强度超标 ⚠️',
+            desc: `近期RPE均值 ${avgRpe.toFixed(1)}，已自动下调后续计划量`,
+            icon: '📉',
+            cls: 'intensity-over'
+        };
+    } else if (avgRpe <= 5.0 && completionRate >= 0.98) {
+        return {
+            status: '低于实际能力 💪',
+            desc: `近期训练较轻松，已自动上调后续计划量`,
+            icon: '📈',
+            cls: 'intensity-under'
+        };
+    } else {
+        return {
+            status: '契合度极佳 ✨',
+            desc: '训练量完美匹配您的体能，保持适中',
+            icon: '✅',
+            cls: 'intensity-balanced'
+        };
+    }
+}
+
 function recalibratePlan() {
     if (!S.plan) return;
     genPlan(true);
@@ -752,6 +802,12 @@ let h=`<div class="plan-header"><p class="panel-title" style="margin:0">\u8bad\u
 <div class="stat"><div class="stat-val">${workoutDays.length}</div><div class="stat-lbl">\u8ba1\u5212\u5929</div></div>
 <div class="stat"><div class="stat-val">${doneDays.length}/${workoutDays.length}</div><div class="stat-lbl">\u5df2\u5b8c\u6210</div></div>
 <div class="stat"><div class="stat-val">${workoutDays.reduce((s,d)=>s+d.exercises.length,0)}</div><div class="stat-lbl">\u603b\u52a8\u4f5c</div></div>
+</div>`;
+
+const intensityInfo = assessPlanIntensity();
+h += `<div class="intensity-card ${intensityInfo.cls}">
+  <span class="intensity-title">${intensityInfo.icon} ${intensityInfo.status}</span>
+  <span class="intensity-desc">${intensityInfo.desc}</span>
 </div>`;
 
 const vsFmt=viewStart.slice(5).replace('-','/');
@@ -977,24 +1033,9 @@ function submitRPE(rpe, isSkip=false) {
         const day = _pendingRpeDay;
         const date = _pendingRpeDate;
         const _dayIsSwim = !!day.isSwimDay;
-        
-        // Auto-volume adjustment: if not all checked, reduce future volume
-        // (Skip for swim days — swim doesn't affect gym volume)
         const checkedCount = Object.keys(S.prog[date] || {}).filter(k=>S.prog[date][k]).length;
         const totalEx = day.exercises.length;
-        if (!_dayIsSwim) {
-            if (checkedCount < totalEx) {
-                S.volumeMultiplier = Math.max(0.5, (S.volumeMultiplier || 1.0) * 0.9);
-                showToast(`未全部完成，已调整后续训练量`);
-            } else {
-                if((S.volumeMultiplier||1.0) < 1.0) S.volumeMultiplier = Math.min(1.0, (S.volumeMultiplier||1.0) * 1.05);
-                showToast(isSkip ? `训练完成。` : `训练完成。RPE ${actualRpe}/10`);
-            }
-        } else {
-            showToast(isSkip ? `🏊 游泳训练完成！` : `🏊 游泳完成。RPE ${actualRpe}/10`);
-            checkSwimMilestone();
-        }
-
+        
         LOG.unshift({
             date: date,
             workout: day.workoutType,
@@ -1014,6 +1055,32 @@ function submitRPE(rpe, isSkip=false) {
             isSwimDay: _dayIsSwim
         });
         ls(K.log,LOG);
+        
+        if (!_dayIsSwim) {
+            // Assess intensity and auto-volume adjustment
+            const assessment = assessPlanIntensity();
+            let toastMsg = '';
+            if (assessment.cls === 'intensity-over') {
+                S.volumeMultiplier = Math.max(0.5, (S.volumeMultiplier || 1.0) * 0.9);
+                toastMsg = `📉 强度超标：后续训练量已自动下调 10%`;
+            } else if (assessment.cls === 'intensity-under') {
+                S.volumeMultiplier = Math.min(1.5, (S.volumeMultiplier || 1.0) * 1.05);
+                toastMsg = `📈 强度低于能力：已自动上调后续训练量 5%`;
+            } else {
+                if ((S.volumeMultiplier || 1.0) > 1.0) S.volumeMultiplier = Math.max(1.0, S.volumeMultiplier - 0.05);
+                if ((S.volumeMultiplier || 1.0) < 1.0) S.volumeMultiplier = Math.min(1.0, S.volumeMultiplier + 0.05);
+                toastMsg = `✨ 强度适中：完美契合您的体能！`;
+            }
+            showToast(toastMsg);
+            
+            // Auto recalibrate remaining days of the plan
+            setTimeout(() => {
+                genPlan(true);
+            }, 100);
+        } else {
+            showToast(isSkip ? `🏊 游泳训练完成！` : `🏊 游泳完成。RPE ${actualRpe}/10`);
+            checkSwimMilestone();
+        }
         
         // Save weight history per exercise
         day.exercises.forEach((ex,i)=>{
