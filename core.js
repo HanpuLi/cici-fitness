@@ -377,6 +377,7 @@ function _pad(n){return String(n).padStart(2,'0')}
 function todayStr(){const d=new Date();return `${d.getFullYear()}-${_pad(d.getMonth()+1)}-${_pad(d.getDate())}`}
 function dateStr(d){return `${d.getFullYear()}-${_pad(d.getMonth()+1)}-${_pad(d.getDate())}`}
 function addDays(base,n){const d=new Date(base+'T12:00:00');d.setDate(d.getDate()+n);return dateStr(d)}
+function dayDiff(a,b){const da=new Date(a+'T12:00:00');const db=new Date(b+'T12:00:00');return Math.round((db-da)/(24*60*60*1000))}
 function fmtDate(ds){const d=new Date(ds+'T00:00:00');return['周日','周一','周二','周三','周四','周五','周六'][d.getDay()]+'·'+(d.getMonth()+1)+'/'+(d.getDate())}
 
 // ══ Lock check ══════════════════════════════════════════
@@ -844,6 +845,7 @@ ${locked&&!d.isRest?'<i class="ti ti-lock" style="font-size:9px;color:var(--ink3
 h+=`</div></div>`;
 
 if(sel&&!sel.isRest){
+  const lg = LOG.find(l => l.date === sel.date);
   if(sel._src==='log'&&!planDays.find(dd=>dd.date===sel.date)){
     const lg=sel._logEntry;
     h+=`<div class="wh"><span class="wh-title">${fmtDate(sel.date)} \u00b7 ${sel.workoutType}</span><span class="badge">${sel.duration||'?'}\u5206\u949f</span><span class="warn-tag" style="background:var(--blue-bg);color:var(--blue);border-color:rgba(75,107,138,.25)">\u5386\u53f2\u8bb0\u5f55</span></div>`;
@@ -861,14 +863,48 @@ if(sel&&!sel.isRest){
     }else{h+=`<div class="hist-empty">\u8be5\u65e5\u8bad\u7ec3\u8be6\u60c5\u4e0d\u53ef\u7528</div>`}
     if(lg&&lg.note)h+=`<div class="hist-note">"${lg.note}"</div>`;
   }else{
-    const locked=isLocked(sel),pd=S.prog[sel.date]||{};
+    const locked=isLocked(sel);
     const _isSwimDay=!!sel.isSwimDay;
-    h+=`<div class="wh">
+    
+    if(locked && lg) {
+      h+=`<div class="wh">
+<span class="wh-title">${fmtDate(sel.date)} \u00b7 ${lg.workout}</span>
+<span class="badge">${lg.duration || sel.duration}\u5206\u949f</span>
+${lg.isSwimDay?`<span class="badge" style="background:rgba(59,130,246,.12);color:#3b82f6">${S.swimLevel||'\u5165\u95e8'}</span>`:''}
+<span class="warn-tag" style="background:rgba(76,175,80,.12);color:#4caf50;border-color:rgba(76,175,80,.25)">\u5df2\u6253\u5365</span>
+<span class="warn-tag">\u5df2\u9501\u5b9a</span>
+<button class="regen-btn" style="margin-left:8px;font-size:10px;padding:2px 8px" onclick="unlockDate('${sel.date}')">\u89e3\u9664\u9501\u5b9a</button>
+</div>`;
+
+      h+=`<div class="hist-detail-meta" style="margin-bottom:12px;display:flex;gap:8px;flex-wrap:wrap">`;
+      if(lg.rpe)h+=`<span class="hist-detail-chip rpe" style="background:rgba(224,117,94,.12);color:var(--terra);padding:4px 10px;border-radius:20px;font-size:11px;font-weight:600">RPE ${lg.rpe}/10</span>`;
+      if(lg.mood)h+=`<span class="hist-detail-chip mood" style="background:var(--surface2);padding:4px 10px;border-radius:20px;font-size:11px">${lg.mood}</span>`;
+      h+=`<span class="hist-detail-chip dur" style="background:var(--surface2);padding:4px 10px;border-radius:20px;font-size:11px">${lg.exerciseCount||(lg.exercises||[]).length}\u4e2a\u52a8\u4f5c</span></div>`;
+
+      if(lg.exercises&&lg.exercises.length){
+        h+=`<div class="exlist">`;
+        lg.exercises.forEach(ex=>{
+          const done=ex.done!==false;
+          h+=`<div class="exrow${done?' done-ex':''}">
+<div style="flex:1;min-width:0">
+<div class="exname" onclick="showExDetail('${ex.name}')" style="cursor:pointer; ${!done?'text-decoration:line-through;opacity:.6':''}">${ex.name} <i class="ti ti-info-circle" style="font-size:11px;opacity:.4;vertical-align:middle"></i></div>
+${ex.weight?`<div class="wt-hint" style="margin-top:2px;display:block">${ex.weight}kg</div>`:''}
+</div>
+<span class="av" style="opacity:.5;margin-right:12px">${ex.sets||'?'}\u00d7${ex.reps||'?'}${ex.unit||'\u6b21'}</span>
+<button class="cb${done?' ck':''}" style="cursor:default;pointer-events:none;opacity:${done?1:0.15}"><i class="ti ti-check"></i></button>
+</div>`;
+        });
+        h+=`</div>`;
+      }else{h+=`<div class="hist-empty">\u8be5\u65e5\u8bad\u7ec3\u8be6\u60c5\u4e0d\u53ef\u7528</div>`}
+      if(lg.note)h+=`<div class="hist-note" style="margin-top:12px;padding:10px 14px;background:var(--surface2);border-radius:8px;font-size:12px;font-style:italic;color:var(--ink2)">"${lg.note}"</div>`;
+    }else{
+      const pd=S.prog[sel.date]||{};
+      h+=`<div class="wh">
 <span class="wh-title">${fmtDate(sel.date)} \u00b7 ${sel.workoutType}</span>
 <span class="badge">${sel.duration}\u5206\u949f</span>
 ${_isSwimDay?`<span class="badge" style="background:rgba(59,130,246,.12);color:#3b82f6">${S.swimLevel||'\u5165\u95e8'}</span>`:''}
 ${!locked&&!_isSwimDay?`<button class="regen-btn" style="margin-left:auto;font-size:10px;padding:2px 8px" onclick="startTimer(45, '\u7ec4\u95f4\u4f11\u606f')">45s</button><button class="regen-btn" style="margin-left:4px;font-size:10px;padding:2px 8px" onclick="startTimer(60, '\u7ec4\u95f4\u4f11\u606f')">60s</button>`:''}
-${locked?`<span class="warn-tag">\u5df2\u9501\u5b9a</span><button class="regen-btn" style="margin-left:8px;font-size:10px;padding:2px 8px" onclick="unlockDate('${sel.date}')">\u89e3\u9664\u9501\u5b9a</button>`:''}
+${locked?`<span class="warn-tag" style="background:var(--surface3);color:var(--ink3);border-color:var(--border)">\u672a\u6253\u5365</span><span class="warn-tag">\u5df2\u9501\u5b9a</span><button class="regen-btn" style="margin-left:8px;font-size:10px;padding:2px 8px" onclick="unlockDate('${sel.date}')">\u89e3\u9664\u9501\u5b9a</button>`:''}
 </div>
 <div class="exlist">${sel.exercises.map((ex,i)=>{
 const done=pd[i];
@@ -895,21 +931,25 @@ ${!locked?`
 <div class="adjg"><button class="ab" onclick="adj('${sel.date}',${i},'s',-1)">-</button><span class="av">${sets}\u7ec4</span><button class="ab" onclick="adj('${sel.date}',${i},'s',1)">+</button></div>
 <div class="adjg"><button class="ab" onclick="adj('${sel.date}',${i},'r',-1)">-</button><span class="av">${reps}${ex.unit}${ex.bi?'/每侧':''}</span><button class="ab" onclick="adj('${sel.date}',${i},'r',1)">+</button></div>
 <button class="cb${done?' ck':''}" onclick="tog('${sel.date}',${i})"><i class="ti ti-check"></i></button>
-`:`<span class="av" style="opacity:.5">${sets}\u00d7${reps}${ex.unit}${ex.bi?'/每侧':''}</span>`}
+`:`<span class="av" style="opacity:.5;margin-right:12px">${sets}\u00d7${reps}${ex.unit}${ex.bi?'/每侧':''}</span>
+<button class="cb${done?' ck':''}" style="cursor:default;pointer-events:none;opacity:${done?1:0.15}"><i class="ti ti-check"></i></button>
+`}
 </div>`;}).join('')}</div>`;
-
-    const alreadyLogged = LOG.some(l=>l.date===sel.date&&l.workout===sel.workoutType);
-    if (!locked && !sel.isRest && !alreadyLogged) {
-        const checkedCount = Object.keys(S.prog[sel.date] || {}).filter(k=>S.prog[sel.date][k]).length;
-        const btnText = checkedCount === sel.exercises.length ? '完成训练并打卡' : '结束训练并打卡';
-        const btnCls = checkedCount === sel.exercises.length ? 'btn-complete-workout' : 'btn-end-workout-early';
-        h += `<div class="workout-action-bar" style="margin-top:16px;display:flex;justify-content:center;width:100%">
-            <button class="${btnCls}" onclick="endWorkoutEarly('${sel.date}')">
-                <i class="ti ti-checklist" style="margin-right:6px"></i>${btnText}
-            </button>
-        </div>`;
+      
+      const alreadyLogged = LOG.some(l=>l.date===sel.date&&l.workout===sel.workoutType);
+      if (!locked && !sel.isRest && !alreadyLogged) {
+          const checkedCount = Object.keys(pd).filter(k=>pd[k]).length;
+          const btnText = checkedCount === sel.exercises.length ? '完成训练并打卡' : '结束训练并打卡';
+          const btnCls = checkedCount === sel.exercises.length ? 'btn-complete-workout' : 'btn-end-workout-early';
+          h += `<div class="workout-action-bar" style="margin-top:16px;display:flex;justify-content:center;width:100%">
+              <button class="${btnCls}" onclick="endWorkoutEarly('${sel.date}')">
+                  <i class="ti ti-checklist" style="margin-right:6px"></i>${btnText}
+              </button>
+          </div>`;
+      }
     }
   }
+}
 }else if(sel&&sel.isRest){
 h+=`<div class="tip" style="text-align:center;padding:2rem">\u4f11\u606f\u65e5 \u2014 \u597d\u597d\u6062\u590d\uff0c\u660e\u5929\u7ee7\u7eed</div>`;
 }
@@ -919,7 +959,19 @@ initTouchDrag();
 }
 
 // ══ Interactions ════════════════════════════════════════
-function selectDate(ds){S.selDate=ds;saveState();render()}
+function selectDate(ds){
+    S.selDate=ds;
+    if(S.plan && S.plan.days && S.plan.days.length) {
+        const planStart = S.plan.days[0].date;
+        const diff = dayDiff(planStart, ds);
+        const currentStart = _calWeekOffset * 7;
+        if (diff < currentStart || diff >= currentStart + 14) {
+            _calWeekOffset = Math.floor(diff / 7);
+        }
+    }
+    saveState();
+    render();
+}
 
 // ══ Timer System ═════════════════════════════════════════
 let _timerInterval=null;
