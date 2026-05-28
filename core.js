@@ -334,6 +334,11 @@ split.groups.forEach(grp=>{
 const count=groupBudget[grp]||0;
 if(!count)return;
 let pool=(DB[grp]||[]).filter(ex=>ex.eq.some(e=>S.equip.includes(e))&&!used.has(ex.n)&&!excluded.has(ex.n));
+if(S.periodMode){
+  const skipKeywords = ['深蹲', '硬拉', '臀推', '悬挂', '腹轮', '倒蹬', '哈克', '波比'];
+  const filtered = pool.filter(ex => !skipKeywords.some(k => ex.n.includes(k)));
+  if(filtered.length > 0) pool = filtered;
+}
 // Difficulty filter
 if(S.level==='初级')pool=pool.filter(ex=>ex.diff<=2);
 if(S.level==='高级')pool.sort((a,b)=>b.diff-a.diff);// prefer harder
@@ -346,7 +351,7 @@ const isCardio=grp==='cardio',isTime=!!ex.u;
 const exSets=isCardio?1:sets;
 const exReps=isCardio?Math.max(sch.cardioMin,10):(isTime?(S.level==='初级'?30:S.level==='中级'?45:60):reps);
 // Build coaching note combining technique + goal/level context
-const coaching=`${ex.note} — ${sch.intensityNote[S.level]}（${sch.weightGuide[S.level]}）`;
+const coaching = (S.periodMode ? '🩸 经期温和模式 | ' : '') + `${ex.note} — ${sch.intensityNote[S.level]}（${sch.weightGuide[S.level]}）`;
 result.push({name:ex.n,sets:exSets,reps:exReps,unit:isCardio?'分钟':(isTime?'秒':'次'),note:coaching,group:grp,diff:ex.diff,bi:!!ex.bi});
 });
 });
@@ -505,15 +510,24 @@ return roundWeight(w, n);
 }
 
 function suggestWeight(exName){
+let target;
 const last=getLastWeight(exName);
-if(!last) return getDefaultWeight(exName);
-const w=last.weight, rpe=last.rpe||6;
-const step=getWeightStep(exName);
-// RPE-based progression
-if(rpe<=4) return roundWeight(w+step*2, exName); // Too easy → +2 steps
-if(rpe<=6) return roundWeight(w+step, exName);   // Moderate → +1 step
-if(rpe<=8) return w;                              // Good → same weight
-return Math.max(step, roundWeight(w-step, exName)); // Hard/max → -1 step
+if(!last) {
+  target = getDefaultWeight(exName);
+} else {
+  const w=last.weight, rpe=last.rpe||6;
+  const step=getWeightStep(exName);
+  // RPE-based progression
+  if(rpe<=4) target = roundWeight(w+step*2, exName); // Too easy → +2 steps
+  else if(rpe<=6) target = roundWeight(w+step, exName);   // Moderate → +1 step
+  else if(rpe<=8) target = w;                              // Good → same weight
+  else target = Math.max(step, roundWeight(w-step, exName)); // Hard/max → -1 step
+}
+if(S.periodMode){
+  const step=getWeightStep(exName);
+  target = Math.max(step, roundWeight(target * 0.75, exName));
+}
+return target;
 }
 // ══ Swimming Plan Generator ═════════════════════════════
 function pickSwimExercises(){
