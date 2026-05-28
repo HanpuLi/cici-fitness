@@ -1276,3 +1276,80 @@ textarea:focus { border-color: var(--terra-br); }
 }
 
 
+/* ══ Period Mode Toggle ═══════════════════════════════════ */
+.period-toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 12px;
+    padding: 10px 12px;
+    background: var(--surface2);
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    transition: background .25s, border-color .25s;
+}
+.period-toggle-row.active {
+    background: rgba(232, 121, 149, 0.08);
+    border-color: rgba(232, 121, 149, 0.25);
+}
+.period-toggle-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.period-toggle-icon {
+    font-size: 20px;
+    line-height: 1;
+}
+.period-toggle-label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink);
+}
+.period-toggle-hint {
+    display: block;
+    font-size: 10px;
+    color: var(--ink3);
+    margin-top: 1px;
+}
+
+/* iOS-style toggle switch */
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 44px;
+    height: 26px;
+    flex-shrink: 0;
+}
+.switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+.switch-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: var(--border2);
+    border-radius: 26px;
+    transition: background .3s cubic-bezier(.4,0,.2,1);
+}
+.switch-slider::before {
+    content: "";
+    position: absolute;
+    height: 20px;
+    width: 20px;
+    left: 3px;
+    bottom: 3px;
+    background: #fff;
+    border-radius: 50%;
+    transition: transform .3s cubic-bezier(.4,0,.2,1);
+    box-shadow: 0 1px 3px rgba(0,0,0,.15);
+}
+.switch input:checked + .switch-slider {
+    background: #e87995;
+}
+.switch input:checked + .switch-slider::before {
+    transform: translateX(18px);
+}

@@ -7,7 +7,7 @@ function lg(k){try{const v=localStorage.getItem(k);return v?JSON.parse(v):null}c
 function ls(k,v){try{localStorage.setItem(k,JSON.stringify(v));schedulePush()}catch{}}
 
 // ══ State ════════════════════════════════════════════════
-const S={goal:'女性薄肌',level:'初级',days:3,dur:60,equip:['健身房全套'],focus:['均衡全身'],limits:'',plan:null,selDate:null,prog:{},adj:{},weights:{},volumeMultiplier:1.0,restDur:45,swimLevel:'入门'};
+const S={goal:'女性薄肌',level:'初级',days:3,dur:60,equip:['健身房全套'],focus:['均衡全身'],limits:'',plan:null,selDate:null,prog:{},adj:{},weights:{},volumeMultiplier:1.0,restDur:45,swimLevel:'入门',periodMode:false};
 let LOG=lg(K.log)||[];
 let W_HIST=lg(K.wh)||{};
 let PR_LIST=lg('fit_pr')||[]; // {date,exercise,weight,prev}
@@ -378,7 +378,7 @@ function todayStr(){const d=new Date();return `${d.getFullYear()}-${_pad(d.getMo
 function dateStr(d){return `${d.getFullYear()}-${_pad(d.getMonth()+1)}-${_pad(d.getDate())}`}
 function addDays(base,n){const d=new Date(base+'T12:00:00');d.setDate(d.getDate()+n);return dateStr(d)}
 function dayDiff(a,b){const da=new Date(a+'T12:00:00');const db=new Date(b+'T12:00:00');return Math.round((db-da)/(24*60*60*1000))}
-function fmtDate(ds){const d=new Date(ds+'T00:00:00');return['周日','周一','周二','周三','周四','周五','周六'][d.getDay()]+'·'+(d.getMonth()+1)+'/'+(d.getDate())}
+function fmtDate(ds){const d=new Date(ds+'T12:00:00');return['周日','周一','周二','周三','周四','周五','周六'][d.getDay()]+'·'+(d.getMonth()+1)+'/'+(d.getDate())}
 
 // ══ Lock check ══════════════════════════════════════════
 function isLocked(day){
@@ -565,6 +565,25 @@ const COMBO_PATTERNS={
 '4+3':['G','S','G','S','G','S','G'],
 };
 
+// ── Period mode: gentle land-based alternative to swim ──
+function pickPeriodAlternative(){
+  const excluded = getExcluded();
+  const corePool = (DB.core||[]).filter(ex => ex.diff <= 1 && !excluded.has(ex.n));
+  const cardioPool = (DB.cardio||[]).filter(ex => ex.diff <= 1 && !excluded.has(ex.n) && !ex.n.includes('跳') && !ex.n.includes('波比'));
+  const exercises = [];
+  // 1. Warm-up: light cardio 10min
+  const warmup = cardioPool.find(ex => ex.n.includes('椭圆') || ex.n.includes('骑行') || ex.n.includes('慢跑')) || cardioPool[0];
+  if (warmup) exercises.push({name:warmup.n,sets:1,reps:10,unit:'分钟',note:warmup.note+' · 经期替代游泳，保持轻松心率',group:'cardio',diff:1,isWarmup:true,bi:false});
+  // 2. Core: 2-3 gentle core exercises
+  for(let i=corePool.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[corePool[i],corePool[j]]=[corePool[j],corePool[i]];}
+  corePool.slice(0, 3).forEach(ex => {
+    exercises.push({name:ex.n,sets:3,reps:ex.u==='秒'?30:12,unit:ex.u||'次',note:ex.note,group:'core',diff:1,isWarmup:false,bi:ex.bi||false});
+  });
+  // 3. Cool-down stretch 5min
+  exercises.push({name:'全身拉伸放松',sets:1,reps:5,unit:'分钟',note:'针对下背、髋屈肌和腿后侧进行缓慢拉伸',group:'cardio',diff:1,isStretch:true,bi:false});
+  return exercises;
+}
+
 function genPlan(isRecalibrate = false){
 _skipAutoRegen=false; // Reset so future auto-regen can trigger
 const hasPool=S.equip.includes('泳池');
@@ -668,8 +687,12 @@ const split=splits[(startSplitIdx + generatedGymCount) % splits.length];
 generatedGymCount++;
 days.push({date:ds,isRest:false,workoutType:split.type,duration:S.dur,exercises:pickExercises(split,excluded)});
 }else if(dayType===2){
-// Swim day
+// Swim day (or period alternative)
+if(S.periodMode){
+days.push({date:ds,isRest:false,isSwimDay:false,workoutType:'🧘 轻量替代',duration:40,exercises:pickPeriodAlternative()});
+}else{
 days.push({date:ds,isRest:false,isSwimDay:true,workoutType:'🏊 游泳训练',duration:50,exercises:pickSwimExercises()});
+}
 }else{
 days.push({date:ds,isRest:true,workoutType:'休息',duration:0,exercises:[]});
 }
@@ -2514,7 +2537,7 @@ const entries=LOG.filter(l=>l.date===dateStr);
 const modal=document.getElementById('hist-modal');
 const content=document.getElementById('hist-modal-content');
 if(!modal||!content)return;
-const d=new Date(dateStr+'T00:00:00');
+const d=new Date(dateStr+'T12:00:00');
 const dayName=['\u5468\u65e5','\u5468\u4e00','\u5468\u4e8c','\u5468\u4e09','\u5468\u56db','\u5468\u4e94','\u5468\u516d'][d.getDay()];
 const dateFmt=`${d.getFullYear()}\u5e74${d.getMonth()+1}\u6708${d.getDate()}\u65e5 ${dayName}`;
 if(!entries.length){content.innerHTML=`<div class="hist-detail-header"><span class="hist-detail-date">${dateFmt}</span><button class="ex-modal-close" onclick="closeHistModal()">\u2715</button></div><div class="hist-empty">\u8be5\u65e5\u6682\u65e0\u8bad\u7ec3\u8bb0\u5f55</div>`;modal.classList.add('open');return}
