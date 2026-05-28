@@ -351,7 +351,7 @@ const isCardio=grp==='cardio',isTime=!!ex.u;
 const exSets=isCardio?1:sets;
 const exReps=isCardio?Math.max(sch.cardioMin,10):(isTime?(S.level==='初级'?30:S.level==='中级'?45:60):reps);
 // Build coaching note combining technique + goal/level context
-const coaching = (S.periodMode ? '🩸 经期温和模式 | ' : '') + `${ex.note} — ${sch.intensityNote[S.level]}（${sch.weightGuide[S.level]}）`;
+const coaching = (S.periodMode ? '经期温和模式 | ' : '') + `${ex.note} — ${sch.intensityNote[S.level]}（${sch.weightGuide[S.level]}）`;
 result.push({name:ex.n,sets:exSets,reps:exReps,unit:isCardio?'分钟':(isTime?'秒':'次'),note:coaching,group:grp,diff:ex.diff,bi:!!ex.bi});
 });
 });
@@ -703,7 +703,7 @@ days.push({date:ds,isRest:false,workoutType:split.type,duration:S.dur,exercises:
 }else if(dayType===2){
 // Swim day (or period alternative)
 if(S.periodMode){
-days.push({date:ds,isRest:false,isSwimDay:false,workoutType:'🧘 轻量替代',duration:40,exercises:pickPeriodAlternative()});
+days.push({date:ds,isRest:false,isSwimDay:false,workoutType:'轻量替代',duration:40,exercises:pickPeriodAlternative()});
 }else{
 days.push({date:ds,isRest:false,isSwimDay:true,workoutType:'🏊 游泳训练',duration:50,exercises:pickSwimExercises()});
 }
