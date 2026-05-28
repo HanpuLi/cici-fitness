@@ -60,7 +60,7 @@ function updateThemeBtn(theme){
 
 // ══ State Persistence ════════════════════════════════════
 function saveState(){
-ls(K.settings,{goal:S.goal,level:S.level,days:S.days,dur:S.dur,equip:S.equip,focus:S.focus,limits:S.limits,volumeMultiplier:S.volumeMultiplier,restDur:S.restDur,swimLevel:S.swimLevel});
+ls(K.settings,{goal:S.goal,level:S.level,days:S.days,dur:S.dur,equip:S.equip,focus:S.focus,limits:S.limits,volumeMultiplier:S.volumeMultiplier,restDur:S.restDur,swimLevel:S.swimLevel,periodMode:S.periodMode});
 if(S.plan)ls(K.plan,{plan:S.plan,prog:S.prog,adj:S.adj,weights:S.weights,unlockedDates:S.unlockedDates});
 localStorage.setItem('fit_selDate', S.selDate || '');
 }
@@ -99,6 +99,10 @@ document.querySelectorAll('#g-rest .chip').forEach(b=>b.classList.toggle('on',+b
 document.querySelectorAll('#g-swim-level .chip').forEach(b=>b.classList.toggle('on',b.dataset.v===(S.swimLevel||'入门')));
 const swimPanel=document.getElementById('swim-settings');
 if(swimPanel) swimPanel.style.display=S.equip.includes('泳池')?'block':'none';
+const periodSwitch=document.getElementById('period-switch');
+if(periodSwitch) periodSwitch.checked=!!S.periodMode;
+const periodRow=document.getElementById('period-toggle-row');
+if(periodRow) periodRow.classList.toggle('active',!!S.periodMode);
 updateSwimBreakdown();
 
 const rBtn = document.getElementById('recal-btn');
@@ -513,13 +517,18 @@ _pushing=false;
 }
 
 // ══ UI Bindings ══════════════════════════════════════════
+function flashSaved(){
+  const dot=document.getElementById('saved-dot');
+  if(dot){dot.classList.add('show');setTimeout(()=>dot.classList.remove('show'),1200);}
+}
+
 function single(id,key){
 const el=document.getElementById(id);if(!el)return;
 el.addEventListener('click',e=>{
 const b=e.target.closest('.chip');if(!b)return;
 document.querySelectorAll('#'+id+' .chip').forEach(c=>c.classList.remove('on'));
 b.classList.add('on');S[key]=b.dataset.v;saveState();
-const dot=document.getElementById('saved-dot');dot.classList.add('show');setTimeout(()=>dot.classList.remove('show'),1200);
+flashSaved();
 });
 }
 function multi(id,key){
@@ -530,6 +539,7 @@ b.classList.toggle('on');
 const v=b.dataset.v;
 S[key]=S[key].includes(v)?S[key].filter(x=>x!==v):[...S[key],v];
 saveState();
+flashSaved();
 });
 }
 single('g-level','level');
@@ -540,6 +550,7 @@ el.addEventListener('click',e=>{
 const b=e.target.closest('.chip');if(!b)return;
 document.querySelectorAll('#g-rest .chip').forEach(c=>c.classList.remove('on'));
 b.classList.add('on');S.restDur=+b.dataset.v;saveState();
+flashSaved();
 });
 })();
 // Swim level selector
@@ -549,9 +560,20 @@ el.addEventListener('click',e=>{
 const b=e.target.closest('.chip');if(!b)return;
 document.querySelectorAll('#g-swim-level .chip').forEach(c=>c.classList.remove('on'));
 b.classList.add('on');S.swimLevel=b.dataset.v;saveState();
-const dot=document.getElementById('saved-dot');dot.classList.add('show');setTimeout(()=>dot.classList.remove('show'),1200);
+flashSaved();
+})})();
+
+// Period mode toggle
+const periodSwitch=document.getElementById('period-switch');
+if(periodSwitch) periodSwitch.addEventListener('change',function(){
+S.periodMode=this.checked;
+const row=document.getElementById('period-toggle-row');
+if(row) row.classList.toggle('active',S.periodMode);
+saveState();
+flashSaved();
+if(S.plan){genPlan(true);render();}
 });
-})();
+
 // Show/hide swim settings when 泳池 equipment is toggled
 const _origEquipEl=document.getElementById('g-equip');
 if(_origEquipEl){
