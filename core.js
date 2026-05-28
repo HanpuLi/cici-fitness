@@ -462,12 +462,12 @@ const isLeg=isLegCompound||n.includes('腿')||n.includes('臀')||n.includes('股
 if(isBarbell){
   // 基础值: 标准杠=20kg空杆, EZ杆/短杆=10kg
   const bases={
-    legCompound: {初级:20,中级:30,高级:40},  // 深蹲/硬拉/臀推: 最低=空杆20kg
-    upperPush:   {初级:20,中级:25,高级:35},  // 卧推: 最低=空杆20kg
-    overhead:    {初级:15,中级:20,高级:30},  // 推举/肩推: 可用短杆15kg起
-    upperPull:   {初级:15,中级:20,高级:30},  // 划船/直立划船
-    isolation:   {初级:10,中级:15,高级:20},  // 弯举: EZ杆10kg起
-    other:       {初级:15,中级:20,高级:30}   // 兜底
+    legCompound: {初级:15,中级:25,高级:35},  // 深蹲/硬拉/臀推: 15kg起 (可用女子杆/固定杠铃)
+    upperPush:   {初级:12.5,中级:20,高级:30},  // 卧推: 12.5kg起 (可用轻量固定杠铃)
+    overhead:    {初级:7.5,中级:12.5,高级:20},  // 推举/肩推: 7.5kg起 (可用曲柄杆/轻量固定杠铃)
+    upperPull:   {初级:10,中级:15,高级:25},  // 划船/直立划船: 10kg起
+    isolation:   {初级:5,中级:10,高级:15},  // 弯举: EZ杆/轻固定杆5kg起
+    other:       {初级:10,中级:15,高级:25}   // 兜底
   };
   let cat='other';
   if(isLegCompound)cat='legCompound';
