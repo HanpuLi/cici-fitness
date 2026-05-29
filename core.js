@@ -993,7 +993,8 @@ if(sel&&!sel.isRest){
 ${lg.isSwimDay?`<span class="badge" style="background:rgba(59,130,246,.12);color:#3b82f6">${S.swimLevel||'\u5165\u95e8'}</span>`:''}
 <span class="warn-tag" style="background:rgba(76,175,80,.12);color:#4caf50;border-color:rgba(76,175,80,.25)">\u5df2\u6253\u5365</span>
 <span class="warn-tag">\u5df2\u9501\u5b9a</span>
-<button class="regen-btn" style="margin-left:8px;font-size:10px;padding:2px 8px" onclick="unlockDate('${sel.date}')">\u89e3\u9664\u9501\u5b9a</button>
+<button class="regen-btn" style="margin-left:8px;font-size:10px;padding:2px 8px" onclick="unlockDate('${sel.date}')">解除锁定</button>
+<button class="regen-btn" style="margin-left:6px;font-size:10px;padding:2px 8px;background:var(--sage-bg);color:var(--sage);border-color:var(--sage-br)" onclick="shareWorkout('${sel.date}')">分享卡片</button>
 </div>`;
 
       h+=`<div class="hist-detail-meta" style="margin-bottom:12px;display:flex;gap:8px;flex-wrap:wrap">`;
@@ -1617,6 +1618,15 @@ if(confirm('确定要解除锁定吗？\n您的动作勾选记录将被保留，
     if(typeof renderStats === 'function') renderStats();
     showToast('已解锁 ' + fmtDate(date));
 }
+}
+
+function shareWorkout(date){
+    const lg = LOG.find(l => l.date === date);
+    if(lg){
+        if(typeof openShareModal === 'function') openShareModal(lg);
+    }else{
+        alert('未找到打卡记录');
+    }
 }
 
 // ══ Drag to reorder ════════════════════════════════════
