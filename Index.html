@@ -28,7 +28,7 @@
         <div class="masthead-seal">咪</div>
         <div>
             <h1>Cici</h1>
-            <p class="masthead-sub">健身计划 · Fitness Planner</p>
+            <p class="masthead-sub" id="masthead-sub" style="cursor: default; user-select: none;" onclick="triggerDevClick()">健身计划 · Fitness Planner</p>
         </div>
         <div class="masthead-right" style="display:flex;align-items:center;gap:8px">
             <button class="theme-toggle" id="theme-btn" onclick="toggleTheme()" title="切换深色/浅色模式">🌙</button>
@@ -293,6 +293,47 @@
             <div style="display: flex; gap: 10px;">
                 <button id="download-card-btn" class="btn" style="flex: 1; background: var(--sage); color: #fff; border: none; padding: 12px; border-radius: var(--radius-sm); font-weight: 600;" onclick="downloadShareCard()">下载分享图</button>
             </div>
+        </div>
+    </div>
+
+    <!-- Developer Testing Console Modal -->
+    <div id="dev-modal" class="ex-modal-overlay" onclick="if(event.target===this)closeDevModal()">
+        <div class="ex-modal-card" onclick="event.stopPropagation()" style="max-width: 500px;">
+            <div class="ex-modal-hdr" style="margin-bottom: 15px; border-bottom: 1px solid var(--border); padding-bottom: 10px;">
+                <h3 class="ex-modal-title" style="font-family: var(--font-display); font-size: 18px; color: var(--ink);">🛠️ 开发者测试控制台</h3>
+                <button class="ex-modal-close" onclick="closeDevModal()">&#10005;</button>
+            </div>
+            
+            <p class="sec" style="margin-top: 0; font-weight: 600; font-size: 13px;">打卡数据模拟</p>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 15px;">
+                <button class="btn-dev" onclick="genMockHistory(14)">生成 14天 模拟历史</button>
+                <button class="btn-dev" onclick="genMockHistory(30)">生成 30天 模拟历史</button>
+                <button class="btn-dev" onclick="genMockPRs()">注入 模拟个人纪录</button>
+                <button class="btn-dev" onclick="genMockPeriodLog()">注入 生理期低负重打卡</button>
+            </div>
+            
+            <p class="sec" style="font-weight: 600; font-size: 13px;">时间与夏令时模拟 (DST)</p>
+            <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 15px;">
+                <button class="btn-dev" style="flex: 1;" onclick="toggleDstSimulation()">模拟冬/夏令时转换</button>
+                <span id="dst-status" style="font-size: 11px; color: var(--ink3); font-weight: 500;">标准状态</span>
+            </div>
+            
+            <p class="sec" style="font-weight: 600; font-size: 13px;">等级目标与计划快速模拟</p>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 15px;">
+                <button class="btn-dev" onclick="quickGenPlan('女性薄肌', '初级')">女性薄肌 (初级) 计划</button>
+                <button class="btn-dev" onclick="quickGenPlan('臀腿塑形', '高级')">臀腿塑形 (高级) 计划</button>
+            </div>
+            
+            <p class="sec" style="font-weight: 600; font-size: 13px;">系统状态调试</p>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 15px;">
+                <button class="btn-dev" onclick="testSystemSounds('start')">测试倒计时启动音</button>
+                <button class="btn-dev" onclick="testSystemSounds('end')">测试倒计时结束音</button>
+                <button class="btn-dev" onclick="toggleOfflineSyncSim()">模拟同步状态切换</button>
+                <button class="btn-dev dev-danger" onclick="clearMockOnly()">仅清空模拟打卡/PR</button>
+            </div>
+            
+            <p class="sec" style="font-weight: 600; font-size: 13px;">本地 State 监视器 (JSON)</p>
+            <textarea id="dev-state-inspector" style="width: 100%; height: 120px; font-family: var(--font-mono); font-size: 10px; background: var(--surface2); color: var(--ink); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px; box-sizing: border-box; resize: none;" readonly></textarea>
         </div>
     </div>
 

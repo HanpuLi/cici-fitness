@@ -382,7 +382,8 @@ return result;
 
 // ══ Calendar helpers (local timezone) ═══════════════════
 function _pad(n){return String(n).padStart(2,'0')}
-function todayStr(){const d=new Date();return `${d.getFullYear()}-${_pad(d.getMonth()+1)}-${_pad(d.getDate())}`}
+let _mockDate = null;
+function todayStr(){const d=_mockDate?new Date(_mockDate):new Date();return `${d.getFullYear()}-${_pad(d.getMonth()+1)}-${_pad(d.getDate())}`}
 function dateStr(d){return `${d.getFullYear()}-${_pad(d.getMonth()+1)}-${_pad(d.getDate())}`}
 function addDays(base,n){const d=new Date(base+'T12:00:00');d.setDate(d.getDate()+n);return dateStr(d)}
 function dayDiff(a,b){const da=new Date(a+'T12:00:00');const db=new Date(b+'T12:00:00');return Math.round((db-da)/(24*60*60*1000))}

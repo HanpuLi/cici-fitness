@@ -526,6 +526,12 @@ _pushTimer=setTimeout(pushToCloud,2000);
 
 async function pushToCloud(){
 if(!_db||!_user||_pushing)return;
+if(typeof _mockSyncFail !== 'undefined' && _mockSyncFail) {
+    console.log('[sync] simulated push failure (offline)');
+    const pill=document.getElementById('sync-pill');
+    if(pill){pill.textContent='❌';pill.className='auth-pill-sync err'}
+    return;
+}
 _pushing=true;
 const data={};
 CLOUD_KEYS.forEach(k=>{const v=localStorage.getItem(k);if(v!==null){try{data[k]=JSON.parse(v)}catch{data[k]=v}}});
@@ -821,6 +827,274 @@ function drawShareCard(logEntry) {
     ctx.restore();
     
     return canvas.toDataURL('image/png');
+}
+
+// ══ Developer Console & Testing Helpers ══════════════════
+let _devClicks = 0;
+let _devLastClick = 0;
+let _mockSyncFail = false;
+
+function triggerDevClick() {
+    const now = Date.now();
+    if (now - _devLastClick > 3000) {
+        _devClicks = 0;
+    }
+    _devClicks++;
+    _devLastClick = now;
+    if (_devClicks === 7) {
+        showToast('🛠️ 开发者测试控制台已解锁！');
+        openDevModal();
+        _devClicks = 0;
+    }
+}
+
+function openDevModal() {
+    const modal = document.getElementById('dev-modal');
+    if (modal) modal.classList.add('open');
+    updateStateInspector();
+}
+
+function closeDevModal() {
+    const modal = document.getElementById('dev-modal');
+    if (modal) modal.classList.remove('open');
+}
+
+function updateStateInspector() {
+    const el = document.getElementById('dev-state-inspector');
+    if (el) {
+        el.value = JSON.stringify({
+            S,
+            logCount: LOG.length,
+            prCount: PR_LIST.length,
+            isOfflineSimulated: _mockSyncFail,
+            simulatedDate: _mockDate || '当前真实系统时间'
+        }, null, 2);
+    }
+}
+
+function genMockHistory(days) {
+    if (!confirm(`确定生成过去 ${days} 天的模拟打卡历史记录吗？这会覆盖同日期的数据。`)) return;
+    
+    const splitNames = ["上肢推", "上肢拉", "下肢力量", "核心与胸", "有氧塑形"];
+    const baseDate = todayStr();
+    
+    for (let i = days; i >= 1; i--) {
+        // 60% training probability
+        if (Math.random() > 0.6) continue;
+        
+        const targetDate = addDays(baseDate, -i);
+        // Exclude if already exists (or overwrite)
+        const existIdx = LOG.findIndex(l => l.date === targetDate);
+        if (existIdx !== -1) {
+            LOG.splice(existIdx, 1);
+        }
+        
+        const isSwim = S.equip.includes('泳池') && Math.random() > 0.7;
+        let entry;
+        
+        if (isSwim) {
+            entry = {
+                date: targetDate,
+                workout: '游泳训练',
+                duration: Math.round(30 + Math.random() * 20),
+                exerciseCount: 3,
+                rpe: Math.round(5 + Math.random() * 3),
+                mood: ["😊 舒畅", "😅 略累", "🥰 精神饱满"][Math.floor(Math.random() * 3)],
+                exercises: [
+                    { name: '水中呼吸练习', sets: 1, reps: 5, unit: '分钟', done: true },
+                    { name: '蛙泳连续游', sets: 1, reps: 30, unit: '分钟', done: true },
+                    { name: '水中漫步放松', sets: 1, reps: 5, unit: '分钟', done: true }
+                ],
+                note: '自动生成的模拟游泳训练。',
+                isSwimDay: true
+            };
+        } else {
+            const splitName = splitNames[i % splitNames.length];
+            const exercises = [];
+            // Pick a few random exercises from chest/back/quads
+            const poolGroups = ['chest', 'back', 'quads', 'hamglutes'];
+            const grp = poolGroups[Math.floor(Math.random() * poolGroups.length)];
+            const dbList = DB[grp] || [];
+            
+            dbList.slice(0, 3).forEach(ex => {
+                exercises.push({
+                    name: ex.n,
+                    sets: 3,
+                    reps: 12,
+                    unit: '次',
+                    weight: Math.round(10 + Math.random() * 15),
+                    done: true
+                });
+            });
+            
+            entry = {
+                date: targetDate,
+                workout: splitName,
+                duration: Math.round(40 + Math.random() * 25),
+                exerciseCount: exercises.length,
+                rpe: Math.round(5 + Math.random() * 4),
+                mood: ["💪 爽快", "😊 舒适", "😅 稍累"][Math.floor(Math.random() * 3)],
+                exercises: exercises,
+                note: '自动生成的模拟力量训练。'
+            };
+        }
+        LOG.push(entry);
+    }
+    
+    LOG.sort((a, b) => a.date.localeCompare(b.date));
+    ls(K.log, LOG);
+    loadState();
+    renderLog();
+    if (typeof renderStats === 'function') renderStats();
+    if (typeof render === 'function') render();
+    updateStateInspector();
+    showToast(`成功生成 ${days} 天的模拟训练记录！`);
+}
+
+function genMockPRs() {
+    PR_LIST = [
+        { date: addDays(todayStr(), -12), exercise: '传统硬拉', weight: 80, prev: 75 },
+        { date: addDays(todayStr(), -8), exercise: '杠铃深蹲', weight: 65, prev: 60 },
+        { date: addDays(todayStr(), -5), exercise: '杠铃卧推', weight: 45, prev: 40 },
+        { date: addDays(todayStr(), -2), exercise: '罗马尼亚硬拉', weight: 60, prev: 55 }
+    ];
+    ls(K.pr, PR_LIST);
+    
+    // Inject weight history for progression charts
+    W_HIST['传统硬拉'] = [{ date: addDays(todayStr(), -20), weight: 70, rpe: 7 }, { date: addDays(todayStr(), -12), weight: 80, rpe: 8 }];
+    W_HIST['杠铃深蹲'] = [{ date: addDays(todayStr(), -18), weight: 60, rpe: 6 }, { date: addDays(todayStr(), -8), weight: 65, rpe: 7 }];
+    W_HIST['杠铃卧推'] = [{ date: addDays(todayStr(), -15), weight: 40, rpe: 7 }, { date: addDays(todayStr(), -5), weight: 45, rpe: 8 }];
+    W_HIST['罗马尼亚硬拉'] = [{ date: addDays(todayStr(), -10), weight: 55, rpe: 7 }, { date: addDays(todayStr(), -2), weight: 60, rpe: 8 }];
+    ls(K.wh, W_HIST);
+    
+    loadState();
+    if (typeof renderStats === 'function') renderStats();
+    if (typeof render === 'function') render();
+    updateStateInspector();
+    showToast('已注入模拟 PR 纪录与训练重量历史！');
+}
+
+function genMockPeriodLog() {
+    // Inject normal training first if none exists to establish benchmark
+    if (!W_HIST['哑铃卧推'] || W_HIST['哑铃卧推'].length === 0) {
+        W_HIST['哑铃卧推'] = [{ date: addDays(todayStr(), -10), weight: 15, rpe: 7, period: false }];
+    }
+    
+    // Inject a low weight log in periodMode 3 days ago
+    const targetDate = addDays(todayStr(), -3);
+    const existIdx = LOG.findIndex(l => l.date === targetDate);
+    if (existIdx !== -1) LOG.splice(existIdx, 1);
+    
+    const entry = {
+        date: targetDate,
+        workout: '上肢推 (生理期温和)',
+        duration: 35,
+        exerciseCount: 1,
+        rpe: 6,
+        mood: '😅 轻松',
+        exercises: [{ name: '哑铃卧推', sets: 3, reps: 12, unit: '次', weight: 10, done: true }],
+        note: '经期模拟打卡，实测降重推荐。'
+    };
+    LOG.push(entry);
+    LOG.sort((a, b) => a.date.localeCompare(b.date));
+    ls(K.log, LOG);
+    
+    W_HIST['哑铃卧推'].push({ date: targetDate, weight: 10, rpe: 6, period: true });
+    ls(K.wh, W_HIST);
+    
+    loadState();
+    renderLog();
+    if (typeof renderStats === 'function') renderStats();
+    if (typeof render === 'function') render();
+    updateStateInspector();
+    showToast('已注入生理期“哑铃卧推”10kg (正常为15kg) 低负重打卡！');
+}
+
+function toggleDstSimulation() {
+    const el = document.getElementById('dst-status');
+    if (!_mockDate) {
+        // Mock BST/DST Summer (June)
+        _mockDate = '2026-06-15T12:00:00';
+        if (el) el.textContent = '模拟夏季 (DST)';
+        showToast('已切换至模拟夏季夏令时时间 (2026-06-15)');
+    } else if (_mockDate === '2026-06-15T12:00:00') {
+        // Mock GMT Winter (December)
+        _mockDate = '2026-12-15T12:00:00';
+        if (el) el.textContent = '模拟冬季 (Standard)';
+        showToast('已切换至模拟冬季标准时间 (2026-12-15)');
+    } else {
+        _mockDate = null;
+        if (el) el.textContent = '标准状态';
+        showToast('已恢复系统当前真实时间');
+    }
+    loadState();
+    if (typeof render === 'function') render();
+    if (typeof renderStats === 'function') renderStats();
+    updateStateInspector();
+}
+
+function quickGenPlan(goal, level) {
+    S.goal = goal;
+    S.level = level;
+    if (goal === '臀腿塑形') {
+        S.focus = ['下肢'];
+        if (!S.equip.includes('健身房全套')) S.equip.push('健身房全套');
+    } else {
+        S.focus = ['均衡全身'];
+    }
+    saveState();
+    if (typeof genPlan === 'function') genPlan(true);
+    if (typeof render === 'function') render();
+    updateStateInspector();
+    showToast(`已快速生成 ${goal} (${level}) 专属计划！`);
+}
+
+function testSystemSounds(type) {
+    if (type === 'start') {
+        if (typeof playRestStartSound === 'function') {
+            playRestStartSound();
+            showToast('已鸣响倒计时启动音（风铃声）');
+        }
+    } else {
+        if (typeof playDing === 'function') {
+            playDing();
+            showToast('已鸣响倒计时结束音（铜磬声）');
+        }
+    }
+}
+
+function toggleOfflineSyncSim() {
+    _mockSyncFail = !_mockSyncFail;
+    showToast(_mockSyncFail ? '“离线同步模拟”已开启：打卡将无法回传云端' : '“离线同步模拟”已关闭：恢复网络数据传输');
+    
+    const pill = document.getElementById('sync-pill');
+    if (pill) {
+        if (_mockSyncFail) {
+            pill.textContent = '❌';
+            pill.className = 'auth-pill-sync err';
+        } else {
+            pill.textContent = '✓';
+            pill.className = 'auth-pill-sync ok';
+        }
+    }
+    updateStateInspector();
+}
+
+function clearMockOnly() {
+    if (!confirm('确定清除测试控制台生成的模拟数据（LOG、W_HIST、PR_LIST）吗？\n您的主要配置设置和登录状态将被完整保留。')) return;
+    LOG = [];
+    ls(K.log, LOG);
+    PR_LIST = [];
+    ls(K.pr, PR_LIST);
+    W_HIST = {};
+    ls(K.wh, W_HIST);
+    
+    loadState();
+    renderLog();
+    if (typeof renderStats === 'function') renderStats();
+    if (typeof render === 'function') render();
+    updateStateInspector();
+    showToast('模拟打卡及负重进步历史已被清除！');
 }
 
 // ══ Init ═════════════════════════════════════════════════
