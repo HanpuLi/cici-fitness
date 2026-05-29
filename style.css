@@ -1353,3 +1353,31 @@ textarea:focus { border-color: var(--terra-br); }
 .switch input:checked + .switch-slider::before {
     transform: translateX(18px);
 }
+
+/* ══ Developer Testing Console ════════════════════════════ */
+.btn-dev {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--ink);
+    border-radius: var(--radius-sm);
+    padding: 8px 10px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all .2s;
+    text-align: center;
+}
+.btn-dev:hover {
+    background: var(--border);
+}
+.btn-dev:active {
+    transform: scale(0.96);
+}
+.btn-dev.dev-danger {
+    background: rgba(198, 88, 56, 0.08);
+    border-color: rgba(198, 88, 56, 0.25);
+    color: var(--terra);
+}
+.btn-dev.dev-danger:hover {
+    background: rgba(198, 88, 56, 0.15);
+}
