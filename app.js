@@ -81,6 +81,8 @@ if(p&&p.plan&&p.plan.days){
 }
 else{S.plan=null;}
 LOG=lg(K.log)||[];
+W_HIST=lg(K.wh)||{};
+PR_LIST=lg(K.pr)||[];
 applySettingsToUI();
 if(S.plan)render();
 if(S.plan && typeof autoAlignPlan==='function') autoAlignPlan();
@@ -193,11 +195,14 @@ el.innerHTML=html;
 function delLog(idx){
 if(!confirm('确定删除这条记录？'))return;
 const logEntry = LOG[idx];
-if (logEntry && S.prog[logEntry.date]) {
+LOG.splice(idx,1);
+ls(K.log,LOG);
+const dateHasOtherLogs = LOG.some(entry => entry.date === logEntry.date);
+if (!dateHasOtherLogs && S.prog[logEntry.date]) {
     delete S.prog[logEntry.date];
-    saveState();
 }
-LOG.splice(idx,1);ls(K.log,LOG);renderLog();
+saveState();
+renderLog();
 if(typeof render === 'function') render();
 if(typeof renderStats === 'function') renderStats();
 }
@@ -211,7 +216,8 @@ if(confirm('⚠️ 警告：确定要清空所有计划、打卡记录和统计�
         try{ await _db.collection('users').doc(_user.uid).delete(); }catch(e){ console.warn('Cloud clear failed:',e); }
     }
     // 3. Clear local (including weight history)
-    localStorage.clear();
+    Object.values(K).forEach(key => localStorage.removeItem(key));
+    localStorage.removeItem('fit_selDate');
     W_HIST={};
     PR_LIST=[];
     location.reload();
@@ -424,8 +430,19 @@ const reader=new FileReader();
 reader.onload=e=>{
 try{
 const data=JSON.parse(e.target.result);
-Object.entries(data).forEach(([k,v])=>{if(k!=='_meta')ls(k,v)});
-location.reload();
+const allowed = new Set(Object.values(K));
+let imported = false;
+Object.entries(data).forEach(([k,v])=>{
+    if(allowed.has(k)){
+        ls(k,v);
+        imported = true;
+    }
+});
+if (imported) {
+    location.reload();
+} else {
+    alert('未找到有效的备份数据');
+}
 }catch{alert('文件格式错误')}
 };reader.readAsText(file);
 }

@@ -2,7 +2,7 @@
 const firebaseConfig={apiKey:"AIzaSyB12HcJxsqqmWoih3wnfpyqu9LDzEE9nXs",authDomain:"cici-fitness.firebaseapp.com",projectId:"cici-fitness",storageBucket:"cici-fitness.firebasestorage.app",messagingSenderId:"375793627351",appId:"1:375793627351:web:f2dbfd8e107206417f4092",measurementId:"G-ZHCCRWZ57P"};
 
 // ══ Storage Layer ════════════════════════════════════════
-const K={settings:'fit_s1',plan:'fit_p1',prog:'fit_pr1',log:'fit_log1',adj:'fit_adj1',wh:'fit_wh1'};
+const K={settings:'fit_s1',plan:'fit_p1',prog:'fit_pr1',log:'fit_log1',adj:'fit_adj1',wh:'fit_wh1',pr:'fit_pr'};
 function lg(k){try{const v=localStorage.getItem(k);return v?JSON.parse(v):null}catch{return null}}
 function ls(k,v){try{localStorage.setItem(k,JSON.stringify(v));schedulePush()}catch{}}
 
@@ -10,7 +10,7 @@ function ls(k,v){try{localStorage.setItem(k,JSON.stringify(v));schedulePush()}ca
 const S={goal:'女性薄肌',level:'初级',days:3,dur:60,equip:['健身房全套'],focus:['均衡全身'],limits:'',plan:null,selDate:null,prog:{},adj:{},weights:{},volumeMultiplier:1.0,restDur:45,swimLevel:'入门',periodMode:false};
 let LOG=lg(K.log)||[];
 let W_HIST=lg(K.wh)||{};
-let PR_LIST=lg('fit_pr')||[]; // {date,exercise,weight,prev}
+let PR_LIST=lg(K.pr)||[]; // {date,exercise,weight,prev}
 let _logShowAll=false;
 let _calWeekOffset=0;
 
@@ -335,7 +335,7 @@ const count=groupBudget[grp]||0;
 if(!count)return;
 let pool=(DB[grp]||[]).filter(ex=>ex.eq.some(e=>S.equip.includes(e))&&!used.has(ex.n)&&!excluded.has(ex.n));
 if(S.periodMode){
-  const skipKeywords = ['深蹲', '硬拉', '臀推', '悬挂', '腹轮', '倒蹬', '哈克', '波比'];
+  const skipKeywords = ['深蹲', '硬拉', '臀推', '悬挂', '腹轮', '倒蹬', '哈克', '波比', '转体', '卷腹', '抬腿', '伐木'];
   const filtered = pool.filter(ex => !skipKeywords.some(k => ex.n.includes(k)));
   if(filtered.length > 0) pool = filtered;
 }
@@ -358,7 +358,10 @@ result.push({name:ex.n,sets:exSets,reps:exReps,unit:isCardio?'分钟':(isTime?'�
 
 // Always append cardio finisher if not a pure cardio day
 if(!split.groups.includes('cardio') && S.dur >= 45) {
-    const cPool = DB.cardio.filter(ex=>ex.eq.some(e=>S.equip.includes(e)));
+    let cPool = DB.cardio.filter(ex=>ex.eq.some(e=>S.equip.includes(e)));
+    if(S.periodMode){
+        cPool = cPool.filter(ex => !ex.n.includes('跳') && !ex.n.includes('波比') && !ex.n.includes('攀爬') && !ex.n.includes('单车'));
+    }
     if(cPool.length) {
         const cEx = cPool[Math.floor(Math.random()*cPool.length)];
         result.push({name:cEx.n,sets:1,reps:15,unit:'分钟',note:'薄肌有氧收尾 — 保持心率120-140，帮助肌肉拉长',group:'cardio',diff:cEx.diff});
@@ -417,13 +420,18 @@ if(val>maxPrev){
 showToast(`🏆 ${exName} 新纪录！${val}kg`);
 PR_LIST.unshift({date,exercise:exName,weight:val,prev:maxPrev});
 if(PR_LIST.length>50)PR_LIST=PR_LIST.slice(0,50);
-ls('fit_pr',PR_LIST);
+ls(K.pr,PR_LIST);
 }}}}
 saveState();
 }
-function getLastWeight(exName){
+function getLastWeight(exName, excludePeriod = false){
 const hist=W_HIST[exName];
 if(!hist||!hist.length)return null;
+if(excludePeriod){
+    for(let i=hist.length-1;i>=0;i--){
+        if(!hist[i].period) return hist[i];
+    }
+}
 return hist[hist.length-1];
 }
 
@@ -511,9 +519,19 @@ return roundWeight(w, n);
 
 function suggestWeight(exName){
 let target;
-const last=getLastWeight(exName);
+const last=getLastWeight(exName, true); // Get last non-period weight
 if(!last) {
-  target = getDefaultWeight(exName);
+  const fallbackLast = getLastWeight(exName, false);
+  if (!fallbackLast) {
+    target = getDefaultWeight(exName);
+  } else {
+    const w=fallbackLast.weight, rpe=fallbackLast.rpe||6;
+    const step=getWeightStep(exName);
+    if(rpe<=4) target = roundWeight(w+step*2, exName);
+    else if(rpe<=6) target = roundWeight(w+step, exName);
+    else if(rpe<=8) target = w;
+    else target = Math.max(step, roundWeight(w-step, exName));
+  }
 } else {
   const w=last.weight, rpe=last.rpe||6;
   const step=getWeightStep(exName);
@@ -582,7 +600,7 @@ const COMBO_PATTERNS={
 // ── Period mode: gentle land-based alternative to swim ──
 function pickPeriodAlternative(){
   const excluded = getExcluded();
-  const corePool = (DB.core||[]).filter(ex => ex.diff <= 1 && !excluded.has(ex.n));
+  const corePool = (DB.core||[]).filter(ex => ex.diff <= 1 && !excluded.has(ex.n) && !ex.n.includes('转体') && !ex.n.includes('卷腹') && !ex.n.includes('抬腿') && !ex.n.includes('伐木'));
   const cardioPool = (DB.cardio||[]).filter(ex => ex.diff <= 1 && !excluded.has(ex.n) && !ex.n.includes('跳') && !ex.n.includes('波比'));
   const exercises = [];
   // 1. Warm-up: light cardio 10min
@@ -1429,7 +1447,7 @@ function submitRPE(rpe, isSkip=false) {
             const w=getWeight(date,i);
             if(w&&w>0&&!ex.isWarmup&&!ex.isStretch&&ex.unit==='次'){
                 if(!W_HIST[ex.name])W_HIST[ex.name]=[];
-                W_HIST[ex.name].push({date,weight:w,rpe:actualRpe});
+                W_HIST[ex.name].push({date,weight:w,rpe:actualRpe,period:S.periodMode});
                 if(W_HIST[ex.name].length>50)W_HIST[ex.name]=W_HIST[ex.name].slice(-50);
             }
         });
