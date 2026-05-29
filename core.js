@@ -587,7 +587,7 @@ function pickPeriodAlternative(){
   const exercises = [];
   // 1. Warm-up: light cardio 10min
   const warmup = cardioPool.find(ex => ex.n.includes('椭圆') || ex.n.includes('骑行') || ex.n.includes('慢跑')) || cardioPool[0];
-  if (warmup) exercises.push({name:warmup.n,sets:1,reps:10,unit:'分钟',note:warmup.note+' · 经期替代游泳，保持轻松心率',group:'cardio',diff:1,isWarmup:true,bi:false});
+  if (warmup) exercises.push({name:warmup.n,sets:1,reps:10,unit:'分钟',note:warmup.note+' — 保持轻松心率',group:'cardio',diff:1,isWarmup:true,bi:false});
   // 2. Core: 2-3 gentle core exercises
   for(let i=corePool.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[corePool[i],corePool[j]]=[corePool[j],corePool[i]];}
   corePool.slice(0, 3).forEach(ex => {
