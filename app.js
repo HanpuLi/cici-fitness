@@ -117,7 +117,11 @@ if(!hasPool){el.style.display='none';return;}
 el.style.display='block';
 const sp=SWIM_SPLIT[S.days]||{gym:Math.max(2,S.days-1),swim:1};
 const rest=7-S.days;
-el.innerHTML=`🏋️ ${sp.gym}天力量 + 🏊 ${sp.swim}天游泳${rest>0?` + 😴 ${rest}天休息`:''}`;
+if(S.periodMode){
+el.innerHTML=`${sp.gym}天力量（降负重） + ${sp.swim}天陆地替代${rest>0?` + ${rest}天休息`:''}`;
+}else{
+el.innerHTML=`${sp.gym}天力量 + ${sp.swim}天游泳${rest>0?` + ${rest}天休息`:''}`;
+}
 }
 
 // ══ Tabs ═════════════════════════════════════════════════
@@ -571,6 +575,7 @@ const row=document.getElementById('period-toggle-row');
 if(row) row.classList.toggle('active',S.periodMode);
 saveState();
 flashSaved();
+updateSwimBreakdown();
 if(S.plan){genPlan(true);render();}
 });
 
