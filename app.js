@@ -834,6 +834,13 @@ let _devClicks = 0;
 let _devLastClick = 0;
 let _mockSyncFail = false;
 
+function _checkSyncAlert() {
+    if (_user && !_mockSyncFail) {
+        return confirm('⚠️ 警告：检测到您已登录 Google 账号。生成测试历史数据会自动同步至云端，可能会覆盖或污染您的真实训练记录！\n\n建议先在测试控制台中开启“模拟同步状态切换”（断开云同步）或退出登录。\n\n点击“确定”继续生成并上传，点击“取消”放弃。');
+    }
+    return true;
+}
+
 function triggerDevClick() {
     const now = Date.now();
     if (now - _devLastClick > 3000) {
@@ -873,6 +880,7 @@ function updateStateInspector() {
 }
 
 function genMockHistory(days) {
+    if (!_checkSyncAlert()) return;
     if (!confirm(`确定生成过去 ${days} 天的模拟打卡历史记录吗？这会覆盖同日期的数据。`)) return;
     
     const splitNames = ["上肢推", "上肢拉", "下肢力量", "核心与胸", "有氧塑形"];
@@ -952,6 +960,7 @@ function genMockHistory(days) {
 }
 
 function genMockPRs() {
+    if (!_checkSyncAlert()) return;
     PR_LIST = [
         { date: addDays(todayStr(), -12), exercise: '传统硬拉', weight: 80, prev: 75 },
         { date: addDays(todayStr(), -8), exercise: '杠铃深蹲', weight: 65, prev: 60 },
@@ -975,6 +984,7 @@ function genMockPRs() {
 }
 
 function genMockPeriodLog() {
+    if (!_checkSyncAlert()) return;
     // Inject normal training first if none exists to establish benchmark
     if (!W_HIST['哑铃卧推'] || W_HIST['哑铃卧推'].length === 0) {
         W_HIST['哑铃卧推'] = [{ date: addDays(todayStr(), -10), weight: 15, rpe: 7, period: false }];
