@@ -182,6 +182,7 @@ html+=`
     ${x.note?`<div class="jentry-note">"${x.note}"</div>`:''}
     <div class="log-actions" style="margin-top:10px;border-top:1px solid var(--border);padding-top:8px">
       <button class="log-act-btn" onclick="editLog(${logIdx})">编辑</button>
+      <button class="log-act-btn" style="color:var(--sage)" onclick="shareWorkoutFromIndex(${logIdx})">分享</button>
       <button class="log-act-btn del" onclick="delLog(${logIdx})">删除</button>
     </div>
   </div>
@@ -608,6 +609,219 @@ updateSwimBreakdown();
 document.getElementById('sl-days').addEventListener('input',e=>{S.days=+e.target.value;document.getElementById('v-days').textContent=S.days+'天';saveState();updateSwimBreakdown()});
 document.getElementById('sl-dur').addEventListener('input',e=>{S.dur=+e.target.value;document.getElementById('v-dur').textContent=S.dur+'分钟';saveState()});
 document.getElementById('limits').addEventListener('input',e=>{S.limits=e.target.value;saveState()});
+
+// ══ Share Card Generator ════════════════════════════════
+let _currentShareImgUrl = null;
+let _currentShareDate = '';
+
+function shareWorkoutFromIndex(idx) {
+    const lg = LOG[idx];
+    if (lg) openShareModal(lg);
+}
+
+function openShareModal(logEntry) {
+    if (!logEntry) return;
+    const imgUrl = drawShareCard(logEntry);
+    _currentShareImgUrl = imgUrl;
+    _currentShareDate = logEntry.date;
+    
+    const container = document.getElementById('share-card-preview-container');
+    if (container) {
+        container.innerHTML = `<img src="${imgUrl}" style="max-width:100%; max-height:450px; border-radius:4px; display:block;" alt="打卡卡片预览" />`;
+    }
+    
+    const modal = document.getElementById('share-modal');
+    if (modal) modal.classList.add('open');
+}
+
+function closeShareModal() {
+    const modal = document.getElementById('share-modal');
+    if (modal) modal.classList.remove('open');
+}
+
+function downloadShareCard() {
+    if (!_currentShareImgUrl) return;
+    const a = document.createElement('a');
+    a.href = _currentShareImgUrl;
+    a.download = `cici_workout_${_currentShareDate}.png`;
+    a.click();
+}
+
+function drawShareCard(logEntry) {
+    const canvas = document.createElement('canvas');
+    canvas.width = 600;
+    canvas.height = 850;
+    const ctx = canvas.getContext('2d');
+    
+    // 1. Background (warm beige paper texture style)
+    ctx.fillStyle = '#f5f4ef';
+    ctx.fillRect(0, 0, 600, 850);
+    
+    // 2. Artistic borders
+    ctx.strokeStyle = '#d5cec2';
+    ctx.lineWidth = 14;
+    ctx.strokeRect(7, 7, 586, 836);
+    
+    ctx.strokeStyle = '#8c8070';
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(22, 22, 556, 806);
+    
+    // 3. Header title (ZCOOL XiaoWei Calligraphic styling)
+    ctx.fillStyle = '#2c2825';
+    ctx.textAlign = 'center';
+    ctx.font = 'normal 32px "ZCOOL XiaoWei", "Noto Serif SC", Georgia, serif';
+    ctx.fillText('Cici 健身日记', 300, 78);
+    
+    // 4. Subtitle (DM Mono / Outfit style)
+    ctx.fillStyle = '#8c8070';
+    ctx.font = 'normal 13px "DM Mono", "Outfit", sans-serif';
+    ctx.fillText(fmtDate(logEntry.date), 300, 108);
+    
+    // 5. Divider
+    ctx.strokeStyle = '#d5cec2';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(40, 132);
+    ctx.lineTo(560, 132);
+    ctx.stroke();
+    
+    // 6. Stats block (3 columns)
+    const stats = [
+        { label: '训练时间', val: `${logEntry.duration || 0} 分钟` },
+        { label: '完成动作', val: `${logEntry.exerciseCount || (logEntry.exercises || []).length} 个` },
+        { label: '运动心境', val: `${logEntry.mood || '💪'}${logEntry.rpe ? ` (RPE ${logEntry.rpe})` : ''}` }
+    ];
+    const colWidth = 520 / 3;
+    stats.forEach((st, idx) => {
+        const x = 40 + idx * colWidth + colWidth / 2;
+        ctx.fillStyle = '#8c8070';
+        ctx.font = 'normal 12px "Outfit", system-ui, sans-serif';
+        ctx.fillText(st.label, x, 168);
+        
+        ctx.fillStyle = '#2c2825';
+        ctx.font = 'bold 18px "Outfit", system-ui, sans-serif';
+        ctx.fillText(st.val, x, 198);
+    });
+    
+    // 7. Divider
+    ctx.beginPath();
+    ctx.moveTo(40, 224);
+    ctx.lineTo(560, 224);
+    ctx.stroke();
+    
+    // 8. Title of exercises list
+    ctx.fillStyle = '#2c2825';
+    ctx.textAlign = 'left';
+    ctx.font = 'bold 16px "Noto Serif SC", Georgia, serif';
+    ctx.fillText('今日训练内容', 50, 262);
+    
+    // 9. Draw exercises list
+    let y = 300;
+    const exList = logEntry.exercises || [];
+    const limit = 8;
+    exList.slice(0, limit).forEach(ex => {
+        // Exercise Name
+        ctx.fillStyle = '#2c2825';
+        ctx.font = 'normal 14px "Noto Serif SC", system-ui, serif';
+        ctx.fillText(`• ${ex.name}`, 50, y);
+        
+        // Detail
+        ctx.fillStyle = '#8c8070';
+        ctx.font = 'normal 13px "DM Mono", "Outfit", monospace';
+        ctx.textAlign = 'right';
+        const wtStr = ex.weight ? `${ex.weight}kg ` : '';
+        ctx.fillText(`${wtStr}${ex.sets}组 × ${ex.reps}${ex.unit || '次'}`, 550, y);
+        ctx.textAlign = 'left'; // reset
+        y += 36;
+    });
+    
+    if (exList.length > limit) {
+        ctx.fillStyle = '#8c8070';
+        ctx.font = 'italic 12px "Outfit", system-ui, sans-serif';
+        ctx.fillText(`... 还有其他 ${exList.length - limit} 个动作已打卡`, 50, y);
+        y += 36;
+    }
+    
+    // 10. Notes section
+    if (logEntry.note) {
+        y += 8;
+        ctx.fillStyle = '#8c8070';
+        ctx.font = 'italic 12px "Noto Serif SC", system-ui, serif';
+        
+        const noteText = `“ ${logEntry.note} ”`;
+        // Basic line-wrapping for canvas text
+        let line = '';
+        let lineCount = 0;
+        for (let i = 0; i < noteText.length; i++) {
+            let testLine = line + noteText[i];
+            let metrics = ctx.measureText(testLine);
+            if (metrics.width > 480 && i > 0) {
+                ctx.fillText(line, 50, y);
+                line = noteText[i];
+                y += 20;
+                lineCount++;
+                if (lineCount >= 2) break;
+            } else {
+                line = testLine;
+            }
+        }
+        if (lineCount < 2) {
+            ctx.fillText(line, 50, y);
+        }
+    }
+    
+    // 11. Divider
+    ctx.strokeStyle = '#d5cec2';
+    ctx.beginPath();
+    ctx.moveTo(40, 725);
+    ctx.lineTo(560, 725);
+    ctx.stroke();
+    
+    // 12. Motivative quote based on date hash
+    const quotes = [
+        "每一个缓缓落下的重量，都是对身体的温柔致敬。",
+        "在缓慢而笃定的重复中，感受肌肉与呼吸的宁静。",
+        "水流抚平喧嚣，重力沉淀心绪。",
+        "慢慢来，最适合你的节奏，就是最好的进度。",
+        "身体记得你流下的每一滴汗，和每一次平稳的呼吸。"
+    ];
+    let hash = 0;
+    const dateStr = logEntry.date || '2026-05-29';
+    for (let i = 0; i < dateStr.length; i++) {
+        hash += dateStr.charCodeAt(i);
+    }
+    const quote = quotes[hash % quotes.length];
+    
+    ctx.fillStyle = '#8c8070';
+    ctx.textAlign = 'center';
+    ctx.font = 'italic 13px "Noto Serif SC", Georgia, serif';
+    ctx.fillText(quote, 300, 758);
+    
+    // 13. App Branding
+    ctx.fillStyle = '#b4b0a7';
+    ctx.font = 'normal 10px "DM Mono", "Outfit", monospace';
+    ctx.fillText('CICI FITNESS APP', 300, 792);
+    
+    // 14. Red Calligraphic Seal (Stamp)
+    ctx.save();
+    ctx.strokeStyle = 'rgba(198, 88, 56, 0.75)';
+    ctx.lineWidth = 1.5;
+    ctx.translate(510, 755);
+    ctx.rotate(-0.1);
+    // Draw seal circle
+    ctx.beginPath();
+    ctx.arc(0, 0, 18, 0, Math.PI * 2);
+    ctx.stroke();
+    // Inner calligraphic text
+    ctx.fillStyle = 'rgba(198, 88, 56, 0.75)';
+    ctx.font = 'bold 9px "Cormorant Garamond", Georgia, serif';
+    ctx.fillText('Cici', 0, -2);
+    ctx.font = 'bold 8px "Noto Serif SC", Georgia, serif';
+    ctx.fillText('印记', 0, 8);
+    ctx.restore();
+    
+    return canvas.toDataURL('image/png');
+}
 
 // ══ Init ═════════════════════════════════════════════════
 loadState();
