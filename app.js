@@ -263,7 +263,7 @@ return`<div class="heat-cell${c.active?' heat-on':''}${isToday?' heat-today':''}
 
 // Muscle distribution with bar
 const dist={};
-LOG.slice(0,60).forEach(l=>{
+LOG.slice(-60).forEach(l=>{
 if(l.exercises)l.exercises.forEach(ex=>{
 for(const[grp,exs]of Object.entries(DB)){
 if(exs.find(e=>e.n===ex.name)){dist[grp]=(dist[grp]||0)+1;break}}
@@ -392,7 +392,7 @@ return `<div class="panel">
 
 // ══ Export / Import ══════════════════════════════════════
 function exportForAI(){
-const recent=LOG.slice(0,30);
+const recent=LOG.slice(-30).reverse();
 if(!recent.length){alert('暂无日志记录');return}
 const dist={};
 recent.forEach(l=>{if(l.exercises)l.exercises.forEach(ex=>{for(const[g,exs]of Object.entries(DB)){if(exs.find(e=>e.n===ex.name)){dist[g]=(dist[g]||0)+1;break}}})});
@@ -1150,6 +1150,8 @@ function toggleOfflineSyncSim() {
         } else {
             pill.textContent = '✓';
             pill.className = 'auth-pill-sync ok';
+            // Sync any local offline edits to the cloud
+            schedulePush();
         }
     }
     updateStateInspector();

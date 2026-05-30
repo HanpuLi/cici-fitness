@@ -677,14 +677,14 @@ if (isRecalibrate && S.plan) {
     const sortedPreserved = Object.values(preserve).sort((a,b) => a.date.localeCompare(b.date));
     for (let j = sortedPreserved.length - 1; j >= 0; j--) {
         const d = sortedPreserved[j];
-        if (!d.isRest && !d.isSwimDay && isDone(d)) {
+        if (!d.isRest && !d.isSwimDay && d.workoutType !== '轻量替代' && isDone(d)) {
             lastGymWorkoutType = d.workoutType;
             break;
         }
     }
 }
 if (!lastGymWorkoutType && LOG.length > 0) {
-    const lastLog = LOG.find(l => !l.isSwimDay && l.workout !== '休息' && l.workout !== '🏊 游泳训练');
+    const lastLog = LOG.slice().reverse().find(l => !l.isSwimDay && l.workout !== '休息' && l.workout !== '🏊 游泳训练' && l.workout !== '轻量替代');
     if (lastLog) {
         lastGymWorkoutType = lastLog.workout;
     }
@@ -749,7 +749,7 @@ showTab('today',document.querySelector('.tab'));
 }
 
 function assessPlanIntensity(){
-    const gymLogs = LOG.filter(l => !l.isSwimDay && l.workout !== '休息' && l.workout !== '🏊 游泳训练').slice(0, 3);
+    const gymLogs = LOG.filter(l => !l.isSwimDay && l.workout !== '休息' && l.workout !== '🏊 游泳训练' && l.workout !== '轻量替代').slice(-3).reverse();
     if (!gymLogs.length) {
         return {
             status: '评估中',
@@ -824,14 +824,14 @@ function autoAlignPlan() {
     const sortedPast = pastDays.sort((a,b) => a.date.localeCompare(b.date));
     for (let j = sortedPast.length - 1; j >= 0; j--) {
         const d = sortedPast[j];
-        if (!d.isRest && !d.isSwimDay && isDone(d)) {
+        if (!d.isRest && !d.isSwimDay && d.workoutType !== '轻量替代' && isDone(d)) {
             lastCompletedType = d.workoutType;
             break;
         }
     }
     
     if (!lastCompletedType && typeof LOG !== 'undefined' && LOG.length > 0) {
-        const lastLog = LOG.find(l => !l.isSwimDay && l.workout !== '休息' && l.workout !== '🏊 游泳训练');
+        const lastLog = LOG.slice().reverse().find(l => !l.isSwimDay && l.workout !== '休息' && l.workout !== '🏊 游泳训练' && l.workout !== '轻量替代');
         if (lastLog) {
             lastCompletedType = lastLog.workout;
         }
@@ -850,7 +850,7 @@ function autoAlignPlan() {
     }
     
     // 3. Find first future gym day
-    const firstFutureGymDay = S.plan.days.find(d => d.date >= today && !d.isRest && !d.isSwimDay);
+    const firstFutureGymDay = S.plan.days.find(d => d.date >= today && !d.isRest && !d.isSwimDay && d.workoutType !== '轻量替代');
     
     if (firstFutureGymDay) {
         const scheduledType = firstFutureGymDay.workoutType;
