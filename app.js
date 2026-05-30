@@ -1110,15 +1110,30 @@ function quickGenPlan(goal, level) {
 }
 
 function testSystemSounds(type) {
-    if (type === 'start') {
-        if (typeof playRestStartSound === 'function') {
-            playRestStartSound();
-            showToast('已鸣响倒计时启动音（风铃声）');
+    try {
+        if (typeof _getAudioCtx === 'function') {
+            const ctx = _getAudioCtx();
+            if (ctx && ctx.state === 'suspended') {
+                ctx.resume().then(() => triggerSound());
+                return;
+            }
         }
-    } else {
-        if (typeof playDing === 'function') {
-            playDing();
-            showToast('已鸣响倒计时结束音（铜磬声）');
+    } catch(e) {
+        console.warn('Audio Context resume failed:', e);
+    }
+    triggerSound();
+
+    function triggerSound() {
+        if (type === 'start') {
+            if (typeof playRestStartSound === 'function') {
+                playRestStartSound();
+                showToast('已鸣响倒计时启动音（风铃声）');
+            }
+        } else {
+            if (typeof playDing === 'function') {
+                playDing();
+                showToast('已鸣响倒计时结束音（铜磬声）');
+            }
         }
     }
 }
