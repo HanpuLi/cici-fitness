@@ -867,15 +867,65 @@ function closeDevModal() {
 }
 
 function updateStateInspector() {
-    const el = document.getElementById('dev-state-inspector');
-    if (el) {
-        el.value = JSON.stringify({
-            S,
-            logCount: LOG.length,
-            prCount: PR_LIST.length,
-            isOfflineSimulated: _mockSyncFail,
-            simulatedDate: _mockDate || '当前真实系统时间'
-        }, null, 2);
+    const summaryEl = document.getElementById('dev-state-summary');
+    if (!summaryEl) return;
+    
+    let html = `
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px 15px;">
+            <div><strong>训练目标:</strong> ${S.goal || '—'}</div>
+            <div><strong>训练等级:</strong> ${S.level || '—'}</div>
+            <div><strong>每周频次:</strong> ${S.days || 0} 天</div>
+            <div><strong>单次时长:</strong> ${S.dur || 0} 分钟</div>
+            <div><strong>生理期模式:</strong> <span style="color:${S.periodMode ? 'var(--terra)' : 'var(--sage)'}; font-weight:bold;">${S.periodMode ? '开启' : '关闭'}</span></div>
+            <div><strong>组间休息:</strong> ${S.restDur ?? 45} 秒</div>
+            <div><strong>打卡总数 (LOG):</strong> ${LOG.length} 条</div>
+            <div><strong>个人纪录 (PR):</strong> ${PR_LIST.length} 条</div>
+            <div><strong>负重历史:</strong> ${Object.keys(W_HIST).length} 个动作</div>
+            <div><strong>同步模拟状态:</strong> <span style="color:${_mockSyncFail ? 'var(--terra)' : 'var(--sage)'}; font-weight:bold;">${_mockSyncFail ? '断开 (离线)' : '连通 (在线)'}</span></div>
+            <div><strong>模拟系统日期:</strong> ${_mockDate ? _mockDate.split('T')[0] : '真实时间'}</div>
+            <div><strong>配重系数 (Volume):</strong> ${S.volumeMultiplier || 1.0}</div>
+        </div>
+        <div style="margin-top: 8px; padding-top: 6px; border-top: 1px dashed var(--border); font-size: 10px; word-break: break-all;">
+            <strong>当前计划天数:</strong> ${S.plan && S.plan.days ? `${S.plan.days.length} 天 (${S.plan.days.filter(d => !d.isRest).length} 训练日 / ${S.plan.days.filter(d => d.isRest).length} 休息日)` : '无活跃计划'}
+        </div>
+    `;
+    summaryEl.innerHTML = html;
+}
+
+function copyDevStateJSON() {
+    const exportData = {
+        _meta: { version: 1, exported: new Date().toISOString(), app: 'Cici健身计划', type: 'developer_export' }
+    };
+    Object.entries(K).forEach(([,key])=>{
+        const v=lg(key);
+        if(v!==null) exportData[key]=v;
+    });
+    navigator.clipboard.writeText(JSON.stringify(exportData, null, 2))
+        .then(() => showToast('📋 完整 State JSON 已复制到剪贴板！'))
+        .catch(() => alert('复制失败，您的浏览器不支持剪贴板操作，请手动导出备份文件'));
+}
+
+function importDevStateJSON() {
+    const jsonStr = prompt('请粘贴您要导入的 State JSON 数据：');
+    if (!jsonStr) return;
+    try {
+        const data = JSON.parse(jsonStr);
+        const allowed = new Set(Object.values(K));
+        let imported = false;
+        Object.entries(data).forEach(([k,v])=>{
+            if (allowed.has(k)) {
+                ls(k,v);
+                imported = true;
+            }
+        });
+        if (imported) {
+            showToast('导入成功，即将重新载入页面...');
+            setTimeout(() => location.reload(), 1000);
+        } else {
+            alert('数据不合规：未包含任何有效的数据键。');
+        }
+    } catch(e) {
+        alert('导入失败：JSON 格式解析错误。');
     }
 }
 

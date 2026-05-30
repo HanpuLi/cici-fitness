@@ -332,8 +332,14 @@
                 <button class="btn-dev dev-danger" onclick="clearMockOnly()">仅清空模拟打卡/PR</button>
             </div>
             
-            <p class="sec" style="font-weight: 600; font-size: 13px;">本地 State 监视器 (JSON)</p>
-            <textarea id="dev-state-inspector" style="width: 100%; height: 120px; font-family: var(--font-mono); font-size: 10px; background: var(--surface2); color: var(--ink); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px; box-sizing: border-box; resize: none;" readonly></textarea>
+            <p class="sec" style="font-weight: 600; font-size: 13px;">本地 State 监视与操作</p>
+            <div id="dev-state-summary" style="font-family: var(--font-body); font-size: 11px; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px; margin-bottom: 10px; text-align: left; line-height: 1.6; color: var(--ink2);">
+                <!-- Structured key-value summary will be injected here -->
+            </div>
+            <div style="display: flex; gap: 8px;">
+                <button class="btn-dev" style="flex: 1;" onclick="copyDevStateJSON()">📋 复制完整 State JSON</button>
+                <button class="btn-dev" style="flex: 1;" onclick="importDevStateJSON()">📥 导入自定义 JSON</button>
+            </div>
         </div>
     </div>
 
