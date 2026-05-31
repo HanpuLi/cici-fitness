@@ -298,7 +298,7 @@ ls('fit_swim',SWIM_LOG);
 // ══ Plan Generator ═══════════════════════════════════════
 // Derive how many exercises fit in session based on duration
 function calcTotalExercises(){
-const sch=SCHEMES[S.goal];
+const sch=SCHEMES[S.goal]||SCHEMES['女性薄肌'];
 const warmup=5,cooldown=10;
 const available=S.dur-warmup-cooldown;
 const exTime=sch.timePerSet*(sch.sets[S.level]||3)/60; // minutes per exercise
@@ -309,7 +309,7 @@ return Math.max(1, baseTarget);
 
 function pickExercises(split,excluded){
 const result=[],used=new Set();
-const sch=SCHEMES[S.goal];
+const sch=SCHEMES[S.goal]||SCHEMES['女性薄肌'];
 const sets=sch.sets[S.level],reps=sch.reps[S.level];
 const focusMap=FOCUS_MAP;
 const totalTarget=calcTotalExercises();
@@ -738,9 +738,9 @@ days.push({date:ds,isRest:true,workoutType:'休息',duration:0,exercises:[]});
 }
 }
 
-const sch=SCHEMES[S.goal];
+const sch=SCHEMES[S.goal]||SCHEMES['女性薄肌'];
 const isSwimPlan=hasPool&&swimPerWeek>0;
-let tipText=TIPS[S.goal];
+let tipText=TIPS[S.goal]||TIPS['女性薄肌'];
 if(isSwimPlan){
 tipText+=`\n🏊 ${SWIM_TIPS[S.swimLevel||'入门']}\n📊 本周安排：${gymPerWeek}天力量 + ${swimPerWeek}天游泳`;
 }
