@@ -389,7 +389,7 @@ return result;
 
 // ══ Calendar helpers (local timezone) ═══════════════════
 function _pad(n){return String(n).padStart(2,'0')}
-let _mockDate = null;
+let _mockDate = sessionStorage.getItem('__dev_mock_date__') || null;
 function todayStr(){const d=_mockDate?new Date(_mockDate):new Date();return `${d.getFullYear()}-${_pad(d.getMonth()+1)}-${_pad(d.getDate())}`}
 function dateStr(d){return `${d.getFullYear()}-${_pad(d.getMonth()+1)}-${_pad(d.getDate())}`}
 function addDays(base,n){const d=new Date(base+'T12:00:00');d.setDate(d.getDate()+n);return dateStr(d)}
