@@ -756,7 +756,9 @@ showTab('today',document.querySelector('.tab'));
 }
 
 function assessPlanIntensity(){
-    const gymLogs = LOG.filter(l => !l.isSwimDay && l.workout !== '休息' && l.workout !== '🏊 游泳训练' && l.workout !== '轻量替代').slice(-3).reverse();
+    // Sort a copy of LOG by date descending to always evaluate the 3 most recent entries
+    const sortedLogs = [...LOG].sort((a, b) => b.date.localeCompare(a.date));
+    const gymLogs = sortedLogs.filter(l => !l.isSwimDay && l.workout !== '休息' && l.workout !== '🏊 游泳训练' && l.workout !== '轻量替代').slice(0, 3);
     if (!gymLogs.length) {
         return {
             status: '评估中',
