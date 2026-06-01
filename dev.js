@@ -289,51 +289,132 @@
             S.periodMode = false;
             saveState();
 
-            // Mock historical workouts (30 days)
+            const dbRef = typeof DB !== 'undefined' ? DB : {};
+            const getRoutineForGroup = (grp, count = 2) => {
+                const pool = dbRef[grp] || [];
+                const valid = pool.filter(ex => ex.eq && ex.eq.some(e => S.equip.includes(e) || e === '无器材'));
+                return valid.slice(0, count);
+            };
+
+            const routine = {
+                chest: getRoutineForGroup('chest'),
+                triceps: getRoutineForGroup('triceps'),
+                shoulder: getRoutineForGroup('shoulder'),
+                back: getRoutineForGroup('back'),
+                biceps: getRoutineForGroup('biceps'),
+                quads: getRoutineForGroup('quads'),
+                hamglutes: getRoutineForGroup('hamglutes'),
+                calves: getRoutineForGroup('calves'),
+                core: getRoutineForGroup('core'),
+                cardio: getRoutineForGroup('cardio')
+            };
+
+            // In case DB is not loaded (like in headless tests), fallback to some static ones so tests pass
+            if (Object.values(routine).every(r => r.length === 0)) {
+                routine.chest = [{ n: '哑铃卧推', eq: ['哑铃'], muscle: ['胸'] }];
+                routine.back = [{ n: '哑铃划船', eq: ['哑铃'], muscle: ['背'] }];
+                routine.quads = [{ n: '哑铃高脚杯深蹲', eq: ['哑铃'], muscle: ['腿'] }];
+            }
+
             const workoutSplits = ['上肢推', '上肢拉', '下肢力量', '核心与有氧'];
             const today = todayStr();
             const mockLogs = [];
+            const mockWh = {};
+
             for (let i = 30; i >= 1; i--) {
                 // 70% workout frequency
                 if (i % 7 === 0 || i % 7 === 5) continue; 
                 
                 const targetDate = addDays(today, -i);
                 const split = workoutSplits[i % workoutSplits.length];
+
+                let dayGroups = [];
+                if (split === '上肢推') dayGroups = ['chest', 'shoulder', 'triceps'];
+                else if (split === '上肢拉') dayGroups = ['back', 'biceps'];
+                else if (split === '下肢力量') dayGroups = ['quads', 'hamglutes', 'calves'];
+                else if (split === '核心与有氧') dayGroups = ['core', 'cardio'];
+
+                const dayExercises = [];
+                dayGroups.forEach(grp => {
+                    const exList = routine[grp] || [];
+                    exList.forEach(ex => {
+                        const isCardio = grp === 'cardio' || (ex.muscle && ex.muscle.includes('心肺'));
+                        const reps = isCardio ? 15 : (ex.u === '秒' ? 30 : 12);
+                        const unit = ex.u || '次';
+                        
+                        const isBodyweight = ex.eq && ex.eq.includes('无器材');
+                        const hasWeight = !isCardio && grp !== 'core' && grp !== 'calves' && !isBodyweight;
+                        
+                        const progressStep = Math.round((30 - i) / 5);
+                        const baseWeight = grp === 'chest' || grp === 'quads' || grp === 'hamglutes' ? 20 : 10;
+                        const weightVal = hasWeight ? (baseWeight + progressStep) : null;
+
+                        dayExercises.push({
+                            name: ex.n,
+                            sets: 3,
+                            reps: reps,
+                            unit: unit,
+                            weight: weightVal,
+                            done: true
+                        });
+
+                        if (hasWeight) {
+                            if (!mockWh[ex.n]) mockWh[ex.n] = [];
+                            mockWh[ex.n].push({
+                                date: targetDate,
+                                weight: weightVal,
+                                rpe: 6 + (i % 3)
+                            });
+                        }
+                    });
+                });
+
                 mockLogs.push({
                     date: targetDate,
                     workout: split,
                     duration: 45 + (i % 15),
-                    exerciseCount: 3,
+                    exerciseCount: dayExercises.length,
                     rpe: 6 + (i % 3),
                     mood: ['💪 爽快', '😊 舒适', '😅 稍累'][i % 3],
-                    exercises: [
-                        { name: '哑铃卧推', sets: 3, reps: 12, unit: '次', weight: 8 + Math.round(i / 5), done: true },
-                        { name: '哑铃划船', sets: 3, reps: 12, unit: '次', weight: 10 + Math.round(i / 5), done: true },
-                        { name: '哑铃高脚杯深蹲', sets: 3, reps: 12, unit: '次', weight: 12 + Math.round(i / 5), done: true }
-                    ],
-                    note: '模拟活跃打卡纪录。'
+                    exercises: dayExercises,
+                    note: '健康打卡纪录模拟。'
                 });
             }
-            localStorage.setItem(K.log, JSON.stringify(mockLogs));
 
-            // Mock Weight progress
-            const mockWh = {
-                '哑铃卧推': [], '哑铃划船': [], '哑铃高脚杯深蹲': []
-            };
-            for (let i = 30; i >= 1; i--) {
-                if (i % 7 === 0 || i % 7 === 5) continue;
-                const d = addDays(today, -i);
-                mockWh['哑铃卧推'].push({ date: d, weight: 8 + Math.round(i / 5), rpe: 7 });
-                mockWh['哑铃划船'].push({ date: d, weight: 10 + Math.round(i / 5), rpe: 7 });
-                mockWh['哑铃高脚杯深蹲'].push({ date: d, weight: 12 + Math.round(i / 5), rpe: 7 });
-            }
+            // Sort logs descending (newest first)
+            mockLogs.sort((a, b) => b.date.localeCompare(a.date));
+            localStorage.setItem(K.log, JSON.stringify(mockLogs));
             localStorage.setItem(K.wh, JSON.stringify(mockWh));
 
-            // Mock PRs
-            const mockPr = [
-                { date: addDays(today, -20), exercise: '哑铃卧推', weight: 12, prev: 10 },
-                { date: addDays(today, -10), exercise: '哑铃高脚杯深蹲', weight: 18, prev: 16 }
-            ];
+            // Generate PRs dynamically
+            const mockPr = [];
+            const weightExs = Object.keys(mockWh);
+            if (weightExs.length >= 2) {
+                const ex1 = weightExs[0];
+                const history1 = mockWh[ex1];
+                if (history1.length >= 3) {
+                    const midIndex = Math.floor(history1.length / 2);
+                    mockPr.push({
+                        date: history1[midIndex].date,
+                        exercise: ex1,
+                        weight: history1[midIndex].weight,
+                        prev: history1[midIndex].weight - 2
+                    });
+                }
+                const ex2 = weightExs[1];
+                const history2 = mockWh[ex2];
+                if (history2.length >= 3) {
+                    const midIndex = Math.floor(history2.length / 2);
+                    mockPr.push({
+                        date: history2[midIndex].date,
+                        exercise: ex2,
+                        weight: history2[midIndex].weight,
+                        prev: history2[midIndex].weight - 2
+                    });
+                }
+            } else {
+                mockPr.push({ date: addDays(today, -15), exercise: '哑铃卧推', weight: 12, prev: 10 });
+            }
             localStorage.setItem(K.pr, JSON.stringify(mockPr));
 
             // Re-generate fresh plan for the active user
@@ -375,7 +456,7 @@
                 exercises: [{ name: '哑铃卧推', sets: 3, reps: 12, unit: '次', weight: 10, done: true }],
                 note: '生理期降重打卡模拟。'
             });
-            mockLogs.sort((a,b) => a.date.localeCompare(b.date));
+            mockLogs.sort((a,b) => b.date.localeCompare(a.date));
             localStorage.setItem(K.log, JSON.stringify(mockLogs));
 
             if (typeof genPlan === 'function') {

@@ -35,7 +35,11 @@ global.document = {
 global.window = global;
 global.showToast = () => {};
 global.todayStr = () => '2026-06-01';
-global.addDays = (b, n) => '2026-06-02';
+global.addDays = (base, n) => {
+    const d = new Date(base + 'T12:00:00');
+    d.setDate(d.getDate() + n);
+    return d.toISOString().slice(0, 10);
+};
 global.saveState = () => {};
 global.genPlan = () => {};
 global.setTimeout = (fn) => fn();
@@ -192,6 +196,48 @@ try {
     assert('clearMockOnly clears historical logs', localStorage.getItem('fit_log1') === null);
     assert('clearMockOnly clears weight history', localStorage.getItem('fit_wh1') === null);
     assert('clearMockOnly clears PR lists', localStorage.getItem('fit_pr') === null);
+
+    // 4. Test active_user Preset Scenario
+    // Mock DB structure for the test
+    global.DB = {
+        chest: [{ n: '杠铃卧推', eq: ['健身房全套'], muscle: ['胸'] }],
+        back: [{ n: '引体向上', eq: ['健身房全套'], muscle: ['背'] }],
+        quads: [{ n: '杠铃深蹲', eq: ['健身房全套'], muscle: ['腿'] }]
+    };
+    applyPresetScenario('active_user');
+    
+    const logsJson = localStorage.getItem('fit_log1');
+    const whJson = localStorage.getItem('fit_wh1');
+    const prJson = localStorage.getItem('fit_pr');
+    
+    assert('active_user preset writes logs to local storage', logsJson !== null);
+    assert('active_user preset writes weight history to local storage', whJson !== null);
+    assert('active_user preset writes PR list to local storage', prJson !== null);
+    
+    const parsedLogs = JSON.parse(logsJson);
+    const parsedWh = JSON.parse(whJson);
+    const parsedPr = JSON.parse(prJson);
+    
+    assert('Mock logs are non-empty', parsedLogs.length > 0);
+    // Check if sorted descending (newest first)
+    let isDescending = true;
+    for (let j = 0; j < parsedLogs.length - 1; j++) {
+        if (parsedLogs[j].date < parsedLogs[j+1].date) {
+            isDescending = false;
+        }
+    }
+    assert('Mock logs are sorted in descending order (newest first)', isDescending);
+    
+    // Check that exercises are dynamic and match the split
+    const chestLog = parsedLogs.find(l => l.workout === '上肢推');
+    if (chestLog) {
+        assert('Upper body push split contains chest exercises', chestLog.exercises.some(e => e.name === '杠铃卧推'));
+        assert('Upper body push split does not contain legs exercises', !chestLog.exercises.some(e => e.name === '杠铃深蹲'));
+    }
+    
+    // Check that weight history is populated for the chosen exercises
+    assert('Weight history contains records for 杠铃卧推', parsedWh['杠铃卧推'] !== undefined);
+    assert('Weight history records are sorted oldest-to-newest', parsedWh['杠铃卧推'][0].date < parsedWh['杠铃卧推'][parsedWh['杠铃卧推'].length - 1].date);
 
 } catch (e) {
     failed++;
