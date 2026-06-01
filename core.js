@@ -888,13 +888,6 @@ function getAdj(date,ei,f,base){return S.adj[date+'-'+ei+'-'+f]??base}
 let _dragSrc=null;
 let _skipAutoRegen=false;
 
-function render(){
-if(!S.plan){
-    renderOnboarding();
-    return;
-}
-const{days:planDays,tip,rest,excludedCount}=S.plan;
-
 function renderOnboarding(){
     const mainEl = document.getElementById('main');
     if (!mainEl) return;
@@ -1044,6 +1037,13 @@ globalThis.generateFirstPlan = function() {
     if (typeof render === 'function') render();
     showToast('✨ 您的定制计划已生成！');
 };
+
+function render(){
+if(!S.plan){
+    renderOnboarding();
+    return;
+}
+const{days:planDays,tip,rest,excludedCount}=S.plan;
 const today=todayStr();
 const workoutDays=planDays.filter(d=>!d.isRest);
 const doneDays=workoutDays.filter(d=>isDone(d));
