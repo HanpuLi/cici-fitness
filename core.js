@@ -905,51 +905,54 @@ function renderOnboarding(){
     <div class="onboard-wrap">
         <div class="onboard-hero">
             <svg class="onboard-logo-svg" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M50 90C50 90 85 55 85 35C85 15 69 10 50 35C31 10 15 15 15 35C15 55 50 90 50 90Z" fill="none" stroke="var(--terra)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
-                <path d="M50 35V90" stroke="var(--border)" stroke-width="2" stroke-linecap="round"/>
-                <circle cx="50" cy="22" r="6" fill="var(--amber)"/>
+                <circle cx="50" cy="50" r="40" stroke="var(--border)" stroke-width="1.5"/>
+                <path d="M50 10V90" stroke="var(--border)" stroke-dasharray="2 2" stroke-width="1"/>
+                <path d="M30 45C30 45 42 35 50 50C58 65 70 55 70 55" stroke="var(--terra)" stroke-width="2.5" stroke-linecap="round"/>
+                <circle cx="50" cy="50" r="4" fill="var(--ink)"/>
             </svg>
-            <h1 class="onboard-title">Cici 健身计划</h1>
-            <p class="onboard-subtitle">慢节奏，静力量。为您定制轻量、科学的力量训练与游泳计划。</p>
+            <h1 class="onboard-title">CICI FITNESS</h1>
+            <p class="onboard-subtitle">慢节奏 · 静力量</p>
+            <div style="width: 24px; height: 1px; background: var(--border); margin: 12px auto;"></div>
+            <p style="font-size: 12px; color: var(--ink2); max-width: 340px; margin: 0 auto; line-height: 1.6;">
+                为您定制轻量、科学的力量训练与游泳计划。在专注与平稳的呼吸中，感知肌肉的深度收缩。
+            </p>
         </div>
 
-        <div class="onboard-section-title">1. 选择您的训练重心</div>
+        <div class="onboard-section-title">I. 选择训练重心</div>
         <div class="onboard-goal-grid">
             <div class="onboard-goal-card ${S.goal === '女性薄肌' ? 'on' : ''}" onclick="selectOnboardGoal('女性薄肌')">
-                <span class="onboard-goal-icon">🌸</span>
                 <h3 class="onboard-goal-name">女性薄肌计划</h3>
-                <p class="onboard-goal-desc">适合轻量塑形、匀称线条与力量循序提升。重点塑造全身紧致感。</p>
+                <p class="onboard-goal-desc">专注全身比例的协调性与肌肉线条的平滑感。通过控制负重与深度慢速收缩，激活深层肌群，改善身体形态与挺拔度。</p>
                 <div class="onboard-goal-tags">
                     <span class="onboard-goal-tag">全身均衡</span>
-                    <span class="onboard-goal-tag">轻量负重</span>
-                    <span class="onboard-goal-tag">温和组数</span>
+                    <span class="onboard-goal-tag">低负重</span>
+                    <span class="onboard-goal-tag">修长线条</span>
                 </div>
             </div>
             <div class="onboard-goal-card ${S.goal === '臀腿塑形' ? 'on' : ''}" onclick="selectOnboardGoal('臀腿塑形')">
-                <span class="onboard-goal-icon">🍑</span>
                 <h3 class="onboard-goal-name">臀腿塑形计划</h3>
-                <p class="onboard-goal-desc">专注于臀腿肌肉群的深度激活与塑形。较多力量负重，适合打造下肢核心力量。</p>
+                <p class="onboard-goal-desc">侧重于臀肌与大腿后侧的深度募集。包含高效率的臀肌激活与进阶力量训练，强化下肢稳定度，塑造饱满健康的线条。</p>
                 <div class="onboard-goal-tags">
                     <span class="onboard-goal-tag">臀肌激活</span>
+                    <span class="onboard-goal-tag">力量募集</span>
                     <span class="onboard-goal-tag">下肢侧重</span>
-                    <span class="onboard-goal-tag">进阶训练</span>
                 </div>
             </div>
         </div>
 
-        <div class="onboard-section-title">2. 配置个性化参数</div>
+        <div class="onboard-section-title">II. 个性化参数设定</div>
         <div class="onboard-form-grid">
             <div class="onboard-form-row">
-                <label class="onboard-form-label">每周频次 <span class="val-hint" id="onboard-days-val">${S.days}天</span></label>
+                <label class="onboard-form-label">每周训练天数 <span class="val-hint" id="onboard-days-val">${S.days} 天</span></label>
                 <div class="onboard-chips">
                     ${[2, 3, 4, 5, 6].map(d => `
-                        <div class="onboard-chip ${S.days === d ? 'on' : ''}" onclick="setOnboardDays(${d})">${d}天</div>
+                        <div class="onboard-chip ${S.days === d ? 'on' : ''}" onclick="setOnboardDays(${d})">${d} 天</div>
                     `).join('')}
                 </div>
             </div>
 
             <div class="onboard-form-row">
-                <label class="onboard-form-label">当前级别 <span class="val-hint" id="onboard-level-val">${S.level}</span></label>
+                <label class="onboard-form-label">当前训练级别 <span class="val-hint" id="onboard-level-val">${S.level}</span></label>
                 <div class="onboard-chips">
                     ${['初级', '中级', '高级'].map(l => `
                         <div class="onboard-chip ${S.level === l ? 'on' : ''}" onclick="setOnboardLevel('${l}')">${l}</div>
@@ -958,27 +961,27 @@ function renderOnboarding(){
             </div>
 
             <div class="onboard-form-row">
-                <label class="onboard-form-label">训练设备 <span>(可多选)</span></label>
+                <label class="onboard-form-label">可支配训练设备 <span style="font-size: 11px; font-weight: normal; color: var(--ink3);">(多选)</span></label>
                 <div class="onboard-chips">
                     ${['徒手', '哑铃', '弹力带', '健身房全套'].map(eq => `
                         <div class="onboard-chip ${S.equip.includes(eq) ? 'on' : ''}" onclick="toggleOnboardEquip('${eq}')">${eq === '健身房全套' ? '健身房器械' : eq}</div>
                     `).join('')}
-                    <div class="onboard-chip swim-chip ${S.equip.includes('泳池') ? 'on' : ''}" onclick="toggleOnboardEquip('泳池')">🌊 泳池 (含游泳)</div>
+                    <div class="onboard-chip swim-chip ${S.equip.includes('泳池') ? 'on' : ''}" onclick="toggleOnboardEquip('泳池')">游泳池</div>
                 </div>
             </div>
 
             <div class="onboard-form-row" id="onboard-swim-level-row" style="display: ${hasPool ? 'flex' : 'none'}">
-                <label class="onboard-form-label">游泳水平 <span class="val-hint" id="onboard-swim-level-val">${S.swimLevel || '入门'}</span></label>
+                <label class="onboard-form-label">游泳技术级别 <span class="val-hint" id="onboard-swim-level-val">${S.swimLevel || '入门'}</span></label>
                 <div class="onboard-chips">
                     ${['入门', '进阶'].map(sl => `
-                        <div class="onboard-chip ${S.swimLevel === sl ? 'on' : ''}" onclick="setOnboardSwimLevel('${sl}')">${sl === '入门' ? '入门 (打腿/练习)' : '进阶 (多姿/长距)'}</div>
+                        <div class="onboard-chip ${S.swimLevel === sl ? 'on' : ''}" onclick="setOnboardSwimLevel('${sl}')">${sl === '入门' ? '入门' : '进阶'}</div>
                     `).join('')}
                 </div>
             </div>
         </div>
 
         <button class="onboard-btn-generate" onclick="generateFirstPlan()">
-            ✨ 开启我的训练计划
+            生成我的定制训练计划
         </button>
     </div>
     `;
@@ -1035,7 +1038,7 @@ globalThis.generateFirstPlan = function() {
     if (typeof saveState === 'function') saveState();
     if (typeof genPlan === 'function') genPlan(false);
     if (typeof render === 'function') render();
-    showToast('✨ 您的定制计划已生成！');
+    showToast('专属定制计划已成功生成');
 };
 
 function render(){
