@@ -983,6 +983,9 @@ function renderOnboarding(){
         <button class="onboard-btn-generate" onclick="generateFirstPlan()">
             生成我的定制训练计划
         </button>
+        <p style="text-align: center; margin-top: 16px; font-size: 11px; color: var(--ink3);">
+            已拥有账号？ <a href="#" onclick="event.preventDefault(); if(typeof signInGoogle==='function')signInGoogle();" style="color: var(--terra); text-decoration: underline; font-weight: 500; cursor: pointer;">登录并恢复云端数据</a>
+        </p>
     </div>
     `;
     mainEl.innerHTML = html;
