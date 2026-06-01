@@ -899,6 +899,13 @@ function renderOnboarding(){
     const mainEl = document.getElementById('main');
     if (!mainEl) return;
     
+    // Ensure defensive defaults for all settings
+    if (!S.goal) S.goal = '女性薄肌';
+    if (!S.level) S.level = '初级';
+    if (!S.days) S.days = 3;
+    if (!S.equip || !Array.isArray(S.equip)) S.equip = ['健身房全套'];
+    if (!S.swimLevel) S.swimLevel = '入门';
+    
     const hasPool = S.equip.includes('泳池');
     
     let html = `
