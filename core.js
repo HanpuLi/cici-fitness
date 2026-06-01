@@ -889,8 +889,154 @@ let _dragSrc=null;
 let _skipAutoRegen=false;
 
 function render(){
-if(!S.plan)return;
+if(!S.plan){
+    renderOnboarding();
+    return;
+}
 const{days:planDays,tip,rest,excludedCount}=S.plan;
+
+function renderOnboarding(){
+    const mainEl = document.getElementById('main');
+    if (!mainEl) return;
+    
+    const hasPool = S.equip.includes('泳池');
+    
+    let html = `
+    <div class="onboard-wrap">
+        <div class="onboard-hero">
+            <svg class="onboard-logo-svg" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M50 90C50 90 85 55 85 35C85 15 69 10 50 35C31 10 15 15 15 35C15 55 50 90 50 90Z" fill="none" stroke="var(--terra)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M50 35V90" stroke="var(--border)" stroke-width="2" stroke-linecap="round"/>
+                <circle cx="50" cy="22" r="6" fill="var(--amber)"/>
+            </svg>
+            <h1 class="onboard-title">Cici 健身计划</h1>
+            <p class="onboard-subtitle">慢节奏，静力量。为您定制轻量、科学的力量训练与游泳计划。</p>
+        </div>
+
+        <div class="onboard-section-title">1. 选择您的训练重心</div>
+        <div class="onboard-goal-grid">
+            <div class="onboard-goal-card ${S.goal === '女性薄肌' ? 'on' : ''}" onclick="selectOnboardGoal('女性薄肌')">
+                <span class="onboard-goal-icon">🌸</span>
+                <h3 class="onboard-goal-name">女性薄肌计划</h3>
+                <p class="onboard-goal-desc">适合轻量塑形、匀称线条与力量循序提升。重点塑造全身紧致感。</p>
+                <div class="onboard-goal-tags">
+                    <span class="onboard-goal-tag">全身均衡</span>
+                    <span class="onboard-goal-tag">轻量负重</span>
+                    <span class="onboard-goal-tag">温和组数</span>
+                </div>
+            </div>
+            <div class="onboard-goal-card ${S.goal === '臀腿塑形' ? 'on' : ''}" onclick="selectOnboardGoal('臀腿塑形')">
+                <span class="onboard-goal-icon">🍑</span>
+                <h3 class="onboard-goal-name">臀腿塑形计划</h3>
+                <p class="onboard-goal-desc">专注于臀腿肌肉群的深度激活与塑形。较多力量负重，适合打造下肢核心力量。</p>
+                <div class="onboard-goal-tags">
+                    <span class="onboard-goal-tag">臀肌激活</span>
+                    <span class="onboard-goal-tag">下肢侧重</span>
+                    <span class="onboard-goal-tag">进阶训练</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="onboard-section-title">2. 配置个性化参数</div>
+        <div class="onboard-form-grid">
+            <div class="onboard-form-row">
+                <label class="onboard-form-label">每周频次 <span class="val-hint" id="onboard-days-val">${S.days}天</span></label>
+                <div class="onboard-chips">
+                    ${[2, 3, 4, 5, 6].map(d => `
+                        <div class="onboard-chip ${S.days === d ? 'on' : ''}" onclick="setOnboardDays(${d})">${d}天</div>
+                    `).join('')}
+                </div>
+            </div>
+
+            <div class="onboard-form-row">
+                <label class="onboard-form-label">当前级别 <span class="val-hint" id="onboard-level-val">${S.level}</span></label>
+                <div class="onboard-chips">
+                    ${['初级', '中级', '高级'].map(l => `
+                        <div class="onboard-chip ${S.level === l ? 'on' : ''}" onclick="setOnboardLevel('${l}')">${l}</div>
+                    `).join('')}
+                </div>
+            </div>
+
+            <div class="onboard-form-row">
+                <label class="onboard-form-label">训练设备 <span>(可多选)</span></label>
+                <div class="onboard-chips">
+                    ${['徒手', '哑铃', '弹力带', '健身房全套'].map(eq => `
+                        <div class="onboard-chip ${S.equip.includes(eq) ? 'on' : ''}" onclick="toggleOnboardEquip('${eq}')">${eq === '健身房全套' ? '健身房器械' : eq}</div>
+                    `).join('')}
+                    <div class="onboard-chip swim-chip ${S.equip.includes('泳池') ? 'on' : ''}" onclick="toggleOnboardEquip('泳池')">🌊 泳池 (含游泳)</div>
+                </div>
+            </div>
+
+            <div class="onboard-form-row" id="onboard-swim-level-row" style="display: ${hasPool ? 'flex' : 'none'}">
+                <label class="onboard-form-label">游泳水平 <span class="val-hint" id="onboard-swim-level-val">${S.swimLevel || '入门'}</span></label>
+                <div class="onboard-chips">
+                    ${['入门', '进阶'].map(sl => `
+                        <div class="onboard-chip ${S.swimLevel === sl ? 'on' : ''}" onclick="setOnboardSwimLevel('${sl}')">${sl === '入门' ? '入门 (打腿/练习)' : '进阶 (多姿/长距)'}</div>
+                    `).join('')}
+                </div>
+            </div>
+        </div>
+
+        <button class="onboard-btn-generate" onclick="generateFirstPlan()">
+            ✨ 开启我的训练计划
+        </button>
+    </div>
+    `;
+    mainEl.innerHTML = html;
+}
+
+globalThis.selectOnboardGoal = function(goal) {
+    S.goal = goal;
+    if (goal === '臀腿塑形') {
+        S.focus = ['下肢'];
+        if (!S.equip.includes('健身房全套')) S.equip.push('健身房全套');
+    } else {
+        S.focus = ['均衡全身'];
+    }
+    if (typeof saveState === 'function') saveState();
+    if (typeof applySettingsToUI === 'function') applySettingsToUI();
+    renderOnboarding();
+};
+
+globalThis.setOnboardDays = function(days) {
+    S.days = days;
+    if (typeof saveState === 'function') saveState();
+    if (typeof applySettingsToUI === 'function') applySettingsToUI();
+    renderOnboarding();
+};
+
+globalThis.setOnboardLevel = function(level) {
+    S.level = level;
+    if (typeof saveState === 'function') saveState();
+    if (typeof applySettingsToUI === 'function') applySettingsToUI();
+    renderOnboarding();
+};
+
+globalThis.toggleOnboardEquip = function(equip) {
+    const idx = S.equip.indexOf(equip);
+    if (idx !== -1) {
+        if (S.equip.length > 1) S.equip.splice(idx, 1);
+    } else {
+        S.equip.push(equip);
+    }
+    if (typeof saveState === 'function') saveState();
+    if (typeof applySettingsToUI === 'function') applySettingsToUI();
+    renderOnboarding();
+};
+
+globalThis.setOnboardSwimLevel = function(swimLevel) {
+    S.swimLevel = swimLevel;
+    if (typeof saveState === 'function') saveState();
+    if (typeof applySettingsToUI === 'function') applySettingsToUI();
+    renderOnboarding();
+};
+
+globalThis.generateFirstPlan = function() {
+    if (typeof saveState === 'function') saveState();
+    if (typeof genPlan === 'function') genPlan(false);
+    if (typeof render === 'function') render();
+    showToast('✨ 您的定制计划已生成！');
+};
 const today=todayStr();
 const workoutDays=planDays.filter(d=>!d.isRest);
 const doneDays=workoutDays.filter(d=>isDone(d));
