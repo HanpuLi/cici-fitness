@@ -84,7 +84,7 @@ LOG=lg(K.log)||[];
 W_HIST=lg(K.wh)||{};
 PR_LIST=lg(K.pr)||[];
 applySettingsToUI();
-if(S.plan)render();
+render();
 if(S.plan && typeof autoAlignPlan==='function') autoAlignPlan();
 _initialLoad = false;
 }
