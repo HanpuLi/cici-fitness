@@ -278,15 +278,13 @@
             showToast('已加载【新用户】预设！即将刷新...');
             setTimeout(() => location.reload(), 1000);
         } else if (type === 'active_user') {
-            // Active user preset: Set standard thin muscles goal, 30 days history, progress weights, and PRs
-            S.goal = '女性薄肌';
-            S.level = '初级';
-            S.days = 4;
-            S.dur = 60;
-            S.equip = ['健身房全套', '哑铃'];
-            S.focus = ['均衡全身'];
-            S.limits = '';
-            S.periodMode = false;
+            // Active user preset: Use settings from the Settings page if they exist, otherwise use defaults
+            if (!S.goal) S.goal = '女性薄肌';
+            if (!S.level) S.level = '初级';
+            if (!S.days) S.days = 4;
+            if (!S.dur) S.dur = 60;
+            if (!S.equip || S.equip.length === 0) S.equip = ['健身房全套', '哑铃'];
+            if (!S.focus || S.focus.length === 0) S.focus = ['均衡全身'];
             saveState();
 
             const dbRef = typeof DB !== 'undefined' ? DB : {};
@@ -316,23 +314,42 @@
                 routine.quads = [{ n: '哑铃高脚杯深蹲', eq: ['哑铃'], muscle: ['腿'] }];
             }
 
-            const workoutSplits = ['上肢推', '上肢拉', '下肢力量', '核心与有氧'];
+            const daysPerWeek = S.days || 3;
+            const gymPatterns = {
+                2: [1,0,0,1,0,0,0],
+                3: [1,0,1,0,1,0,0],
+                4: [1,1,0,1,1,0,0],
+                5: [1,1,1,0,1,1,0],
+                6: [1,1,1,1,1,1,0],
+                7: [1,1,1,1,1,1,1]
+            };
+            const pattern = gymPatterns[daysPerWeek] || gymPatterns[3];
+
+            const splitsRef = typeof SPLITS !== 'undefined' ? SPLITS : {};
+            const currentSplits = splitsRef[daysPerWeek] || [
+                { type: '上肢推', groups: ['chest', 'shoulder', 'triceps'] },
+                { type: '上肢拉', groups: ['back', 'biceps'] },
+                { type: '下肢力量', groups: ['quads', 'hamglutes', 'calves'] },
+                { type: '核心与有氧', groups: ['core', 'cardio'] }
+            ];
+
             const today = todayStr();
             const mockLogs = [];
             const mockWh = {};
+            let workoutCount = 0;
 
             for (let i = 30; i >= 1; i--) {
-                // 70% workout frequency
-                if (i % 7 === 0 || i % 7 === 5) continue; 
+                // Check if this day is a training day in the pattern
+                if (pattern[i % 7] === 0) continue; 
                 
                 const targetDate = addDays(today, -i);
-                const split = workoutSplits[i % workoutSplits.length];
+                
+                // Cycle through splits
+                const splitObj = currentSplits[workoutCount % currentSplits.length];
+                workoutCount++;
 
-                let dayGroups = [];
-                if (split === '上肢推') dayGroups = ['chest', 'shoulder', 'triceps'];
-                else if (split === '上肢拉') dayGroups = ['back', 'biceps'];
-                else if (split === '下肢力量') dayGroups = ['quads', 'hamglutes', 'calves'];
-                else if (split === '核心与有氧') dayGroups = ['core', 'cardio'];
+                const splitType = splitObj.type;
+                const dayGroups = splitObj.groups;
 
                 const dayExercises = [];
                 dayGroups.forEach(grp => {
@@ -371,8 +388,8 @@
 
                 mockLogs.push({
                     date: targetDate,
-                    workout: split,
-                    duration: 45 + (i % 15),
+                    workout: splitType,
+                    duration: S.dur || 60,
                     exerciseCount: dayExercises.length,
                     rpe: 6 + (i % 3),
                     mood: ['💪 爽快', '😊 舒适', '😅 稍累'][i % 3],
