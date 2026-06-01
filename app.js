@@ -89,6 +89,7 @@ if(S.plan && typeof autoAlignPlan==='function') autoAlignPlan();
 _initialLoad = false;
 }
 function applySettingsToUI(){
+document.querySelectorAll('#g-goal .chip').forEach(b=>b.classList.toggle('on',b.dataset.v===S.goal));
 document.querySelectorAll('#g-level .chip').forEach(b=>b.classList.toggle('on',b.dataset.v===S.level));
 document.getElementById('sl-days').value=S.days;
 document.getElementById('v-days').textContent=S.days+'天';
@@ -570,6 +571,25 @@ saveState();
 flashSaved();
 });
 }
+(function(){
+const el=document.getElementById('g-goal');if(!el)return;
+el.addEventListener('click',e=>{
+const b=e.target.closest('.chip');if(!b)return;
+document.querySelectorAll('#g-goal .chip').forEach(c=>c.classList.remove('on'));
+b.classList.add('on');
+const goal=b.dataset.v;
+S.goal=goal;
+if(goal==='臀腿塑形'){
+S.focus=['下肢'];
+if(!S.equip.includes('健身房全套'))S.equip.push('健身房全套');
+}else{
+S.focus=['均衡全身'];
+}
+saveState();
+applySettingsToUI();
+flashSaved();
+});
+})();
 single('g-level','level');
 multi('g-equip','equip');multi('g-focus','focus');
 (function(){
