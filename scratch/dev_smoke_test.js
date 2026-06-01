@@ -149,6 +149,55 @@ try {
     console.error(`  ❌ Test 2 Crash: ${e.message}\n${e.stack}`);
 }
 
+console.log('\n═══ Test 3: Sound and Simulation Utilities ═══');
+try {
+    // 1. Test testSystemSounds
+    let soundPlayed = '';
+    global.playRestStartSound = () => { soundPlayed = 'start'; };
+    global.playDing = () => { soundPlayed = 'end'; };
+    
+    testSystemSounds('start');
+    assert('testSystemSounds("start") plays correct audio', soundPlayed === 'start');
+    
+    testSystemSounds('end');
+    assert('testSystemSounds("end") plays correct audio', soundPlayed === 'end');
+
+    // 2. Test toggleOfflineSyncSim
+    // Mock sessionStorage
+    const sessionStore = {};
+    global.sessionStorage = {
+        setItem: (k, v) => { sessionStore[k] = String(v); },
+        removeItem: k => { delete sessionStore[k]; },
+        getItem: k => sessionStore[k] ?? null
+    };
+
+    window._mockSyncFail = false;
+    toggleOfflineSyncSim();
+    assert('toggleOfflineSyncSim toggles mock status to true', window._mockSyncFail === true);
+    assert('toggleOfflineSyncSim stores state in sessionStorage', sessionStore['__dev_mock_sync_fail__'] === '1');
+
+    toggleOfflineSyncSim();
+    assert('toggleOfflineSyncSim toggles mock status back to false', window._mockSyncFail === false);
+    assert('toggleOfflineSyncSim removes state from sessionStorage', sessionStore['__dev_mock_sync_fail__'] === undefined);
+
+    // 3. Test clearMockOnly
+    let confirmCalled = false;
+    global.confirm = () => { confirmCalled = true; return true; };
+    localStorage.setItem('fit_log1', '[]');
+    localStorage.setItem('fit_wh1', '{}');
+    localStorage.setItem('fit_pr', '[]');
+
+    clearMockOnly();
+    assert('clearMockOnly prompts for confirmation', confirmCalled);
+    assert('clearMockOnly clears historical logs', localStorage.getItem('fit_log1') === null);
+    assert('clearMockOnly clears weight history', localStorage.getItem('fit_wh1') === null);
+    assert('clearMockOnly clears PR lists', localStorage.getItem('fit_pr') === null);
+
+} catch (e) {
+    failed++;
+    console.error(`  ❌ Test 3 Crash: ${e.message}\n${e.stack}`);
+}
+
 // ── Summary ──
 console.log(`\n${'═'.repeat(50)}`);
 console.log(`  Dev Suite Results: ${passed} passed, ${failed} failed`);

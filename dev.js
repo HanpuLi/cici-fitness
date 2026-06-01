@@ -32,8 +32,8 @@
         return originalRemoveItem.call(localStorage, key);
     };
 
-    // Override Sync failures when sandbox is active to block actual sync
-    if (isSandboxActive()) {
+    // Override Sync failures when sandbox is active or simulated offline mode is on
+    if (isSandboxActive() || sessionStorage.getItem('__dev_mock_sync_fail__') === '1') {
         window._mockSyncFail = true;
     }
 
@@ -397,6 +397,60 @@
                 genPlan(true);
             }
             showToast('已加载【力量+游泳混合】预设！即将刷新...');
+            setTimeout(() => location.reload(), 1000);
+        }
+    };
+
+    // ══ Test System Sounds ══════════════════════════════════════
+    window.testSystemSounds = function(type) {
+        if (type === 'start') {
+            if (typeof playRestStartSound === 'function') {
+                playRestStartSound();
+                showToast('已播放倒计时开始提示音');
+            } else {
+                showToast('错误：playRestStartSound 未定义');
+            }
+        } else if (type === 'end') {
+            if (typeof playDing === 'function') {
+                playDing();
+                showToast('已播放倒计时结束提示音');
+            } else {
+                showToast('错误：playDing 未定义');
+            }
+        }
+    };
+
+    // ══ Toggle Offline Sync Simulation ══════════════════════════
+    window.toggleOfflineSyncSim = function() {
+        window._mockSyncFail = !window._mockSyncFail;
+        if (window._mockSyncFail) {
+            sessionStorage.setItem('__dev_mock_sync_fail__', '1');
+            showToast('🔌 已开启模拟离线模式 (强制同步失败)');
+        } else {
+            sessionStorage.removeItem('__dev_mock_sync_fail__');
+            showToast('🔌 已关闭模拟离线模式 (同步已恢复)');
+        }
+
+        const pill = document.getElementById('sync-pill');
+        if (pill) {
+            if (window._mockSyncFail) {
+                pill.textContent = '❌';
+                pill.className = 'auth-pill-sync err';
+            } else {
+                pill.textContent = '✓';
+                pill.className = 'auth-pill-sync ok';
+            }
+        }
+    };
+
+    // ══ Clear Mock Data Only (History / PR) ════════════════════
+    window.clearMockOnly = function() {
+        if (confirm('确定清空所有打卡历史、负重记录和个人最佳纪录（PR）吗？（此操作仅影响当前环境，若在沙箱中则仅清空沙箱数据）')) {
+            localStorage.removeItem('fit_log1');
+            localStorage.removeItem('fit_wh1');
+            localStorage.removeItem('fit_pr');
+            localStorage.removeItem('fit_pr1');
+            showToast('🗑️ 历史记录、负重及 PR 数据已清空！正在刷新...');
             setTimeout(() => location.reload(), 1000);
         }
     };

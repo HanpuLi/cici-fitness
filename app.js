@@ -850,7 +850,7 @@ function drawShareCard(logEntry) {
 }
 
 // ══ Developer Console Bridge ════════════════════════════
-var _mockSyncFail = false;
+var _mockSyncFail = window._mockSyncFail || false;
 function triggerDevClick() {
     if (typeof window.devTriggerClick === 'function') {
         window.devTriggerClick();
