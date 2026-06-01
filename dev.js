@@ -277,14 +277,27 @@
             SANDBOX_KEYS.forEach(k => localStorage.removeItem(k));
             showToast('已加载【新用户】预设！即将刷新...');
             setTimeout(() => location.reload(), 1000);
-        } else if (type === 'active_user') {
-            // Active user preset: Use settings from the Settings page if they exist, otherwise use defaults
-            if (!S.goal) S.goal = '女性薄肌';
-            if (!S.level) S.level = '初级';
-            if (!S.days) S.days = 4;
-            if (!S.dur) S.dur = 60;
-            if (!S.equip || S.equip.length === 0) S.equip = ['健身房全套', '哑铃'];
-            if (!S.focus || S.focus.length === 0) S.focus = ['均衡全身'];
+        } else if (type === 'active_user' || type === 'mixed') {
+            // Unified preset history simulation: active_user uses current settings, mixed forces hybrid settings
+            if (type === 'active_user') {
+                if (!S.goal) S.goal = '女性薄肌';
+                if (!S.level) S.level = '初级';
+                if (!S.days) S.days = 4;
+                if (!S.dur) S.dur = 60;
+                if (!S.equip || S.equip.length === 0) S.equip = ['健身房全套', '哑铃'];
+                if (!S.focus || S.focus.length === 0) S.focus = ['均衡全身'];
+            } else {
+                // Mixed preset: force hybrid strength + swimming settings
+                S.goal = '女性薄肌';
+                S.level = '初级';
+                S.days = 4;
+                S.dur = 60;
+                S.equip = ['哑铃', '泳池'];
+                S.swimLevel = '入门';
+                S.focus = ['均衡全身'];
+                S.limits = '';
+                S.periodMode = false;
+            }
             saveState();
 
             const dbRef = typeof DB !== 'undefined' ? DB : {};
@@ -314,19 +327,53 @@
                 routine.quads = [{ n: '哑铃高脚杯深蹲', eq: ['哑铃'], muscle: ['腿'] }];
             }
 
-            const daysPerWeek = S.days || 3;
-            const gymPatterns = {
-                2: [1,0,0,1,0,0,0],
-                3: [1,0,1,0,1,0,0],
-                4: [1,1,0,1,1,0,0],
-                5: [1,1,1,0,1,1,0],
-                6: [1,1,1,1,1,1,0],
-                7: [1,1,1,1,1,1,1]
+            const getSwimExercises = () => {
+                if (typeof pickSwimExercises === 'function') {
+                    return pickSwimExercises();
+                }
+                return [
+                    { name: '水中呼吸练习', sets: 1, reps: 5, unit: '分钟' },
+                    { name: '扶边蛙泳腿练习', sets: 1, reps: 15, unit: '分钟' }
+                ];
             };
-            const pattern = gymPatterns[daysPerWeek] || gymPatterns[3];
+
+            const hasPool = S.equip.includes('泳池');
+            const daysPerWeek = S.days || 3;
+            let gymDays = daysPerWeek, swimDays = 0;
+            if (hasPool) {
+                const swimSplit = { 2:{gym:1,swim:1}, 3:{gym:2,swim:1}, 4:{gym:3,swim:1}, 5:{gym:3,swim:2}, 6:{gym:4,swim:2}, 7:{gym:4,swim:3} };
+                const sp = swimSplit[daysPerWeek] || {gym:2, swim:1};
+                gymDays = sp.gym;
+                swimDays = sp.swim;
+            }
+
+            let pattern;
+            if (hasPool) {
+                const comboPatterns = {
+                    '1+1':['G','R','R','S','R','R','R'],
+                    '2+1':['G','R','S','R','G','R','R'],
+                    '3+1':['G','S','R','G','R','G','R'],
+                    '2+2':['G','S','R','G','S','R','R'],
+                    '3+2':['G','S','G','R','G','S','R'],
+                    '4+2':['G','G','S','G','G','S','R'],
+                    '4+3':['G','S','G','S','G','S','G'],
+                };
+                const key = gymDays + '+' + swimDays;
+                pattern = comboPatterns[key] || comboPatterns['3+1'];
+            } else {
+                const gymPatterns = {
+                    2: [1,0,0,1,0,0,0],
+                    3: [1,0,1,0,1,0,0],
+                    4: [1,1,0,1,1,0,0],
+                    5: [1,1,1,0,1,1,0],
+                    6: [1,1,1,1,1,1,0],
+                    7: [1,1,1,1,1,1,1]
+                };
+                pattern = gymPatterns[daysPerWeek] || gymPatterns[3];
+            }
 
             const splitsRef = typeof SPLITS !== 'undefined' ? SPLITS : {};
-            const currentSplits = splitsRef[daysPerWeek] || [
+            const currentSplits = splitsRef[gymDays] || [
                 { type: '上肢推', groups: ['chest', 'shoulder', 'triceps'] },
                 { type: '上肢拉', groups: ['back', 'biceps'] },
                 { type: '下肢力量', groups: ['quads', 'hamglutes', 'calves'] },
@@ -339,71 +386,85 @@
             let workoutCount = 0;
 
             for (let i = 30; i >= 1; i--) {
-                // Check if this day is a training day in the pattern
-                if (pattern[i % 7] === 0) continue; 
+                const dayType = pattern[i % 7];
+                if (!dayType || dayType === 'R' || dayType === 0) continue; 
                 
                 const targetDate = addDays(today, -i);
-                
-                // Cycle through splits
-                const splitObj = currentSplits[workoutCount % currentSplits.length];
-                workoutCount++;
-
-                const splitType = splitObj.type;
-                const dayGroups = splitObj.groups;
-
                 const dayExercises = [];
-                dayGroups.forEach(grp => {
-                    const exList = routine[grp] || [];
-                    exList.forEach(ex => {
-                        const isCardio = grp === 'cardio' || (ex.muscle && ex.muscle.includes('心肺'));
-                        const reps = isCardio ? 15 : (ex.u === '秒' ? 30 : 12);
-                        const unit = ex.u || '次';
-                        
-                        const isBodyweight = ex.eq && ex.eq.includes('无器材');
-                        const hasWeight = !isCardio && grp !== 'core' && grp !== 'calves' && !isBodyweight;
-                        
-                        const progressStep = Math.round((30 - i) / 5);
-                        const baseWeight = grp === 'chest' || grp === 'quads' || grp === 'hamglutes' ? 20 : 10;
-                        const weightVal = hasWeight ? (baseWeight + progressStep) : null;
+                let splitType = '';
 
+                if (dayType === 'S') {
+                    splitType = '🏊 游泳训练';
+                    const swimExs = getSwimExercises();
+                    swimExs.forEach(ex => {
                         dayExercises.push({
-                            name: ex.n,
-                            sets: 3,
-                            reps: reps,
-                            unit: unit,
-                            weight: weightVal,
+                            name: ex.name || ex.n,
+                            sets: ex.sets || 1,
+                            reps: ex.reps || 10,
+                            unit: ex.unit || '分钟',
+                            weight: null,
                             done: true
                         });
-
-                        if (hasWeight) {
-                            if (!mockWh[ex.n]) mockWh[ex.n] = [];
-                            mockWh[ex.n].push({
-                                date: targetDate,
-                                weight: weightVal,
-                                rpe: 6 + (i % 3)
-                            });
-                        }
                     });
-                });
+                } else {
+                    const splitObj = currentSplits[workoutCount % currentSplits.length];
+                    workoutCount++;
+
+                    splitType = splitObj.type;
+                    const dayGroups = splitObj.groups;
+
+                    dayGroups.forEach(grp => {
+                        const exList = routine[grp] || [];
+                        exList.forEach(ex => {
+                            const isCardio = grp === 'cardio' || (ex.muscle && ex.muscle.includes('心肺'));
+                            const reps = isCardio ? 15 : (ex.u === '秒' ? 30 : 12);
+                            const unit = ex.u || '次';
+                            
+                            const isBodyweight = ex.eq && ex.eq.includes('无器材');
+                            const hasWeight = !isCardio && grp !== 'core' && grp !== 'calves' && !isBodyweight;
+                            
+                            const progressStep = Math.round((30 - i) / 5);
+                            const baseWeight = grp === 'chest' || grp === 'quads' || grp === 'hamglutes' ? 20 : 10;
+                            const weightVal = hasWeight ? (baseWeight + progressStep) : null;
+
+                            dayExercises.push({
+                                name: ex.n,
+                                sets: 3,
+                                reps: reps,
+                                unit: unit,
+                                weight: weightVal,
+                                done: true
+                            });
+
+                            if (hasWeight) {
+                                if (!mockWh[ex.n]) mockWh[ex.n] = [];
+                                mockWh[ex.n].push({
+                                    date: targetDate,
+                                    weight: weightVal,
+                                    rpe: 6 + (i % 3)
+                                });
+                            }
+                        });
+                    });
+                }
 
                 mockLogs.push({
                     date: targetDate,
                     workout: splitType,
-                    duration: S.dur || 60,
+                    duration: dayType === 'S' ? 50 : (S.dur || 60),
                     exerciseCount: dayExercises.length,
                     rpe: 6 + (i % 3),
                     mood: ['💪 爽快', '😊 舒适', '😅 稍累'][i % 3],
                     exercises: dayExercises,
-                    note: '健康打卡纪录模拟。'
+                    note: dayType === 'S' ? '畅快游泳训练。' : '健康打卡纪录模拟。',
+                    isSwimDay: dayType === 'S'
                 });
             }
 
-            // Sort logs descending (newest first)
             mockLogs.sort((a, b) => b.date.localeCompare(a.date));
             localStorage.setItem(K.log, JSON.stringify(mockLogs));
             localStorage.setItem(K.wh, JSON.stringify(mockWh));
 
-            // Generate PRs dynamically
             const mockPr = [];
             const weightExs = Object.keys(mockWh);
             if (weightExs.length >= 2) {
@@ -434,11 +495,39 @@
             }
             localStorage.setItem(K.pr, JSON.stringify(mockPr));
 
-            // Re-generate fresh plan for the active user
+            // Generate swim achievements
+            const swimWorkoutLogs = mockLogs.filter(l => l.isSwimDay);
+            const swimCount = swimWorkoutLogs.length;
+
+            if (swimCount > 0) {
+                const swimMilestonesRef = typeof SWIM_MILESTONES !== 'undefined' ? SWIM_MILESTONES : [];
+                const swimLogState = {
+                    count: swimCount,
+                    milestones: []
+                };
+                const chronoSwimLogs = [...swimWorkoutLogs].reverse(); // oldest first
+                
+                swimMilestonesRef.forEach(ms => {
+                    if (swimCount >= ms.count) {
+                        const matchedLog = chronoSwimLogs[ms.count - 1];
+                        swimLogState.milestones.push({
+                            count: ms.count,
+                            icon: ms.icon,
+                            title: ms.title,
+                            desc: ms.desc,
+                            date: matchedLog ? matchedLog.date : today
+                        });
+                    }
+                });
+                localStorage.setItem('fit_swim', JSON.stringify(swimLogState));
+            } else {
+                localStorage.removeItem('fit_swim');
+            }
+
             if (typeof genPlan === 'function') {
                 genPlan(true);
             }
-            showToast('已加载【活跃用户】预设并生成新计划！');
+            showToast(type === 'active_user' ? '已加载【活跃用户】预设并生成新计划！' : '已加载【力量+游泳混合】预设并生成新计划！');
             setTimeout(() => location.reload(), 1000);
 
         } else if (type === 'period') {
@@ -480,21 +569,6 @@
                 genPlan(true);
             }
             showToast('已加载【生理期】预设并生成减负计划！');
-            setTimeout(() => location.reload(), 1000);
-
-        } else if (type === 'mixed') {
-            // Mixed strength & pool preset: set equipment to include pool, select goal, trigger plan
-            S.goal = '女性薄肌';
-            S.level = '初级';
-            S.days = 4;
-            S.equip = ['哑铃', '泳池'];
-            S.swimLevel = '入门';
-            saveState();
-
-            if (typeof genPlan === 'function') {
-                genPlan(true);
-            }
-            showToast('已加载【力量+游泳混合】预设！即将刷新...');
             setTimeout(() => location.reload(), 1000);
         }
     };
