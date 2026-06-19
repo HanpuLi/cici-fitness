@@ -1846,4 +1846,210 @@ textarea:focus { border-color: var(--terra-br); }
     }
 }
 
+/* Achievements Gallery styles */
+.ach-badge-card {
+    transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.1), box-shadow 0.2s, background-color 0.2s;
+}
+.ach-badge-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    background-color: var(--surface2) !important;
+}
+.ach-badge-card:hover svg {
+    transform: scale(1.1);
+}
+.ach-badge-card:active {
+    transform: translateY(0) scale(0.98);
+}
+
+/* ══ Pool Mode — Wet-Hand Friendly Swim Day UI ═══════════ */
+
+/* Phase color labels */
+.pool-phase-tag {
+    display: inline-block;
+    font-size: 10px; font-weight: 700;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    padding: 3px 10px;
+    border-radius: 12px;
+    margin-bottom: 4px;
+}
+.pool-phase-tag.warmup   { background: rgba(255,152,0,.12); color: #e68a00; border: 1px solid rgba(255,152,0,.3); }
+.pool-phase-tag.tech     { background: rgba(59,130,246,.10); color: #3b82f6; border: 1px solid rgba(59,130,246,.25); }
+.pool-phase-tag.main     { background: rgba(62,125,82,.10);  color: var(--sage); border: 1px solid var(--sage-br); }
+.pool-phase-tag.cooldown { background: rgba(139,92,246,.10); color: #8b5cf6; border: 1px solid rgba(139,92,246,.25); }
+
+/* Pool mode container */
+.pool-mode .exlist {
+    gap: 14px;
+    padding-bottom: 100px; /* space for fixed bottom button */
+}
+
+/* Pool mode exercise cards: large, tappable */
+.pool-mode .exrow {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 14px;
+    padding: 20px 18px;
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    min-height: 72px;
+    cursor: pointer;
+    transition: all .18s ease;
+    box-shadow: 0 2px 8px rgba(0,0,0,.02);
+    -webkit-user-select: none;
+    user-select: none;
+}
+.pool-mode .exrow:active {
+    transform: scale(0.98);
+    background: var(--surface2);
+}
+.pool-mode .exrow.done-ex {
+    opacity: 0.45;
+    border-color: var(--sage-br);
+    background: var(--sage-bg);
+}
+
+/* Pool mode exercise name — larger */
+.pool-mode .exname {
+    font-size: 16px;
+    font-weight: 700;
+    line-height: 1.4;
+}
+
+/* Pool mode note — larger for readability */
+.pool-mode .exnote {
+    font-size: 13px;
+    line-height: 1.5;
+    margin-top: 4px;
+}
+
+/* Pool mode checkbox — 56×56 for wet hands */
+.pool-mode .cb {
+    width: 56px;
+    height: 56px;
+    font-size: 24px;
+    border-width: 2px;
+    border-radius: 16px;
+    flex-shrink: 0;
+    margin-left: auto;
+}
+.pool-mode .cb.ck {
+    transform: rotate(-4deg) scale(1.05);
+    box-shadow: 0 3px 10px rgba(62,125,82,.3);
+}
+
+/* Pool mode timer button — large, standalone */
+.pool-mode .act-play-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    min-height: 52px;
+    font-size: 16px;
+    font-weight: 700;
+    font-family: var(--font-body);
+    background: rgba(59,130,246,.08);
+    color: #3b82f6;
+    border: 1.5px solid rgba(59,130,246,.25);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all .2s;
+    -webkit-user-select: none;
+    user-select: none;
+    padding: 12px;
+    margin-top: 8px;
+    letter-spacing: .03em;
+}
+.pool-mode .act-play-btn:active {
+    transform: scale(0.97);
+    background: rgba(59,130,246,.15);
+}
+
+/* Pool mode reps display */
+.pool-mode .pool-reps {
+    font-family: var(--font-display);
+    font-size: 20px;
+    font-weight: 900;
+    color: var(--terra);
+    white-space: nowrap;
+}
+
+/* Pool mode info row */
+.pool-mode .exrow > div:first-child {
+    flex: 1;
+    min-width: 0;
+}
+
+/* Pool mode fixed bottom complete button */
+.pool-mode-bottom-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 900;
+    padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    box-shadow: 0 -4px 20px rgba(0,0,0,.08);
+    display: flex;
+    justify-content: center;
+    animation: slideUpBottom .3s ease both;
+}
+@keyframes slideUpBottom {
+    from { transform: translateY(100%); }
+    to   { transform: translateY(0); }
+}
+.pool-mode-bottom-bar .btn-complete-workout,
+.pool-mode-bottom-bar .btn-end-workout-early {
+    width: 100%;
+    max-width: 680px;
+    min-height: 60px;
+    font-size: 18px;
+    font-weight: 800;
+    border-radius: var(--radius);
+    letter-spacing: .04em;
+}
+
+/* Pool mode header badges */
+.pool-mode .wh {
+    flex-wrap: wrap;
+    gap: 8px;
+}
+.pool-mode .badge {
+    font-size: 13px;
+    padding: 5px 14px;
+}
+
+/* Pool mode rest timer buttons — larger */
+.pool-mode .wh .regen-btn {
+    font-size: 14px;
+    padding: 8px 16px;
+    min-height: 44px;
+}
+
+/* Swim day indicator on calendar */
+.dc.swim-day .dt {
+    color: #3b82f6;
+}
+.dc.swim-day.sel {
+    border-color: rgba(59,130,246,.35);
+    background: rgba(59,130,246,.06);
+}
+
+/* Hide adjusters in pool mode (swim exercises are fixed 1 set × N min) */
+.pool-mode .adjg {
+    display: none !important;
+}
+
+/* Dark theme adjustments for pool mode */
+[data-theme="dark"] .pool-phase-tag.warmup   { background: rgba(255,152,0,.15); }
+[data-theme="dark"] .pool-phase-tag.tech     { background: rgba(59,130,246,.15); }
+[data-theme="dark"] .pool-phase-tag.main     { background: rgba(62,125,82,.15); }
+[data-theme="dark"] .pool-phase-tag.cooldown { background: rgba(139,92,246,.15); }
+[data-theme="dark"] .pool-mode .act-play-btn { background: rgba(59,130,246,.12); }
+[data-theme="dark"] .pool-mode-bottom-bar { background: var(--surface); border-color: var(--border2); }
+
 

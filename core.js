@@ -276,13 +276,13 @@ const DN=['周一','周二','周三','周四','周五','周六','周日'];
 
 // ══ Swim Milestones ════════════════════════════════════════
 const SWIM_MILESTONES=[
-{count:1,icon:'🏊',title:'初次下水',desc:'完成第一次游泳训练！'},
-{count:3,icon:'💧',title:'水性初具',desc:'已完成 3 次游泳训练'},
-{count:5,icon:'🐠',title:'小鱼儿',desc:'已完成 5 次游泳训练'},
-{count:10,icon:'🧜‍♀️',title:'水中小达人',desc:'已完成 10 次游泳训练！'},
-{count:20,icon:'🏅',title:'泳池常客',desc:'已完成 20 次游泳训练'},
-{count:30,icon:'🌊',title:'乘风破浪',desc:'已完成 30 次游泳训练！'},
-{count:50,icon:'🧜',title:'美人鱼',desc:'已完成 50 次游泳训练！！'},
+{count:1,icon:'',title:'初次下水',desc:'完成第一次游泳训练！'},
+{count:3,icon:'',title:'水性初具',desc:'已完成 3 次游泳训练'},
+{count:5,icon:'',title:'小鱼儿',desc:'已完成 5 次游泳训练'},
+{count:10,icon:'',title:'水中小达人',desc:'已完成 10 次游泳训练！'},
+{count:20,icon:'',title:'泳池常客',desc:'已完成 20 次游泳训练'},
+{count:30,icon:'',title:'乘风破浪',desc:'已完成 30 次游泳训练！'},
+{count:50,icon:'',title:'美人鱼',desc:'已完成 50 次游泳训练！！'},
 ];
 let SWIM_LOG=lg('fit_swim')||{count:0,milestones:[]};
 function checkSwimMilestone(){
@@ -290,9 +290,79 @@ SWIM_LOG.count=(SWIM_LOG.count||0)+1;
 const m=SWIM_MILESTONES.find(ms=>ms.count===SWIM_LOG.count);
 if(m){
 SWIM_LOG.milestones.push({...m,date:todayStr()});
-setTimeout(()=>showToast(`${m.icon} 游泳成就解锁：${m.title}！`),500);
+setTimeout(()=>showToast(`游泳成就解锁：${m.title}！`),500);
 }
 ls('fit_swim',SWIM_LOG);
+}
+
+const GYM_MILESTONES=[
+{count:1,icon:'',title:'力量萌新',desc:'完成第一次力量训练！'},
+{count:3,icon:'',title:'渐入佳境',desc:'已完成 3 次力量训练'},
+{count:5,icon:'',title:'习惯养成',desc:'已完成 5 次力量训练'},
+{count:10,icon:'',title:'铁骨铜筋',desc:'已完成 10 次力量训练！'},
+{count:20,icon:'',title:'训练狂人',desc:'已完成 20 次力量训练'},
+{count:30,icon:'',title:'钢铁之魂',desc:'已完成 30 次力量训练！'},
+{count:50,icon:'',title:'终极雕刻家',desc:'已完成 50 次力量训练！！'},
+];
+let GYM_LOG=lg('fit_gym_ach')||{count:0,milestones:[]};
+function checkGymMilestone(){
+GYM_LOG.count=(GYM_LOG.count||0)+1;
+const m=GYM_MILESTONES.find(ms=>ms.count===GYM_LOG.count);
+if(m){
+GYM_LOG.milestones.push({...m,date:todayStr()});
+setTimeout(()=>showToast(`力量成就解锁：${m.title}！`),500);
+}
+ls('fit_gym_ach',GYM_LOG);
+}
+
+function rebuildAchievementsFromLogs() {
+    const today = todayStr();
+    
+    // Swim Achievements
+    const swimLogs = LOG.filter(l => l.isSwimDay);
+    const swimCount = swimLogs.length;
+    const chronoSwim = [...swimLogs].reverse(); // oldest first
+    
+    SWIM_LOG = {
+        count: swimCount,
+        milestones: []
+    };
+    SWIM_MILESTONES.forEach(ms => {
+        if (swimCount >= ms.count) {
+            const matchedLog = chronoSwim[ms.count - 1];
+            SWIM_LOG.milestones.push({
+                count: ms.count,
+                icon: ms.icon || '',
+                title: ms.title,
+                desc: ms.desc,
+                date: matchedLog ? matchedLog.date : today
+            });
+        }
+    });
+    ls('fit_swim', SWIM_LOG);
+
+    // Gym Achievements
+    const gymLogs = LOG.filter(l => !l.isSwimDay);
+    const gymCount = gymLogs.length;
+    const chronoGym = [...gymLogs].reverse(); // oldest first
+    
+    GYM_LOG = {
+        count: gymCount,
+        milestones: []
+    };
+    GYM_MILESTONES.forEach(ms => {
+        if (gymCount >= ms.count) {
+            const matchedLog = chronoGym[ms.count - 1];
+            GYM_LOG.milestones.push({
+                count: ms.count,
+                icon: ms.icon || '',
+                title: ms.title,
+                desc: ms.desc,
+                date: matchedLog ? matchedLog.date : today
+            });
+        }
+    });
+    ls('fit_gym_ach', GYM_LOG);
 }
 
 // ══ Plan Generator ═══════════════════════════════════════
@@ -425,7 +495,7 @@ const hist=W_HIST[exName];
 if(hist&&hist.length>0){
 const maxPrev=Math.max(...hist.map(h=>h.weight));
 if(val>maxPrev){
-showToast(`🏆 ${exName} 新纪录！${val}kg`);
+showToast(`${exName} 新纪录！${val}kg`);
 PR_LIST.unshift({date,exercise:exName,weight:val,prev:maxPrev});
 if(PR_LIST.length>50)PR_LIST=PR_LIST.slice(0,50);
 ls(K.pr,PR_LIST);
@@ -691,7 +761,7 @@ if (isRecalibrate && S.plan) {
     }
 }
 if (!lastGymWorkoutType && LOG.length > 0) {
-    const lastLog = LOG.slice().reverse().find(l => !l.isSwimDay && l.workout !== '休息' && l.workout !== '🏊 游泳训练' && l.workout !== '轻量替代');
+    const lastLog = LOG.slice().reverse().find(l => !l.isSwimDay && l.workout !== '休息' && l.workout !== '游泳训练' && l.workout !== '轻量替代');
     if (lastLog) {
         lastGymWorkoutType = lastLog.workout;
     }
@@ -731,7 +801,7 @@ days.push({date:ds,isRest:false,workoutType:split.type,duration:S.dur,exercises:
 if(S.periodMode){
 days.push({date:ds,isRest:false,isSwimDay:false,workoutType:'轻量替代',duration:40,exercises:pickPeriodAlternative()});
 }else{
-days.push({date:ds,isRest:false,isSwimDay:true,workoutType:'🏊 游泳训练',duration:50,exercises:pickSwimExercises()});
+days.push({date:ds,isRest:false,isSwimDay:true,workoutType:'游泳训练',duration:50,exercises:pickSwimExercises()});
 }
 }else{
 days.push({date:ds,isRest:true,workoutType:'休息',duration:0,exercises:[]});
@@ -742,7 +812,7 @@ const sch=SCHEMES[S.goal]||SCHEMES['女性薄肌'];
 const isSwimPlan=hasPool&&swimPerWeek>0;
 let tipText=TIPS[S.goal]||TIPS['女性薄肌'];
 if(isSwimPlan){
-tipText+=`\n🏊 ${SWIM_TIPS[S.swimLevel||'入门']}\n📊 本周安排：${gymPerWeek}天力量 + ${swimPerWeek}天游泳`;
+tipText+=`\n游泳水平：${SWIM_TIPS[S.swimLevel||'入门']}\n本周安排：${gymPerWeek}天力量 + ${swimPerWeek}天游泳`;
 }
 S.plan={days,tip:tipText,rest:sch.rest,excludedCount:excluded.size};
 // Reset calendar view offset and select today
@@ -758,12 +828,12 @@ showTab('today',document.querySelector('.tab'));
 function assessPlanIntensity(){
     // Sort a copy of LOG by date descending to always evaluate the 3 most recent entries
     const sortedLogs = [...LOG].sort((a, b) => b.date.localeCompare(a.date));
-    const gymLogs = sortedLogs.filter(l => !l.isSwimDay && l.workout !== '休息' && l.workout !== '🏊 游泳训练' && l.workout !== '轻量替代').slice(0, 3);
+    const gymLogs = sortedLogs.filter(l => !l.isSwimDay && l.workout !== '休息' && l.workout !== '游泳训练' && l.workout !== '轻量替代').slice(0, 3);
     if (!gymLogs.length) {
         return {
             status: '评估中',
             desc: '打卡 1 天后开始自动评估强度',
-            icon: '🔍',
+            icon: '',
             cls: 'intensity-none'
         };
     }
@@ -785,23 +855,23 @@ function assessPlanIntensity(){
     
     if (avgRpe >= 7.5 || hasHighRpe >= 2 || completionRate < 0.85) {
         return {
-            status: '强度超标 ⚠️',
+            status: '强度超标',
             desc: `近期RPE均值 ${avgRpe.toFixed(1)}，已自动下调后续计划量`,
-            icon: '📉',
+            icon: '',
             cls: 'intensity-over'
         };
     } else if (avgRpe <= 5.0 && completionRate >= 0.98) {
         return {
-            status: '低于实际能力 💪',
+            status: '低于实际能力',
             desc: `近期训练较轻松，已自动上调后续计划量`,
-            icon: '📈',
+            icon: '',
             cls: 'intensity-under'
         };
     } else {
         return {
-            status: '契合度极佳 ✨',
+            status: '契合度极佳',
             desc: '训练量完美匹配您的体能，保持适中',
-            icon: '✅',
+            icon: '',
             cls: 'intensity-balanced'
         };
     }
@@ -840,7 +910,7 @@ function autoAlignPlan() {
     }
     
     if (!lastCompletedType && typeof LOG !== 'undefined' && LOG.length > 0) {
-        const lastLog = LOG.slice().reverse().find(l => !l.isSwimDay && l.workout !== '休息' && l.workout !== '🏊 游泳训练' && l.workout !== '轻量替代');
+        const lastLog = LOG.slice().reverse().find(l => !l.isSwimDay && l.workout !== '休息' && l.workout !== '游泳训练' && l.workout !== '轻量替代');
         if (lastLog) {
             lastCompletedType = lastLog.workout;
         }
@@ -1119,6 +1189,7 @@ else if(d.isRest&&isPlan)cls+=' rest';
 else if(done&&isPlan)cls+=' done';
 if(isToday)cls+=' today';
 if(locked&&!d.isRest)cls+=' locked';
+if(d.isSwimDay)cls+=' swim-day';
 if(isSel&&!isNone&&!(d.isRest&&isPlan))cls+=' sel';
 const drag=(isPlan&&!d.isRest&&!locked)?`draggable="true" ondragstart="dragStart(event,'${d.date}')" ondragover="dragOver(event)" ondrop="dragDrop(event,'${d.date}')" ondragend="dragEnd()"`:
 (isPlan&&!d.isRest&&locked?`ondragover="dragOver(event)" ondrop="dragDrop(event,'${d.date}')"`:'' );
@@ -1189,6 +1260,58 @@ ${ex.weight?`<div class="wt-hint" style="margin-top:2px;display:block">${ex.weig
       if(lg.note)h+=`<div class="hist-note" style="margin-top:12px;padding:10px 14px;background:var(--surface2);border-radius:8px;font-size:12px;font-style:italic;color:var(--ink2)">"${lg.note}"</div>`;
     }else{
       const pd=S.prog[sel.date]||{};
+      const locked=isLocked(sel);
+      const _isSwimDay=!!sel.isSwimDay;
+
+      // ── Pool Mode: swim-day-specific UI with large touch targets ──
+      if(_isSwimDay && !locked){
+        const PHASE_LABELS={warmup:'热身',tech:'技术练习',main:'主练',cooldown:'放松'};
+        const PHASE_ICONS={warmup:'🔥',tech:'🎯',main:'🏊',cooldown:'🧘'};
+        h+=`<div class="pool-mode">`;
+        h+=`<div class="wh">
+<span class="wh-title">${fmtDate(sel.date)} \u00b7 ${sel.workoutType}</span>
+<span class="badge" style="background:rgba(59,130,246,.12);color:#3b82f6">${S.swimLevel||'\u5165\u95e8'}</span>
+<span class="badge">${sel.duration}\u5206\u949f</span>
+</div>`;
+        // Group exercises by swim phase
+        let lastPhase='';
+        h+=`<div class="exlist">`;
+        sel.exercises.forEach((ex,i)=>{
+          const done=pd[i];
+          const reps=getAdj(sel.date,i,'r',ex.reps);
+          const phase=ex.swimPhase||'main';
+          // Phase separator
+          if(phase!==lastPhase){
+            lastPhase=phase;
+            h+=`<div style="padding:4px 0 2px"><span class="pool-phase-tag ${phase}">${PHASE_ICONS[phase]||''} ${PHASE_LABELS[phase]||phase}</span></div>`;
+          }
+          h+=`<div class="exrow${done?' done-ex':''}" onclick="tog('${sel.date}',${i})">
+<div style="flex:1;min-width:0">
+<div class="exname">${ex.name} <i class="ti ti-info-circle" style="font-size:12px;opacity:.4;vertical-align:middle" onclick="event.stopPropagation();showExDetail('${ex.name}')"></i></div>
+<div class="exnote">${ex.note}</div>
+<span class="pool-reps">${reps}\u5206\u949f</span>
+${!done?`<button class="act-play-btn" onclick="event.stopPropagation();startTimer(${reps*60}, '${ex.name}')">\u25b6 \u5f00\u59cb\u8ba1\u65f6 ${reps}\u5206\u949f</button>`:''}
+</div>
+<button class="cb${done?' ck':''}" onclick="event.stopPropagation();tog('${sel.date}',${i})"><i class="ti ti-check"></i></button>
+</div>`;
+        });
+        h+=`</div>`;
+        // Fixed bottom complete button
+        const alreadyLogged = LOG.some(l=>l.date===sel.date&&l.workout===sel.workoutType);
+        if(!alreadyLogged){
+          const checkedCount = Object.keys(pd).filter(k=>pd[k]).length;
+          const btnText = checkedCount === sel.exercises.length ? '\u5b8c\u6210\u6e38\u6cf3\u8bad\u7ec3' : '\u7ed3\u675f\u8bad\u7ec3\u5e76\u6253\u5361';
+          const btnCls = checkedCount === sel.exercises.length ? 'btn-complete-workout' : 'btn-end-workout-early';
+          h+=`<div class="pool-mode-bottom-bar">
+<button class="${btnCls}" onclick="endWorkoutEarly('${sel.date}')">
+<i class="ti ti-swimming" style="margin-right:8px"></i>${btnText}
+</button>
+</div>`;
+        }
+        h+=`</div>`; // close pool-mode
+
+      // ── Standard gym day render (unchanged) ──
+      }else{
       h+=`<div class="wh">
 <span class="wh-title">${fmtDate(sel.date)} \u00b7 ${sel.workoutType}</span>
 <span class="badge">${sel.duration}\u5206\u949f</span>
@@ -1206,8 +1329,8 @@ const lastW=needsWt?getLastWeight(ex.name):null;
 const sugW=needsWt?suggestWeight(ex.name):null;
 const dispW=curW!==null?curW:(sugW??'');
 return`<div class="exrow${done?' done-ex':''}"><div style="flex:1;min-width:0">
-<div class="exname" onclick="showExDetail('${ex.name}')" style="cursor:pointer">${ex.name}${needsWt&&W_HIST[ex.name]&&W_HIST[ex.name].length>0&&(curW||0)>=Math.max(...W_HIST[ex.name].map(h=>h.weight))?` <span title="\u4e2a\u4eba\u7eaa\u5f55" style="font-size:10px">\ud83c\udfc6</span>`:''} <i class="ti ti-info-circle" style="font-size:11px;opacity:.4;vertical-align:middle"></i>${!locked&&!ex.isWarmup&&!ex.isStretch?` <span class="swap-btn" onclick="event.stopPropagation();swapExercise('${sel.date}',${i})" title="\u66ff\u6362\u52a8\u4f5c">\ud83d\udd04</span>`:''}</div>
-<div class="exnote">${ex.note}${ex.bi?' ⚡️ 左右各做一遍算1组':''}</div>
+<div class="exname" onclick="showExDetail('${ex.name}')" style="cursor:pointer">${ex.name}${needsWt&&W_HIST[ex.name]&&W_HIST[ex.name].length>0&&(curW||0)>=Math.max(...W_HIST[ex.name].map(h=>h.weight))?` <span title="个人纪录" style="font-size:9px;color:var(--terra);border:1px solid var(--terra);border-radius:2px;padding:0 2px;margin-left:4px;font-weight:600">纪录</span>`:''} <i class="ti ti-info-circle" style="font-size:11px;opacity:.4;vertical-align:middle"></i>${!locked&&!ex.isWarmup&&!ex.isStretch?` <span class="swap-btn" onclick="event.stopPropagation();swapExercise('${sel.date}',${i})" title="替换动作" style="border:1px solid var(--sage);color:var(--sage);border-radius:2px;padding:0 4px;font-size:10px;margin-left:4px">替换</span>`:''}</div>
+<div class="exnote">${ex.note}${ex.bi?' (左右各做一遍算1组)':''}</div>
 ${needsWt&&!locked?`<div class="wt-row">
 <input type="number" class="wt-input" value="${dispW||''}" placeholder="${sugW||''}" onchange="setWeight('${sel.date}',${i},+this.value)" step="${getWeightStep(ex.name)}" min="0">
 <span class="wt-unit">kg</span>
@@ -1237,6 +1360,7 @@ ${!locked?`
               </button>
           </div>`;
       }
+      } // end gym-day else
     }
   }
 }else if(sel&&sel.isRest){
@@ -1549,12 +1673,12 @@ function submitRPE(rpe, isSkip=false) {
     const noteEl = document.getElementById('rpe-note');
     const note = noteEl ? noteEl.value.trim() : '';
     const actualRpe = isSkip ? 6 : rpe;
-    const moods=['😴','😌','😌','🙂','🙂','💪','💪','🔥','🔥','😵'];
+    const moods=['疲惫','偏累','一般','舒适','饱满','充沛','火热','极佳','突破','力竭'];
     
     if (_editingLogIdx !== null) {
         // Edit mode
         LOG[_editingLogIdx].rpe = actualRpe;
-        LOG[_editingLogIdx].mood = moods[actualRpe-1]||'💪';
+        LOG[_editingLogIdx].mood = moods[actualRpe-1]||'一般';
         LOG[_editingLogIdx].note = note;
         ls(K.log,LOG);
         showToast('已更新记录');
@@ -1580,7 +1704,7 @@ function submitRPE(rpe, isSkip=false) {
                 weight:getWeight(date,i)||null,
                 done: !!(S.prog[date] && S.prog[date][i])
             })),
-            mood: moods[actualRpe-1]||'💪',
+            mood: moods[actualRpe-1]||'一般',
             note: note,
             isSwimDay: _dayIsSwim
         });
@@ -1592,14 +1716,14 @@ function submitRPE(rpe, isSkip=false) {
             let toastMsg = '';
             if (assessment.cls === 'intensity-over') {
                 S.volumeMultiplier = Math.max(0.5, (S.volumeMultiplier || 1.0) * 0.9);
-                toastMsg = `📉 强度超标：后续训练量已自动下调 10%`;
+                toastMsg = `强度超标：后续训练量已自动下调 10%`;
             } else if (assessment.cls === 'intensity-under') {
                 S.volumeMultiplier = Math.min(1.5, (S.volumeMultiplier || 1.0) * 1.05);
-                toastMsg = `📈 强度低于能力：已自动上调后续训练量 5%`;
+                toastMsg = `强度低于能力：已自动上调后续训练量 5%`;
             } else {
                 if ((S.volumeMultiplier || 1.0) > 1.0) S.volumeMultiplier = Math.max(1.0, S.volumeMultiplier - 0.05);
                 if ((S.volumeMultiplier || 1.0) < 1.0) S.volumeMultiplier = Math.min(1.0, S.volumeMultiplier + 0.05);
-                toastMsg = `✨ 强度适中：完美契合您的体能！`;
+                toastMsg = `强度适中：完美契合您的体能！`;
             }
             showToast(toastMsg);
             
@@ -1607,8 +1731,10 @@ function submitRPE(rpe, isSkip=false) {
             setTimeout(() => {
                 genPlan(true);
             }, 100);
+            
+            checkGymMilestone();
         } else {
-            showToast(isSkip ? `🏊 游泳训练完成！` : `🏊 游泳完成。RPE ${actualRpe}/10`);
+            showToast(isSkip ? `游泳训练完成！` : `游泳完成。RPE ${actualRpe}/10`);
             checkSwimMilestone();
         }
         
@@ -1689,7 +1815,7 @@ function tog(date,ei){
             _pendingRpeDay = day;
             // Customize RPE modal for swim days
             if(day.isSwimDay){
-                document.getElementById('rpe-modal-title').innerText = '🏊 游泳训练完成！';
+                document.getElementById('rpe-modal-title').innerText = '游泳训练完成！';
                 document.getElementById('rpe-modal-desc').innerText = '评估今天游泳的累计程度';
             }
             setTimeout(() => {
