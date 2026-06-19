@@ -47,13 +47,13 @@ function updateThemeBtn(theme){
     if (!btn) return;
     const current = theme || localStorage.getItem('fit_theme') || 'system';
     if (current === 'system') {
-        btn.textContent = '🌓';
+        btn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>`;
         btn.title = '跟随系统 (点击切换)';
     } else if (current === 'light') {
-        btn.textContent = '☀️';
+        btn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>`;
         btn.title = '浅色模式 (点击切换)';
     } else {
-        btn.textContent = '🌙';
+        btn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>`;
         btn.title = '深色模式 (点击切换)';
     }
 }
@@ -83,6 +83,7 @@ else{S.plan=null;}
 LOG=lg(K.log)||[];
 W_HIST=lg(K.wh)||{};
 PR_LIST=lg(K.pr)||[];
+if(typeof rebuildAchievementsFromLogs === 'function') rebuildAchievementsFromLogs();
 applySettingsToUI();
 render();
 if(S.plan && typeof autoAlignPlan==='function') autoAlignPlan();
@@ -159,11 +160,11 @@ html+=`<div class="tl-month">${y}年${parseInt(m)}月</div><div class="tl-wrap">
 items.forEach((x,i)=>{
 const isLast=i===items.length-1;
 const logIdx=LOG.indexOf(x);
-const mood=x.mood||'💪';
+const mood=x.mood||'一般';
 html+=`
 <div class="tl-item">
   <div class="tl-left">
-    <div class="tl-dot">${mood}</div>
+    <div class="tl-dot" style="font-size:10px;font-weight:600">${mood.slice(0,2)}</div>
     ${isLast&&Object.keys(byMonth)[Object.keys(byMonth).length-1]===month?'':'<div class="tl-line"></div>'}
   </div>
   <div class="tl-card">
@@ -210,7 +211,7 @@ if(typeof renderStats === 'function') renderStats();
 }
 
 async function clearAllData() {
-if(confirm('⚠️ 警告：确定要清空所有计划、打卡记录和统计数据吗？此操作不可恢复！（包括云端数据）')){
+if(confirm('警告：确定要清空所有计划、打卡记录和统计数据吗？此操作不可恢复！（包括云端数据）')){
     // 1. Stop realtime sync so cloud data doesn't flood back
     if(_unsub){_unsub();_unsub=null}
     // 2. Delete cloud data if logged in
@@ -230,35 +231,35 @@ if(confirm('⚠️ 警告：确定要清空所有计划、打卡记录和统计�
 function renderStats(){
 const el=document.getElementById('stats-content');
 if(!el)return;
-const today=new Date();
+const tStr = todayStr();
+const thisMonth = tStr.slice(0, 7);
 
 // Streak
+const logDates=new Set(LOG.map(l=>l.date));
 let streak=0;
 for(let i=0;i<365;i++){
-const d=new Date(today);d.setDate(d.getDate()-i);
-if(LOG.find(l=>l.date===d.toISOString().split('T')[0]))streak++;
+const ds=addDays(tStr,-i);
+if(logDates.has(ds))streak++;
 else if(i>0)break;
 }
 
 // Month stats
-const thisMonth=today.toISOString().slice(0,7);
 const monthLogs=LOG.filter(l=>l.date.startsWith(thisMonth));
-const today7=new Date();today7.setDate(today7.getDate()-7);const t7str=today7.toISOString().split('T')[0];
-const weekDays=S.plan?S.plan.days.filter(d=>!d.isRest&&d.date>=t7str&&d.date<=today.toISOString().split('T')[0]):[];
+const t7str=addDays(tStr,-7);
+const weekDays=S.plan?S.plan.days.filter(d=>!d.isRest&&d.date>=t7str&&d.date<=tStr):[];
 const weekDone=weekDays.filter(d=>isDone(d)).length;
 const weekTotal=weekDays.length;
 const weekPct=weekTotal?Math.round(weekDone/weekTotal*100):0;
 
 // 12-week heatmap
-const logDates=new Set(LOG.map(l=>l.date));
 const heatCells=[];
 for(let i=83;i>=0;i--){
-const d=new Date(today);d.setDate(d.getDate()-i);
-const ds=d.toISOString().split('T')[0];
+const ds=addDays(tStr,-i);
+const d=new Date(ds+'T12:00:00');
 heatCells.push({ds,active:logDates.has(ds),day:d.getDay()});
 }
 const heatHtml=heatCells.map(c=>{
-const isToday=c.ds===today.toISOString().split('T')[0];
+const isToday=c.ds===tStr;
 return`<div class="heat-cell${c.active?' heat-on':''}${isToday?' heat-today':''}" title="${c.ds}" ${c.active?`onclick="showHistoryDetail('${c.ds}')"`:''} ></div>`;
 }).join('');
 
@@ -266,11 +267,34 @@ return`<div class="heat-cell${c.active?' heat-on':''}${isToday?' heat-today':''}
 const dist={};
 LOG.slice(-60).forEach(l=>{
 if(l.exercises)l.exercises.forEach(ex=>{
+let found = false;
 for(const[grp,exs]of Object.entries(DB)){
-if(exs.find(e=>e.n===ex.name)){dist[grp]=(dist[grp]||0)+1;break}}
+const foundEx = exs.find(e=>e.n===ex.name);
+if(foundEx){
+if(grp==='swimming'){
+const muscles=foundEx.muscle||[];
+muscles.forEach(m=>{
+if(m==='上肢') dist['swim_upper']=(dist['swim_upper']||0)+1;
+else if(m==='下肢') dist['swim_lower']=(dist['swim_lower']||0)+1;
+else if(m==='核心') dist['swim_core']=(dist['swim_core']||0)+1;
+else if(m==='心肺') dist['swim_cardio']=(dist['swim_cardio']||0)+1;
+else if(m==='全身'){
+dist['swim_upper']=(dist['swim_upper']||0)+1;
+dist['swim_lower']=(dist['swim_lower']||0)+1;
+dist['swim_core']=(dist['swim_core']||0)+1;
+dist['swim_cardio']=(dist['swim_cardio']||0)+1;
+}
+});
+} else {
+dist[grp]=(dist[grp]||0)+1;
+}
+found = true;
+break;
+}
+}
 });
 });
-const grpNames={chest:'胸',shoulder:'肩',back:'背',biceps:'二头',triceps:'三头',quads:'股四头',hamglutes:'臀腿',calves:'小腿',core:'核心',cardio:'有氧',swimming:'游泳'};
+const grpNames={chest:'胸',shoulder:'肩',back:'背',biceps:'二头',triceps:'三头',quads:'股四头',hamglutes:'臀腿',calves:'小腿',core:'核心',cardio:'有氧',swim_upper:'游泳(上肢)',swim_lower:'游泳(下肢)',swim_core:'游泳(核心)',swim_cardio:'游泳(心肺)'};
 const distEntries=Object.entries(dist).sort((a,b)=>b[1]-a[1]);
 const maxDist=distEntries[0]?.[1]||1;
 
@@ -358,15 +382,68 @@ ${PR_LIST.length?`
   `).join('')}
 </div>`:''}
 ${(()=>{
+if(!GYM_LOG||!GYM_LOG.count) return '';
+const gymCount=GYM_LOG.count;
+const gymLogs=LOG.filter(l=>!l.isSwimDay);
+const thisMonthGym=gymLogs.filter(l=>l.date.startsWith(thisMonth));
+const totalGymMin=gymLogs.reduce((s,l)=>s+(l.duration||0),0);
+const nextMs=GYM_MILESTONES.find(m=>m.count>gymCount);
+const badgesHtml = GYM_MILESTONES.map((ms, idx) => {
+    const isUnlocked = gymCount >= ms.count;
+    const matchedLog = (GYM_LOG.milestones || []).find(m => m.count === ms.count);
+    const badgeSvg = typeof getAchievementBadgeSvg === 'function' ? getAchievementBadgeSvg(ms, isUnlocked) : '';
+    return `
+    <div class="ach-badge-card" onclick="openAchievementModal('gym', ${idx})" style="flex: 1 1 20%; min-width: 65px; text-align: center; cursor: pointer; padding: 6px; border-radius: var(--radius-sm); border: 1px solid ${isUnlocked?'var(--border2)':'transparent'}; background: ${isUnlocked?'var(--surface)':'none'}; transition: all 0.2s ease;">
+        <div style="margin-bottom: 4px;">${badgeSvg}</div>
+        <div style="font-size: 10px; font-weight: 600; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${ms.title}">${ms.title}</div>
+        <div style="font-size: 9px; color: var(--ink3);">${isUnlocked && matchedLog ? matchedLog.date.slice(5) : `${gymCount}/${ms.count}`}</div>
+    </div>
+    `;
+}).join('');
+
+return `<div class="panel">
+  <p class="panel-title">力量成就</p>
+  <div class="stats">
+    <div class="stat"><div class="stat-val">${gymCount}</div><div class="stat-lbl">总力量次数</div></div>
+    <div class="stat"><div class="stat-val">${thisMonthGym.length}</div><div class="stat-lbl">本月力量</div></div>
+    <div class="stat"><div class="stat-val">${totalGymMin}</div><div class="stat-lbl">总力量分钟</div></div>
+  </div>
+  ${nextMs?`<div style="margin-top:12px;padding:8px 12px;background:var(--surface2);border-radius:8px;font-size:12px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+      <span>下一成就: ${nextMs.title}</span>
+      <span style="font-weight:600;color:var(--terra)">${gymCount}/${nextMs.count}</span>
+    </div>
+    <div class="progress-bar"><div class="progress-fill" style="width:${Math.round(gymCount/nextMs.count*100)}%"></div></div>
+  </div>`:'<div style="margin-top:12px;text-align:center;font-size:12px;color:var(--sage)">所有成就已解锁！</div>'}
+  
+  <p class="panel-title" style="font-size: 11px; color: var(--ink3); margin-top: 16px; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;">力量勋章墙</p>
+  <div style="display: flex; flex-wrap: wrap; gap: 8px; justify-content: start;">
+    ${badgesHtml}
+  </div>
+</div>`;
+})()}
+${(()=>{
 if(!SWIM_LOG||!SWIM_LOG.count) return '';
 const swimCount=SWIM_LOG.count;
 const swimLogs=LOG.filter(l=>l.isSwimDay);
-const thisMonthSwim=swimLogs.filter(l=>l.date.startsWith(today.toISOString().slice(0,7)));
+const thisMonthSwim=swimLogs.filter(l=>l.date.startsWith(thisMonth));
 const totalSwimMin=swimLogs.reduce((s,l)=>s+(l.duration||0),0);
 const nextMs=SWIM_MILESTONES.find(m=>m.count>swimCount);
-const unlockedMs=(SWIM_LOG.milestones||[]).slice().reverse();
+const badgesHtml = SWIM_MILESTONES.map((ms, idx) => {
+    const isUnlocked = swimCount >= ms.count;
+    const matchedLog = (SWIM_LOG.milestones || []).find(m => m.count === ms.count);
+    const badgeSvg = typeof getAchievementBadgeSvg === 'function' ? getAchievementBadgeSvg(ms, isUnlocked) : '';
+    return `
+    <div class="ach-badge-card" onclick="openAchievementModal('swim', ${idx})" style="flex: 1 1 20%; min-width: 65px; text-align: center; cursor: pointer; padding: 6px; border-radius: var(--radius-sm); border: 1px solid ${isUnlocked?'var(--border2)':'transparent'}; background: ${isUnlocked?'var(--surface)':'none'}; transition: all 0.2s ease;">
+        <div style="margin-bottom: 4px;">${badgeSvg}</div>
+        <div style="font-size: 10px; font-weight: 600; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${ms.title}">${ms.title}</div>
+        <div style="font-size: 9px; color: var(--ink3);">${isUnlocked && matchedLog ? matchedLog.date.slice(5) : `${swimCount}/${ms.count}`}</div>
+    </div>
+    `;
+}).join('');
+
 return `<div class="panel">
-  <p class="panel-title">🏊 游泳成就</p>
+  <p class="panel-title">游泳成就</p>
   <div class="stats">
     <div class="stat"><div class="stat-val">${swimCount}</div><div class="stat-lbl">总游泳次数</div></div>
     <div class="stat"><div class="stat-val">${thisMonthSwim.length}</div><div class="stat-lbl">本月游泳</div></div>
@@ -374,18 +451,16 @@ return `<div class="panel">
   </div>
   ${nextMs?`<div style="margin-top:12px;padding:8px 12px;background:var(--surface2);border-radius:8px;font-size:12px">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
-      <span>下一成就: ${nextMs.icon} ${nextMs.title}</span>
+      <span>下一成就: ${nextMs.title}</span>
       <span style="font-weight:600;color:var(--terra)">${swimCount}/${nextMs.count}</span>
     </div>
     <div class="progress-bar"><div class="progress-fill" style="width:${Math.round(swimCount/nextMs.count*100)}%"></div></div>
-  </div>`:'<div style="margin-top:8px;text-align:center;font-size:12px;color:var(--sage)">🧜 所有成就已解锁！</div>'}
-  ${unlockedMs.length?`<div style="margin-top:10px">
-    ${unlockedMs.map(m=>`<div style="display:flex;align-items:center;gap:8px;padding:4px 0;font-size:12px;border-bottom:1px solid var(--border)">
-      <span style="font-size:16px">${m.icon}</span>
-      <div style="flex:1"><span style="font-weight:600">${m.title}</span><span style="color:var(--ink3);margin-left:6px;font-size:11px">${m.desc}</span></div>
-      <span style="font-size:10px;color:var(--ink3)">${m.date||''}</span>
-    </div>`).join('')}
-  </div>`:''}
+  </div>`:'<div style="margin-top:12px;text-align:center;font-size:12px;color:var(--sage)">所有成就已解锁！</div>'}
+  
+  <p class="panel-title" style="font-size: 11px; color: var(--ink3); margin-top: 16px; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;">游泳勋章墙</p>
+  <div style="display: flex; flex-wrap: wrap; gap: 8px; justify-content: start;">
+    ${badgesHtml}
+  </div>
 </div>`;
 })()}
 `;
@@ -396,8 +471,34 @@ function exportForAI(){
 const recent=LOG.slice(-30).reverse();
 if(!recent.length){alert('暂无日志记录');return}
 const dist={};
-recent.forEach(l=>{if(l.exercises)l.exercises.forEach(ex=>{for(const[g,exs]of Object.entries(DB)){if(exs.find(e=>e.n===ex.name)){dist[g]=(dist[g]||0)+1;break}}})});
-const grpNames={chest:'胸',shoulder:'肩',back:'背',biceps:'二头',triceps:'三头',quads:'股四头',hamglutes:'臀腿',calves:'小腿',core:'核心',cardio:'有氧',swimming:'游泳'};
+recent.forEach(l=>{
+if(l.exercises)l.exercises.forEach(ex=>{
+for(const[g,exs]of Object.entries(DB)){
+const foundEx = exs.find(e=>e.n===ex.name);
+if(foundEx){
+if(g==='swimming'){
+const muscles=foundEx.muscle||[];
+muscles.forEach(m=>{
+if(m==='上肢') dist['swim_upper']=(dist['swim_upper']||0)+1;
+else if(m==='下肢') dist['swim_lower']=(dist['swim_lower']||0)+1;
+else if(m==='核心') dist['swim_core']=(dist['swim_core']||0)+1;
+else if(m==='心肺') dist['swim_cardio']=(dist['swim_cardio']||0)+1;
+else if(m==='全身'){
+dist['swim_upper']=(dist['swim_upper']||0)+1;
+dist['swim_lower']=(dist['swim_lower']||0)+1;
+dist['swim_core']=(dist['swim_core']||0)+1;
+dist['swim_cardio']=(dist['swim_cardio']||0)+1;
+}
+});
+} else {
+dist[g]=(dist[g]||0)+1;
+}
+break;
+}
+}
+});
+});
+const grpNames={chest:'胸',shoulder:'肩',back:'背',biceps:'二头',triceps:'三头',quads:'股四头',hamglutes:'臀腿',calves:'小腿',core:'核心',cardio:'有氧',swim_upper:'游泳(上肢)',swim_lower:'游泳(下肢)',swim_core:'游泳(核心)',swim_cardio:'游泳(心肺)'};
 const distStr=Object.entries(dist).sort((a,b)=>b[1]-a[1]).map(([g,c])=>`${grpNames[g]||g}${c}组`).join('·');
 
 let logStr=recent.map(l=>{
@@ -474,7 +575,7 @@ firebase.auth().onAuthStateChanged(handleAuth);
 
 function handleAuth(user){
 _user=user;renderAuthBtn();
-if(user){setupRealtimeSync();showToast('✓ 已连接')}
+if(user){setupRealtimeSync();showToast('已连接')}
 else{if(_unsub){_unsub();_unsub=null}}
 }
 
@@ -489,10 +590,10 @@ function renderAuthBtn(){
 const el=document.getElementById('auth-btn');if(!el)return;
 if(_user){
 const name=_user.displayName?_user.displayName.split(' ')[0]:'已登录';
-const photo=_user.photoURL?`<img src="${_user.photoURL}" class="auth-avatar" alt="">`:'👤';
+const photo=_user.photoURL?`<img src="${_user.photoURL}" class="auth-avatar" alt="">`:`<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:4px"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>`;
 el.innerHTML=`<div class="auth-pill-left">${photo}<span style="font-size:12px">${name}</span></div><div class="auth-pill-sync" id="sync-pill">✓</div><button class="auth-pill-signout" onclick="signOutUser()">退出</button>`;
 }else{
-el.innerHTML=`<button class="auth-sign-in" onclick="signInGoogle()">🔐 登录同步</button>`;
+el.innerHTML=`<button class="auth-sign-in" onclick="signInGoogle()"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:6px"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>登录同步</button>`;
 }
 }
 
@@ -512,7 +613,7 @@ const lv=localStorage.getItem(k);
 const cv=JSON.stringify(v);
 if(lv!==cv){try{localStorage.setItem(k,cv);changed=true}catch{}}
 });
-if(changed){loadState();renderLog();showToast('☁ 已从云端同步')}
+if(changed){loadState();renderLog();showToast('已从云端同步')}
 },e=>console.warn('Sync error:',e));
 // Initial push — send local data up first so cloud has latest
 setTimeout(()=>pushToCloud(),1000);
@@ -530,7 +631,7 @@ if(!_db||!_user||_pushing)return;
 if(typeof _mockSyncFail !== 'undefined' && _mockSyncFail) {
     console.log('[sync] simulated push failure (offline)');
     const pill=document.getElementById('sync-pill');
-    if(pill){pill.textContent='❌';pill.className='auth-pill-sync err'}
+    if(pill){pill.textContent='X';pill.className='auth-pill-sync err'}
     return;
 }
 _pushing=true;
@@ -673,6 +774,489 @@ function downloadShareCard() {
     a.click();
 }
 
+// ══ Achievement Badges & Sharing ═════════════════════════
+let _currentAchType = '';
+let _currentAchIdx = 0;
+let _currentAchImgUrl = '';
+let _achShareMode = false;
+
+function openAchievementModal(type, index) {
+    const ms = (type === 'gym' ? GYM_MILESTONES : SWIM_MILESTONES)[index];
+    const userLog = type === 'gym' ? GYM_LOG : SWIM_LOG;
+    const isUnlocked = userLog.count >= ms.count;
+    const matchedLog = userLog.milestones.find(m => m.count === ms.count);
+    const dateStr = matchedLog ? matchedLog.date : '';
+    
+    _currentAchType = type;
+    _currentAchIdx = index;
+    _currentAchImgUrl = '';
+    _achShareMode = false;
+    
+    document.getElementById('ach-modal-name').textContent = ms.title;
+    document.getElementById('ach-modal-desc').textContent = ms.desc;
+    
+    const statusEl = document.getElementById('ach-modal-status');
+    if (isUnlocked) {
+        statusEl.textContent = `已解锁 · ${dateStr}`;
+        statusEl.style.color = 'var(--sage)';
+    } else {
+        statusEl.textContent = `未解锁 · 进度 ${userLog.count}/${ms.count}`;
+        statusEl.style.color = 'var(--ink3)';
+    }
+    
+    // Set Badge SVG
+    const badgeContainer = document.getElementById('ach-modal-badge-container');
+    badgeContainer.innerHTML = getAchievementBadgeSvg(ms, isUnlocked);
+    
+    // Hide share preview and reset button
+    document.getElementById('ach-modal-share-container').style.display = 'none';
+    const actionBtn = document.getElementById('ach-action-btn');
+    actionBtn.textContent = '生成成就卡片';
+    actionBtn.style.background = 'var(--sage)';
+    
+    // Open Modal
+    document.getElementById('achievement-modal').classList.add('open');
+}
+
+function closeAchievementModal() {
+    document.getElementById('achievement-modal').classList.remove('open');
+}
+
+function toggleAchShareCard() {
+    const btn = document.getElementById('ach-action-btn');
+    const container = document.getElementById('ach-modal-share-container');
+    
+    if (!_achShareMode) {
+        // Draw the share card
+        const imgUrl = drawAchievementShareCard(_currentAchType, _currentAchIdx);
+        _currentAchImgUrl = imgUrl;
+        
+        container.innerHTML = `<img src="${imgUrl}" style="width:100%; border-radius:var(--radius); display:block;" alt="成就卡片" />`;
+        container.style.display = 'flex';
+        btn.textContent = '下载勋章卡';
+        btn.style.background = 'var(--terra)';
+        _achShareMode = true;
+    } else {
+        // Download the share card
+        if (!_currentAchImgUrl) return;
+        const ms = (_currentAchType === 'gym' ? GYM_MILESTONES : SWIM_MILESTONES)[_currentAchIdx];
+        const a = document.createElement('a');
+        a.href = _currentAchImgUrl;
+        a.download = `cici_achievement_${ms.title}.png`;
+        a.click();
+    }
+}
+
+function getAchievementBadgeSvg(ms, isUnlocked) {
+    const opacity = isUnlocked ? 1.0 : 0.25;
+    const filter = isUnlocked ? '' : 'filter="url(#ach-grayscale)"';
+    
+    let primaryColor, secondaryColor, accentColor, innerIcon;
+    const count = ms.count;
+    const isSwim = ms.desc.includes('游泳');
+
+    if (count <= 3) {
+        primaryColor = '#b25e36';
+        secondaryColor = '#e3a88a';
+        accentColor = '#f5b595';
+    } else if (count <= 10) {
+        primaryColor = '#64748b';
+        secondaryColor = '#cbd5e1';
+        accentColor = '#94a3b8';
+    } else if (count <= 30) {
+        primaryColor = '#b45309';
+        secondaryColor = '#fef08a';
+        accentColor = '#f59e0b';
+    } else {
+        primaryColor = '#0369a1';
+        secondaryColor = '#bae6fd';
+        accentColor = '#38bdf8';
+    }
+
+    if (isSwim) {
+        if (count <= 3) {
+            innerIcon = `<path d="M12,28 C16,28 17,24 20,24 C23,24 24,28 28,28 C32,28 33,24 36,24 C39,24 40,28 44,28" stroke="${primaryColor}" stroke-width="3" fill="none" stroke-linecap="round" />
+                         <path d="M12,34 C16,34 17,30 20,30 C23,30 24,34 28,34 C32,34 33,30 36,30 C39,30 40,34 44,34" stroke="${accentColor}" stroke-width="3" fill="none" stroke-linecap="round" opacity="0.8" />`;
+        } else if (count <= 5) {
+            innerIcon = `<path d="M14,30 C20,22 36,22 42,30 C36,38 20,38 14,30 Z" fill="${accentColor}" opacity="0.8"/>
+                         <path d="M42,30 L48,24 L46,30 L48,36 Z" fill="${primaryColor}"/>
+                         <circle cx="20" cy="28" r="1.5" fill="#fff"/>`;
+        } else if (count <= 10) {
+            innerIcon = `<circle cx="28" cy="20" r="4" fill="${primaryColor}"/>
+                         <path d="M16,28 Q28,24 40,28 M20,34 Q28,32 36,34" stroke="${accentColor}" stroke-width="3" fill="none" stroke-linecap="round"/>`;
+        } else if (count <= 20) {
+            innerIcon = `<path d="M28,16 L28,38 M22,16 L22,24 Q28,26 34,24 L34,16 M20,20 L20,16 M36,20 L36,16" stroke="${primaryColor}" stroke-width="2.5" fill="none" stroke-linecap="round"/>`;
+        } else if (count <= 30) {
+            innerIcon = `<path d="M16,32 L40,32 L36,38 L20,38 Z" fill="${primaryColor}"/>
+                         <path d="M26,14 L26,30 M26,16 L36,26 L26,26 Z" fill="${accentColor}" opacity="0.9"/>`;
+        } else {
+            innerIcon = `<path d="M16,22 L22,16 L28,24 L34,16 L40,22 L38,32 L18,32 Z" fill="${primaryColor}"/>
+                         <path d="M12,36 Q28,30 44,36" stroke="${accentColor}" stroke-width="3.5" fill="none" stroke-linecap="round"/>`;
+        }
+    } else {
+        if (count <= 1) {
+            innerIcon = `<rect x="26" y="16" width="4" height="20" rx="2" fill="${primaryColor}"/>
+                         <rect x="20" y="18" width="16" height="4" rx="1" fill="${accentColor}"/>
+                         <rect x="20" y="30" width="16" height="4" rx="1" fill="${accentColor}"/>`;
+        } else if (count <= 3) {
+            innerIcon = `<path d="M22,24 C18,24 16,27 16,32 C16,37 20,40 28,40 C36,40 40,37 40,32 C40,27 38,24 34,24 Z" fill="${primaryColor}"/>
+                         <path d="M22,24 L22,20 C22,16 34,16 34,20 L34,24" stroke="${accentColor}" stroke-width="3.5" fill="none" stroke-linecap="round"/>`;
+        } else if (count <= 5) {
+            innerIcon = `<path d="M18,18 L28,14 L38,18 L38,28 C38,34 28,38 28,38 C28,38 18,34 18,28 Z" fill="${primaryColor}"/>
+                         <path d="M22,20 L28,17 L34,20 L34,26 C34,31 28,34 28,34 C28,34 22,31 22,26 Z" fill="${accentColor}" opacity="0.8"/>`;
+        } else if (count <= 10) {
+            innerIcon = `<path d="M16,34 C16,26 24,24 28,24 C34,24 40,28 36,34 C34,36 28,38 28,38 C28,38 18,38 16,34 Z" fill="${primaryColor}"/>
+                         <path d="M22,24 Q28,14 34,20 L28,24" stroke="${accentColor}" stroke-width="3" fill="none"/>`;
+        } else if (count <= 20) {
+            innerIcon = `<path d="M28,14 C28,14 36,18 36,26 C36,34 28,40 28,40 C28,40 20,34 20,26 C20,18 28,14 28,14 Z" fill="${accentColor}" opacity="0.9"/>
+                         <path d="M28,20 C28,20 32,22 32,28 C32,34 28,36 28,36 C28,36 24,34 24,28 C24,22 28,20 28,20 Z" fill="${primaryColor}"/>`;
+        } else if (count <= 30) {
+            innerIcon = `<polygon points="30,12 18,26 26,26 24,40 38,22 30,22" fill="${accentColor}"/>
+                         <polygon points="30,12 22,26 26,26 24,36 34,22 30,22" fill="${primaryColor}" opacity="0.8"/>`;
+        } else {
+            innerIcon = `<polygon points="28,12 32,22 42,22 34,28 38,38 28,32 18,38 22,28 14,22 24,22" fill="${accentColor}"/>
+                         <circle cx="28" cy="24" r="3.5" fill="${primaryColor}"/>`;
+        }
+    }
+
+    return `
+    <svg width="36" height="36" viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg" ${filter} style="opacity: ${opacity}; transition: transform 0.2s ease-in-out; display: inline-block;">
+        <defs>
+            <filter id="ach-grayscale">
+                <feColorMatrix type="matrix" values="0.3333 0.3333 0.3333 0 0 0.3333 0.3333 0.3333 0 0 0.3333 0.3333 0.3333 0 0 0 0 0 1 0"/>
+            </filter>
+            <linearGradient id="grad-ach-${count}-${isSwim}" x1="0" y1="0" x2="56" y2="56" gradientUnits="userSpaceOnUse">
+                <stop offset="0%" stop-color="${secondaryColor}"/>
+                <stop offset="100%" stop-color="${primaryColor}"/>
+            </linearGradient>
+        </defs>
+        <circle cx="28" cy="28" r="25" stroke="url(#grad-ach-${count}-${isSwim})" stroke-width="1.5" stroke-dasharray="4 2" />
+        <circle cx="28" cy="28" r="22" fill="var(--surface)" stroke="var(--border)" stroke-width="1"/>
+        <circle cx="28" cy="28" r="18" fill="url(#grad-ach-${count}-${isSwim})" opacity="0.15" />
+        <g>
+            ${innerIcon}
+        </g>
+        ${!isUnlocked ? `
+        <circle cx="43" cy="43" r="8" fill="var(--bg)" stroke="var(--border)" stroke-width="1"/>
+        <path d="M41,41 L41,39 C41,37.5 45,37.5 45,39 L45,41 M39,41 L47,41 L47,46 L39,46 Z" stroke="var(--ink3)" stroke-width="1" fill="none" stroke-linejoin="round"/>
+        ` : ''}
+    </svg>
+    `;
+}
+
+function drawAchievementShareCard(type, idx) {
+    const canvas = document.createElement('canvas');
+    canvas.width = 600;
+    canvas.height = 850;
+    const ctx = canvas.getContext('2d');
+    
+    // 1. Background
+    ctx.fillStyle = '#f5f4ef';
+    ctx.fillRect(0, 0, 600, 850);
+    
+    // 2. Artistic borders
+    ctx.strokeStyle = '#d5cec2';
+    ctx.lineWidth = 14;
+    ctx.strokeRect(7, 7, 586, 836);
+    
+    ctx.strokeStyle = '#8c8070';
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(22, 22, 556, 806);
+    
+    // 3. Header title
+    ctx.fillStyle = '#2c2825';
+    ctx.textAlign = 'center';
+    ctx.font = 'normal 32px "ZCOOL XiaoWei", "Noto Serif SC", Georgia, serif';
+    ctx.fillText('Cici 健身成就勋章', 300, 100);
+    
+    // 4. Divider
+    ctx.strokeStyle = '#d5cec2';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(80, 140);
+    ctx.lineTo(520, 140);
+    ctx.stroke();
+
+    const ms = (type === 'gym' ? GYM_MILESTONES : SWIM_MILESTONES)[idx];
+    const userLog = type === 'gym' ? GYM_LOG : SWIM_LOG;
+    const isUnlocked = userLog.count >= ms.count;
+    const matchedLog = userLog.milestones.find(m => m.count === ms.count);
+    const dateStr = matchedLog ? matchedLog.date : '未解锁';
+
+    // 5. Draw Medal in Center (300, 360)
+    const cx = 300, cy = 340, r = 120;
+    
+    let primaryColor, secondaryColor, accentColor;
+    const count = ms.count;
+    if (count <= 3) {
+        primaryColor = '#b25e36';
+        secondaryColor = '#e3a88a';
+        accentColor = '#f5b595';
+    } else if (count <= 10) {
+        primaryColor = '#64748b';
+        secondaryColor = '#cbd5e1';
+        accentColor = '#94a3b8';
+    } else if (count <= 30) {
+        primaryColor = '#b45309';
+        secondaryColor = '#fef08a';
+        accentColor = '#f59e0b';
+    } else {
+        primaryColor = '#0369a1';
+        secondaryColor = '#bae6fd';
+        accentColor = '#38bdf8';
+    }
+
+    const grad = ctx.createLinearGradient(cx - r, cy - r, cx + r, cy + r);
+    grad.addColorStop(0, secondaryColor);
+    grad.addColorStop(1, primaryColor);
+    
+    ctx.strokeStyle = grad;
+    ctx.lineWidth = 6;
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.stroke();
+    
+    ctx.strokeStyle = '#d5cec2';
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([8, 4]);
+    ctx.beginPath();
+    ctx.arc(cx, cy, r - 12, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    
+    ctx.fillStyle = '#fcfbfa';
+    ctx.beginPath();
+    ctx.arc(cx, cy, r - 20, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#d5cec2';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.fillStyle = primaryColor;
+    ctx.strokeStyle = primaryColor;
+    ctx.lineWidth = 4;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+
+    const isSwim = type === 'swim';
+    if (isSwim) {
+        if (count <= 3) {
+            ctx.beginPath();
+            ctx.moveTo(-40, -10);
+            ctx.bezierCurveTo(-20, -30, -20, 10, 0, -10);
+            ctx.bezierCurveTo(20, -30, 20, 10, 40, -10);
+            ctx.stroke();
+            ctx.strokeStyle = accentColor;
+            ctx.beginPath();
+            ctx.moveTo(-40, 10);
+            ctx.bezierCurveTo(-20, -10, -20, 30, 0, 10);
+            ctx.bezierCurveTo(20, -10, 20, 30, 40, 10);
+            ctx.stroke();
+        } else if (count <= 5) {
+            ctx.fillStyle = accentColor;
+            ctx.beginPath();
+            ctx.moveTo(-35, 0);
+            ctx.quadraticCurveTo(-10, -25, 20, 0);
+            ctx.quadraticCurveTo(-10, 25, -35, 0);
+            ctx.fill();
+            ctx.fillStyle = primaryColor;
+            ctx.beginPath();
+            ctx.moveTo(20, 0);
+            ctx.lineTo(35, -15);
+            ctx.lineTo(30, 0);
+            ctx.lineTo(35, 15);
+            ctx.closePath();
+            ctx.fill();
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.arc(-20, -4, 3, 0, Math.PI*2);
+            ctx.fill();
+        } else if (count <= 10) {
+            ctx.beginPath();
+            ctx.arc(0, -25, 12, 0, Math.PI*2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.moveTo(-40, 5);
+            ctx.quadraticCurveTo(0, -10, 40, 5);
+            ctx.moveTo(-30, 20);
+            ctx.quadraticCurveTo(0, 12, 30, 20);
+            ctx.stroke();
+        } else if (count <= 20) {
+            ctx.beginPath();
+            ctx.moveTo(0, -35); ctx.lineTo(0, 35);
+            ctx.moveTo(-20, -15); ctx.lineTo(-20, 5);
+            ctx.quadraticCurveTo(0, 15, 20, 5); ctx.lineTo(20, -15);
+            ctx.moveTo(-28, -5); ctx.lineTo(-28, -15);
+            ctx.moveTo(28, -5); ctx.lineTo(28, -15);
+            ctx.stroke();
+        } else if (count <= 30) {
+            ctx.fillStyle = primaryColor;
+            ctx.beginPath();
+            ctx.moveTo(-35, 15);
+            ctx.lineTo(35, 15);
+            ctx.lineTo(25, 30);
+            ctx.lineTo(-25, 30);
+            ctx.closePath();
+            ctx.fill();
+            ctx.fillStyle = accentColor;
+            ctx.beginPath();
+            ctx.moveTo(-5, -25);
+            ctx.lineTo(-5, 10);
+            ctx.lineTo(25, 10);
+            ctx.closePath();
+            ctx.fill();
+        } else {
+            ctx.beginPath();
+            ctx.moveTo(-30, -5);
+            ctx.lineTo(-15, -25);
+            ctx.lineTo(0, -5);
+            ctx.lineTo(15, -25);
+            ctx.lineTo(30, -5);
+            ctx.lineTo(25, 20);
+            ctx.lineTo(-25, 20);
+            ctx.closePath();
+            ctx.fill();
+            ctx.strokeStyle = accentColor;
+            ctx.beginPath();
+            ctx.moveTo(-40, 30);
+            ctx.quadraticCurveTo(0, 18, 40, 30);
+            ctx.stroke();
+        }
+    } else {
+        if (count <= 1) {
+            ctx.fillStyle = primaryColor;
+            ctx.fillRect(-5, -35, 10, 70);
+            ctx.fillStyle = accentColor;
+            ctx.fillRect(-20, -30, 40, 10);
+            ctx.fillRect(-20, 20, 40, 10);
+        } else if (count <= 3) {
+            ctx.fillStyle = primaryColor;
+            ctx.beginPath();
+            ctx.arc(0, 12, 30, 0, Math.PI*2);
+            ctx.fill();
+            ctx.strokeStyle = accentColor;
+            ctx.lineWidth = 6;
+            ctx.beginPath();
+            ctx.arc(0, -10, 16, Math.PI, 0);
+            ctx.stroke();
+        } else if (count <= 5) {
+            ctx.fillStyle = primaryColor;
+            ctx.beginPath();
+            ctx.moveTo(-25, -25);
+            ctx.lineTo(0, -32);
+            ctx.lineTo(25, -25);
+            ctx.lineTo(25, 5);
+            ctx.quadraticCurveTo(25, 25, 0, 35);
+            ctx.quadraticCurveTo(-25, 25, -25, 5);
+            ctx.closePath();
+            ctx.fill();
+            ctx.fillStyle = accentColor;
+            ctx.beginPath();
+            ctx.moveTo(-18, -19);
+            ctx.lineTo(0, -24);
+            ctx.lineTo(18, -19);
+            ctx.lineTo(18, 4);
+            ctx.quadraticCurveTo(18, 19, 0, 27);
+            ctx.quadraticCurveTo(-18, 19, -18, 4);
+            ctx.closePath();
+            ctx.fill();
+        } else if (count <= 10) {
+            ctx.beginPath();
+            ctx.arc(0, 15, 20, 0, Math.PI*2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(-15, -5, 15, 0, Math.PI*2);
+            ctx.fill();
+            ctx.strokeStyle = accentColor;
+            ctx.beginPath();
+            ctx.moveTo(-20, -15);
+            ctx.quadraticCurveTo(0, -30, 20, -10);
+            ctx.stroke();
+        } else if (count <= 20) {
+            ctx.fillStyle = accentColor;
+            ctx.beginPath();
+            ctx.moveTo(0, -35);
+            ctx.quadraticCurveTo(25, -15, 25, 15);
+            ctx.quadraticCurveTo(25, 38, 0, 38);
+            ctx.quadraticCurveTo(-25, 38, -25, 15);
+            ctx.quadraticCurveTo(-25, -15, 0, -35);
+            ctx.fill();
+            ctx.fillStyle = primaryColor;
+            ctx.beginPath();
+            ctx.moveTo(0, -15);
+            ctx.quadraticCurveTo(14, -3, 14, 15);
+            ctx.quadraticCurveTo(14, 28, 0, 28);
+            ctx.quadraticCurveTo(-14, 28, -14, 15);
+            ctx.quadraticCurveTo(-14, -3, 0, -15);
+            ctx.fill();
+        } else if (count <= 30) {
+            ctx.fillStyle = accentColor;
+            ctx.beginPath();
+            ctx.moveTo(5, -35);
+            ctx.lineTo(-20, -2);
+            ctx.lineTo(-3, -2);
+            ctx.lineTo(-7, 33);
+            ctx.lineTo(20, 5);
+            ctx.lineTo(5, 5);
+            ctx.closePath();
+            ctx.fill();
+            ctx.fillStyle = primaryColor;
+            ctx.beginPath();
+            ctx.moveTo(5, -35);
+            ctx.lineTo(-12, -2);
+            ctx.lineTo(-3, -2);
+            ctx.lineTo(-7, 25);
+            ctx.lineTo(14, 5);
+            ctx.lineTo(5, 5);
+            ctx.closePath();
+            ctx.fill();
+        } else {
+            ctx.fillStyle = accentColor;
+            ctx.beginPath();
+            for (let i = 0; i < 5; i++) {
+                ctx.lineTo(Math.cos((18 + i * 72) * Math.PI / 180) * 35, -Math.sin((18 + i * 72) * Math.PI / 180) * 35);
+                ctx.lineTo(Math.cos((54 + i * 72) * Math.PI / 180) * 15, -Math.sin((54 + i * 72) * Math.PI / 180) * 15);
+            }
+            ctx.closePath();
+            ctx.fill();
+            ctx.fillStyle = primaryColor;
+            ctx.beginPath();
+            ctx.arc(0, 0, 8, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+
+    ctx.restore();
+
+    ctx.textAlign = 'center';
+    ctx.fillStyle = isUnlocked ? '#3e7d52' : '#9b948a';
+    ctx.font = 'bold 13px "Outfit", system-ui, sans-serif';
+    ctx.fillText(isUnlocked ? `已解锁 · ${dateStr}` : `尚未解锁 (${userLog.count}/${ms.count})`, 300, 520);
+    
+    ctx.fillStyle = '#2c2825';
+    ctx.font = 'bold 36px "ZCOOL XiaoWei", "Noto Serif SC", Georgia, serif';
+    ctx.fillText(ms.title, 300, 580);
+    
+    ctx.fillStyle = '#6b6560';
+    ctx.font = 'normal 15px "Outfit", system-ui, sans-serif';
+    ctx.fillText(ms.desc, 300, 630);
+    
+    ctx.strokeStyle = '#d5cec2';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(120, 680);
+    ctx.lineTo(480, 680);
+    ctx.stroke();
+    
+    ctx.fillStyle = '#9b948a';
+    ctx.font = 'normal 12px "Outfit", system-ui, sans-serif';
+    ctx.fillText('CICI FITNESS · 极简专业健身助理', 300, 720);
+    
+    return canvas.toDataURL('image/png');
+}
+
 function drawShareCard(logEntry) {
     const canvas = document.createElement('canvas');
     canvas.width = 600;
@@ -715,7 +1299,7 @@ function drawShareCard(logEntry) {
     const stats = [
         { label: '训练时间', val: `${logEntry.duration || 0} 分钟` },
         { label: '完成动作', val: `${logEntry.exerciseCount || (logEntry.exercises || []).length} 个` },
-        { label: '运动心境', val: `${logEntry.mood || '💪'}${logEntry.rpe ? ` (RPE ${logEntry.rpe})` : ''}` }
+        { label: '运动心境', val: `${logEntry.mood || '一般'}${logEntry.rpe ? ` (RPE ${logEntry.rpe})` : ''}` }
     ];
     const colWidth = 520 / 3;
     stats.forEach((st, idx) => {

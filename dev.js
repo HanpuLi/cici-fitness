@@ -1,7 +1,7 @@
 (function() {
     // ══ Storage Layer & Sandbox Redirect ═════════════════════════
     const SANDBOX_KEYS = [
-        'fit_s1', 'fit_p1', 'fit_pr1', 'fit_log1', 'fit_adj1', 'fit_wh1', 'fit_pr', 'fit_selDate'
+        'fit_s1', 'fit_p1', 'fit_pr1', 'fit_log1', 'fit_adj1', 'fit_wh1', 'fit_pr', 'fit_selDate', 'fit_swim', 'fit_gym_ach'
     ];
 
     const originalGetItem = localStorage.getItem;
@@ -65,7 +65,7 @@
     function unlockDevConsole() {
         if (originalGetItem.call(localStorage, 'fit_dev_unlocked') !== '1') {
             originalSetItem.call(localStorage, 'fit_dev_unlocked', '1');
-            showToast('🛠️ 开发者测试控制台已解锁！');
+            showToast('开发者测试控制台已解锁！');
             setupDevUI();
         }
         openDevModal();
@@ -88,7 +88,7 @@
         const floatBtn = document.createElement('div');
         floatBtn.id = 'dev-float-btn';
         floatBtn.className = 'dev-floating-btn';
-        floatBtn.innerHTML = '🛠️';
+        floatBtn.innerHTML = 'DEV';
         floatBtn.title = '打开开发者控制台';
         floatBtn.onclick = openDevModal;
         document.body.appendChild(floatBtn);
@@ -99,7 +99,7 @@
             banner.id = 'dev-sandbox-banner';
             banner.className = 'dev-sandbox-banner active';
             banner.innerHTML = `
-                <span>⚠️ 开发者沙箱模式激活中：数据仅在本地隔离存储，不修改云端数据</span>
+                <span>[警告] 开发者沙箱模式激活中：数据仅在本地隔离存储，不修改云端数据</span>
                 <button onclick="toggleSandbox(false)">退出沙箱</button>
             `;
             document.body.insertBefore(banner, document.body.firstChild);
@@ -116,8 +116,8 @@
         modal.innerHTML = `
             <div class="ex-modal-card" onclick="event.stopPropagation()">
                 <div class="ex-modal-hdr" style="margin-bottom: 10px; border-bottom: 1px solid var(--border); padding-bottom: 8px;">
-                    <h3 class="ex-modal-title" style="font-family: var(--font-display); font-size: 18px; color: var(--ink); display: flex; align-items: center; gap: 8px;">
-                        🛠️ 开发者测试控制台
+                    <h3 class="ex-modal-title" style="font-family: var(--font-display); font-size: 18px; color: var(--ink; display: flex; align-items: center; gap: 8px;">
+                        开发者测试控制台
                         <span id="dev-sandbox-badge" class="badge-dev ${isSandboxActive() ? 'active' : 'inactive'}">
                             ${isSandboxActive() ? '沙箱环境' : '真实环境'}
                         </span>
@@ -126,9 +126,9 @@
                 </div>
 
                 <div class="dev-tabs-container">
-                    <button id="dev-tab-sim-btn" class="dev-tab-btn active" onclick="switchDevTab('sim')">🧪 模拟控制</button>
-                    <button id="dev-tab-inspector-btn" class="dev-tab-btn" onclick="switchDevTab('inspector')">📊 状态监视</button>
-                    <button id="dev-tab-import-btn" class="dev-tab-btn" onclick="switchDevTab('import')">📥 导入/导出</button>
+                    <button id="dev-tab-sim-btn" class="dev-tab-btn active" onclick="switchDevTab('sim')">模拟控制</button>
+                    <button id="dev-tab-inspector-btn" class="dev-tab-btn" onclick="switchDevTab('inspector')">状态监视</button>
+                    <button id="dev-tab-import-btn" class="dev-tab-btn" onclick="switchDevTab('import')">导入/导出</button>
                 </div>
 
                 <div class="dev-modal-body">
@@ -136,25 +136,25 @@
                     <div id="dev-panel-sim" class="dev-panel" style="display: block;">
                         <p class="sec" style="margin-top: 0; font-weight: 600; font-size: 13px; color: var(--ink);">数据隔离沙箱 (Sandbox)</p>
                         <div style="background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px; margin-bottom: 12px; font-size: 11px; line-height: 1.5; color: var(--ink2);">
-                            开启沙箱后，系统会将当前真实数据复制到临时存储，之后的所有修改、打卡和重排都在隔离沙箱进行，退出沙箱后恢复真实数据，100% 安全。
+                            开启沙箱后，系统会将当前真实数据复制 to 临时存储，之后的所有修改、打卡和重排都在隔离沙箱进行，退出沙箱后恢复真实数据，100% 安全。
                             <div style="margin-top: 8px; display: flex; align-items: center; gap: 10px;">
                                 <button class="btn-dev" style="flex: 1; border-color: ${isSandboxActive() ? 'var(--terra)' : 'var(--border)'}" onclick="toggleSandbox(${!isSandboxActive()})">
-                                    ${isSandboxActive() ? '🔌 退出隔离沙箱' : '🛡️ 开启隔离沙箱'}
+                                    ${isSandboxActive() ? '退出隔离沙箱' : '开启隔离沙箱'}
                                 </button>
                             </div>
                         </div>
 
                         <p class="sec" style="font-weight: 600; font-size: 13px; color: var(--ink);">测试场景预设 (Scenarios)</p>
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px;">
-                            <button class="btn-dev" onclick="applyPresetScenario('new_user')">🆕 新用户首次使用</button>
-                            <button class="btn-dev" onclick="applyPresetScenario('active_user')">📊 活跃用户 (30天历史)</button>
-                            <button class="btn-dev" onclick="applyPresetScenario('period')">🩸 生理期降重打卡</button>
-                            <button class="btn-dev" onclick="applyPresetScenario('mixed')">🏊 力量+游泳混合</button>
+                            <button class="btn-dev" onclick="applyPresetScenario('new_user')">新用户首次使用</button>
+                            <button class="btn-dev" onclick="applyPresetScenario('active_user')">活跃用户 (30天历史)</button>
+                            <button class="btn-dev" onclick="applyPresetScenario('period')">生理期降重打卡</button>
+                            <button class="btn-dev" onclick="applyPresetScenario('mixed')">力量+游泳混合</button>
                         </div>
 
                         <p class="sec" style="font-weight: 600; font-size: 13px; color: var(--ink);">时钟与夏令时模拟 (Time Travel)</p>
                         <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 12px; background: var(--surface2); padding: 8px; border-radius: var(--radius-sm); border: 1px solid var(--border);">
-                            <button class="btn-dev" style="flex: 1;" onclick="toggleDstSimulation()">⏱️ 切换冬/夏令时时间</button>
+                            <button class="btn-dev" style="flex: 1;" onclick="toggleDstSimulation()">切换冬/夏令时时间</button>
                             <span id="dst-status" style="font-size: 11px; color: var(--ink3); font-weight: 600;">
                                 ${window._mockDate ? (window._mockDate.includes('-06-') ? '模拟夏季 (DST)' : '模拟冬季 (Std)') : '系统真实时间'}
                             </span>
@@ -162,10 +162,10 @@
 
                         <p class="sec" style="font-weight: 600; font-size: 13px; color: var(--ink);">通用调试小工具</p>
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px;">
-                            <button class="btn-dev" onclick="testSystemSounds('start')">🔔 测倒计时开始音</button>
-                            <button class="btn-dev" onclick="testSystemSounds('end')">🔕 测倒计时结束音</button>
-                            <button class="btn-dev" onclick="toggleOfflineSyncSim()">🔌 模拟离线/同步切换</button>
-                            <button class="btn-dev dev-danger" onclick="clearMockOnly()">🗑️ 清空历史/PR</button>
+                            <button class="btn-dev" onclick="testSystemSounds('start')">测倒计时开始音</button>
+                            <button class="btn-dev" onclick="testSystemSounds('end')">测倒计时结束音</button>
+                            <button class="btn-dev" onclick="toggleOfflineSyncSim()">模拟离线/同步切换</button>
+                            <button class="btn-dev dev-danger" onclick="clearMockOnly()">清空历史/PR</button>
                         </div>
                     </div>
 
@@ -182,16 +182,16 @@
                         <div id="dev-json-status" class="dev-status-msg success" style="display: none;"></div>
                         <textarea id="dev-json-textarea" class="dev-textarea" placeholder="在此粘贴 State JSON 进行导入..."></textarea>
                         <div style="display: flex; gap: 8px; margin-top: 10px;">
-                            <button class="btn-dev" style="flex: 1;" onclick="copyDevStateJSON()">📋 复制 State</button>
-                            <button class="btn-dev" style="flex: 1;" onclick="formatDevStateTextarea()">✨ 格式化 JSON</button>
-                            <button class="btn-dev" style="flex: 1; background: var(--terra); color: #fff; border-color: var(--terra);" onclick="importDevStateJSON()">📥 保存并载入</button>
+                            <button class="btn-dev" style="flex: 1;" onclick="copyDevStateJSON()">复制 State</button>
+                            <button class="btn-dev" style="flex: 1;" onclick="formatDevStateTextarea()">格式化 JSON</button>
+                            <button class="btn-dev" style="flex: 1; background: var(--terra); color: #fff; border-color: var(--terra);" onclick="importDevStateJSON()">保存并载入</button>
                         </div>
                     </div>
                 </div>
 
                 <div style="border-top: 1px solid var(--border); padding-top: 8px; display: flex; justify-content: space-between; align-items: center;">
                     <span style="font-size: 10px; color: var(--ink3);">快捷键: Cmd/Ctrl+Shift+D 切换</span>
-                    <button class="btn-dev dev-danger" style="padding: 4px 8px; font-size: 10px;" onclick="lockDevConsole()">🔒 锁定开发者模式</button>
+                    <button class="btn-dev dev-danger" style="padding: 4px 8px; font-size: 10px;" onclick="lockDevConsole()">锁定开发者模式</button>
                 </div>
             </div>
         `;
@@ -252,14 +252,14 @@
                 }
             });
             originalSetItem.call(localStorage, '__dev_active__', '1');
-            showToast('🛡️ 数据隔离沙箱已激活！正在重新载入...');
+            showToast('数据隔离沙箱已激活！正在重新载入...');
         } else {
             // Deactivate Sandbox: clear all __dev__ keys
             originalRemoveItem.call(localStorage, '__dev_active__');
             SANDBOX_KEYS.forEach(k => {
                 originalRemoveItem.call(localStorage, '__dev__' + k);
             });
-            showToast('🔌 已退出隔离沙箱！正在恢复真实数据...');
+            showToast('已退出隔离沙箱！正在恢复真实数据...');
         }
         setTimeout(() => location.reload(), 1000);
     };
@@ -267,7 +267,7 @@
     // ══ Scenarios / Presets ══════════════════════════════════════
     window.applyPresetScenario = function(type) {
         if (!isSandboxActive()) {
-            if (!confirm('⚠️ 警告：您当前不在【隔离沙箱】模式。应用预设会永久修改/覆盖您的【真实训练数据】！\n\n强烈建议先开启“数据隔离沙箱”以确保数据安全。\n\n点击“确定”继续写入真实数据，点击“取消”放弃。')) {
+            if (!confirm('警告：您当前不在【隔离沙箱】模式。应用预设会永久修改/覆盖您的【真实训练数据】！\n\n强烈建议先开启“数据隔离沙箱”以确保数据安全。\n\n点击“确定”继续写入真实数据，点击“取消”放弃。')) {
                 return;
             }
         }
@@ -394,7 +394,7 @@
                 let splitType = '';
 
                 if (dayType === 'S') {
-                    splitType = '🏊 游泳训练';
+                    splitType = '游泳训练';
                     const swimExs = getSwimExercises();
                     swimExs.forEach(ex => {
                         dayExercises.push({
@@ -454,7 +454,7 @@
                     duration: dayType === 'S' ? 50 : (S.dur || 60),
                     exerciseCount: dayExercises.length,
                     rpe: 6 + (i % 3),
-                    mood: ['💪 爽快', '😊 舒适', '😅 稍累'][i % 3],
+                    mood: ['爽快', '舒适', '稍累'][i % 3],
                     exercises: dayExercises,
                     note: dayType === 'S' ? '畅快游泳训练。' : '健康打卡纪录模拟。',
                     isSwimDay: dayType === 'S'
@@ -512,7 +512,7 @@
                         const matchedLog = chronoSwimLogs[ms.count - 1];
                         swimLogState.milestones.push({
                             count: ms.count,
-                            icon: ms.icon,
+                            icon: ms.icon || '',
                             title: ms.title,
                             desc: ms.desc,
                             date: matchedLog ? matchedLog.date : today
@@ -522,6 +522,35 @@
                 localStorage.setItem('fit_swim', JSON.stringify(swimLogState));
             } else {
                 localStorage.removeItem('fit_swim');
+            }
+
+            // Generate gym achievements
+            const gymWorkoutLogs = mockLogs.filter(l => !l.isSwimDay);
+            const gymCount = gymWorkoutLogs.length;
+
+            if (gymCount > 0) {
+                const gymMilestonesRef = typeof GYM_MILESTONES !== 'undefined' ? GYM_MILESTONES : [];
+                const gymLogState = {
+                    count: gymCount,
+                    milestones: []
+                };
+                const chronoGymLogs = [...gymWorkoutLogs].reverse(); // oldest first
+                
+                gymMilestonesRef.forEach(ms => {
+                    if (gymCount >= ms.count) {
+                        const matchedLog = chronoGymLogs[ms.count - 1];
+                        gymLogState.milestones.push({
+                            count: ms.count,
+                            icon: ms.icon || '',
+                            title: ms.title,
+                            desc: ms.desc,
+                            date: matchedLog ? matchedLog.date : today
+                        });
+                    }
+                });
+                localStorage.setItem('fit_gym_ach', JSON.stringify(gymLogState));
+            } else {
+                localStorage.removeItem('fit_gym_ach');
             }
 
             if (typeof genPlan === 'function') {
@@ -558,7 +587,7 @@
                 duration: 35,
                 exerciseCount: 1,
                 rpe: 6,
-                mood: '😅 轻松',
+                mood: '轻松',
                 exercises: [{ name: '哑铃卧推', sets: 3, reps: 12, unit: '次', weight: 10, done: true }],
                 note: '生理期降重打卡模拟。'
             });
@@ -597,16 +626,16 @@
         window._mockSyncFail = !window._mockSyncFail;
         if (window._mockSyncFail) {
             sessionStorage.setItem('__dev_mock_sync_fail__', '1');
-            showToast('🔌 已开启模拟离线模式 (强制同步失败)');
+            showToast('已开启模拟离线模式 (强制同步失败)');
         } else {
             sessionStorage.removeItem('__dev_mock_sync_fail__');
-            showToast('🔌 已关闭模拟离线模式 (同步已恢复)');
+            showToast('已关闭模拟离线模式 (同步已恢复)');
         }
 
         const pill = document.getElementById('sync-pill');
         if (pill) {
             if (window._mockSyncFail) {
-                pill.textContent = '❌';
+                pill.textContent = 'X';
                 pill.className = 'auth-pill-sync err';
             } else {
                 pill.textContent = '✓';
@@ -622,7 +651,7 @@
             localStorage.removeItem('fit_wh1');
             localStorage.removeItem('fit_pr');
             localStorage.removeItem('fit_pr1');
-            showToast('🗑️ 历史记录、负重及 PR 数据已清空！正在刷新...');
+            showToast('历史记录、负重及 PR 数据已清空！正在刷新...');
             setTimeout(() => location.reload(), 1000);
         }
     };
@@ -844,7 +873,7 @@
         const txt = document.getElementById('dev-json-textarea');
         if (txt) {
             navigator.clipboard.writeText(txt.value)
-                .then(() => showToast('📋 State JSON 已复制到剪贴板！'))
+                .then(() => showToast('State JSON 已复制到剪贴板！'))
                 .catch(() => alert('复制失败，请手动在文本框中全选复制。'));
         }
     };
@@ -888,12 +917,12 @@
             });
 
             if (validKeysCount === 0) {
-                showJsonStatusMessage('⚠️ JSON 格式正确，但未包含任何有效的应用设置键名（如 fit_s1, fit_p1 等）。', 'error');
+                showJsonStatusMessage('JSON 格式正确，但未包含任何有效的应用设置键名（如 fit_s1, fit_p1 等）。', 'error');
             } else {
-                showJsonStatusMessage(`✓ JSON 格式正确，检测到 ${validKeysCount} 个应用设置项可用于导入。`, 'success');
+                showJsonStatusMessage(`JSON 格式正确，检测到 ${validKeysCount} 个应用设置项可用于导入。`, 'success');
             }
         } catch (e) {
-            showJsonStatusMessage(`❌ JSON 语法错误：${e.message}`, 'error');
+            showJsonStatusMessage(`JSON 语法错误：${e.message}`, 'error');
         }
     }
 
@@ -915,7 +944,7 @@
             });
 
             if (imported) {
-                showToast('📥 导入成功，正在重新载入主界面...');
+                showToast('导入成功，正在重新载入主界面...');
                 setTimeout(() => location.reload(), 1000);
             } else {
                 alert('导入失败：JSON 数据不含合规的项目参数。');

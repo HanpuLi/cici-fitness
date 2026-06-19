@@ -59,8 +59,8 @@ global.updateStateInspector = () => {};
 // ── Test suite ──
 let passed = 0, failed = 0;
 function assert(label, condition) {
-  if (condition) { passed++; console.log(`  ✅ ${label}`); }
-  else { failed++; console.error(`  ❌ FAIL: ${label}`); }
+  if (condition) { passed++; console.log(`  [PASS] ${label}`); }
+  else { failed++; console.error(`  [FAIL] ${label}`); }
 }
 
 console.log('\n═══ Test 1: genPlan with goal=女性薄肌 (default) ═══');
@@ -73,7 +73,7 @@ try {
   assert('Each workout day has exercises', S.plan.days.filter(d => !d.isRest).every(d => d.exercises.length > 0));
 } catch (e) {
   failed++;
-  console.error(`  ❌ CRASH: ${e.message}\n${e.stack}`);
+  console.error(`  [CRASH] ${e.message}\n${e.stack}`);
 }
 
 console.log('\n═══ Test 2: genPlan with goal=臀腿塑形 (高级) ═══');
@@ -85,7 +85,7 @@ try {
   assert('Plan tip mentions 臀', S.plan.tip.includes('臀'));
 } catch (e) {
   failed++;
-  console.error(`  ❌ CRASH: ${e.message}\n${e.stack}`);
+  console.error(`  [CRASH] ${e.message}\n${e.stack}`);
 }
 
 console.log('\n═══ Test 3: genPlan with UNKNOWN goal (fallback) ═══');
@@ -96,7 +96,7 @@ try {
   assert('No crash with unknown goal', S.plan && S.plan.days.length === 14);
 } catch (e) {
   failed++;
-  console.error(`  ❌ CRASH: ${e.message}\n${e.stack}`);
+  console.error(`  [CRASH] ${e.message}\n${e.stack}`);
 }
 
 console.log('\n═══ Test 4: autoAlignPlan with 轻量替代 day ═══');
@@ -112,7 +112,7 @@ try {
   S.periodMode = false;
 } catch (e) {
   failed++;
-  console.error(`  ❌ CRASH: ${e.message}\n${e.stack}`);
+  console.error(`  [CRASH] ${e.message}\n${e.stack}`);
 }
 
 console.log('\n═══ Test 5: LOG reverse search direction ═══');
@@ -122,7 +122,7 @@ try {
   LOG.push({ date: '2026-05-29', workout: '拉（背+肩后束+二头）', duration: 55, exerciseCount: 4, exercises: [], rpe: 7 });
   LOG.push({ date: '2026-05-30', workout: '腿（股四/臀腿/小腿）+核心', duration: 60, exerciseCount: 5, exercises: [], rpe: 8 });
 
-  const lastLog = LOG.slice().reverse().find(l => !l.isSwimDay && l.workout !== '休息' && l.workout !== '🏊 游泳训练' && l.workout !== '轻量替代');
+  const lastLog = LOG.slice().reverse().find(l => !l.isSwimDay && l.workout !== '休息' && l.workout !== '游泳训练' && l.workout !== '轻量替代');
   assert('Reverse search finds newest entry (2026-05-30)', lastLog.date === '2026-05-30');
   assert('Newest entry is 腿 day', lastLog.workout.includes('腿'));
 
@@ -130,7 +130,7 @@ try {
   assert('Forward search would have found OLDEST (2026-01-01)', oldWayLog.date === '2026-01-01');
 } catch (e) {
   failed++;
-  console.error(`  ❌ CRASH: ${e.message}\n${e.stack}`);
+  console.error(`  [CRASH] ${e.message}\n${e.stack}`);
 }
 
 console.log('\n═══ Test 6: assessPlanIntensity with high RPE logs ═══');
@@ -148,7 +148,7 @@ try {
   assert('Detects high intensity (RPE 9,8,9 → 超标)', result.status.includes('超标') || result.cls === 'intensity-over');
 } catch (e) {
   failed++;
-  console.error(`  ❌ CRASH: ${e.message}\n${e.stack}`);
+  console.error(`  [CRASH] ${e.message}\n${e.stack}`);
 }
 
 console.log('\n═══ Test 7: recalibrate after period mode → normal ═══');
@@ -168,7 +168,7 @@ try {
   assert('No 轻量替代 in future after period mode off', !hasPeriodDay);
 } catch (e) {
   failed++;
-  console.error(`  ❌ CRASH: ${e.message}\n${e.stack}`);
+  console.error(`  [CRASH] ${e.message}\n${e.stack}`);
 }
 
 // ── Summary ──

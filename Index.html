@@ -31,7 +31,7 @@
             <p class="masthead-sub" id="masthead-sub" style="cursor: default; user-select: none;" onclick="triggerDevClick()">健身计划 · Fitness Planner</p>
         </div>
         <div class="masthead-right" style="display:flex;align-items:center;gap:8px">
-            <button class="theme-toggle" id="theme-btn" onclick="toggleTheme()" title="切换深色/浅色模式">🌙</button>
+            <button class="theme-toggle" id="theme-btn" onclick="toggleTheme()" title="切换模式"></button>
             <div id="auth-btn" class="auth-btn"></div>
         </div>
     </header>
@@ -105,11 +105,11 @@
                     <button class="chip" data-v="壶铃">壶铃</button>
                     <button class="chip" data-v="哑铃">哑铃</button>
                     <button class="chip on" data-v="健身房全套">健身房全套</button>
-                    <button class="chip" data-v="泳池">泳池 🏊</button>
+                    <button class="chip" data-v="泳池">泳池</button>
                 </div>
 <div class="tecnogym-ref" style="margin:8px 0 4px">
     <details>
-        <summary style="font-size:11px;color:var(--ink3);cursor:pointer;user-select:none">📋 Tecnogym 设备对照表（点击展开）</summary>
+        <summary style="font-size:11px;color:var(--ink3);cursor:pointer;user-select:none">Tecnogym 设备对照表（点击展开）</summary>
         <div style="font-size:11px;color:var(--ink3);margin-top:8px;line-height:1.8;padding:8px 12px;background:var(--surface2);border-radius:8px">
             <p style="font-weight:600;margin:0 0 4px;color:var(--ink2)">力量器械 (Plurima / Selection / Biostrength)</p>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:2px 12px">
@@ -150,12 +150,12 @@
                 <span>Bench → 卧推凳动作</span>
                 <span>Bands → 弹力带动作</span>
             </div>
-            <p style="margin:8px 0 0;font-size:10px;opacity:.7">✅ 选择「健身房全套」已覆盖 Tecnogym Plurima / Selection / Biostrength / Excite / Skill 全系列</p>
+            <p style="margin:8px 0 0;font-size:10px;opacity:.7">选择「健身房全套」已覆盖 Tecnogym Plurima / Selection / Biostrength / Excite / Skill 全系列</p>
         </div>
     </details>
 </div>
 <div id="swim-settings" style="display:none">
-                <p class="sec">游泳水平 🏊</p>
+                <p class="sec">游泳水平</p>
                 <div class="chips" id="g-swim-level">
                     <button class="chip on" data-v="入门">入门（水性+蛙泳基础）</button>
                     <button class="chip" data-v="进阶">进阶（蛙泳巩固+耐力）</button>
@@ -297,6 +297,30 @@
             <p style="font-size: 11px; color: var(--ink3); margin-bottom: 16px; line-height: 1.4;">提示：手机端可长按上方图片直接保存或转发分享</p>
             <div style="display: flex; gap: 10px;">
                 <button id="download-card-btn" class="btn" style="flex: 1; background: var(--sage); color: #fff; border: none; padding: 12px; border-radius: var(--radius-sm); font-weight: 600;" onclick="downloadShareCard()">下载分享图</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Achievement Detail Modal -->
+    <div id="achievement-modal" class="ex-modal-overlay" onclick="if(event.target===this)closeAchievementModal()">
+        <div class="ex-modal-card" onclick="event.stopPropagation()" style="max-width: 400px; text-align: center; position: relative;">
+            <div class="ex-modal-hdr" style="margin-bottom: 8px; border-bottom: none;">
+                <h3 id="ach-modal-title" class="ex-modal-title" style="font-size: 18px; color: var(--ink); margin: 0 auto 0 0;">成就详情</h3>
+                <button class="ex-modal-close" onclick="closeAchievementModal()">&#10005;</button>
+            </div>
+            <div id="ach-modal-badge-container" style="display:flex;justify-content:center;margin: 24px 0 16px 0;">
+                <!-- SVG Badge here -->
+            </div>
+            <h4 id="ach-modal-name" style="font-family: var(--font-display); font-size: 24px; font-weight: 700; color: var(--ink); margin-bottom: 8px;">力量萌新</h4>
+            <p id="ach-modal-status" style="font-size: 12px; font-weight: 600; color: var(--sage); margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px;">已解锁 · 2026-06-01</p>
+            <p id="ach-modal-desc" style="font-size: 14px; color: var(--ink2); line-height: 1.5; margin-bottom: 24px; padding: 0 16px;">完成第一次力量训练！</p>
+            
+            <div id="ach-modal-share-container" style="display:none; justify-content:center; box-shadow: 0 4px 20px rgba(0,0,0,0.1); border-radius: var(--radius); overflow: hidden; background: var(--surface2); margin: 16px auto; max-width: 320px; transition: all 0.3s ease;">
+                <!-- Preview image will be injected here -->
+            </div>
+            
+            <div style="display: flex; gap: 10px; padding: 0 16px;">
+                <button id="ach-action-btn" class="btn" style="flex: 1; background: var(--sage); color: #fff; border: none; padding: 12px; border-radius: var(--radius-sm); font-weight: 600; transition: background 0.2s;" onclick="toggleAchShareCard()">生成成就卡片</button>
             </div>
         </div>
     </div>

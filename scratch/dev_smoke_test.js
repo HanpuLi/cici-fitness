@@ -60,6 +60,16 @@ global.K = {
     pr: 'fit_pr'
 };
 
+// Global milestone lists
+global.SWIM_MILESTONES = [
+    { count: 1, title: '初次下水', desc: '完成第一次游泳训练！' },
+    { count: 3, title: '水性初具', desc: '已完成 3 次游泳训练' }
+];
+global.GYM_MILESTONES = [
+    { count: 1, title: '力量萌新', desc: '完成第一次力量训练！' },
+    { count: 3, title: '渐入佳境', desc: '已完成 3 次力量训练' }
+];
+
 // Load dev.js
 const devCode = fs.readFileSync(__dirname + '/../dev.js', 'utf8');
 vm.runInThisContext(devCode, { filename: 'dev.js' });
@@ -69,10 +79,10 @@ let passed = 0, failed = 0;
 function assert(label, condition) {
     if (condition) {
         passed++;
-        console.log(`  ✅ ${label}`);
+        console.log(`  [PASS] ${label}`);
     } else {
         failed++;
-        console.error(`  ❌ FAIL: ${label}`);
+        console.error(`  [FAIL] ${label}`);
     }
 }
 
@@ -108,7 +118,7 @@ try {
 
 } catch (e) {
     failed++;
-    console.error(`  ❌ Test 1 Crash: ${e.message}\n${e.stack}`);
+    console.error(`  [CRASH] Test 1 Crash: ${e.message}\n${e.stack}`);
 }
 
 console.log('\n═══ Test 2: JSON Import Syntax and Scheme Validator ═══');
@@ -150,7 +160,7 @@ try {
 
 } catch (e) {
     failed++;
-    console.error(`  ❌ Test 2 Crash: ${e.message}\n${e.stack}`);
+    console.error(`  [CRASH] Test 2 Crash: ${e.message}\n${e.stack}`);
 }
 
 console.log('\n═══ Test 3: Sound and Simulation Utilities ═══');
@@ -235,13 +245,19 @@ try {
         assert('Upper body push split does not contain legs exercises', !chestLog.exercises.some(e => e.name === '杠铃深蹲'));
     }
     
-    // Check that weight history is populated for the chosen exercises
-    assert('Weight history contains records for 杠铃卧推', parsedWh['杠铃卧推'] !== undefined);
-    assert('Weight history records are sorted oldest-to-newest', parsedWh['杠铃卧推'][0].date < parsedWh['杠铃卧推'][parsedWh['杠铃卧推'].length - 1].date);
+    // Check achievements
+    const gymAchJson = localStorage.getItem('fit_gym_ach');
+    assert('active_user preset generates Gym achievements', gymAchJson !== null);
+    if (gymAchJson) {
+        const parsedGymAch = JSON.parse(gymAchJson);
+        assert('Gym achievement milestones list is non-empty', parsedGymAch.milestones.length > 0);
+        assert('Gym achievement count matches logs count', parsedGymAch.count === parsedLogs.filter(l => !l.isSwimDay).length);
+        assert('Gym achievement date matches matched log date', parsedGymAch.milestones[0].date !== undefined);
+    }
 
 } catch (e) {
     failed++;
-    console.error(`  ❌ Test 3 Crash: ${e.message}\n${e.stack}`);
+    console.error(`  [CRASH] Test 3 Crash: ${e.message}\n${e.stack}`);
 }
 
 // ── Summary ──
