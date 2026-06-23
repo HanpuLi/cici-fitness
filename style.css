@@ -186,6 +186,13 @@ body {
     font-feature-settings: "kern" 1, "liga" 1;
     font-variant-numeric: lining-nums;
     padding-bottom: 2rem;
+    overscroll-behavior-y: none;
+    animation: appFadeIn 0.45s ease-out;
+}
+
+@keyframes appFadeIn {
+    0% { opacity: 0; transform: scale(0.98); }
+    100% { opacity: 1; transform: scale(1); }
 }
 
 body::after {
@@ -1753,7 +1760,12 @@ textarea:focus {
     color: var(--ink);
 }
 
+.log-act-btn.del {
+    color: var(--terra);
+}
+
 .log-act-btn.del:hover {
+    background: var(--terra-bg);
     color: var(--terra);
 }
 
@@ -1778,7 +1790,7 @@ textarea:focus {
 }
 
 .timer-bar.show {
-    top: 20px;
+    top: calc(10px + env(safe-area-inset-top, 20px));
 }
 
 .timer-progress {

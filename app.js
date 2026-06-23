@@ -70,7 +70,7 @@ if(s)Object.assign(S,s);
 const p=lg(K.plan);
 if(p&&p.plan&&p.plan.days){
     S.plan=p.plan;
-    S.selDate=localStorage.getItem('fit_selDate') || p.selDate || todayStr();
+    S.selDate=localStorage.getItem(nsKey('fit_selDate')) || p.selDate || todayStr();
     if(_initialLoad && S.selDate<todayStr() && S.plan.days.some(d=>d.date===todayStr())){
         S.selDate=todayStr();
     }
@@ -90,14 +90,39 @@ if(S.plan && typeof autoAlignPlan==='function') autoAlignPlan();
 _initialLoad = false;
 }
 function applySettingsToUI(){
-document.querySelectorAll('#g-goal .chip').forEach(b=>b.classList.toggle('on',b.dataset.v===S.goal));
+document.querySelectorAll('#g-goal .chip').forEach(b=>b.classList.toggle('on',hasGoal(b.dataset.v)));
 document.querySelectorAll('#g-level .chip').forEach(b=>b.classList.toggle('on',b.dataset.v===S.level));
 document.getElementById('sl-days').value=S.days;
 document.getElementById('v-days').textContent=S.days+'天';
 document.getElementById('sl-dur').value=S.dur;
 document.getElementById('v-dur').textContent=S.dur+'分钟';
 document.querySelectorAll('#g-equip .chip').forEach(b=>b.classList.toggle('on',S.equip.includes(b.dataset.v)));
-document.querySelectorAll('#g-focus .chip').forEach(b=>b.classList.toggle('on',S.focus.includes(b.dataset.v)));
+document.querySelectorAll('#g-focus .chip').forEach(b=>{
+    const v = b.dataset.v;
+    if (hasGoal('倒三角矫正') && (v === '上肢' || v === '均衡全身')) {
+        b.classList.add('disabled');
+        b.style.opacity = 0.5;
+        b.style.pointerEvents = 'none';
+    } else {
+        b.classList.remove('disabled');
+        b.style.opacity = 1;
+        b.style.pointerEvents = 'auto';
+    }
+    b.classList.toggle('on',S.focus.includes(v));
+});
+
+const goalInfo = document.getElementById('goal-info');
+if (goalInfo) {
+    if (hasGoal('倒三角矫正')) {
+        goalInfo.innerHTML = "你的目标是降低上半身视觉宽度，下肢已自动启用，上肢仅维持不主动增长。<br>臀中肌外展每次必练；核心只做真空吸/死虫/plank；建议蛋白 1.6-2g/kg、热量盈余 200-300kcal。";
+        goalInfo.style.display = "block";
+    } else if (hasGoal('翘臀美背')) {
+        goalInfo.innerHTML = "臀推顶端挤压优先；美背日强化背阔与体态（圆肩改善）；收腰靠真空吸而非减脂；避免直立划船/耸肩。";
+        goalInfo.style.display = "block";
+    } else {
+        goalInfo.style.display = "none";
+    }
+}
 document.getElementById('limits').value=S.limits||'';
 document.querySelectorAll('#g-rest .chip').forEach(b=>b.classList.toggle('on',+b.dataset.v===(S.restDur??45)));
 document.querySelectorAll('#g-swim-level .chip').forEach(b=>b.classList.toggle('on',b.dataset.v===(S.swimLevel||'入门')));
@@ -218,12 +243,14 @@ if(confirm('警告：确定要清空所有计划、打卡记录和统计数据�
     if(_db && _user){
         try{ await _db.collection('users').doc(_user.uid).delete(); }catch(e){ console.warn('Cloud clear failed:',e); }
     }
-    // 3. Clear local (including weight history)
-    Object.values(K).forEach(key => localStorage.removeItem(key));
-    localStorage.removeItem('fit_selDate');
+    // 3. Clear local (including weight history) using nsKey
+    Object.values(K).forEach(key => localStorage.removeItem(nsKey(key)));
+    localStorage.removeItem(nsKey('fit_selDate'));
     W_HIST={};
     PR_LIST=[];
-    location.reload();
+    S.plan=null;
+    // 4. Force state save so local variables are reset
+    saveState();location.reload();
 }
 }
 
@@ -574,10 +601,27 @@ firebase.auth().onAuthStateChanged(handleAuth);
 }
 
 function handleAuth(user){
-_user=user;renderAuthBtn();
+_user=user;
+updateProfileUI();
+loadState();
+if(typeof render === 'function') render();
+if(typeof renderLog === 'function') renderLog();
+if(typeof renderStats === 'function') renderStats();
+applySettingsToUI();
+renderAuthBtn();
 if(user){setupRealtimeSync();showToast('已连接')}
 else{if(_unsub){_unsub();_unsub=null}}
 }
+
+window.updateProfileUI = function() {
+    const name = (_user && _user.displayName) ? _user.displayName.split(' ')[0] : '我的';
+    const titleEl = document.getElementById('doc-title');
+    if (titleEl) titleEl.textContent = `${name}健身计划`;
+    const nameEl = document.getElementById('user-name');
+    if (nameEl) nameEl.textContent = `${name}的计划`;
+    const sealEl = document.getElementById('user-seal');
+    if (sealEl) sealEl.textContent = name.charAt(0).toUpperCase() || '健';
+};
 
 function signInGoogle(){
 firebase.auth().signInWithPopup(new firebase.auth.GoogleAuthProvider()).catch(e=>alert('登录失败: '+e.message));
@@ -609,9 +653,10 @@ if(_localDirty){
 }
 let changed=false;
 Object.entries(doc.data()).forEach(([k,v])=>{
-const lv=localStorage.getItem(k);
+const nk=nsKey(k);
+const lv=localStorage.getItem(nk);
 const cv=JSON.stringify(v);
-if(lv!==cv){try{localStorage.setItem(k,cv);changed=true}catch{}}
+if(lv!==cv){try{localStorage.setItem(nk,cv);changed=true}catch{}}
 });
 if(changed){loadState();renderLog();showToast('已从云端同步')}
 },e=>console.warn('Sync error:',e));
@@ -636,7 +681,7 @@ if(typeof _mockSyncFail !== 'undefined' && _mockSyncFail) {
 }
 _pushing=true;
 const data={};
-CLOUD_KEYS.forEach(k=>{const v=localStorage.getItem(k);if(v!==null){try{data[k]=JSON.parse(v)}catch{data[k]=v}}});
+CLOUD_KEYS.forEach(k=>{const v=localStorage.getItem(nsKey(k));if(v!==null){try{data[k]=JSON.parse(v)}catch{data[k]=v}}});
 try{
 await _db.collection('users').doc(_user.uid).set(data,{merge:true});
 _localDirty=false; // Push succeeded — safe to accept cloud updates again
@@ -676,11 +721,17 @@ flashSaved();
 const el=document.getElementById('g-goal');if(!el)return;
 el.addEventListener('click',e=>{
 const b=e.target.closest('.chip');if(!b)return;
-document.querySelectorAll('#g-goal .chip').forEach(c=>c.classList.remove('on'));
-b.classList.add('on');
 const goal=b.dataset.v;
-S.goal=goal;
-if(goal==='臀腿塑形'){
+let goals = S.goal ? S.goal.split('+') : [];
+if(goals.includes(goal)){
+    goals = goals.filter(g => g !== goal);
+} else {
+    goals.push(goal);
+}
+if(goals.length === 0) goals.push('女性薄肌');
+S.goal = goals.join('+');
+
+if(hasGoal('倒三角矫正') || hasGoal('臀腿塑形') || hasGoal('翘臀美背')){
 S.focus=['下肢'];
 if(!S.equip.includes('健身房全套'))S.equip.push('健身房全套');
 }else{
@@ -1425,7 +1476,8 @@ function drawShareCard(logEntry) {
     // Inner calligraphic text
     ctx.fillStyle = 'rgba(198, 88, 56, 0.75)';
     ctx.font = 'bold 9px "Cormorant Garamond", Georgia, serif';
-    ctx.fillText('Cici', 0, -2);
+    const _sealName = (_user && _user.displayName) ? _user.displayName.split(' ')[0] : '健身';
+    ctx.fillText(_sealName, 0, -2);
     ctx.font = 'bold 8px "Noto Serif SC", Georgia, serif';
     ctx.fillText('印记', 0, 8);
     ctx.restore();

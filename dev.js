@@ -10,23 +10,27 @@
 
     const isSandboxActive = () => originalGetItem.call(localStorage, '__dev_active__') === '1';
 
+    function isSandboxKey(key) {
+        return SANDBOX_KEYS.some(sk => key === sk || key.endsWith('__' + sk));
+    }
+
     // Proxied localStorage
     localStorage.getItem = function(key) {
-        if (isSandboxActive() && SANDBOX_KEYS.includes(key)) {
+        if (isSandboxActive() && isSandboxKey(key)) {
             return originalGetItem.call(localStorage, '__dev__' + key);
         }
         return originalGetItem.call(localStorage, key);
     };
 
     localStorage.setItem = function(key, value) {
-        if (isSandboxActive() && SANDBOX_KEYS.includes(key)) {
+        if (isSandboxActive() && isSandboxKey(key)) {
             return originalSetItem.call(localStorage, '__dev__' + key, value);
         }
         return originalSetItem.call(localStorage, key, value);
     };
 
     localStorage.removeItem = function(key) {
-        if (isSandboxActive() && SANDBOX_KEYS.includes(key)) {
+        if (isSandboxActive() && isSandboxKey(key)) {
             return originalRemoveItem.call(localStorage, '__dev__' + key);
         }
         return originalRemoveItem.call(localStorage, key);
@@ -241,25 +245,27 @@
         }
     };
 
+    const getUid = () => typeof currentUid === 'function' ? currentUid() : 'anon';
+
     // ══ Data Sandbox Toggle ═════════════════════════════════════
     window.toggleSandbox = function(enable) {
+        const uid = getUid();
         if (enable) {
             // Activate Sandbox: copy current real state to sandbox keys
             SANDBOX_KEYS.forEach(k => {
-                const realVal = originalGetItem.call(localStorage, k);
+                const prefixed = uid + '__' + k;
+                const realVal = originalGetItem.call(localStorage, prefixed);
                 if (realVal !== null) {
-                    originalSetItem.call(localStorage, '__dev__' + k, realVal);
+                    originalSetItem.call(localStorage, '__dev__' + prefixed, realVal);
                 }
             });
             originalSetItem.call(localStorage, '__dev_active__', '1');
-            showToast('数据隔离沙箱已激活！正在重新载入...');
+            showToast('已进入安全沙箱，您的修改不会影响真实数据');
         } else {
-            // Deactivate Sandbox: clear all __dev__ keys
+            // Deactivate Sandbox: clean up sandbox keys
+            SANDBOX_KEYS.forEach(k => originalRemoveItem.call(localStorage, '__dev__' + uid + '__' + k));
             originalRemoveItem.call(localStorage, '__dev_active__');
-            SANDBOX_KEYS.forEach(k => {
-                originalRemoveItem.call(localStorage, '__dev__' + k);
-            });
-            showToast('已退出隔离沙箱！正在恢复真实数据...');
+            showToast('已退出安全沙箱');
         }
         setTimeout(() => location.reload(), 1000);
     };
@@ -372,7 +378,7 @@
                 pattern = gymPatterns[daysPerWeek] || gymPatterns[3];
             }
 
-            const splitsRef = typeof SPLITS !== 'undefined' ? SPLITS : {};
+            const splitsRef = (typeof S !== 'undefined' && S.goal === '臀腿塑形' && typeof GLUTE_SPLITS !== 'undefined') ? GLUTE_SPLITS : (typeof SPLITS !== 'undefined' ? SPLITS : {});
             const currentSplits = splitsRef[gymDays] || [
                 { type: '上肢推', groups: ['chest', 'shoulder', 'triceps'] },
                 { type: '上肢拉', groups: ['back', 'biceps'] },
@@ -519,9 +525,9 @@
                         });
                     }
                 });
-                localStorage.setItem('fit_swim', JSON.stringify(swimLogState));
+                localStorage.setItem(getUid() + '__fit_swim', JSON.stringify(swimLogState));
             } else {
-                localStorage.removeItem('fit_swim');
+                localStorage.removeItem(getUid() + '__fit_swim');
             }
 
             // Generate gym achievements
@@ -548,9 +554,9 @@
                         });
                     }
                 });
-                localStorage.setItem('fit_gym_ach', JSON.stringify(gymLogState));
+                localStorage.setItem(getUid() + '__fit_gym_ach', JSON.stringify(gymLogState));
             } else {
-                localStorage.removeItem('fit_gym_ach');
+                localStorage.removeItem(getUid() + '__fit_gym_ach');
             }
 
             if (typeof genPlan === 'function') {
@@ -645,14 +651,26 @@
     };
 
     // ══ Clear Mock Data Only (History / PR) ════════════════════
-    window.clearMockOnly = function() {
+    window.clearMockOnly = async function() {
         if (confirm('确定清空所有打卡历史、负重记录和个人最佳纪录（PR）吗？（此操作仅影响当前环境，若在沙箱中则仅清空沙箱数据）')) {
-            localStorage.removeItem('fit_log1');
-            localStorage.removeItem('fit_wh1');
-            localStorage.removeItem('fit_pr');
-            localStorage.removeItem('fit_pr1');
+            const uid = getUid();
+            localStorage.setItem(uid + '__fit_log1', '[]');
+            localStorage.setItem(uid + '__fit_wh1', '{}');
+            localStorage.setItem(uid + '__fit_pr', '[]');
+            localStorage.setItem(uid + '__fit_pr1', '{}');
+            
+            if (typeof LOG !== 'undefined') LOG = [];
+            if (typeof W_HIST !== 'undefined') W_HIST = {};
+            if (typeof PR_LIST !== 'undefined') PR_LIST = [];
+            if (typeof S !== 'undefined') S.prog = {};
+
+            if (typeof pushToCloud === 'function') {
+                showToast('正在同步清理到云端...');
+                await pushToCloud();
+            }
+            
             showToast('历史记录、负重及 PR 数据已清空！正在刷新...');
-            setTimeout(() => location.reload(), 1000);
+            setTimeout(() => location.reload(), 800);
         }
     };
 

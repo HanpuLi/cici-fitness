@@ -3,13 +3,13 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Cici 健身计划</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title id="doc-title">我的健身计划</title>
     <link rel="manifest" href="manifest.json">
     <link rel="icon" href="icon.svg" type="image/svg+xml">
-    <link rel="apple-touch-icon" href="icon.svg">
+    <link rel="apple-touch-icon" href="icon.png">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#6b5344">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -24,12 +24,12 @@
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 </head>
 
-<body>
+<body ontouchstart="">
     <header class="masthead">
-        <div class="masthead-seal">咪</div>
-        <div>
-            <h1>Cici</h1>
-            <p class="masthead-sub" id="masthead-sub" style="cursor: default; user-select: none;" onclick="triggerDevClick()">健身计划 · Fitness Planner</p>
+        <div class="masthead-seal" id="user-seal">健</div>
+        <div class="masthead-titles">
+            <h1 id="user-name">我的健身计划</h1>
+            <p class="masthead-sub" id="masthead-sub" style="cursor: default; user-select: none;" onclick="triggerDevClick()">FITNESS & WELLNESS</p>
         </div>
         <div class="masthead-right" style="display:flex;align-items:center;gap:8px">
             <button class="theme-toggle" id="theme-btn" onclick="toggleTheme()" title="切换模式"></button>
@@ -76,11 +76,14 @@
             <div class="panel">
                 <p class="panel-title">训练设置 <span class="saved-dot" id="saved-dot"></span></p>
                 
-                <p class="sec">训练目标</p>
+                <p class="sec">训练目标 <span style="font-size:11px;color:var(--ink3);font-weight:400">（可多选）</span></p>
                 <div class="chips" id="g-goal">
                     <button class="chip" data-v="女性薄肌">女性薄肌</button>
                     <button class="chip" data-v="臀腿塑形">臀腿塑形</button>
+                    <button class="chip" data-v="倒三角矫正">倒三角矫正</button>
+                    <button class="chip" data-v="翘臀美背">翘臀美背</button>
                 </div>
+                <div id="goal-info" style="font-size:11px;color:var(--ink3);margin:-4px 0 8px;padding:4px 8px;background:var(--surface2);border-radius:6px"></div>
                 
                 <p class="sec">当前水平</p>
                 <div class="chips" id="g-level">

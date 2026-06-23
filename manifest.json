@@ -1,6 +1,6 @@
 {
-  "name": "Cici 健身计划",
-  "short_name": "Cici Fitness",
+  "name": "健身计划",
+  "short_name": "健身计划",
   "start_url": "./Index.html",
   "display": "standalone",
   "background_color": "#f5f4ef",

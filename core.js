@@ -2,17 +2,26 @@
 const firebaseConfig={apiKey:"AIzaSyB12HcJxsqqmWoih3wnfpyqu9LDzEE9nXs",authDomain:"cici-fitness.firebaseapp.com",projectId:"cici-fitness",storageBucket:"cici-fitness.firebasestorage.app",messagingSenderId:"375793627351",appId:"1:375793627351:web:f2dbfd8e107206417f4092",measurementId:"G-ZHCCRWZ57P"};
 
 // ══ Storage Layer ════════════════════════════════════════
-const K={settings:'fit_s1',plan:'fit_p1',prog:'fit_pr1',log:'fit_log1',adj:'fit_adj1',wh:'fit_wh1',pr:'fit_pr'};
-function lg(k){try{const v=localStorage.getItem(k);return v?JSON.parse(v):null}catch{return null}}
-function ls(k,v){try{localStorage.setItem(k,JSON.stringify(v));schedulePush()}catch{}}
+const K={settings:'fit_s1',plan:'fit_p1',prog:'fit_pr1',log:'fit_log1',adj:'fit_adj1',wh:'fit_wh1',pr:'fit_pr',swim_log:'fit_swim',gym_log:'fit_gym_ach'};
+function currentUid(){ return (typeof firebase !== 'undefined' && firebase.auth().currentUser && firebase.auth().currentUser.uid) || 'anon'; }
+function nsKey(k){ return currentUid() + '__' + k; }
+function lg(k){try{const v=localStorage.getItem(nsKey(k));return v?JSON.parse(v):null}catch{return null}}
+function ls(k,v){try{localStorage.setItem(nsKey(k),JSON.stringify(v));if(typeof schedulePush==='function')schedulePush()}catch{}}
 
 // ══ State ════════════════════════════════════════════════
 const S={goal:'女性薄肌',level:'初级',days:3,dur:60,equip:['健身房全套'],focus:['均衡全身'],limits:'',plan:null,selDate:null,prog:{},adj:{},weights:{},volumeMultiplier:1.0,restDur:45,swimLevel:'入门',periodMode:false};
 let LOG=lg(K.log)||[];
 let W_HIST=lg(K.wh)||{};
 let PR_LIST=lg(K.pr)||[]; // {date,exercise,weight,prev}
+let SWIM_LOG=lg(K.swim_log)||{count:0,milestones:[]};
+let GYM_LOG=lg(K.gym_log)||{count:0,milestones:[]};
 let _logShowAll=false;
 let _calWeekOffset=0;
+
+// ══ Goal Helper ═════════════════════════════════════════
+// S.goal can be '女性薄肌', '臀腿塑形', or '女性薄肌+臀腿塑形'
+function hasGoal(g){return S.goal&&S.goal.includes(g)}
+function isCombinedGoal(){return hasGoal('女性薄肌')&&hasGoal('臀腿塑形')}
 
 // ══ Limits ═══════════════════════════════════════════════
 const LIMIT_RULES=[
@@ -20,6 +29,7 @@ const LIMIT_RULES=[
 {kw:['肩','肩膀','肩关节'],exclude:['杠铃推举','哑铃肩推','侧平举','直立划船','双杠臂屈伸','自由泳划臂+侧头呼吸','自由泳完整配合']},
 {kw:['腰','腰椎','腰背'],exclude:['传统硬拉','罗马尼亚硬拉','俯身划船','早安式体前屈','壶铃摆动']},
 {kw:['颈','颈椎'],exclude:['高位下拉','杠铃推举']},
+{kw:['斜方','脖子粗','脖子','肩颈','颈肩','圆肩'],exclude:['杠铃直立划船']},
 {kw:['跳','跳跃'],exclude:['跳绳','开合跳','跳蹲','波比跳']},
 {kw:['手腕','腕'],exclude:['杠铃卧推','杠铃弯举','俯卧撑','腹轮']},
 {kw:['踝','脚踝'],exclude:['跳绳','开合跳','站姿提踵']},
@@ -72,6 +82,8 @@ back:[
 {n:'直臂下压机',eq:['健身房全套'],muscle:['背阔'],diff:1,note:'手肘贴着靠垫向下压'},
 {n:'山羊挺身',eq:['健身房全套'],muscle:['竖脊肌','臀'],diff:1,note:'罗马椅上，腰背平直起身'},
 {n:'弹力带划船',eq:['弹力带'],muscle:['中背'],diff:1,note:'收紧肩胛骨'},
+{n:'俯卧YTW',eq:['哑铃','无器材','健身房全套'],muscle:['下斜方','后束'],diff:1,note:'俯卧或俯身，手臂依次摆出Y-T-W三个形状，重点激活下斜方让肩胛下沉'},
+{n:'靠墙天使',eq:['无器材'],muscle:['下斜方','姿势'],diff:1,note:'后背贴墙，手臂沿墙面上下滑动如雪天使，全程肩胛贴墙下沉',u:'次'},
 ],
 biceps:[
 {n:'杠铃弯举',eq:['健身房全套'],muscle:['二头'],diff:1,note:'上臂贴身不动，只弯曲前臂'},
@@ -108,6 +120,13 @@ quads:[
 {n:'高脚杯深蹲',eq:['哑铃','无器材'],muscle:['股四头','臀'],diff:1,note:'哑铃贴胸，挺胸下蹲'},
 {n:'壶铃高脚杯深蹲',eq:['壶铃','健身房全套'],muscle:['股四头','臀'],diff:1,note:'双手托壶铃贴胸，挺胸下蹲，动作更自然'},
 ],
+glutemed:[
+{n:'站姿绳索单腿外展',eq:['健身房全套'],muscle:['臀中肌'],diff:1,note:'踝部套绳，对侧手扶机架，单腿向侧方抬起，顶峰停留1秒。本馆主力外展动作（有龙门架）',bi:true},
+{n:'弹力带螃蟹步',eq:['弹力带','无器材'],muscle:['臀中肌'],diff:1,note:'弹力带套膝上，半蹲姿向侧走15-20步/方向，全程保持张力，膝盖不内扣',bi:true},
+{n:'侧卧抬腿',eq:['无器材','弹力带'],muscle:['臀中肌'],diff:1,note:'侧卧上腿伸直向侧上方抬约45°，顶峰停留1秒，骨盆不后倒',bi:true},
+{n:'弹力带蚌式开合',eq:['弹力带','无器材'],muscle:['臀中肌'],diff:1,note:'侧卧屈膝，膝盖如蚌壳向上打开，骨盆不后翻',bi:true},
+{n:'器械外展机',eq:['健身房全套'],muscle:['臀中肌'],diff:1,note:'身体前倾20-30°练上臀纤维。本馆若无此机，用站姿绳索单腿外展替代'},
+],
 hamglutes:[
 {n:'罗马尼亚硬拉',eq:['哑铃','健身房全套'],muscle:['腘绳','臀'],diff:2,note:'微屈膝，臀部后推，感受后侧拉伸'},
 {n:'传统硬拉',eq:['健身房全套'],muscle:['后链全部'],diff:3,note:'背部中立，腿部推地发力'},
@@ -117,11 +136,9 @@ hamglutes:[
 {n:'坐姿腿弯举',eq:['健身房全套'],muscle:['腘绳'],diff:1,note:'背贴靠垫，双腿用力向下压'},
 {n:'站姿单腿弯举机',eq:['健身房全套'],muscle:['腘绳'],diff:1,note:'单腿轮流向后上方弯曲',bi:true},
 {n:'绳索后踢腿',eq:['健身房全套'],muscle:['臀大肌'],diff:1,note:'脚套上把手，向后上方踢出',bi:true},
-{n:'器械外展机',eq:['健身房全套'],muscle:['臀中肌'],diff:1,note:'坐姿向外打开双腿'},
 {n:'器械内收机',eq:['健身房全套'],muscle:['内收肌'],diff:1,note:'坐姿向内夹拢双腿'},
 {n:'壶铃摆动',eq:['壶铃','健身房全套'],muscle:['臀','腘绳','核心'],diff:1,note:'髋部爆发式前推，手臂只是挂钩'},
 {n:'臀桥',eq:['无器材','弹力带'],muscle:['臀'],diff:1,note:'顶端停留，感受臀部发力'},
-{n:'弹力带蚌式开合',eq:['弹力带','无器材'],muscle:['臀中'],diff:1,note:'侧卧，膝盖打开',bi:true},
 ],
 calves:[
 {n:'站姿提踵',eq:['无器材','哑铃','健身房全套'],muscle:['小腿'],diff:1,note:'全幅度，顶端停顿1秒'},
@@ -130,6 +147,7 @@ calves:[
 {n:'坐姿提踵',eq:['健身房全套'],muscle:['比目鱼'],diff:1,note:'膝盖90°，控制速度'},
 ],
 core:[
+{n:'腹横肌真空吸',eq:['无器材','健身房全套'],muscle:['腹横肌'],diff:1,note:'呼气收腹，肚脐向脊柱方向吸紧，保持10-20秒。收紧不增厚腰围',u:'秒'},
 {n:'平板支撑',eq:['无器材','弹力带','哑铃','健身房全套'],muscle:['核心'],diff:1,note:'臀部不要过高或下塌',u:'秒'},
 {n:'卷腹',eq:['无器材','健身房全套'],muscle:['腹直肌'],diff:1,note:'下背贴地，肩胛骨离地即可'},
 {n:'坐姿卷腹机',eq:['健身房全套'],muscle:['腹直肌'],diff:1,note:'身体向前弯曲，双手抓住把手下拉'},
@@ -246,6 +264,187 @@ const SPLITS={
 {type:'全身有氧+拉伸',groups:['cardio','core'],pick:{cardio:3,core:2}},
 ],
 };
+
+// ══ Glute-Leg Splits (臀腿塑形专用) ═══════════════════════
+// 全部精力放在下半身：臀中肌改善腰胯比，臀大肌整体臀型，大腿前后侧让腿不显细。
+// 不安排任何上肢宽度训练。
+const GLUTE_SPLITS={
+// 2天：两次都按全套来 — 臀腿综合
+2:[
+{type:'臀腿综合（髋铰链+深蹲）',groups:['hamglutes','quads','glutemed','calves','core'],pick:{hamglutes:2,quads:2,glutemed:1,calves:1,core:1}},
+{type:'臀腿综合（深蹲+髋铰链）',groups:['quads','hamglutes','glutemed','calves','core'],pick:{quads:2,hamglutes:2,glutemed:1,calves:1,core:1}},
+],
+// 3天：股四日/臀腘日/综合日
+3:[
+{type:'股四头肌日（深蹲为主）',groups:['quads','hamglutes','calves','core'],pick:{quads:3,hamglutes:1,calves:1,core:1}},
+{type:'臀+腘绳肌日（髋铰链为主）',groups:['hamglutes','quads','glutemed','core'],pick:{hamglutes:3,quads:1,glutemed:1,core:1}},
+{type:'臀腿综合日',groups:['hamglutes','quads','glutemed','calves','core'],pick:{hamglutes:2,quads:1,glutemed:1,calves:1,core:1}},
+],
+// 4天：股四/臀腘/综合/臀中+小腿
+4:[
+{type:'股四头肌日（深蹲为主）',groups:['quads','hamglutes','calves','core'],pick:{quads:3,hamglutes:1,calves:1,core:1}},
+{type:'臀+腘绳肌日（髋铰链为主）',groups:['hamglutes','quads','core'],pick:{hamglutes:3,quads:1,core:1}},
+{type:'臀腿综合日',groups:['hamglutes','quads','glutemed','calves','core'],pick:{hamglutes:2,quads:1,glutemed:1,calves:1,core:1}},
+{type:'臀中肌+小腿强化',groups:['glutemed','hamglutes','calves','core'],pick:{glutemed:2,hamglutes:1,calves:2,core:1}},
+],
+// 5天：股四/臀腘/综合/股四进阶/臀中+小腿
+5:[
+{type:'股四头肌日（深蹲为主）',groups:['quads','hamglutes','calves','core'],pick:{quads:3,hamglutes:1,calves:1,core:1}},
+{type:'臀+腘绳肌日（髋铰链为主）',groups:['hamglutes','quads','core'],pick:{hamglutes:3,quads:1,core:1}},
+{type:'臀腿综合日',groups:['hamglutes','quads','glutemed','calves','core'],pick:{hamglutes:2,quads:1,glutemed:1,calves:1,core:1}},
+{type:'臀中肌+小腿强化',groups:['glutemed','hamglutes','calves','core'],pick:{glutemed:2,hamglutes:1,calves:2,core:1}},
+{type:'轻量有氧+拉伸',groups:['cardio','core'],pick:{cardio:3,core:2}},
+],
+// 6天：全下肢高频轮转
+6:[
+{type:'股四头肌日（深蹲为主）',groups:['quads','hamglutes','calves','core'],pick:{quads:3,hamglutes:1,calves:1,core:1}},
+{type:'臀+腘绳肌日（髋铰链为主）',groups:['hamglutes','quads','core'],pick:{hamglutes:3,quads:1,core:1}},
+{type:'臀腿综合日',groups:['hamglutes','quads','glutemed','calves','core'],pick:{hamglutes:2,quads:1,glutemed:1,calves:1,core:1}},
+{type:'臀中肌+小腿强化',groups:['glutemed','hamglutes','calves','core'],pick:{glutemed:2,hamglutes:1,calves:2,core:1}},
+{type:'轻量有氧+拉伸',groups:['cardio','core'],pick:{cardio:3,core:2}},
+{type:'臀大肌泵感日',groups:['hamglutes','glutemed','core'],pick:{hamglutes:4,glutemed:1,core:1}},
+],
+// 7天：6天分化+活动恢复
+7:[
+{type:'股四头肌日（深蹲为主）',groups:['quads','hamglutes','calves','core'],pick:{quads:3,hamglutes:1,calves:1,core:1}},
+{type:'臀+腘绳肌日（髋铰链为主）',groups:['hamglutes','quads','core'],pick:{hamglutes:3,quads:1,core:1}},
+{type:'臀腿综合日',groups:['hamglutes','quads','glutemed','calves','core'],pick:{hamglutes:2,quads:1,glutemed:1,calves:1,core:1}},
+{type:'臀中肌+小腿强化',groups:['glutemed','hamglutes','calves','core'],pick:{glutemed:2,hamglutes:1,calves:2,core:1}},
+{type:'轻量有氧+拉伸',groups:['cardio','core'],pick:{cardio:3,core:2}},
+{type:'臀大肌泵感日',groups:['hamglutes','glutemed','core'],pick:{hamglutes:4,glutemed:1,core:1}},
+{type:'活动休息日（纯拉伸/泡沫轴）',groups:['stretch'],pick:{stretch:5}},
+],
+};
+
+// ══ Athletic Splits (倒三角矫正 - Cait专属) ══════════════
+const ATHLETIC_SPLITS={
+  2:[
+    {type:'臀中肌宽度+臀大肌',groups:['glutemed','hamglutes','quads','core'],pick:{glutemed:3,hamglutes:1,quads:1,core:1}},
+    {type:'臀大肌爆发+腿',groups:['hamglutes','quads','glutemed','core'],pick:{hamglutes:2,quads:1,glutemed:1,core:1}},
+  ],
+  3:[
+    {type:'臀中肌宽度日（外展为主）',groups:['glutemed','hamglutes','core'],pick:{glutemed:3,hamglutes:1,core:1}},
+    {type:'臀大肌爆发日（臀推为主）',groups:['hamglutes','quads','glutemed','core'],pick:{hamglutes:2,quads:1,glutemed:1,core:1}},
+    {type:'腿部体积+综合日',groups:['quads','hamglutes','glutemed','calves'],pick:{quads:2,hamglutes:1,glutemed:1,calves:1}},
+  ],
+  4:[
+    {type:'臀中肌宽度（重）',groups:['glutemed','core'],pick:{glutemed:4,core:1}},
+    {type:'臀大肌爆发',groups:['hamglutes','quads','glutemed','core'],pick:{hamglutes:3,glutemed:1,core:1}},
+    {type:'股四+腘绳',groups:['quads','hamglutes','calves'],pick:{quads:3,hamglutes:1,calves:1}},
+    {type:'臀中+泵感综合',groups:['glutemed','hamglutes'],pick:{glutemed:3,hamglutes:2}},
+  ],
+  5:[
+    {type:'臀中肌宽度',groups:['glutemed','core'],pick:{glutemed:4,core:1}},
+    {type:'臀大肌爆发',groups:['hamglutes','quads','glutemed','core'],pick:{hamglutes:3,glutemed:1,core:1}},
+    {type:'股四头肌日',groups:['quads','calves'],pick:{quads:4,calves:1}},
+    {type:'臀中+臀大泵感',groups:['glutemed','hamglutes'],pick:{glutemed:3,hamglutes:2}},
+    {type:'腘绳+综合+核心',groups:['hamglutes','glutemed','core'],pick:{hamglutes:3,glutemed:1,core:1}},
+  ],
+  6:[
+    {type:'臀中肌宽度',groups:['glutemed','core'],pick:{glutemed:4,core:1}},
+    {type:'臀大肌爆发',groups:['hamglutes','quads','glutemed','core'],pick:{hamglutes:3,glutemed:1,core:1}},
+    {type:'股四头肌日',groups:['quads','calves'],pick:{quads:4,calves:1}},
+    {type:'臀中+臀大泵感',groups:['glutemed','hamglutes'],pick:{glutemed:3,hamglutes:2}},
+    {type:'腘绳+综合+核心',groups:['hamglutes','glutemed','core'],pick:{hamglutes:3,glutemed:1,core:1}},
+    {type:'臀中强化',groups:['glutemed','calves'],pick:{glutemed:3,calves:2}},
+  ],
+  7:[
+    {type:'臀中肌宽度',groups:['glutemed','core'],pick:{glutemed:4,core:1}},
+    {type:'臀大肌爆发',groups:['hamglutes','quads','glutemed','core'],pick:{hamglutes:3,glutemed:1,core:1}},
+    {type:'股四头肌日',groups:['quads','calves'],pick:{quads:4,calves:1}},
+    {type:'臀中+臀大泵感',groups:['glutemed','hamglutes'],pick:{glutemed:3,hamglutes:2}},
+    {type:'腘绳+综合+核心',groups:['hamglutes','glutemed','core'],pick:{hamglutes:3,glutemed:1,core:1}},
+    {type:'臀中强化',groups:['glutemed','calves'],pick:{glutemed:3,calves:2}},
+    {type:'轻量有氧+拉伸',groups:['cardio','stretch'],pick:{cardio:2,stretch:3}},
+  ],
+};
+
+// ══ Glute Back Splits (翘臀美背 - Cici专属) ══════════════
+const GLUTE_BACK_SPLITS={
+  2:[
+    {type:'臀+腿日',groups:['hamglutes','quads','core'],pick:{hamglutes:3,quads:1,core:1}},
+    {type:'美背+臀+核心',groups:['back','hamglutes','core'],pick:{back:3,hamglutes:1,core:1}},
+  ],
+  3:[
+    {type:'臀大肌日（臀峰）',groups:['hamglutes','quads','core'],pick:{hamglutes:3,quads:1,core:1}},
+    {type:'美背+体态日',groups:['back','core'],pick:{back:4,core:2}},
+    {type:'臀腿+核心综合',groups:['hamglutes','quads','glutemed','core'],pick:{hamglutes:2,quads:1,glutemed:1,core:1}},
+  ],
+  4:[
+    {type:'臀大肌（臀峰）',groups:['hamglutes','quads','core'],pick:{hamglutes:3,quads:1,core:1}},
+    {type:'美背+体态',groups:['back','core'],pick:{back:4,core:2}},
+    {type:'股四+臀腿',groups:['quads','hamglutes','core'],pick:{quads:3,hamglutes:1,core:1}},
+    {type:'臀中+美背收尾',groups:['glutemed','back','core'],pick:{glutemed:2,back:2,core:1}},
+  ],
+  5:[
+    {type:'臀大肌（臀峰）',groups:['hamglutes','quads','core'],pick:{hamglutes:3,quads:1,core:1}},
+    {type:'美背+体态',groups:['back','core'],pick:{back:4,core:2}},
+    {type:'股四头肌',groups:['quads','calves','core'],pick:{quads:3,calves:1,core:1}},
+    {type:'臀腿综合',groups:['hamglutes','glutemed','core'],pick:{hamglutes:3,glutemed:1,core:1}},
+    {type:'美背+核心收腰',groups:['back','core'],pick:{back:3,core:2}},
+  ],
+  6:[
+    {type:'臀大肌（臀峰）',groups:['hamglutes','quads','core'],pick:{hamglutes:3,quads:1,core:1}},
+    {type:'美背+体态',groups:['back','core'],pick:{back:4,core:2}},
+    {type:'股四头肌',groups:['quads','calves','core'],pick:{quads:3,calves:1,core:1}},
+    {type:'臀腿综合',groups:['hamglutes','glutemed','core'],pick:{hamglutes:3,glutemed:1,core:1}},
+    {type:'美背+核心收腰',groups:['back','core'],pick:{back:3,core:2}},
+    {type:'臀大肌泵感日',groups:['hamglutes','core'],pick:{hamglutes:4,core:1}},
+  ],
+  7:[
+    {type:'臀大肌（臀峰）',groups:['hamglutes','quads','core'],pick:{hamglutes:3,quads:1,core:1}},
+    {type:'美背+体态',groups:['back','core'],pick:{back:4,core:2}},
+    {type:'股四头肌',groups:['quads','calves','core'],pick:{quads:3,calves:1,core:1}},
+    {type:'臀腿综合',groups:['hamglutes','glutemed','core'],pick:{hamglutes:3,glutemed:1,core:1}},
+    {type:'美背+核心收腰',groups:['back','core'],pick:{back:3,core:2}},
+    {type:'臀大肌泵感日',groups:['hamglutes','core'],pick:{hamglutes:4,core:1}},
+    {type:'轻量有氧+拉伸',groups:['cardio','stretch'],pick:{cardio:3,stretch:2}},
+  ],
+};
+
+// ══ Combined Splits (两者结合: 臀腿为主 + 上肢维持) ════════
+const COMBINED_SPLITS={
+2:[
+{type:'上肢维持（推+拉）',groups:['chest','back','shoulder','core'],pick:{chest:1,back:2,shoulder:1,core:1}},
+{type:'臀腿综合（髋铰链+深蹲）',groups:['hamglutes','quads','calves','core'],pick:{hamglutes:3,quads:2,calves:1,core:1}},
+],
+3:[
+{type:'上肢维持（推+拉）',groups:['chest','back','shoulder','core'],pick:{chest:1,back:2,shoulder:1,core:1}},
+{type:'股四头肌日（深蹲为主）',groups:['quads','hamglutes','calves','core'],pick:{quads:3,hamglutes:1,calves:1,core:1}},
+{type:'臀+腘绳肌日（髋铰链为主）',groups:['hamglutes','quads','core'],pick:{hamglutes:4,quads:1,core:1}},
+],
+4:[
+{type:'上肢维持（推+拉）',groups:['chest','back','shoulder','core'],pick:{chest:1,back:2,shoulder:1,core:1}},
+{type:'股四头肌日（深蹲为主）',groups:['quads','hamglutes','calves','core'],pick:{quads:3,hamglutes:1,calves:1,core:1}},
+{type:'臀+腘绳肌日（髋铰链为主）',groups:['hamglutes','quads','core'],pick:{hamglutes:4,quads:1,core:1}},
+{type:'臀腿综合日',groups:['hamglutes','quads','calves','core'],pick:{hamglutes:2,quads:2,calves:1,core:1}},
+],
+5:[
+{type:'上肢维持·推（胸+肩+三头）',groups:['chest','shoulder','triceps','core'],pick:{chest:2,shoulder:1,triceps:1,core:1}},
+{type:'上肢维持·拉（背+二头）',groups:['back','biceps','core'],pick:{back:2,biceps:1,core:1}},
+{type:'股四头肌日（深蹲为主）',groups:['quads','hamglutes','calves'],pick:{quads:3,hamglutes:1,calves:1}},
+{type:'臀+腘绳肌日（髋铰链为主）',groups:['hamglutes','quads','core'],pick:{hamglutes:4,quads:1,core:1}},
+{type:'臀腿综合日',groups:['hamglutes','quads','calves','core'],pick:{hamglutes:2,quads:2,calves:1,core:1}},
+],
+6:[
+{type:'上肢维持·推（胸+肩+三头）',groups:['chest','shoulder','triceps','core'],pick:{chest:2,shoulder:1,triceps:1,core:1}},
+{type:'上肢维持·拉（背+二头）',groups:['back','biceps','core'],pick:{back:2,biceps:1,core:1}},
+{type:'股四头肌日（深蹲为主）',groups:['quads','hamglutes','calves'],pick:{quads:4,hamglutes:1,calves:1}},
+{type:'臀+腘绳肌日（髋铰链为主）',groups:['hamglutes','core'],pick:{hamglutes:5,core:1}},
+{type:'臀腿综合日',groups:['hamglutes','quads','calves','core'],pick:{hamglutes:2,quads:2,calves:1,core:1}},
+{type:'臀中肌+小腿强化',groups:['hamglutes','calves','core'],pick:{hamglutes:3,calves:2,core:1}},
+],
+7:[
+{type:'上肢维持·推（胸+肩+三头）',groups:['chest','shoulder','triceps','core'],pick:{chest:2,shoulder:1,triceps:1,core:1}},
+{type:'上肢维持·拉（背+二头）',groups:['back','biceps','core'],pick:{back:2,biceps:1,core:1}},
+{type:'股四头肌日（深蹲为主）',groups:['quads','hamglutes','calves'],pick:{quads:4,hamglutes:1,calves:1}},
+{type:'臀+腘绳肌日（髋铰链为主）',groups:['hamglutes','core'],pick:{hamglutes:5,core:1}},
+{type:'臀腿综合日',groups:['hamglutes','quads','calves','core'],pick:{hamglutes:2,quads:2,calves:1,core:1}},
+{type:'臀中肌+小腿强化',groups:['hamglutes','calves','core'],pick:{hamglutes:3,calves:2,core:1}},
+{type:'轻量有氧+拉伸',groups:['cardio','core'],pick:{cardio:3,core:2}},
+],
+};
+
 // focusMap: 用户选择的重点→对应肌群组，上肢包括背部
 const FOCUS_MAP={'均衡全身':['chest','shoulder','back','biceps','triceps','quads','hamglutes','calves','core','cardio'],'上肢':['chest','shoulder','back','biceps','triceps'],'下肢':['quads','hamglutes','calves'],'核心':['core'],'有氧':['cardio'],'游泳':['swimming','core','back']};
 
@@ -261,11 +460,48 @@ const SCHEMES={
   rest:'60-90秒',cardioMin:10,timePerSet:120,
   intensityNote:{初级:'注重动作规范，激活臀肌',中级:'增加负重，强调向心爆发与离心控制',高级:'向力竭挑战，强化臀腿泵感'},
   weightGuide:{初级:'约为最大力量的50-60%',中级:'约为最大力量的65-75%',高级:'约为最大力量的75-85%'}
+},
+'女性薄肌+臀腿塑形':{
+  sets:{初级:3,中级:4,高级:4},reps:{初级:12,中级:10,高级:8},
+  rest:'60-90秒',cardioMin:10,timePerSet:115,
+  intensityNote:{初级:'下肢渐进超负荷，上肢轻量维持',中级:'下肢向心爆发+离心控制，上肢控制性训练',高级:'下肢向力竭挑战，上肢维持不增量'},
+  weightGuide:{初级:'下肢50-60% · 上肢40-50%',中级:'下肢65-75% · 上肢50-60%',高级:'下肢75-85% · 上肢55-65%'}
+},
+'倒三角矫正':{
+  sets:{初级:3,中级:4,高级:4}, reps:{初级:15,中级:12,高级:10},
+  rest:'60-90秒', cardioMin:10, timePerSet:120,
+  intensityNote:{
+    初级:'先学会激活臀中肌，外展类动作做到酸胀',
+    中级:'外展类加阻力但保持15-20次，臀推强调顶端2秒挤压',
+    高级:'外展向力竭，臀推冲个人纪录，臀中肌每次都练'
+  },
+  weightGuide:{
+    初级:'臀推约max的60-70%；外展类用能完成15-20次的阻力',
+    中级:'臀推约max的75-85%；外展类15-20次仍吃力的阻力',
+    高级:'臀推约max的85-95%；外展类力竭区间'
+  }
+},
+'翘臀美背':{
+  sets:{初级:3,中级:4,高级:4}, reps:{初级:12,中级:12,高级:10},
+  rest:'60-90秒', cardioMin:10, timePerSet:110,
+  intensityNote:{
+    初级:'臀推顶端挤压，背部动作专注肩胛后收下沉',
+    中级:'臀推加重强调臀峰，划船/下拉控制离心',
+    高级:'臀推突破，美背日加量，核心真空吸收紧腰腹'
+  },
+  weightGuide:{
+    初级:'臀推约max的60-70%，背部约50-60%',
+    中级:'臀推约max的75-85%，背部约60-70%',
+    高级:'臀推约max的85-95%，背部约70-80%'
+  }
 }
 };
 const TIPS={
 '女性薄肌':'组间休息45-60秒保持心率。训练后必做拉伸避免肌肉结块。重点强化臀腿和核心线条。',
-'臀腿塑形':'注重臀肌激活，多做深蹲、硬拉等复合动作。组间休息稍长以保证负重质量。配合充足蛋白质摄入。'
+'臀腿塑形':'全部精力放在下半身，把视觉重心拉下来。臀推是最优先的动作，直接针对臀大肌。臀中肌侧向训练是改善腰胯比的关键，别跳过。重量选最后两次比较吃力的程度，每周尽量加一点点。蛋白质每公斤体重每天1.6-2克，热量吃够才能长肌肉。',
+'女性薄肌+臀腿塑形':'以臀腿为主战场，上肢仅做维持性训练。下半身每周2-3次，髋铰链和深蹲交替。上肢每周1-2次轻量推拉即可，不追求上肢增量。蛋白质每公斤体重每天1.6-2克，热量吃够才能长肌肉。',
+'倒三角矫正':'臀中肌外展是改善倒三角的关键，每次训练都做，不能跳。上肢宽度类（背阔、侧肩、斜方）只维持不主动练。核心只做真空吸、死虫、平板，避免负重转体/侧屈增厚腰侧。骨架肩宽改不了，把训练量全压到臀腿，视觉重心拉下来。蛋白每公斤1.6-2g，热量盈余200-300kcal才长得出肌肉。',
+'翘臀美背':'臀推是提臀峰第一动作，顶端挤压1-2秒。你可以也应该练背，背阔分离感和肩胛下沉能让背显挺、视觉收腰。斜方"厚"多半是圆肩体态：停掉直立划船和耸肩，多做面拉、YTW、靠墙天使，把肩膀沉下去。收腰靠真空吸和卷腹收紧腹横肌，不是减脂。'
 };
 const SWIM_TIPS={
 '入门':'蛙泳腿口诀：收翻蹬夹。每次蹬腿后享受2-3秒滑行，不要急着做下一个动作。扶池边是你最好的练习伙伴。',
@@ -389,12 +625,23 @@ const groupBudget={};
 const baseTotal=Object.values(split.pick).reduce((a,b)=>a+b,0);
 
 // Add smart warmups based on split groups
+const upperGroups = ['chest','back','shoulder','biceps','triceps'];
+const lowerGroups = ['quads','hamglutes','glutemed','calves'];
+const hasUpper = split.groups.some(g=>upperGroups.includes(g));
+const hasLower = split.groups.some(g=>lowerGroups.includes(g));
+const hasCore = split.groups.includes('core');
+
 const wPool=(DB.warmup||[]).filter(ex=>!used.has(ex.n));
 const wGlobal = wPool.filter(e=>e.muscle.includes('全身'));
-const wSpecific = wPool.filter(e=>split.groups.some(g=>e.muscle.includes(g==='chest'||g==='back'||g==='shoulder'?'上肢':'下肢')));
+const wSpecific = wPool.filter(e=>{
+    if(hasUpper && e.muscle.includes('上肢')) return true;
+    if(hasLower && e.muscle.includes('下肢')) return true;
+    if(hasCore && e.muscle.includes('核心')) return true;
+    return false;
+});
 [...(wGlobal.slice(0,2)), ...(wSpecific.slice(0,2))].forEach(ex=>{
     if(used.has(ex.n))return; used.add(ex.n);
-    result.push({name:ex.n,sets:1,reps:ex.warmupSec||45,unit:'秒',note:ex.note,group:'warmup',diff:ex.diff,isWarmup:true,bi:!!ex.bi});
+    result.push({name:ex.n,sets:1,reps:ex.warmupSec||45,unit:'秒',note:ex.note,group:'warmup',diff:ex.diff,isWarmup:true,bi:!!ex.bi,muscle:ex.muscle});
 });
 
 split.groups.forEach(g=>{
@@ -416,6 +663,12 @@ if(S.periodMode){
   const filtered = pool.filter(ex => !skipKeywords.some(k => ex.n.includes(k)));
   if(filtered.length > 0) pool = filtered;
 }
+// 臀腿塑形 & 倒三角矫正: core = 收紧不增厚, 排除增厚腰侧的动作
+if((hasGoal('臀腿塑形') || hasGoal('倒三角矫正')) && grp==='core'){
+  const waistThicken = ['俄罗斯转体', '负重俄罗斯转体', '绳索伐木', '腹轮'];
+  const thinCore = pool.filter(ex => !waistThicken.some(k => ex.n.includes(k)));
+  if(thinCore.length > 0) pool = thinCore;
+}
 // Difficulty filter
 if(S.level==='初级')pool=pool.filter(ex=>ex.diff<=2);
 if(S.level==='高级')pool.sort((a,b)=>b.diff-a.diff);// prefer harder
@@ -429,7 +682,7 @@ const exSets=isCardio?1:sets;
 const exReps=isCardio?Math.max(sch.cardioMin,10):(isTime?(S.level==='初级'?30:S.level==='中级'?45:60):reps);
 // Build coaching note combining technique + goal/level context
 const coaching = (S.periodMode ? '经期温和模式 | ' : '') + `${ex.note} — ${sch.intensityNote[S.level]}（${sch.weightGuide[S.level]}）`;
-result.push({name:ex.n,sets:exSets,reps:exReps,unit:isCardio?'分钟':(isTime?'秒':'次'),note:coaching,group:grp,diff:ex.diff,bi:!!ex.bi});
+result.push({name:ex.n,sets:exSets,reps:exReps,unit:isCardio?'分钟':(isTime?'秒':'次'),note:coaching,group:grp,diff:ex.diff,bi:!!ex.bi,muscle:ex.muscle});
 });
 });
 
@@ -439,19 +692,29 @@ if(!split.groups.includes('cardio') && S.dur >= 45) {
     if(S.periodMode){
         cPool = cPool.filter(ex => !ex.n.includes('跳') && !ex.n.includes('波比') && !ex.n.includes('攀爬') && !ex.n.includes('单车'));
     }
+    if(hasGoal('臀腿塑形') || hasGoal('倒三角矫正') || hasGoal('翘臀美背')){
+        const legCardio = cPool.filter(ex => ex.n.includes('攀爬') || ex.n.includes('骑行') || ex.n.includes('单车') || ex.n.includes('椭圆'));
+        cPool = legCardio.length ? legCardio : cPool.filter(ex => !ex.n.includes('上肢功率'));
+    }
     if(cPool.length) {
         const cEx = cPool[Math.floor(Math.random()*cPool.length)];
-        result.push({name:cEx.n,sets:1,reps:15,unit:'分钟',note:'薄肌有氧收尾 — 保持心率120-140，帮助肌肉拉长',group:'cardio',diff:cEx.diff});
+        const cardioNote = (hasGoal('臀腿塑形') || hasGoal('倒三角矫正') || hasGoal('翘臀美背')) ? '臀腿有氧收尾 — 优先攀爬机/骑行机，保持对下肢的刺激' : '薄肌有氧收尾 — 保持心率120-140，帮助肌肉拉长';
+        result.push({name:cEx.n,sets:1,reps:15,unit:'分钟',note:cardioNote,group:'cardio',diff:cEx.diff,muscle:cEx.muscle});
     }
 }
 
 // Add smart stretches
 const sPool=(DB.stretch||[]).filter(ex=>!used.has(ex.n));
-const sGlobal = sPool.filter(e=>e.muscle.includes('全身')||e.muscle.includes('核心'));
-const sSpecific = sPool.filter(e=>split.groups.some(g=>e.muscle.includes(g==='chest'||g==='back'||g==='shoulder'?'上肢':'下肢')));
+const sGlobal = sPool.filter(e=>e.muscle.includes('全身'));
+const sSpecific = sPool.filter(e=>{
+    if(hasUpper && e.muscle.includes('上肢')) return true;
+    if(hasLower && e.muscle.includes('下肢')) return true;
+    if(hasCore && e.muscle.includes('核心')) return true;
+    return false;
+});
 [...(sGlobal.slice(0,2)), ...(sSpecific.slice(0,3))].forEach(ex=>{
     if(used.has(ex.n))return; used.add(ex.n);
-    result.push({name:ex.n,sets:1,reps:30,unit:'秒',note:ex.note,group:'stretch',diff:ex.diff,isStretch:true,bi:!!ex.bi});
+    result.push({name:ex.n,sets:1,reps:30,unit:'秒',note:ex.note,group:'stretch',diff:ex.diff,isStretch:true,bi:!!ex.bi,muscle:ex.muscle});
 });
 
 return result;
@@ -708,7 +971,11 @@ gymPerWeek=sp.gym; swimPerWeek=sp.swim;
 }
 
 // Select the correct split template based on GYM days (not total)
-const splits=SPLITS[gymPerWeek]||SPLITS[3];
+// 臀腿塑形 uses dedicated lower-body-only splits
+const splits = hasGoal('倒三角矫正')?(ATHLETIC_SPLITS[gymPerWeek]||ATHLETIC_SPLITS[3]):
+               hasGoal('翘臀美背')?(GLUTE_BACK_SPLITS[gymPerWeek]||GLUTE_BACK_SPLITS[3]):
+               isCombinedGoal()?(COMBINED_SPLITS[gymPerWeek]||COMBINED_SPLITS[3]):
+               (hasGoal('臀腿塑形')?(GLUTE_SPLITS[gymPerWeek]||GLUTE_SPLITS[3]):(SPLITS[gymPerWeek]||SPLITS[3]));
 
 // Build weekly pattern
 let pattern;
@@ -894,7 +1161,10 @@ function autoAlignPlan() {
         const sp = SWIM_SPLIT[S.days] || {gym: Math.max(2, S.days - 1), swim: 1};
         gymPerWeek = sp.gym;
     }
-    const splits = SPLITS[gymPerWeek] || SPLITS[3];
+    const splits = hasGoal('倒三角矫正')?(ATHLETIC_SPLITS[gymPerWeek]||ATHLETIC_SPLITS[3]):
+                   hasGoal('翘臀美背')?(GLUTE_BACK_SPLITS[gymPerWeek]||GLUTE_BACK_SPLITS[3]):
+                   isCombinedGoal()?(COMBINED_SPLITS[gymPerWeek]||COMBINED_SPLITS[3]):
+                   (hasGoal('臀腿塑形')?(GLUTE_SPLITS[gymPerWeek]||GLUTE_SPLITS[3]):(SPLITS[gymPerWeek]||SPLITS[3]));
     
     // 1. Find last completed gym workout type
     let lastCompletedType = null;
@@ -990,24 +1260,42 @@ function renderOnboarding(){
             </p>
         </div>
 
-        <div class="onboard-section-title">I. 选择训练重心</div>
+        <div class="onboard-section-title">I. 选择训练重心 <span style="font-size:11px;color:var(--ink3);font-weight:400">（可多选）</span></div>
         <div class="onboard-goal-grid">
-            <div class="onboard-goal-card ${S.goal === '女性薄肌' ? 'on' : ''}" onclick="selectOnboardGoal('女性薄肌')">
-                <h3 class="onboard-goal-name">女性薄肌计划</h3>
-                <p class="onboard-goal-desc">专注全身比例的协调性与肌肉线条的平滑感。通过控制负重与深度慢速收缩，激活深层肌群，改善身体形态与挺拔度。</p>
+            <div class="onboard-goal-card ${hasGoal('女性薄肌') ? 'on' : ''}" onclick="selectOnboardGoal('女性薄肌')">
+                <h3 class="onboard-goal-name">女性薄肌</h3>
+                <p class="onboard-goal-desc">全身比例均衡，低负重高次数，激活深层肌群，改善身体形态与挺拔度。</p>
                 <div class="onboard-goal-tags">
                     <span class="onboard-goal-tag">全身均衡</span>
                     <span class="onboard-goal-tag">低负重</span>
                     <span class="onboard-goal-tag">修长线条</span>
                 </div>
             </div>
-            <div class="onboard-goal-card ${S.goal === '臀腿塑形' ? 'on' : ''}" onclick="selectOnboardGoal('臀腿塑形')">
-                <h3 class="onboard-goal-name">臀腿塑形计划</h3>
-                <p class="onboard-goal-desc">侧重于臀肌与大腿后侧的深度募集。包含高效率的臀肌激活与进阶力量训练，强化下肢稳定度，塑造饱满健康的线条。</p>
+            <div class="onboard-goal-card ${hasGoal('臀腿塑形') ? 'on' : ''}" onclick="selectOnboardGoal('臀腿塑形')">
+                <h3 class="onboard-goal-name">臀腿塑形</h3>
+                <p class="onboard-goal-desc">全部精力放在下半身。臀中肌改善腰胯比，大腿前后侧让腿更饱满。</p>
                 <div class="onboard-goal-tags">
-                    <span class="onboard-goal-tag">臀肌激活</span>
-                    <span class="onboard-goal-tag">力量募集</span>
-                    <span class="onboard-goal-tag">下肢侧重</span>
+                    <span class="onboard-goal-tag">纯下半身</span>
+                    <span class="onboard-goal-tag">改善腰胯比</span>
+                    <span class="onboard-goal-tag">渐进超负荷</span>
+                </div>
+            </div>
+            <div class="onboard-goal-card ${hasGoal('倒三角矫正') ? 'on' : ''}" onclick="selectOnboardGoal('倒三角矫正')">
+                <h3 class="onboard-goal-name">倒三角矫正</h3>
+                <p class="onboard-goal-desc">专注拉低视觉重心。臀中肌外展必练，核心只做真空吸/死虫。下肢自动启用。</p>
+                <div class="onboard-goal-tags">
+                    <span class="onboard-goal-tag">纯下半身</span>
+                    <span class="onboard-goal-tag">禁止上肢</span>
+                    <span class="onboard-goal-tag">核心收腰</span>
+                </div>
+            </div>
+            <div class="onboard-goal-card ${hasGoal('翘臀美背') ? 'on' : ''}" onclick="selectOnboardGoal('翘臀美背')">
+                <h3 class="onboard-goal-name">翘臀美背</h3>
+                <p class="onboard-goal-desc">强化臀峰与背阔。多做面拉/YTW改善圆肩，避免斜方肌与腰部增厚。</p>
+                <div class="onboard-goal-tags">
+                    <span class="onboard-goal-tag">臀峰强化</span>
+                    <span class="onboard-goal-tag">背阔分离</span>
+                    <span class="onboard-goal-tag">体态改善</span>
                 </div>
             </div>
         </div>
@@ -1064,8 +1352,16 @@ function renderOnboarding(){
 }
 
 globalThis.selectOnboardGoal = function(goal) {
-    S.goal = goal;
-    if (goal === '臀腿塑形') {
+    let goals = S.goal ? S.goal.split('+') : [];
+    if(goals.includes(goal)){
+        goals = goals.filter(g => g !== goal);
+    } else {
+        goals.push(goal);
+    }
+    if(goals.length === 0) goals.push('女性薄肌');
+    S.goal = goals.join('+');
+
+    if(hasGoal('倒三角矫正') || hasGoal('臀腿塑形') || hasGoal('翘臀美背')){
         S.focus = ['下肢'];
         if (!S.equip.includes('健身房全套')) S.equip.push('健身房全套');
     } else {
@@ -1330,7 +1626,7 @@ const sugW=needsWt?suggestWeight(ex.name):null;
 const dispW=curW!==null?curW:(sugW??'');
 return`<div class="exrow${done?' done-ex':''}"><div style="flex:1;min-width:0">
 <div class="exname" onclick="showExDetail('${ex.name}')" style="cursor:pointer">${ex.name}${needsWt&&W_HIST[ex.name]&&W_HIST[ex.name].length>0&&(curW||0)>=Math.max(...W_HIST[ex.name].map(h=>h.weight))?` <span title="个人纪录" style="font-size:9px;color:var(--terra);border:1px solid var(--terra);border-radius:2px;padding:0 2px;margin-left:4px;font-weight:600">纪录</span>`:''} <i class="ti ti-info-circle" style="font-size:11px;opacity:.4;vertical-align:middle"></i>${!locked&&!ex.isWarmup&&!ex.isStretch?` <span class="swap-btn" onclick="event.stopPropagation();swapExercise('${sel.date}',${i})" title="替换动作" style="border:1px solid var(--sage);color:var(--sage);border-radius:2px;padding:0 4px;font-size:10px;margin-left:4px">替换</span>`:''}</div>
-<div class="exnote">${ex.note}${ex.bi?' (左右各做一遍算1组)':''}</div>
+<div class="exnote">${(ex.muscle||[]).map(m=>`<span style="font-size:9px;background:var(--surface2);color:var(--ink2);padding:1px 4px;border-radius:2px;margin-right:4px;display:inline-block">${m}</span>`).join('')}${ex.note}${ex.bi?' (左右各做一遍算1组)':''}</div>
 ${needsWt&&!locked?`<div class="wt-row">
 <input type="number" class="wt-input" value="${dispW||''}" placeholder="${sugW||''}" onchange="setWeight('${sel.date}',${i},+this.value)" step="${getWeightStep(ex.name)}" min="0">
 <span class="wt-unit">kg</span>
@@ -1369,6 +1665,35 @@ h+=`<div class="tip" style="text-align:center;padding:2rem">\u4f11\u606f\u65e5 \
 h+=`<div class="tip">${tip}</div>`;
 document.getElementById('main').innerHTML=h;
 initTouchDrag();
+
+if ('setAppBadge' in navigator) {
+    const todayStrVal = todayStr();
+    const todayPlan = S.plan?.days.find(d => d.date === todayStrVal);
+    if (todayPlan && !todayPlan.isRest && !LOG.some(l => l.date === todayStrVal && l.workout === todayPlan.workoutType)) {
+        navigator.setAppBadge(1).catch(()=>{});
+    } else {
+        navigator.clearAppBadge().catch(()=>{});
+    }
+}
+
+const isIos = /iphone|ipad|ipod/.test(window.navigator.userAgent.toLowerCase());
+const isStandalone = ('standalone' in window.navigator) && window.navigator.standalone;
+let promptEl = document.getElementById('ios-install-prompt');
+if (isIos && !isStandalone && !localStorage.getItem('hideInstallPrompt')) {
+    if (!promptEl) {
+        promptEl = document.createElement('div');
+        promptEl.id = 'ios-install-prompt';
+        promptEl.innerHTML = `
+            <div style="flex:1; font-size:12px; line-height:1.4;">
+                <strong style="display:block; font-size:13px; margin-bottom:2px">获取完美体验 🚀</strong>
+                点击底部的 <i class="ti ti-share" style="font-size:14px; vertical-align:middle; margin:0 2px"></i> ，然后选择<strong>“添加到主屏幕”</strong>
+            </div>
+            <button onclick="document.getElementById('ios-install-prompt').remove(); localStorage.setItem('hideInstallPrompt', '1')" style="background:none; border:none; color:var(--ink2); font-size:20px; padding:0 0 0 10px; cursor:pointer">&times;</button>
+        `;
+        promptEl.style.cssText = 'position:fixed; bottom:max(env(safe-area-inset-bottom, 20px), 20px); left:50%; transform:translateX(-50%); width:90%; max-width:400px; background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:12px 16px; display:flex; align-items:center; box-shadow:0 8px 24px rgba(0,0,0,0.12); z-index:9999; animation:paneFadeIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);';
+        document.body.appendChild(promptEl);
+    }
+}
 }
 
 // ══ Interactions ════════════════════════════════════════
@@ -1397,6 +1722,20 @@ function _getAudioCtx() {
     if(_audioCtx.state === 'suspended') _audioCtx.resume();
     return _audioCtx;
 }
+
+function unlockAudio() {
+    try {
+        const ctx = _getAudioCtx();
+        if(ctx.state === 'suspended') ctx.resume();
+        const buffer = ctx.createBuffer(1, 1, 22050);
+        const source = ctx.createBufferSource();
+        source.buffer = buffer;
+        source.connect(ctx.destination);
+        source.start(0);
+    } catch(e){}
+}
+document.addEventListener('touchstart', unlockAudio, { once: true });
+document.addEventListener('click', unlockAudio, { once: true });
 
 // ── Shared: create a simple convolution reverb impulse ──
 function _makeReverb(ctx, decay, len) {
@@ -1600,8 +1939,26 @@ function playWorkoutCompleteSound() {
     } catch(e) { console.warn('Audio:', e); }
 }
 
+let _wakeLock = null;
+async function _requestWakeLock() {
+    if ('wakeLock' in navigator) {
+        try {
+            _wakeLock = await navigator.wakeLock.request('screen');
+        } catch (err) { console.warn('WakeLock failed:', err); }
+    }
+}
+function _releaseWakeLock() {
+    if (_wakeLock !== null) {
+        _wakeLock.release().catch(()=>{});
+        _wakeLock = null;
+    }
+}
+
 function startTimer(seconds, label="休息中") {
     clearInterval(_timerInterval);
+    _releaseWakeLock();
+    _requestWakeLock();
+    
     const bar = document.getElementById('universal-timer');
     const timeEl = document.getElementById('timer-time');
     const lblEl = document.getElementById('timer-label');
@@ -1610,12 +1967,14 @@ function startTimer(seconds, label="休息中") {
     
     lblEl.innerText = label;
     bar.classList.add('show');
+    unlockAudio();
     playRestStartSound();
     
-    let total = seconds;
-    let remain = seconds;
+    const total = seconds;
+    const endTime = Date.now() + seconds * 1000;
     
     function update() {
+        const remain = Math.max(0, Math.ceil((endTime - Date.now()) / 1000));
         const m = Math.floor(remain / 60);
         const s = remain % 60;
         timeEl.innerText = String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
@@ -1623,18 +1982,19 @@ function startTimer(seconds, label="休息中") {
         
         if (remain <= 0) {
             clearInterval(_timerInterval);
+            _releaseWakeLock();
             playDing();
             setTimeout(() => { bar.classList.remove('show'); }, 3000);
         }
-        remain--;
     }
     
     update();
-    _timerInterval = setInterval(update, 1000);
+    _timerInterval = setInterval(update, 200);
 }
 
 function stopTimer() {
     clearInterval(_timerInterval);
+    _releaseWakeLock();
     const bar = document.getElementById('universal-timer');
     if(bar) bar.classList.remove('show');
 }
