@@ -520,7 +520,7 @@ const SWIM_MILESTONES=[
 {count:30,icon:'',title:'乘风破浪',desc:'已完成 30 次游泳训练！'},
 {count:50,icon:'',title:'美人鱼',desc:'已完成 50 次游泳训练！！'},
 ];
-let SWIM_LOG=lg('fit_swim')||{count:0,milestones:[]};
+SWIM_LOG=lg('fit_swim')||{count:0,milestones:[]};
 function checkSwimMilestone(){
 SWIM_LOG.count=(SWIM_LOG.count||0)+1;
 const m=SWIM_MILESTONES.find(ms=>ms.count===SWIM_LOG.count);
@@ -540,7 +540,7 @@ const GYM_MILESTONES=[
 {count:30,icon:'',title:'钢铁之魂',desc:'已完成 30 次力量训练！'},
 {count:50,icon:'',title:'终极雕刻家',desc:'已完成 50 次力量训练！！'},
 ];
-let GYM_LOG=lg('fit_gym_ach')||{count:0,milestones:[]};
+GYM_LOG=lg('fit_gym_ach')||{count:0,milestones:[]};
 function checkGymMilestone(){
 GYM_LOG.count=(GYM_LOG.count||0)+1;
 const m=GYM_MILESTONES.find(ms=>ms.count===GYM_LOG.count);
