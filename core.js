@@ -774,6 +774,13 @@ if (S.volumeMultiplier) baseTarget = Math.round(baseTarget * S.volumeMultiplier)
 return Math.max(1, baseTarget);
 }
 
+// 平衡 & 单腿稳定动作（「平衡稳定」重点用；不进常规肌群池，作为附加块）
+const BALANCE_MOVES=[
+  {n:'单腿站立',eq:['无器材','健身房全套'],muscle:['踝稳定','核心'],diff:1,note:'单脚站立、另一脚抬离地面，收紧核心保持；进阶闭眼或站软垫',u:'秒',bi:true},
+  {n:'单腿硬拉',eq:['无器材','哑铃','健身房全套'],muscle:['臀','腘绳','平衡'],diff:2,note:'单腿微屈，髋向后铰链上身前倾、后腿伸直成一线，背平直，臀腿+平衡',bi:true},
+  {n:'单腿臀桥',eq:['无器材','健身房全套'],muscle:['臀','骨盆稳定'],diff:1,note:'仰卧屈一膝、另一腿伸直，顶髋至身体一线，骨盆保持水平不下掉',bi:true},
+  {n:'燕式平衡',eq:['无器材','健身房全套'],muscle:['臀','平衡'],diff:2,note:'单腿站、上身前倾对侧腿后抬与背成一线(飞机式)，双臂平展助平衡',u:'秒',bi:true},
+];
 function pickExercises(split,excluded){
 const result=[],used=new Set();
 const sch=currentScheme();
@@ -868,6 +875,19 @@ if(!split.groups.includes('cardio') && S.dur >= 45) {
     }
 }
 
+// 上肢紧致（「上肢紧致」重点，且非上肢日）：轻量高次数塑形，紧致不增维度、不练宽度
+if(S.focus && S.focus.includes('上肢紧致') && !hasUpper){
+  const tone=['绳索下压','哑铃臂屈伸','面拉','反向飞鸟机','俯身飞鸟','坐姿划船','锤式弯举'];
+  let tp=tone.map(n=>{for(const g of['triceps','shoulder','back','biceps']){const f=(DB[g]||[]).find(e=>e.n===n);if(f)return{ex:f,grp:g}}return null}).filter(o=>o&&o.ex.eq.some(e=>e==='无器材'||S.equip.includes(e))&&!used.has(o.ex.n)&&!excluded.has(o.ex.n));
+  for(let i=tp.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[tp[i],tp[j]]=[tp[j],tp[i]]}
+  tp.slice(0,2).forEach(o=>{used.add(o.ex.n);result.push({name:o.ex.n,sets:Math.min(sets,3),reps:18,unit:'次',note:o.ex.note+' — 轻塑形：高次数轻重量，紧致不增维度',group:o.grp,diff:o.ex.diff,bi:!!o.ex.bi,muscle:o.ex.muscle})});
+}
+// 平衡 & 单腿稳定（「平衡稳定」重点）
+if(S.focus && S.focus.includes('平衡稳定')){
+  let bp=BALANCE_MOVES.filter(e=>e.eq.some(q=>q==='无器材'||S.equip.includes(q))&&!used.has(e.n)&&!excluded.has(e.n));
+  for(let i=bp.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[bp[i],bp[j]]=[bp[j],bp[i]]}
+  bp.slice(0,2).forEach(e=>{used.add(e.n);result.push({name:e.n,sets:2,reps:e.u==='秒'?30:12,unit:e.u||'次',note:e.note,group:'core',diff:e.diff,bi:!!e.bi,muscle:e.muscle})});
+}
 // Add smart stretches
 const sPool=(DB.stretch||[]).filter(ex=>!used.has(ex.n));
 const sGlobal = sPool.filter(e=>e.muscle.includes('全身'));
@@ -2553,6 +2573,11 @@ function initTouchDrag(){
 // ══ Exercise Detail Modal ═══════════════════════════════
 // Detail data inline - key exercises with full breakdown
 const EX_DETAIL = {
+  // === 平衡 / 单腿稳定（平衡稳定 模块）===
+  '单腿站立': { muscles:['踝稳定','核心'], steps:['单脚站立，另一脚抬离地面','收紧核心、目视前方保持','进阶可闭眼或站软垫上，换边'], tips:['脚趾轻抓地帮助稳定','晃就先睁眼/手扶墙'], mistakes:['憋气','骨盆歪斜'] },
+  '单腿硬拉': { muscles:['臀','腘绳','平衡'], steps:['单腿微屈站立','髋向后铰链、上身前倾，后腿向后伸成一线','背平直、臀腿发力站起，换边'], tips:['想象后脚跟向后推墙','先扶物找到平衡再脱手或加哑铃'], mistakes:['弓背','膝盖锁死','骨盆打开转胯'] },
+  '单腿臀桥': { muscles:['臀','骨盆稳定'], steps:['仰卧屈一膝、另一腿伸直','支撑腿发力顶髋至身体一线','骨盆保持水平不下掉，换边'], tips:['用臀不用腰','骨盆两侧等高'], mistakes:['塌腰','骨盆歪向一侧'] },
+  '燕式平衡': { muscles:['臀','平衡','下背'], steps:['单腿站立','上身前倾、对侧腿向后抬，与背成一条直线(飞机式)','双臂平展帮助平衡，保持后换边'], tips:['核心收紧、视线落地面前方'], mistakes:['弓背塌腰','骨盆侧翻'] },
   // === 脚踝灵活 / 小腿（少练小腿，重灵活）===
   '脚踝绕环': { muscles:['踝'], steps:['坐或站、抬起一只脚','脚踝带动脚掌缓慢画大圈','顺/逆时针各转后换脚'], tips:['幅度尽量大、速度慢','穿高跟前后都该常做'], mistakes:['只动脚趾不动踝','转太快'] },
   '腓肠肌拉伸': { muscles:['腓肠肌(小腿上部)'], steps:['弓步，后腿伸直、脚跟踩地','重心前压，感受后小腿上部拉伸','两侧各30-60秒'], tips:['后脚尖朝正前、脚跟别离地'], mistakes:['脚跟抬起','含胸弓背'] },
