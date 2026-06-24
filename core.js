@@ -704,7 +704,7 @@ groupBudget[g]=cnt;
 split.groups.forEach(grp=>{
 const count=groupBudget[grp]||0;
 if(!count)return;
-let pool=(DB[grp]||[]).filter(ex=>ex.eq.some(e=>S.equip.includes(e))&&!used.has(ex.n)&&!excluded.has(ex.n));
+let pool=(DB[grp]||[]).filter(ex=>ex.eq.some(e=>e==='无器材'||S.equip.includes(e))&&!used.has(ex.n)&&!excluded.has(ex.n));
 if(S.periodMode){
   const skipKeywords = ['深蹲', '硬拉', '臀推', '悬挂', '腹轮', '倒蹬', '哈克', '波比', '转体', '卷腹', '抬腿', '伐木'];
   const filtered = pool.filter(ex => !skipKeywords.some(k => ex.n.includes(k)));
@@ -735,7 +735,7 @@ result.push({name:ex.n,sets:exSets,reps:exReps,unit:isCardio?'分钟':(isTime?'�
 
 // Always append cardio finisher if not a pure cardio day
 if(!split.groups.includes('cardio') && S.dur >= 45) {
-    let cPool = DB.cardio.filter(ex=>ex.eq.some(e=>S.equip.includes(e)));
+    let cPool = DB.cardio.filter(ex=>ex.eq.some(e=>e==='无器材'||S.equip.includes(e)));
     if(S.periodMode){
         cPool = cPool.filter(ex => !ex.n.includes('跳') && !ex.n.includes('波比') && !ex.n.includes('攀爬') && !ex.n.includes('单车'));
     }
