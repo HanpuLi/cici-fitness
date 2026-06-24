@@ -527,6 +527,19 @@ const TIPS={
 '倒三角矫正':'臀中肌外展是改善倒三角的关键，每次训练都做，不能跳。上肢宽度类（背阔、侧肩、斜方）只维持不主动练。核心只做真空吸、死虫、平板，避免负重转体/侧屈增厚腰侧。骨架肩宽改不了，把训练量全压到臀腿，视觉重心拉下来。蛋白每公斤1.6-2g，热量盈余200-300kcal才长得出肌肉。',
 '翘臀美背':'臀推是提臀峰第一动作，顶端挤压1-2秒。你可以也应该练背，背阔分离感和肩胛下沉能让背显挺、视觉收腰。斜方"厚"多半是圆肩体态：停掉直立划船和耸肩，多做面拉、YTW、靠墙天使，把肩膀沉下去。收腰靠真空吸和卷腹收紧腹横肌，不是减脂。'
 };
+// Resolve S.goal to a canonical SCHEMES/TIPS key. S.goal may be a combo like
+// '女性薄肌+臀腿塑形' or, from older data, an order-swapped/invalid string. Fall back
+// along the SAME priority genPlan() uses to pick split templates, so intensity
+// (sets/reps/weight) never disagrees with the chosen template.
+function currentGoalKey(){
+  if(SCHEMES[S.goal]) return S.goal;
+  if(hasGoal('倒三角矫正')) return '倒三角矫正';
+  if(hasGoal('翘臀美背'))   return '翘臀美背';
+  if(isCombinedGoal())      return '女性薄肌+臀腿塑形';
+  if(hasGoal('臀腿塑形'))   return '臀腿塑形';
+  return '女性薄肌';
+}
+function currentScheme(){ return SCHEMES[currentGoalKey()]; }
 const SWIM_TIPS={
 '入门':'蛙泳腿口诀：收翻蹬夹。每次蹬腿后享受2-3秒滑行，不要急着做下一个动作。扶池边是你最好的练习伙伴。',
 '进阶':'好的蛙泳70%时间在滑行。关注节奏而非速度，累了就加长滑行而不是加快频率。',
@@ -628,7 +641,7 @@ function rebuildAchievementsFromLogs() {
 // ══ Plan Generator ═══════════════════════════════════════
 // Derive how many exercises fit in session based on duration
 function calcTotalExercises(){
-const sch=SCHEMES[S.goal]||SCHEMES['女性薄肌'];
+const sch=currentScheme();
 const warmup=5,cooldown=10;
 const available=S.dur-warmup-cooldown;
 const exTime=sch.timePerSet*(sch.sets[S.level]||3)/60; // minutes per exercise
@@ -639,7 +652,7 @@ return Math.max(1, baseTarget);
 
 function pickExercises(split,excluded){
 const result=[],used=new Set();
-const sch=SCHEMES[S.goal]||SCHEMES['女性薄肌'];
+const sch=currentScheme();
 const sets=sch.sets[S.level],reps=sch.reps[S.level];
 const focusMap=FOCUS_MAP;
 const totalTarget=calcTotalExercises();
@@ -1099,9 +1112,9 @@ days.push({date:ds,isRest:true,workoutType:'休息',duration:0,exercises:[]});
 }
 }
 
-const sch=SCHEMES[S.goal]||SCHEMES['女性薄肌'];
+const sch=currentScheme();
 const isSwimPlan=hasPool&&swimPerWeek>0;
-let tipText=TIPS[S.goal]||TIPS['女性薄肌'];
+let tipText=TIPS[currentGoalKey()]||TIPS['女性薄肌'];
 if(isSwimPlan){
 tipText+=`\n游泳水平：${SWIM_TIPS[S.swimLevel||'入门']}\n本周安排：${gymPerWeek}天力量 + ${swimPerWeek}天游泳`;
 }
