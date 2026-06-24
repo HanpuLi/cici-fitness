@@ -728,7 +728,11 @@ const isCardio=grp==='cardio',isTime=!!ex.u;
 const exSets=isCardio?1:sets;
 const exReps=isCardio?Math.max(sch.cardioMin,10):(isTime?(S.level==='初级'?30:S.level==='中级'?45:60):reps);
 // Build coaching note combining technique + goal/level context
-const coaching = (S.periodMode ? '经期温和模式 | ' : '') + `${ex.note} — ${sch.intensityNote[S.level]}（${sch.weightGuide[S.level]}）`;
+// Show the real last recorded weight (W_HIST) instead of a fabricated %max —
+// app has no 1RM input, so the percentage was meaningless. No history → omit.
+const lastW = getLastWeight(ex.n, true) || getLastWeight(ex.n, false);
+const wHint = lastW ? `（上次 ${lastW.weight}kg）` : '';
+const coaching = (S.periodMode ? '经期温和模式 | ' : '') + `${ex.note} — ${sch.intensityNote[S.level]}${wHint}`;
 result.push({name:ex.n,sets:exSets,reps:exReps,unit:isCardio?'分钟':(isTime?'秒':'次'),note:coaching,group:grp,diff:ex.diff,bi:!!ex.bi,muscle:ex.muscle});
 });
 });
