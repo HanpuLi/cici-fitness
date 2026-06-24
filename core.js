@@ -59,7 +59,22 @@ const LIMIT_RULES = [
   { kw: ['手腕', '腕'], exclude: ['杠铃卧推', '杠铃弯举', '俯卧撑', '腹轮'] },
   { kw: ['踝', '脚踝'], exclude: ['跳绳', '开合跳', '站姿提踵'] },
 ];
-function getExcluded() { const s = new Set(); LIMIT_RULES.forEach(r => { if (r.kw.some(k => S.limits.includes(k))) r.exclude.forEach(e => s.add(e)) }); return s }
+function getExcluded() { 
+  const s = new Set(); 
+  LIMIT_RULES.forEach(r => { if (r.kw.some(k => S.limits.includes(k))) r.exclude.forEach(e => s.add(e)) }); 
+  
+  if (!hasGoal('女性线条')) {
+    const erotic = [
+      '蛙式臀桥', '蛙式臀冲', '跪姿挺髋后仰', '深度深蹲摇摆', '跪姿下沉触踵', '宽距深蹲弹震', '俯卧青蛙翘尾', 
+      '肩垫高极限臀推', '跪姿股四极限后仰', '仰卧风车画腿', '跪姿狂野摇摆', '跪姿骨盆画八字', '四足爬行姿控', 
+      '跪姿后踢抬腿', '跪姿俯身挺身', '四足跪姿髋外展', '四足爬行姿态', '仰卧魅态桥', '触觉连结发力', 
+      '靠墙倒挂大V字', '仰卧折叠犁式', '靠墙九十度前屈', '反绑式跪姿前倾', '仰卧牛面式', '仰卧快乐婴儿式', 
+      '青蛙趴', '小狗伸展式 (融心式)', '仰卧大V字开合', '池边悬浮分腿', '深水螺旋下沉', '池畔仰卧后仰'
+    ];
+    erotic.forEach(e => s.add(e));
+  }
+  return s; 
+}
 
 // ══ Exercise Database (overhauled) ═══════════════════════
 // Each exercise: n=name, eq=equipment, cat=category, muscle=primary muscles, diff=difficulty 1-3, note=cue
@@ -450,7 +465,7 @@ const ATHLETIC_SPLITS = {
   ],
 };
 
-// ══ Curve Splits (女性曲线 — 极致女性曲线: 圆臀+宽胯+丰满大腿+蛮腰) ══
+// ══ Curve Splits (女性线条 — 极致女性线条: 圆臀+宽胯+丰满大腿+蛮腰) ══
 const CURVE_SPLITS = {
   2: [
     { type: '臀大肌+腿后丰满', groups: ['hamglutes', 'quads', 'glutemed', 'core'], pick: { hamglutes: 3, quads: 2, glutemed: 1, core: 1 } },
@@ -629,7 +644,7 @@ const SCHEMES = {
       高级: '臀推约max的85-95%，背部约70-80%'
     }
   },
-  '女性曲线': {
+  '女性线条': {
     sets: { 初级: 3, 中级: 4, 高级: 4 }, reps: { 初级: 15, 中级: 12, 高级: 10 },
     rest: '45-75秒', cardioMin: 12, timePerSet: 110,
     intensityNote: {
@@ -650,7 +665,7 @@ const TIPS = {
   '女性薄肌+臀腿塑形': '以臀腿为主战场，上肢仅做维持性训练。下半身每周2-3次，髋铰链和深蹲交替。上肢每周1-2次轻量推拉即可，不追求上肢增量。蛋白质每公斤体重每天1.6-2克，热量吃够才能长肌肉。',
   '倒三角矫正': '臀中肌外展是改善倒三角的关键，每次训练都做，不能跳。上肢宽度类（背阔、侧肩、斜方）只维持不主动练。核心只做真空吸、死虫、平板，避免负重转体/侧屈增厚腰侧。骨架肩宽改不了，把训练量全压到臀腿，视觉重心拉下来。蛋白每公斤1.6-2g，热量盈余200-300kcal才长得出肌肉。',
   '翘臀美背': '臀推是提臀峰第一动作，顶端挤压1-2秒。你可以也应该练背，背阔分离感和肩胛下沉能让背显挺、视觉收腰。斜方"厚"多半是圆肩体态：停掉直立划船和耸肩，多做面拉、YTW、靠墙天使，把肩膀沉下去。收腰靠真空吸和卷腹收紧腹横肌，不是减脂。',
-  '女性曲线': '目标是极致女性曲线：圆翘臀(臀推/硬拉)+宽胯(臀中肌外展)+丰满大腿(股四/腘绳/内收都练、堆围度)+极小蛮腰。臀和大腿都要渐进加重、长肉长围度，大腿要有肉感；练腿别一味只练外侧股四显"壮"，多兼顾腘绳/内收/臀腿衔接让大腿丰满柔顺。腰反过来——只做真空吸/平板收紧，绝不做负重转体/侧屈(会把腰练厚练方)，靠"胯臀大、腰细"的对比拉满沙漏感。上肢几乎不练以免变宽。吃要够(蛋白每公斤1.6-2g+轻微热量盈余)才能把臀腿喂大；腰围靠真空吸+控糖控总量+有氧维持，不靠饿。'
+  '女性线条': '目标是极致女性线条：圆翘臀(臀推/硬拉)+宽胯(臀中肌外展)+丰满大腿(股四/腘绳/内收都练、堆围度)+极小蛮腰。臀和大腿都要渐进加重、长肉长围度，大腿要有肉感；练腿别一味只练外侧股四显"壮"，多兼顾腘绳/内收/臀腿衔接让大腿丰满柔顺。腰反过来——只做真空吸/平板收紧，绝不做负重转体/侧屈(会把腰练厚练方)，靠"胯臀大、腰细"的对比拉满沙漏感。上肢几乎不练以免变宽。吃要够(蛋白每公斤1.6-2g+轻微热量盈余)才能把臀腿喂大；腰围靠真空吸+控糖控总量+有氧维持，不靠饿。'
 };
 // Resolve S.goal to a canonical SCHEMES/TIPS key. S.goal may be a combo like
 // '女性薄肌+臀腿塑形' or, from older data, an order-swapped/invalid string. Fall back
@@ -658,7 +673,7 @@ const TIPS = {
 // (sets/reps/weight) never disagrees with the chosen template.
 function currentGoalKey() {
   if (SCHEMES[S.goal]) return S.goal;
-  if (hasGoal('女性曲线')) return '女性曲线';
+  if (hasGoal('女性线条')) return '女性线条';
   if (hasGoal('倒三角矫正')) return '倒三角矫正';
   if (hasGoal('翘臀美背')) return '翘臀美背';
   if (isCombinedGoal()) return '女性薄肌+臀腿塑形';
@@ -670,7 +685,7 @@ function currentScheme() { return SCHEMES[currentGoalKey()]; }
 // Used by BOTH the settings chip (app.js) and onboarding (selectOnboardGoal) so the two can't
 // drift into producing invalid keys like '倒三角矫正+翘臀美背'. Caller persists + re-renders.
 function applyGoalToggle(goal) {
-  const EXCLUSIVE = ['倒三角矫正', '翘臀美背', '女性曲线']; // 整套预设方案，不与其他目标组合
+  const EXCLUSIVE = ['倒三角矫正', '翘臀美背', '女性线条']; // 整套预设方案，不与其他目标组合
   const ORDER = ['女性薄肌', '臀腿塑形'];        // 规范组合顺序，命中 '女性薄肌+臀腿塑形' key
   let goals = S.goal ? S.goal.split('+') : [];
   if (EXCLUSIVE.includes(goal)) {
@@ -682,7 +697,7 @@ function applyGoalToggle(goal) {
   if (goals.length === 0) goals.push('女性薄肌');
   goals.sort((a, b) => ORDER.indexOf(a) - ORDER.indexOf(b));
   S.goal = goals.join('+');
-  if (hasGoal('倒三角矫正') || hasGoal('臀腿塑形') || hasGoal('翘臀美背') || hasGoal('女性曲线')) {
+  if (hasGoal('倒三角矫正') || hasGoal('臀腿塑形') || hasGoal('翘臀美背') || hasGoal('女性线条')) {
     S.focus = ['下肢'];
     ['健身房全套', '弹力带', '无器材'].forEach(x => { if (!S.equip.includes(x)) S.equip.push(x); }); // 臀中肌动作多在弹力带/徒手池
   } else {
@@ -869,7 +884,7 @@ function pickExercises(split, excluded) {
       if (filtered.length > 0) pool = filtered;
     }
     // 臀腿塑形 & 倒三角矫正: core = 收紧不增厚, 排除增厚腰侧的动作
-    if ((hasGoal('臀腿塑形') || hasGoal('倒三角矫正') || hasGoal('女性曲线')) && grp === 'core') {
+    if ((hasGoal('臀腿塑形') || hasGoal('倒三角矫正') || hasGoal('女性线条')) && grp === 'core') {
       const waistThicken = ['俄罗斯转体', '负重俄罗斯转体', '绳索伐木', '腹轮'];
       const thinCore = pool.filter(ex => !waistThicken.some(k => ex.n.includes(k)));
       if (thinCore.length > 0) pool = thinCore;
@@ -901,13 +916,13 @@ function pickExercises(split, excluded) {
     if (S.periodMode) {
       cPool = cPool.filter(ex => !ex.n.includes('跳') && !ex.n.includes('波比') && !ex.n.includes('攀爬') && !ex.n.includes('单车'));
     }
-    if (hasGoal('臀腿塑形') || hasGoal('倒三角矫正') || hasGoal('翘臀美背') || hasGoal('女性曲线')) {
+    if (hasGoal('臀腿塑形') || hasGoal('倒三角矫正') || hasGoal('翘臀美背') || hasGoal('女性线条')) {
       const legCardio = cPool.filter(ex => ex.n.includes('攀爬') || ex.n.includes('骑行') || ex.n.includes('单车') || ex.n.includes('椭圆'));
       cPool = legCardio.length ? legCardio : cPool.filter(ex => !ex.n.includes('上肢功率'));
     }
     if (cPool.length) {
       const cEx = cPool[Math.floor(Math.random() * cPool.length)];
-      const cardioNote = (hasGoal('臀腿塑形') || hasGoal('倒三角矫正') || hasGoal('翘臀美背') || hasGoal('女性曲线')) ? '臀腿有氧收尾 — 优先攀爬机/骑行机，保持对下肢的刺激' : '薄肌有氧收尾 — 保持心率120-140，帮助肌肉拉长';
+      const cardioNote = (hasGoal('臀腿塑形') || hasGoal('倒三角矫正') || hasGoal('翘臀美背') || hasGoal('女性线条')) ? '臀腿有氧收尾 — 优先攀爬机/骑行机，保持对下肢的刺激' : '薄肌有氧收尾 — 保持心率120-140，帮助肌肉拉长';
       result.push({ name: cEx.n, sets: 1, reps: 15, unit: '分钟', note: cardioNote, group: 'cardio', diff: cEx.diff, muscle: cEx.muscle });
     }
   }
@@ -1208,7 +1223,7 @@ function genPlan(isRecalibrate = false, preserveFuture = false) {
 
   // Select the correct split template based on GYM days (not total)
   // 臀腿塑形 uses dedicated lower-body-only splits
-  const splits = hasGoal('女性曲线') ? (CURVE_SPLITS[gymPerWeek] || CURVE_SPLITS[3]) :
+  const splits = hasGoal('女性线条') ? (CURVE_SPLITS[gymPerWeek] || CURVE_SPLITS[3]) :
     hasGoal('倒三角矫正') ? (ATHLETIC_SPLITS[gymPerWeek] || ATHLETIC_SPLITS[3]) :
       hasGoal('翘臀美背') ? (GLUTE_BACK_SPLITS[gymPerWeek] || GLUTE_BACK_SPLITS[3]) :
         isCombinedGoal() ? (COMBINED_SPLITS[gymPerWeek] || COMBINED_SPLITS[3]) :
@@ -1398,7 +1413,7 @@ function autoAlignPlan() {
     const sp = SWIM_SPLIT[S.days] || { gym: Math.max(2, S.days - 1), swim: 1 };
     gymPerWeek = sp.gym;
   }
-  const splits = hasGoal('女性曲线') ? (CURVE_SPLITS[gymPerWeek] || CURVE_SPLITS[3]) :
+  const splits = hasGoal('女性线条') ? (CURVE_SPLITS[gymPerWeek] || CURVE_SPLITS[3]) :
     hasGoal('倒三角矫正') ? (ATHLETIC_SPLITS[gymPerWeek] || ATHLETIC_SPLITS[3]) :
       hasGoal('翘臀美背') ? (GLUTE_BACK_SPLITS[gymPerWeek] || GLUTE_BACK_SPLITS[3]) :
         isCombinedGoal() ? (COMBINED_SPLITS[gymPerWeek] || COMBINED_SPLITS[3]) :
