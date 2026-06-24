@@ -60,7 +60,7 @@ function updateThemeBtn(theme){
 
 // ══ State Persistence ════════════════════════════════════
 function saveState(){
-ls(K.settings,{goal:S.goal,level:S.level,days:S.days,dur:S.dur,equip:S.equip,focus:S.focus,limits:S.limits,volumeMultiplier:S.volumeMultiplier,restDur:S.restDur,swimLevel:S.swimLevel,periodMode:S.periodMode});
+ls(K.settings,{goal:S.goal,level:S.level,days:S.days,dur:S.dur,equip:S.equip,focus:S.focus,limits:S.limits,volumeMultiplier:S.volumeMultiplier,restDur:S.restDur,swimLevel:S.swimLevel,periodMode:S.periodMode,displayName:S.displayName,sealChar:S.sealChar});
 if(S.plan)ls(K.plan,{plan:S.plan,prog:S.prog,adj:S.adj,weights:S.weights,unlockedDates:S.unlockedDates});
 localStorage.setItem(nsKey('fit_selDate'), S.selDate || '');
 }
@@ -631,13 +631,27 @@ else{if(_unsub){_unsub();_unsub=null}}
 }
 
 window.updateProfileUI = function() {
-    const name = (_user && _user.displayName) ? _user.displayName.split(' ')[0] : '我的';
+    // Prefer a user-set display name (Chinese-name friendly) over Google's `given family` split.
+    const gName = (_user && _user.displayName) ? _user.displayName.split(' ')[0] : '我的';
+    const name = (S.displayName && S.displayName.trim()) ? S.displayName.trim() : gName;
+    const seal = (S.sealChar && S.sealChar.trim()) ? S.sealChar.trim() : ((name && name.charAt(0).toUpperCase()) || '健');
     const titleEl = document.getElementById('doc-title');
     if (titleEl) titleEl.textContent = `${name}健身计划`;
     const nameEl = document.getElementById('user-name');
-    if (nameEl) nameEl.textContent = `${name}的计划`;
+    if (nameEl) { nameEl.textContent = `${name}的计划`; nameEl.style.cursor = 'pointer'; nameEl.title = '点击修改显示名 / 印章'; nameEl.onclick = editProfileName; }
     const sealEl = document.getElementById('user-seal');
-    if (sealEl) sealEl.textContent = name.charAt(0).toUpperCase() || '健';
+    if (sealEl) { sealEl.textContent = seal; sealEl.style.cursor = 'pointer'; sealEl.title = '点击修改显示名 / 印章'; sealEl.onclick = editProfileName; }
+};
+window.editProfileName = function() {
+    const cur = (S.displayName && S.displayName.trim()) ? S.displayName.trim() : ((_user && _user.displayName) ? _user.displayName.split(' ')[0] : '');
+    const n = prompt('显示名（用于标题与"…的计划"）：', cur);
+    if (n === null) return; // cancelled
+    S.displayName = n.trim() || null; // empty restores Google/default name
+    const sc = prompt('印章字（建议1-2字，留空自动取名字首字）：', (S.sealChar || ''));
+    if (sc !== null) S.sealChar = sc.trim() || null;
+    if (typeof saveState === 'function') saveState();
+    updateProfileUI();
+    if (typeof showToast === 'function') showToast('已更新显示名');
 };
 
 function signInGoogle(){
@@ -1495,7 +1509,7 @@ function drawShareCard(logEntry) {
     // Inner calligraphic text
     ctx.fillStyle = 'rgba(198, 88, 56, 0.75)';
     ctx.font = 'bold 9px "Cormorant Garamond", Georgia, serif';
-    const _sealName = (_user && _user.displayName) ? _user.displayName.split(' ')[0] : '健身';
+    const _sealName = (S.sealChar && S.sealChar.trim()) ? S.sealChar.trim() : (S.displayName && S.displayName.trim()) ? S.displayName.trim() : (_user && _user.displayName) ? _user.displayName.split(' ')[0] : '健身';
     ctx.fillText(_sealName, 0, -2);
     ctx.font = 'bold 8px "Noto Serif SC", Georgia, serif';
     ctx.fillText('印记', 0, 8);
