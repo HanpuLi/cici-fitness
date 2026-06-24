@@ -625,7 +625,7 @@ function rebuildAchievementsFromLogs() {
     ls('fit_swim', SWIM_LOG);
 
     // Gym Achievements
-    const gymLogs = LOG.filter(l => !l.isSwimDay);
+    const gymLogs = LOG.filter(l => !l.isSwimDay && l.workout !== '轻量替代'); // 轻量替代是替代游泳的恢复日，不计入力量成就(与进度逻辑一致)
     const gymCount = gymLogs.length;
     const chronoGym = [...gymLogs].reverse(); // oldest first
     
@@ -2149,7 +2149,7 @@ function submitRPE(rpe, isSkip=false) {
                 genPlan(true, true);
             }, 100);
             
-            checkGymMilestone();
+            if(day.workoutType !== '轻量替代') checkGymMilestone(); // recovery day doesn't count toward strength milestones
         } else {
             showToast(isSkip ? `游泳训练完成！` : `游泳完成。RPE ${actualRpe}/10`);
             checkSwimMilestone();

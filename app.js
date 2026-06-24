@@ -229,6 +229,15 @@ const dateHasOtherLogs = LOG.some(entry => entry.date === logEntry.date);
 if (!dateHasOtherLogs && S.prog[logEntry.date]) {
     delete S.prog[logEntry.date];
 }
+// Achievement counts/milestones are derived from LOG; recompute or they stay inflated until reload.
+if (typeof rebuildAchievementsFromLogs === 'function') rebuildAchievementsFromLogs();
+// Drop weight history & PRs recorded on that date (unless another log still covers it),
+// so deleted lifts stop feeding the "上次kg" suggestion and PR list.
+if (!dateHasOtherLogs) {
+    Object.keys(W_HIST).forEach(n => { W_HIST[n] = W_HIST[n].filter(h => h.date !== logEntry.date); if (!W_HIST[n].length) delete W_HIST[n]; });
+    ls(K.wh, W_HIST);
+    if (PR_LIST.some(p => p.date === logEntry.date)) { PR_LIST = PR_LIST.filter(p => p.date !== logEntry.date); ls(K.pr, PR_LIST); }
+}
 saveState();
 renderLog();
 if(typeof render === 'function') render();
