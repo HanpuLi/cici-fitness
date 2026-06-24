@@ -168,6 +168,19 @@
                 </div>
                 <p style="font-size:11px;color:var(--ink3);margin-top:4px">游泳等级独立于健身等级，可单独调节进度</p>
 </div>
+<div class="period-toggle-row" id="cycle-enable-row" style="margin: 15px 0;">
+    <div class="period-toggle-info">
+        <div>
+            <span class="period-toggle-label">生理期 / 周期功能</span>
+            <span class="period-toggle-hint">没有生理周期可关闭，下方相关选项会隐藏</span>
+        </div>
+    </div>
+    <label class="switch" for="cycle-enable-switch">
+        <input type="checkbox" id="cycle-enable-switch">
+        <span class="switch-slider"></span>
+    </label>
+</div>
+<div id="cycle-block">
 <div class="period-toggle-row" id="period-toggle-row" style="margin: 15px 0;">
     <div class="period-toggle-info">
         <div>
@@ -179,6 +192,20 @@
         <input type="checkbox" id="period-switch">
         <span class="switch-slider"></span>
     </label>
+</div>
+<p class="sec">月经周期（把滑块拖到"今天"在周期里的位置）</p>
+<div class="srow">
+    <input type="range" id="sl-cycle" min="1" max="40" step="1" value="1">
+    <span class="sval" id="v-cycle">第1天</span>
+</div>
+<div style="display:flex;gap:8px;align-items:center;margin:-2px 0 8px">
+    <span style="font-size:11px;color:var(--ink3)">周期长度</span>
+    <input type="number" id="cycle-len" min="20" max="40" value="28" style="width:54px;padding:4px 6px;border:1px solid var(--border);border-radius:6px;background:var(--surface2);color:var(--ink);font-size:13px">
+    <span style="font-size:11px;color:var(--ink3)">天</span>
+    <button class="exp-btn" style="margin-left:auto;font-size:11px;padding:4px 10px" onclick="cyclePeriodStart()">今天来月经了</button>
+</div>
+<div id="cycle-phase" style="font-size:12px;color:var(--ink2);line-height:1.6;padding:8px 10px;background:var(--surface2);border-radius:8px"></div>
+<p style="font-size:10px;color:var(--ink3);margin:6px 2px 0">仅供参考，以身体感受为准；训练量仍会随你每次打卡的 RPE 自动微调。</p>
 </div>
                 <p class="sec">重点部位（可多选）</p>
                 <div class="chips" id="g-focus">

@@ -33,7 +33,7 @@ function migrateLegacyKeys(uid){
 }
 
 // ══ State ════════════════════════════════════════════════
-const S={goal:'女性薄肌',level:'初级',days:3,dur:60,equip:['健身房全套'],focus:['均衡全身'],limits:'',plan:null,selDate:null,prog:{},adj:{},weights:{},volumeMultiplier:1.0,restDur:45,swimLevel:'入门',periodMode:false};
+const S={goal:'女性薄肌',level:'初级',days:3,dur:60,equip:['健身房全套'],focus:['均衡全身'],limits:'',plan:null,selDate:null,prog:{},adj:{},weights:{},volumeMultiplier:1.0,restDur:45,swimLevel:'入门',periodMode:false,cycleEnabled:true,cycleDay:1,cycleLength:28};
 let LOG=lg(K.log)||[];
 let W_HIST=lg(K.wh)||{};
 let PR_LIST=lg(K.pr)||[]; // {date,exercise,weight,prev}
@@ -632,6 +632,18 @@ function applyGoalToggle(goal){
   } else {
     S.focus=['均衡全身'];
   }
+}
+// Menstrual-cycle phase from a user-set "current day" (manual slider — a PWA can't read iOS
+// Health). Returns a phase label + gentle training note. Suggestion only; actual training load
+// still auto-tunes from each check-in's RPE, so a wrong guess self-corrects.
+function cyclePhase(day, length){
+  length = +length||28; day = +day||1;
+  const periodLen = 5;
+  const ovu = Math.max(periodLen+3, length-14); // 排卵 ≈ 下次月经前 14 天
+  if(day<=periodLen) return {key:'menstrual', name:'月经期', advice:'建议开「经期模式」(降负重、避高腹压)。能轻动就轻动缓解不适，痛就休息，别硬上。'};
+  if(day<ovu-1)      return {key:'follicular', name:'卵泡期', advice:'状态通常最好——可冲强度、加重量，臀腿大动作/破纪录的好窗口。'};
+  if(day<=ovu+1)     return {key:'ovulation', name:'排卵期', advice:'力量峰值，适合上大重量；充分热身、注意关节稳定。'};
+  return {key:'luteal', name:'黄体期', advice: day>length-4 ? '经前段：减量、重恢复、睡好；想多吃属正常，优先蛋白。' : '维持训练量即可，临近经前再逐步减量。'};
 }
 const SWIM_TIPS={
 '入门':'蛙泳腿口诀：收翻蹬夹。每次蹬腿后享受2-3秒滑行，不要急着做下一个动作。扶池边是你最好的练习伙伴。',

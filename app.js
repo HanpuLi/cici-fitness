@@ -60,7 +60,7 @@ function updateThemeBtn(theme){
 
 // ══ State Persistence ════════════════════════════════════
 function saveState(){
-ls(K.settings,{goal:S.goal,level:S.level,days:S.days,dur:S.dur,equip:S.equip,focus:S.focus,limits:S.limits,volumeMultiplier:S.volumeMultiplier,restDur:S.restDur,swimLevel:S.swimLevel,periodMode:S.periodMode,displayName:S.displayName,sealChar:S.sealChar});
+ls(K.settings,{goal:S.goal,level:S.level,days:S.days,dur:S.dur,equip:S.equip,focus:S.focus,limits:S.limits,volumeMultiplier:S.volumeMultiplier,restDur:S.restDur,swimLevel:S.swimLevel,periodMode:S.periodMode,displayName:S.displayName,sealChar:S.sealChar,cycleEnabled:S.cycleEnabled,cycleDay:S.cycleDay,cycleLength:S.cycleLength});
 if(S.plan)ls(K.plan,{plan:S.plan,prog:S.prog,adj:S.adj,weights:S.weights,unlockedDates:S.unlockedDates});
 localStorage.setItem(nsKey('fit_selDate'), S.selDate || '');
 }
@@ -133,12 +133,29 @@ const periodSwitch=document.getElementById('period-switch');
 if(periodSwitch) periodSwitch.checked=!!S.periodMode;
 const periodRow=document.getElementById('period-toggle-row');
 if(periodRow) periodRow.classList.toggle('active',!!S.periodMode);
+const cyEn=document.getElementById('cycle-enable-switch');
+if(cyEn) cyEn.checked=S.cycleEnabled!==false;
+const cyBlock=document.getElementById('cycle-block');
+if(cyBlock) cyBlock.style.display=(S.cycleEnabled!==false)?'':'none';
+const slCy=document.getElementById('sl-cycle'); if(slCy) slCy.value=S.cycleDay||1;
+const cyLen=document.getElementById('cycle-len'); if(cyLen) cyLen.value=S.cycleLength||28;
+if(typeof updateCycleUI==='function') updateCycleUI();
 updateSwimBreakdown();
 
 const rBtn = document.getElementById('recal-btn');
 if(rBtn) rBtn.style.display = S.plan ? 'block' : 'none';
 }
 
+function updateCycleUI(){
+  const day=S.cycleDay||1, len=S.cycleLength||28;
+  const v=document.getElementById('v-cycle'); if(v) v.textContent='第'+day+'天';
+  const box=document.getElementById('cycle-phase');
+  if(box && typeof cyclePhase==='function'){
+    const p=cyclePhase(day,len);
+    const nudge=(p.key==='menstrual'&&!S.periodMode)?` <a href="#" onclick="event.preventDefault();document.getElementById('period-switch').click()" style="color:var(--terra)">一键开经期模式</a>`:'';
+    box.innerHTML='<b>'+p.name+'</b>（第'+day+'/'+len+'天）<br>'+p.advice+nudge;
+  }
+}
 function updateSwimBreakdown(){
 const el=document.getElementById('swim-breakdown');
 if(!el) return;
@@ -869,6 +886,14 @@ updateSwimBreakdown();
 document.getElementById('sl-days').addEventListener('input',e=>{S.days=+e.target.value;document.getElementById('v-days').textContent=S.days+'天';saveState();updateSwimBreakdown()});
 document.getElementById('sl-dur').addEventListener('input',e=>{S.dur=+e.target.value;document.getElementById('v-dur').textContent=S.dur+'分钟';saveState()});
 document.getElementById('limits').addEventListener('input',e=>{S.limits=e.target.value;saveState()});
+// Cycle controls (manual slider; whole block hidden when 「生理期/周期功能」 is off — e.g. for Cait)
+const cyEnSw=document.getElementById('cycle-enable-switch');
+if(cyEnSw) cyEnSw.addEventListener('change',function(){S.cycleEnabled=this.checked;let ch=false;if(!this.checked&&S.periodMode){S.periodMode=false;ch=true;}saveState();applySettingsToUI();flashSaved();if(ch&&S.plan){genPlan(true);render();}});
+const slCycle=document.getElementById('sl-cycle');
+if(slCycle) slCycle.addEventListener('input',e=>{S.cycleDay=+e.target.value;updateCycleUI();saveState();});
+const cyLenEl=document.getElementById('cycle-len');
+if(cyLenEl) cyLenEl.addEventListener('input',e=>{S.cycleLength=Math.max(20,Math.min(40,+e.target.value||28));updateCycleUI();saveState();});
+window.cyclePeriodStart=function(){S.cycleDay=1;saveState();applySettingsToUI();flashSaved();if(typeof showToast==='function')showToast('已记录：周期第1天');};
 
 // ══ Share Card Generator ════════════════════════════════
 let _currentShareImgUrl = null;
