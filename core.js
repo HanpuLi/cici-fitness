@@ -49,12 +49,12 @@ function isCombinedGoal(){return hasGoal('女性薄肌')&&hasGoal('臀腿塑形'
 
 // ══ Limits ═══════════════════════════════════════════════
 const LIMIT_RULES=[
-{kw:['膝','膝盖','膝关节'],exclude:['杠铃深蹲','史密斯深蹲','腿举','哑铃弓步蹲','跳蹲','跳绳','开合跳','壶铃摆动']},
-{kw:['肩','肩膀','肩关节'],exclude:['杠铃推举','哑铃肩推','侧平举','直立划船','双杠臂屈伸','自由泳划臂+侧头呼吸','自由泳完整配合']},
-{kw:['腰','腰椎','腰背'],exclude:['传统硬拉','罗马尼亚硬拉','俯身划船','早安式体前屈','壶铃摆动']},
+{kw:['膝','膝盖','膝关节'],exclude:['杠铃深蹲','史密斯深蹲','倒蹬机','哑铃弓步蹲','跳绳','开合跳','壶铃摆动']},
+{kw:['肩','肩膀','肩关节'],exclude:['杠铃推举','哑铃肩推','侧平举','杠铃直立划船','双杠臂屈伸','自由泳划臂+侧头呼吸','自由泳完整配合']},
+{kw:['腰','腰椎','腰背'],exclude:['传统硬拉','罗马尼亚硬拉','俯身划船','壶铃摆动']},
 {kw:['颈','颈椎'],exclude:['高位下拉','杠铃推举']},
 {kw:['斜方','脖子粗','脖子','肩颈','颈肩','圆肩'],exclude:['杠铃直立划船']},
-{kw:['跳','跳跃'],exclude:['跳绳','开合跳','跳蹲','波比跳']},
+{kw:['跳','跳跃'],exclude:['跳绳','开合跳','波比跳']},
 {kw:['手腕','腕'],exclude:['杠铃卧推','杠铃弯举','俯卧撑','腹轮']},
 {kw:['踝','脚踝'],exclude:['跳绳','开合跳','站姿提踵']},
 ];
@@ -241,6 +241,16 @@ stretch:[
 
 // ══ Split Templates ═════════════════════════════════════════
 // groups = 肌群组, pick = 每组多少个动作
+// ── Dev assertion: every LIMIT_RULES exclude must exactly match a DB[grp][].n.
+// Exclusion uses exact name match, so a typo like '直立划船' vs '杠铃直立划船' silently
+// fails to exclude. Warns on drift; no functional effect. (Runs after DB is defined.)
+(function(){try{
+  const names=new Set();Object.values(DB).forEach(arr=>arr.forEach(ex=>names.add(ex.n)));
+  LIMIT_RULES.forEach(r=>r.exclude.forEach(n=>{
+    if(!names.has(n)) console.warn('[LIMIT_RULES] exclude 名在 DB 中不存在:',n,'(kw:'+r.kw.join('/')+')');
+  }));
+}catch(e){}})();
+
 const SPLITS={
 // 2天：上肢/下肢 — AB分
 2:[
