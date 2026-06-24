@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>健身计划</title>
+<!--
+  GitHub Pages serves this page for the bare root (…/cici-fitness/) and any other
+  unmatched path, because the app's entry file is Index.html (capital I) — Pages looks
+  for a lowercase index.html at the root and finds none. We can't add a local index.html
+  (the macOS filesystem is case-insensitive, so it would collide with Index.html), so this
+  404 page forwards to the real app instead. Cici's installed PWA opens ./Index.html
+  directly and never hits this page.
+-->
+<script>
+  location.replace('Index.html' + location.search + location.hash);
+</script>
+<meta http-equiv="refresh" content="0; url=Index.html">
+<style>body{font-family:-apple-system,sans-serif;text-align:center;margin-top:22vh;color:#6b5344;background:#f5f4ef}a{color:#c65838}</style>
+</head>
+<body>正在打开健身计划… 若未自动跳转，请点击 <a href="Index.html">这里</a>。</body>
+</html>
