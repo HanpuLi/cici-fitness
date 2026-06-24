@@ -806,14 +806,17 @@ const sel=S.plan?.days?.find(d=>d.date===date);
 if(sel&&sel.exercises[ei]){
 const exName=sel.exercises[ei].name;
 const hist=W_HIST[exName];
-if(hist&&hist.length>0){
-const maxPrev=Math.max(...hist.map(h=>h.weight));
-if(val>maxPrev){
-showToast(`${exName} 新纪录！${val}kg`);
-PR_LIST.unshift({date,exercise:exName,weight:val,prev:maxPrev});
-if(PR_LIST.length>50)PR_LIST=PR_LIST.slice(0,50);
+const maxPrev=(hist&&hist.length)?Math.max(...hist.map(h=>h.weight)):0;
+// Dedupe per (date,exercise): editing the weight field mustn't push a new PR + toast on
+// every keystroke. maxPrev excludes today (W_HIST is written at check-in), so update an
+// existing same-day PR in place, and retract it if the value drops back to/below old best.
+const prIdx=PR_LIST.findIndex(p=>p.date===date&&p.exercise===exName);
+if(maxPrev>0&&val>maxPrev){
+if(prIdx>=0){PR_LIST[prIdx].weight=val;PR_LIST[prIdx].prev=maxPrev;}
+else{showToast(`${exName} 新纪录！${val}kg`);PR_LIST.unshift({date,exercise:exName,weight:val,prev:maxPrev});if(PR_LIST.length>50)PR_LIST=PR_LIST.slice(0,50);}
 ls(K.pr,PR_LIST);
-}}}}
+}else if(prIdx>=0){PR_LIST.splice(prIdx,1);ls(K.pr,PR_LIST);}
+}}
 saveState();
 }
 function getLastWeight(exName, excludePeriod = false){
@@ -1644,7 +1647,7 @@ ${!done?`<button class="act-play-btn" onclick="event.stopPropagation();startTime
         });
         h+=`</div>`;
         // Fixed bottom complete button
-        const alreadyLogged = LOG.some(l=>l.date===sel.date&&l.workout===sel.workoutType);
+        const alreadyLogged = LOG.some(l=>l.date===sel.date); // key on date only (matches isDone/delLog/stats); date+type let a re-typed day double-log
         if(!alreadyLogged){
           const checkedCount = Object.keys(pd).filter(k=>pd[k]).length;
           const btnText = checkedCount === sel.exercises.length ? '\u5b8c\u6210\u6e38\u6cf3\u8bad\u7ec3' : '\u7ed3\u675f\u8bad\u7ec3\u5e76\u6253\u5361';
@@ -1696,7 +1699,7 @@ ${!locked?`
 `}
 </div>`;}).join('')}</div>`;
       
-      const alreadyLogged = LOG.some(l=>l.date===sel.date&&l.workout===sel.workoutType);
+      const alreadyLogged = LOG.some(l=>l.date===sel.date); // key on date only (matches isDone/delLog/stats); date+type let a re-typed day double-log
       if (!locked && !sel.isRest && !alreadyLogged) {
           const checkedCount = Object.keys(pd).filter(k=>pd[k]).length;
           const btnText = checkedCount === sel.exercises.length ? '完成训练并打卡' : '结束训练并打卡';
@@ -2155,7 +2158,7 @@ function submitRPE(rpe, isSkip=false) {
         // Save weight history per exercise
         day.exercises.forEach((ex,i)=>{
             const w=getWeight(date,i);
-            if(w&&w>0&&!ex.isWarmup&&!ex.isStretch&&ex.unit==='次'){
+            if(w&&w>0&&!ex.isWarmup&&!ex.isStretch&&ex.unit==='次'&&S.prog[date]&&S.prog[date][i]){ // only record weight for exercises actually completed
                 if(!W_HIST[ex.name])W_HIST[ex.name]=[];
                 W_HIST[ex.name].push({date,weight:w,rpe:actualRpe,period:S.periodMode});
                 if(W_HIST[ex.name].length>50)W_HIST[ex.name]=W_HIST[ex.name].slice(-50);
