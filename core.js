@@ -2,7 +2,7 @@
 const firebaseConfig={apiKey:"AIzaSyB12HcJxsqqmWoih3wnfpyqu9LDzEE9nXs",authDomain:"cici-fitness.firebaseapp.com",projectId:"cici-fitness",storageBucket:"cici-fitness.firebasestorage.app",messagingSenderId:"375793627351",appId:"1:375793627351:web:f2dbfd8e107206417f4092",measurementId:"G-ZHCCRWZ57P"};
 
 // ══ Storage Layer ════════════════════════════════════════
-const K={settings:'fit_s1',plan:'fit_p1',prog:'fit_pr1',log:'fit_log1',adj:'fit_adj1',wh:'fit_wh1',pr:'fit_pr',swim_log:'fit_swim',gym_log:'fit_gym_ach'};
+const K={settings:'fit_s1',plan:'fit_p1',prog:'fit_pr1',log:'fit_log1',adj:'fit_adj1',wh:'fit_wh1',pr:'fit_pr',swim_log:'fit_swim',gym_log:'fit_gym_ach',body:'fit_body1'};
 function currentUid(){ return (typeof firebase !== 'undefined' && firebase.auth().currentUser && firebase.auth().currentUser.uid) || 'anon'; }
 function nsKey(k){ return currentUid() + '__' + k; }
 function lg(k){try{const v=localStorage.getItem(nsKey(k));return v?JSON.parse(v):null}catch{return null}}
@@ -19,7 +19,7 @@ function migrateLegacyKeys(uid){
   if(localStorage.getItem('__ns_migrated__'+uid)) return false;
   const owner=localStorage.getItem('__legacy_owner_uid__');
   if(owner && owner!==uid){ localStorage.setItem('__ns_migrated__'+uid,'1'); return false; }
-  const BARE=['fit_s1','fit_p1','fit_pr1','fit_log1','fit_adj1','fit_wh1','fit_pr','fit_swim','fit_gym_ach','fit_selDate'];
+  const BARE=['fit_s1','fit_p1','fit_pr1','fit_log1','fit_adj1','fit_wh1','fit_pr','fit_swim','fit_gym_ach','fit_selDate','fit_body1'];
   let any=false;
   BARE.forEach(k=>{
     const src=localStorage.getItem(k);
@@ -39,6 +39,7 @@ let W_HIST=lg(K.wh)||{};
 let PR_LIST=lg(K.pr)||[]; // {date,exercise,weight,prev}
 let SWIM_LOG=lg(K.swim_log)||{count:0,milestones:[]};
 let GYM_LOG=lg(K.gym_log)||{count:0,milestones:[]};
+let BODY_LOG=lg(K.body)||[]; // [{date,weight,waist,hip,thigh}] 体重/围度——体型进度 + 腰臀比
 let _logShowAll=false;
 let _calWeekOffset=0;
 

@@ -83,6 +83,7 @@ else{S.plan=null;}
 LOG=lg(K.log)||[];
 W_HIST=lg(K.wh)||{};
 PR_LIST=lg(K.pr)||[];
+BODY_LOG=lg(K.body)||[];
 if(typeof rebuildAchievementsFromLogs === 'function') rebuildAchievementsFromLogs();
 applySettingsToUI();
 render();
@@ -259,12 +260,59 @@ if(confirm('警告：确定要清空所有计划、打卡记录和统计数据�
     LOG.length=0;
     W_HIST={};
     PR_LIST=[];
+    BODY_LOG=[];
     GYM_LOG={count:0,milestones:[]};
     SWIM_LOG={count:0,milestones:[]};
     S.plan=null; S.prog={}; S.adj={}; S.weights={}; S.unlockedDates=[]; S.volumeMultiplier=1.0; S.selDate=null;
     // 4. Force state save so local variables are reset
     saveState();location.reload();
 }
+}
+
+// ══ Body metrics (体重/围度 — 体型进度, 腰臀比 WHR) ════════
+function logBody(){
+  const g=id=>{const el=document.getElementById(id);if(!el)return null;const v=parseFloat(el.value);return isFinite(v)&&v>0?Math.round(v*10)/10:null;};
+  const e={date:todayStr(),weight:g('b-weight'),waist:g('b-waist'),hip:g('b-hip'),thigh:g('b-thigh')};
+  if(['weight','waist','hip','thigh'].every(k=>e[k]==null)){showToast('请至少填写一项');return;}
+  const i=BODY_LOG.findIndex(x=>x.date===e.date);
+  if(i>=0){['weight','waist','hip','thigh'].forEach(k=>{if(e[k]!=null)BODY_LOG[i][k]=e[k];});}
+  else BODY_LOG.push(e);
+  BODY_LOG.sort((a,b)=>a.date.localeCompare(b.date));
+  ls(K.body,BODY_LOG);
+  showToast('已记录身体数据');
+  if(typeof renderStats==='function')renderStats();
+}
+function delBody(date){
+  if(!confirm('删除 '+date+' 的身体记录？'))return;
+  BODY_LOG=BODY_LOG.filter(x=>x.date!==date);
+  ls(K.body,BODY_LOG);
+  if(typeof renderStats==='function')renderStats();
+}
+function renderBodyPanel(){
+  const IN='width:100%;padding:6px 8px;margin-top:3px;border:1px solid var(--border);border-radius:6px;background:var(--surface2);color:var(--ink);font-size:14px;box-sizing:border-box';
+  const latest=BODY_LOG.length?BODY_LOG[BODY_LOG.length-1]:{};
+  const pv=f=>latest[f]!=null?latest[f]:'';
+  const lblmap={weight:'体重',waist:'腰围',hip:'臀围',thigh:'大腿围'};
+  const fld=(id,lbl,u)=>`<label style="font-size:11px;color:var(--ink3)">${lbl}<span style="opacity:.6"> ${u}</span><input id="${id}" type="number" inputmode="decimal" step="0.1" value="${pv(id.slice(2))}" style="${IN}"></label>`;
+  const spark=(f,unit,better)=>{
+    const pts=BODY_LOG.filter(x=>x[f]!=null);
+    if(pts.length<2)return '';
+    const vals=pts.map(x=>x[f]),mn=Math.min(...vals),mx=Math.max(...vals),rg=mx-mn||1;
+    const last=vals[vals.length-1],delta=Math.round((last-vals[0])*10)/10;
+    const good=better==='down'?delta<0:better==='up'?delta>0:null;
+    const col=good===true?'var(--sage)':good===false?'var(--terra)':'var(--ink3)';
+    return `<div style="margin-bottom:12px"><div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="font-size:12px;font-weight:600">${lblmap[f]}</span><span style="font-size:11px;font-weight:600;color:${col}">${delta>0?'+':''}${delta}${unit} · 现 ${last}${unit}</span></div><div style="display:flex;gap:2px;height:24px;align-items:flex-end">${pts.slice(-14).map(p=>{const h=(p[f]-mn)/rg*70+30;return `<div style="flex:1;background:var(--terra);opacity:.7;border-radius:2px 2px 0 0;height:${h}%" title="${p.date}: ${p[f]}${unit}"></div>`}).join('')}</div></div>`;
+  };
+  const whrPts=BODY_LOG.filter(x=>x.waist!=null&&x.hip!=null);
+  let whrBlock='';
+  if(whrPts.length){
+    const cur=whrPts[whrPts.length-1].waist/whrPts[whrPts.length-1].hip;
+    const d=whrPts.length>1?Math.round((cur-whrPts[0].waist/whrPts[0].hip)*100)/100:null;
+    whrBlock=`<div style="display:flex;justify-content:space-between;align-items:center;margin:10px 0;padding:8px 10px;background:var(--surface2);border-radius:8px"><span style="font-size:12px">腰臀比 WHR<span style="font-size:10px;color:var(--ink3)"> · 越低越沙漏</span></span><b style="font-size:16px;color:var(--terra)">${cur.toFixed(2)}${d!=null?`<span style="font-size:11px;color:${d<0?'var(--sage)':d>0?'var(--terra)':'var(--ink3)'};margin-left:6px">${d>0?'+':''}${d}</span>`:''}</b></div>`;
+  }
+  const charts=['weight','waist','hip','thigh'].map(f=>spark(f,f==='weight'?'kg':'cm',f==='waist'?'down':f==='hip'?'up':null)).join('');
+  const hist=BODY_LOG.length?`<details style="margin-top:6px"><summary style="font-size:11px;color:var(--ink3);cursor:pointer">历史记录 (${BODY_LOG.length})</summary><div style="margin-top:6px">${[...BODY_LOG].reverse().slice(0,40).map(x=>`<div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;padding:4px 0;border-bottom:1px solid var(--border)"><span>${x.date}</span><span style="color:var(--ink3);flex:1;text-align:right;margin-right:8px">${[x.weight!=null?x.weight+'kg':'',x.waist!=null?'腰'+x.waist:'',x.hip!=null?'臀'+x.hip:'',x.thigh!=null?'腿'+x.thigh:''].filter(Boolean).join(' · ')}</span><span onclick="delBody('${x.date}')" style="color:var(--terra);cursor:pointer;padding:0 4px">✕</span></div>`).join('')}</div></details>`:'';
+  return `<div class="panel"><p class="panel-title">身体记录 📏 <span style="font-size:11px;color:var(--ink3);font-weight:400">体型才是真正的进度</span></p><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">${fld('b-weight','体重','kg')}${fld('b-waist','腰围','cm')}${fld('b-hip','臀围','cm')}${fld('b-thigh','大腿围','cm')}</div><button onclick="logBody()" class="exp-btn" style="width:100%;margin-top:10px">保存今日数据</button>${whrBlock}${charts}${hist}</div>`;
 }
 
 // ══ Stats ════════════════════════════════════════════════
@@ -340,6 +388,7 @@ const maxDist=distEntries[0]?.[1]||1;
 
 el.innerHTML=`
 <div class="streak-box"><div class="streak-num">${streak}</div><div class="streak-lbl">连续打卡天数</div></div>
+${typeof renderBodyPanel==='function'?renderBodyPanel():''}
 <div class="panel">
   <p class="panel-title" style="margin-bottom:.75rem">近12周训练热图</p>
   <div class="heat-grid">${heatHtml}</div>
