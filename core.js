@@ -237,6 +237,14 @@ stretch:[
 {n:'臀大肌拉伸',eq:['无器材','弹力带','哑铃','壶铃','健身房全套'],muscle:['下肢'],diff:1,note:'仰卧，一腿架在另一腿膝盖上，双手抱腿拉向胸口',u:'秒',bi:true},
 {n:'髂胫束拉伸',eq:['无器材','弹力带','哑铃','壶铃','健身房全套'],muscle:['下肢'],diff:1,note:'交叉腿站立，身体向后腿一侧侧倾',u:'秒',bi:true},
 {n:'腹部拉伸 (眼镜蛇式)',eq:['无器材','弹力带','哑铃','健身房全套'],muscle:['核心'],diff:1,note:'俯卧撑起上半身，骨盆贴地',u:'秒'},
+{n:'鸽子式开髋',eq:['无器材','健身房全套'],muscle:['下肢','全身'],diff:1,note:'前腿屈膝外旋置于身前、后腿伸直，骨盆摆正下沉开髋，可上身前趴加深',u:'秒',bi:true},
+{n:'90/90髋旋转',eq:['无器材','健身房全套'],muscle:['下肢'],diff:1,note:'坐姿前后腿各屈90°，上身直立左右倒换，练髋内/外旋灵活度',u:'秒',bi:true},
+{n:'青蛙式开胯',eq:['无器材','健身房全套'],muscle:['下肢'],diff:1,note:'四足跪姿双膝向两侧打开，臀部缓慢前后移动，开胯拉内收肌，循序渐进',u:'秒'},
+{n:'蝴蝶式',eq:['无器材','健身房全套'],muscle:['下肢'],diff:1,note:'坐姿脚掌相对、脚跟靠近身体，脊柱拉长后上身前倾拉内侧',u:'秒'},
+{n:'仰卧4字臀拉伸',eq:['无器材','健身房全套'],muscle:['下肢'],diff:1,note:'仰卧一脚踝搭对侧膝成4字，双手抱大腿后侧拉向胸口，拉臀/梨状肌',u:'秒',bi:true},
+{n:'猫牛式',eq:['无器材','健身房全套'],muscle:['核心','全身'],diff:1,note:'四足跪姿，吸气塌腰抬头、呼气拱背低头，随呼吸活动整段脊柱',u:'秒'},
+{n:'胸椎旋转',eq:['无器材','健身房全套'],muscle:['全身','上肢'],diff:1,note:'四足跪姿一手扶头后，手肘向上向后打开旋转，转胸椎非腰',u:'秒',bi:true},
+{n:'盆底放松呼吸',eq:['无器材','健身房全套'],muscle:['核心'],diff:1,note:'仰卧屈膝缓慢腹式呼吸，吸气时主动让盆底放松下沉(反向凯格尔)——柔韧/舒适关键在会放松',u:'秒'},
 ]
 };
 
@@ -858,7 +866,8 @@ const sSpecific = sPool.filter(e=>{
     if(hasCore && e.muscle.includes('核心')) return true;
     return false;
 });
-[...(sGlobal.slice(0,2)), ...(sSpecific.slice(0,3))].forEach(ex=>{
+const _flex=S.focus&&S.focus.includes('柔韧灵活'); // 柔韧重点 → 收尾多排几个拉伸/开髋动作
+[...(sGlobal.slice(0,_flex?3:2)), ...(sSpecific.slice(0,_flex?6:3))].forEach(ex=>{
     if(used.has(ex.n))return; used.add(ex.n);
     result.push({name:ex.n,sets:1,reps:30,unit:'秒',note:ex.note,group:'stretch',diff:ex.diff,isStretch:true,bi:!!ex.bi,muscle:ex.muscle});
 });
@@ -1007,6 +1016,15 @@ else if(isIsolation)w=Math.max(2,Math.round(w*0.7));
 return roundWeight(w, n);
 }
 
+// Estimated 1RM (Epley) from real W_HIST sets that recorded reps — gives genuine strength
+// guidance to replace the removed fabricated %max. Returns null until there's rep-tagged history.
+function estimate1RM(exName){
+  const h=(W_HIST[exName]||[]).filter(x=>x.weight>0&&x.reps>0);
+  if(!h.length)return null;
+  let best=0; h.slice(-12).forEach(x=>{const r=Math.min(x.reps,15);const e=x.weight*(1+r/30);if(e>best)best=e;});
+  return best>0?Math.round(best*10)/10:null;
+}
+function weightForReps(oneRM,reps){ return oneRM?Math.round(oneRM/(1+reps/30)):null; }
 function suggestWeight(exName){
 let target;
 const last=getLastWeight(exName, true); // Get last non-period weight
@@ -1787,7 +1805,10 @@ ${!locked?`
           const checkedCount = Object.keys(pd).filter(k=>pd[k]).length;
           const btnText = checkedCount === sel.exercises.length ? '完成训练并打卡' : '结束训练并打卡';
           const btnCls = checkedCount === sel.exercises.length ? 'btn-complete-workout' : 'btn-end-workout-early';
-          h += `<div class="workout-action-bar" style="margin-top:16px;display:flex;justify-content:center;width:100%">
+          h += `<div class="workout-action-bar" style="margin-top:16px;display:flex;flex-direction:column;gap:8px;align-items:center;width:100%">
+              <button class="${btnCls}" onclick="startGuided('${sel.date}')">
+                  <i class="ti ti-player-play" style="margin-right:6px"></i>开始引导训练
+              </button>
               <button class="${btnCls}" onclick="endWorkoutEarly('${sel.date}')">
                   <i class="ti ti-checklist" style="margin-right:6px"></i>${btnText}
               </button>
@@ -2243,7 +2264,7 @@ function submitRPE(rpe, isSkip=false) {
             const w=getWeight(date,i);
             if(w&&w>0&&!ex.isWarmup&&!ex.isStretch&&ex.unit==='次'&&S.prog[date]&&S.prog[date][i]){ // only record weight for exercises actually completed
                 if(!W_HIST[ex.name])W_HIST[ex.name]=[];
-                W_HIST[ex.name].push({date,weight:w,rpe:actualRpe,period:S.periodMode});
+                W_HIST[ex.name].push({date,weight:w,rpe:actualRpe,period:S.periodMode,reps:getAdj(date,i,'r',ex.reps)}); // reps → 估算 1RM
                 if(W_HIST[ex.name].length>50)W_HIST[ex.name]=W_HIST[ex.name].slice(-50);
             }
         });
@@ -2521,6 +2542,15 @@ function initTouchDrag(){
 // ══ Exercise Detail Modal ═══════════════════════════════
 // Detail data inline - key exercises with full breakdown
 const EX_DETAIL = {
+  // === 柔韧 / 髋灵活 / 盆底（柔韧重点模块）===
+  '鸽子式开髋': { muscles:['臀','髋屈肌'], steps:['前腿屈膝外旋、小腿斜放身前，后腿向后伸直','骨盆摆正、缓慢下沉，上身可前趴加深','深呼吸保持30-60秒后换边'], tips:['前膝不适就把小腿收近身体、减小角度','髋紧可在前侧臀下垫块毛巾'], mistakes:['骨盆歪斜','憋气硬压'] },
+  '90/90髋旋转': { muscles:['髋内旋','髋外旋'], steps:['坐姿，前腿与后腿各屈约90°','上身直立，左右倒换两腿练内外旋','缓慢来回或每侧停留'], tips:['坐不直就把臀部垫高'], mistakes:['含胸塌腰代偿'] },
+  '青蛙式开胯': { muscles:['内收肌'], steps:['四足跪姿，双膝向两侧打开，小腿与大腿约90°','臀部缓慢向后移到拉伸位再回来','控制幅度、循序渐进'], tips:['膝下垫软垫','只静态拉、不要弹震'], mistakes:['一次开太大、拉伤腹股沟'] },
+  '蝴蝶式': { muscles:['内收肌','髋'], steps:['坐姿两脚掌相对、脚跟靠近身体','坐骨坐稳、脊柱拉长后上身前倾','双手可轻压膝盖，保持30-60秒'], tips:['先坐直再前倾，别弓背'], mistakes:['弓背低头代替髋前倾'] },
+  '仰卧4字臀拉伸': { muscles:['臀','梨状肌'], steps:['仰卧，一脚踝搭在对侧大腿上成"4"字','双手抱住对侧大腿后侧拉向胸口','感受臀侧拉伸，换边'], tips:['头肩放松贴地'], mistakes:['抬头耸肩'] },
+  '猫牛式': { muscles:['脊柱'], steps:['四足跪姿，手在肩下、膝在髋下','吸气塌腰抬头(牛)、呼气拱背低头(猫)','随呼吸一节节缓慢交替'], tips:['想象逐节带动脊柱'], mistakes:['只动头颈、脊柱不动'] },
+  '胸椎旋转': { muscles:['胸椎','肩'], steps:['四足跪姿，一手扶头后','手肘先向地面对侧穿，再向上向后打开旋转','目光跟随手肘，换边'], tips:['转的是胸椎、不是腰'], mistakes:['用腰部代偿旋转'] },
+  '盆底放松呼吸': { muscles:['盆底','核心'], steps:['仰卧屈膝或坐姿，缓慢腹式呼吸','吸气时主动让盆底/会阴向下"松开"(反向凯格尔)','呼气自然回收，重复10-20次'], tips:['这是"放松"不是用力收紧；柔韧与舒适的关键在会放松'], mistakes:['一直收紧不放松','憋气'] },
   // === 补充：背部激活 / 臀中肌 / 核心（此前缺详情，是翘臀美背/倒三角矫正的主力动作）===
   '俯卧YTW': {
     muscles: ['下斜方肌', '三角肌后束', '菱形肌'],
@@ -3401,6 +3431,52 @@ const EX_DETAIL = {
   }
 };
 
+// ══ Guided workout mode (逐个动作引导 + 组间自动计时) ══════
+let _wmDate=null,_wmIdx=0,_wmSet=1;
+function _wmIsSimple(ex){return ex.isWarmup||ex.isStretch||ex.group==='cardio'||ex.unit!=='次';}
+function startGuided(date){
+  const day=S.plan&&S.plan.days.find(d=>d.date===date);
+  if(!day||!day.exercises||!day.exercises.length){if(typeof showToast==='function')showToast('今天没有可做的动作');return;}
+  _wmDate=date;
+  const s=day.exercises.findIndex((ex,i)=>!(S.prog[date]&&S.prog[date][i]));
+  _wmIdx=s<0?0:s; _wmSet=1;
+  const m=document.getElementById('workout-modal'); if(m)m.classList.add('open');
+  renderGuided();
+}
+function wmClose(){const m=document.getElementById('workout-modal');if(m)m.classList.remove('open');if(typeof stopTimer==='function')stopTimer();}
+function renderGuided(){
+  const date=_wmDate,day=S.plan&&S.plan.days.find(d=>d.date===date),card=document.getElementById('wm-card');
+  if(!day||!card)return;
+  const list=day.exercises;
+  if(_wmIdx>=list.length){wmClose();render();endWorkoutEarly(date);return;}
+  const ex=list[_wmIdx], simple=_wmIsSimple(ex);
+  const sets=simple?1:getAdj(date,_wmIdx,'s',ex.sets), reps=getAdj(date,_wmIdx,'r',ex.reps);
+  const needW=!ex.isWarmup&&!ex.isStretch&&ex.unit==='次';
+  const lastW=typeof getLastWeight==='function'?(getLastWeight(ex.name,true)||getLastWeight(ex.name,false)):null;
+  const e1rm=typeof estimate1RM==='function'?estimate1RM(ex.name):null, curW=getWeight(date,_wmIdx);
+  card.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><span style="font-size:11px;color:var(--ink3)">动作 ${_wmIdx+1}/${list.length}</span><button class="ex-modal-close" onclick="wmClose()">&#10005;</button></div>
+  <h2 style="font-family:var(--font-display);font-size:22px;margin:0 0 2px">${ex.name}</h2>
+  <p style="font-size:12px;color:var(--ink3);margin:0 0 12px">${(ex.muscle||[]).join(' · ')||(ex.isWarmup?'热身':ex.isStretch?'拉伸':'')}</p>
+  <div style="font-size:16px;margin-bottom:12px">${simple?`${reps} ${ex.unit}`:`第 <b style="color:var(--terra);font-size:20px">${_wmSet}</b> / ${sets} 组 · 目标 ${reps} ${ex.unit}${ex.bi?'/每侧':''}`}</div>
+  ${needW?`<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px"><span style="font-size:12px">重量</span><input id="wm-weight" type="number" inputmode="decimal" step="0.5" value="${curW||''}" placeholder="${lastW?lastW.weight:''}" style="width:96px;padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--surface2);color:var(--ink);font-size:17px"><span style="font-size:11px;color:var(--ink3)">kg${lastW?' · 上次'+lastW.weight:''}${e1rm?' · 1RM≈'+e1rm:''}</span></div>`:''}
+  <div style="font-size:12px;color:var(--ink2);background:var(--surface2);border-radius:8px;padding:8px 10px;margin-bottom:16px;line-height:1.55">${ex.note||''}</div>
+  <div style="display:flex;gap:8px;margin-bottom:8px"><button class="btn btn-out" style="padding:12px 14px" onclick="wmNav(-1)">↑</button><button class="btn" style="flex:1;background:var(--terra);color:#fff;border:none;padding:14px;border-radius:var(--radius-sm);font-weight:600;font-size:15px" onclick="wmDoneSet()">${simple?'完成 ✓':(_wmSet<sets?'完成这组 → 休息':'完成最后一组 ✓')}</button><button class="btn btn-out" style="padding:12px 14px" onclick="wmNav(1)">↓</button></div>
+  <button class="btn btn-out" style="width:100%;font-size:13px" onclick="wmFinish()">结束训练并打卡</button>`;
+  const wEl=document.getElementById('wm-weight');
+  if(wEl)wEl.addEventListener('change',()=>{const v=parseFloat(wEl.value);if(isFinite(v)&&v>0)setWeight(date,_wmIdx,v);});
+}
+function wmDoneSet(){
+  const date=_wmDate,day=S.plan&&S.plan.days.find(d=>d.date===date);if(!day)return;
+  const ex=day.exercises[_wmIdx],simple=_wmIsSimple(ex),sets=simple?1:getAdj(date,_wmIdx,'s',ex.sets);
+  if(!simple&&_wmSet<sets){_wmSet++;if((S.restDur||0)>0&&typeof startTimer==='function')startTimer(S.restDur,'组间休息');renderGuided();return;}
+  if(!S.prog[date])S.prog[date]={};S.prog[date][_wmIdx]=true;saveState();
+  _wmSet=1;let n=_wmIdx+1;while(n<day.exercises.length&&S.prog[date]&&S.prog[date][n])n++;_wmIdx=n;
+  if(_wmIdx>=day.exercises.length){wmClose();render();endWorkoutEarly(date);return;}
+  renderGuided();
+}
+function wmNav(dir){const day=S.plan&&S.plan.days.find(d=>d.date===_wmDate);if(!day)return;_wmIdx=Math.max(0,Math.min(day.exercises.length-1,_wmIdx+dir));_wmSet=1;renderGuided();}
+function wmFinish(){wmClose();render();endWorkoutEarly(_wmDate);}
+
 function showExDetail(name){
 const info=EX_DETAIL[name];
 // Find from DB for muscles
@@ -3413,6 +3489,9 @@ const mistakes=info?.mistakes||[];
 
 document.getElementById('ex-modal-title').textContent=name;
 document.getElementById('ex-modal-muscles').innerHTML=muscles.map(m=>`<span class="jchip">${m}</span>`).join('');
+const _e1rm=typeof estimate1RM==='function'?estimate1RM(name):null;
+const _strEl=document.getElementById('ex-modal-strength');
+if(_strEl)_strEl.innerHTML=_e1rm?`<div style="background:var(--surface2);border-radius:8px;padding:8px 10px;margin-bottom:1rem;font-size:12px"><div style="display:flex;justify-content:space-between"><span>预计 1RM（基于你的历史）</span><b style="color:var(--terra)">≈ ${_e1rm} kg</b></div><div style="font-size:11px;color:var(--ink3);margin-top:4px">目标重量参考：力量5次≈${weightForReps(_e1rm,5)}・增肌10次≈${weightForReps(_e1rm,10)}・塑形15次≈${weightForReps(_e1rm,15)} kg</div></div>`:'';
 document.getElementById('ex-modal-steps').innerHTML=steps.map((s,i)=>`<div class="ex-step"><span class="ex-step-n">${i+1}</span><span>${s}</span></div>`).join('');
 document.getElementById('ex-modal-tips').innerHTML=tips.length?tips.map(t=>`<div class="ex-tip">${t}</div>`).join(''):'';
 document.getElementById('ex-modal-mistakes').innerHTML=mistakes.length?`<p style="font-size:11px;font-weight:600;color:var(--terra);margin:8px 0 4px">常见错误</p>`+mistakes.map(m=>`<div class="ex-tip" style="border-color:var(--terra-br);color:var(--terra)">${m}</div>`).join(''):'';

@@ -215,6 +215,7 @@
                     <button class="chip" data-v="核心">核心</button>
                     <button class="chip" data-v="有氧">有氧</button>
                     <button class="chip" data-v="游泳">游泳</button>
+                    <button class="chip" data-v="柔韧灵活">柔韧灵活</button>
                 </div>
                 <p class="sec">限制或注意</p>
                 <textarea id="limits" placeholder="例如：膝盖不适、肩伤、避免跳跃..."></textarea>
@@ -302,11 +303,17 @@
                 <button class="ex-modal-close" onclick="closeExDetail()">&#10005;</button>
             </div>
             <div id="ex-modal-muscles" class="jentry-chips" style="margin-bottom:1rem"></div>
+            <div id="ex-modal-strength"></div>
             <p style="font-size:11px;font-weight:600;color:var(--ink3);margin-bottom:8px;letter-spacing:.06em">动作要点</p>
             <div id="ex-modal-steps"></div>
             <div id="ex-modal-tips" style="margin-top:10px"></div>
             <div id="ex-modal-mistakes"></div>
         </div>
+    </div>
+
+    <!-- Guided Workout Mode -->
+    <div id="workout-modal" class="ex-modal-overlay" onclick="if(event.target===this)wmClose()">
+        <div class="ex-modal-card" id="wm-card" onclick="event.stopPropagation()"></div>
     </div>
 
     <!-- History Detail Modal -->
