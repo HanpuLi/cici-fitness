@@ -62,7 +62,7 @@ function updateThemeBtn(theme){
 function saveState(){
 ls(K.settings,{goal:S.goal,level:S.level,days:S.days,dur:S.dur,equip:S.equip,focus:S.focus,limits:S.limits,volumeMultiplier:S.volumeMultiplier,restDur:S.restDur,swimLevel:S.swimLevel,periodMode:S.periodMode});
 if(S.plan)ls(K.plan,{plan:S.plan,prog:S.prog,adj:S.adj,weights:S.weights,unlockedDates:S.unlockedDates});
-localStorage.setItem('fit_selDate', S.selDate || '');
+localStorage.setItem(nsKey('fit_selDate'), S.selDate || '');
 }
 function loadState(){
 const s=lg(K.settings);
