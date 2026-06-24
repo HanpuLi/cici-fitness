@@ -33,7 +33,7 @@ function migrateLegacyKeys(uid){
 }
 
 // ══ State ════════════════════════════════════════════════
-const S={goal:'女性薄肌',level:'初级',days:3,dur:60,equip:['健身房全套'],focus:['均衡全身'],limits:'',plan:null,selDate:null,prog:{},adj:{},weights:{},volumeMultiplier:1.0,restDur:45,swimLevel:'入门',periodMode:false,cycleEnabled:true,cycleDay:1,cycleLength:28};
+const S={goal:'女性薄肌',level:'初级',days:3,dur:60,equip:['健身房全套'],focus:['均衡全身'],limits:'',plan:null,selDate:null,prog:{},adj:{},weights:{},volumeMultiplier:1.0,restDur:45,swimLevel:'入门',periodMode:false,cycleEnabled:true,cycleDay:1,cycleLength:28,vacuumDays:[]};
 let LOG=lg(K.log)||[];
 let W_HIST=lg(K.wh)||{};
 let PR_LIST=lg(K.pr)||[]; // {date,exercise,weight,prev}
@@ -245,13 +245,17 @@ stretch:[
 {n:'猫牛式',eq:['无器材','健身房全套'],muscle:['核心','全身'],diff:1,note:'四足跪姿，吸气塌腰抬头、呼气拱背低头，随呼吸活动整段脊柱',u:'秒'},
 {n:'胸椎旋转',eq:['无器材','健身房全套'],muscle:['全身','上肢'],diff:1,note:'四足跪姿一手扶头后，手肘向上向后打开旋转，转胸椎非腰',u:'秒',bi:true},
 {n:'盆底放松呼吸',eq:['无器材','健身房全套'],muscle:['核心'],diff:1,note:'仰卧屈膝缓慢腹式呼吸，吸气时主动让盆底放松下沉(反向凯格尔)——柔韧/舒适关键在会放松',u:'秒'},
-{n:'靠墙静蹲',eq:['无器材','健身房全套'],muscle:['下肢'],diff:1,note:'背贴墙下蹲至大腿平行、膝约90°静态保持——练腿与体位保持耐力',u:'秒'},
+{n:'靠墙静蹲',eq:['无器材','健身房全套'],muscle:['下肢'],diff:1,note:'背贴墙下蹲至大腿平行、膝约90°静态保持——练腿与姿势保持耐力',u:'秒'},
 {n:'深蹲保持',eq:['无器材','健身房全套'],muscle:['下肢'],diff:1,note:'全蹲到底(亚洲蹲)、脚掌踩实、胸口打开，放松髋踝静态保持，练深蹲灵活+耐力',u:'秒'},
 {n:'臀桥保持',eq:['无器材','弹力带','健身房全套'],muscle:['下肢'],diff:1,note:'仰卧顶髋至肩-髋-膝一线，顶端夹臀静态保持，练臀+骨盆稳定',u:'秒'},
 {n:'鸟狗式',eq:['无器材','健身房全套'],muscle:['核心'],diff:1,note:'四足跪姿，对侧手脚伸直保持、骨盆不晃，练核心稳定与平衡',u:'秒',bi:true},
 {n:'门框开胸拉伸',eq:['无器材','健身房全套'],muscle:['全身','上肢'],diff:1,note:'前臂贴门框、身体前倾拉开胸/前肩，改善圆肩让肩线打开、显挺拔',u:'秒',bi:true},
 {n:'胸椎伸展',eq:['无器材','健身房全套'],muscle:['全身'],diff:1,note:'坐姿双手抱头、上背靠椅背或泡沫轴向后伸展，改善含胸驼背',u:'秒'},
 {n:'颈侧拉伸',eq:['无器材','健身房全套'],muscle:['全身'],diff:1,note:'头侧倒、同侧手轻搭，放松颈侧/上斜方，配合收下巴改善头前伸',u:'秒',bi:true},
+{n:'脚踝绕环',eq:['无器材','健身房全套'],muscle:['下肢'],diff:1,note:'抬起一脚，脚踝带动脚掌缓慢画大圈，顺逆各转，活动踝关节',u:'秒',bi:true},
+{n:'腓肠肌拉伸',eq:['无器材','健身房全套'],muscle:['下肢'],diff:1,note:'弓步后腿伸直、脚跟踩地前压，拉小腿上部(穿高跟更稳)',u:'秒',bi:true},
+{n:'比目鱼肌拉伸',eq:['无器材','健身房全套'],muscle:['下肢'],diff:1,note:'弓步后腿微屈膝、脚跟踩地下沉，拉小腿深层',u:'秒',bi:true},
+{n:'跪姿踝背屈',eq:['无器材','健身房全套'],muscle:['下肢'],diff:1,note:'跪姿前脚屈膝、膝过脚尖、脚跟不离地，增加踝背屈活动度(深蹲更深/穿高跟更稳)',u:'秒',bi:true},
 ]
 };
 
@@ -429,14 +433,14 @@ const CURVE_SPLITS={
   5:[
     {type:'臀大肌塑形（臀推为主）',groups:['hamglutes','quads','glutemed','core'],pick:{hamglutes:3,quads:1,glutemed:1,core:1}},
     {type:'臀中肌·胯宽（重）',groups:['glutemed','core'],pick:{glutemed:4,core:2}},
-    {type:'大腿丰满（股四+腘绳）',groups:['quads','hamglutes','calves'],pick:{quads:3,hamglutes:2,calves:1}},
+    {type:'大腿丰满（股四+腘绳）',groups:['quads','hamglutes','core'],pick:{quads:3,hamglutes:2,core:1}}, // 少练小腿(去掉calves)
     {type:'臀中+臀大泵感',groups:['glutemed','hamglutes'],pick:{glutemed:3,hamglutes:2}},
     {type:'腘绳+内收+收腰',groups:['hamglutes','glutemed','core'],pick:{hamglutes:3,glutemed:1,core:2}},
   ],
   6:[
     {type:'臀大肌塑形（臀推为主）',groups:['hamglutes','quads','glutemed','core'],pick:{hamglutes:3,quads:1,glutemed:1,core:1}},
     {type:'臀中肌·胯宽（重）',groups:['glutemed','core'],pick:{glutemed:4,core:2}},
-    {type:'大腿丰满（股四+腘绳）',groups:['quads','hamglutes','calves'],pick:{quads:3,hamglutes:2,calves:1}},
+    {type:'大腿丰满（股四+腘绳）',groups:['quads','hamglutes','core'],pick:{quads:3,hamglutes:2,core:1}}, // 少练小腿(去掉calves)
     {type:'臀中+臀大泵感',groups:['glutemed','hamglutes'],pick:{glutemed:3,hamglutes:2}},
     {type:'腘绳+内收+收腰',groups:['hamglutes','glutemed','core'],pick:{hamglutes:3,glutemed:1,core:2}},
     {type:'臀中强化+股四',groups:['glutemed','quads','core'],pick:{glutemed:2,quads:2,core:1}},
@@ -444,7 +448,7 @@ const CURVE_SPLITS={
   7:[
     {type:'臀大肌塑形（臀推为主）',groups:['hamglutes','quads','glutemed','core'],pick:{hamglutes:3,quads:1,glutemed:1,core:1}},
     {type:'臀中肌·胯宽（重）',groups:['glutemed','core'],pick:{glutemed:4,core:2}},
-    {type:'大腿丰满（股四+腘绳）',groups:['quads','hamglutes','calves'],pick:{quads:3,hamglutes:2,calves:1}},
+    {type:'大腿丰满（股四+腘绳）',groups:['quads','hamglutes','core'],pick:{quads:3,hamglutes:2,core:1}}, // 少练小腿(去掉calves)
     {type:'臀中+臀大泵感',groups:['glutemed','hamglutes'],pick:{glutemed:3,hamglutes:2}},
     {type:'腘绳+内收+收腰',groups:['hamglutes','glutemed','core'],pick:{hamglutes:3,glutemed:1,core:2}},
     {type:'臀中强化+股四',groups:['glutemed','quads','core'],pick:{glutemed:2,quads:2,core:1}},
@@ -2549,7 +2553,12 @@ function initTouchDrag(){
 // ══ Exercise Detail Modal ═══════════════════════════════
 // Detail data inline - key exercises with full breakdown
 const EX_DETAIL = {
-  // === 体位保持 / 稳定 / 体态（柔韧·体位 模块）===
+  // === 脚踝灵活 / 小腿（少练小腿，重灵活）===
+  '脚踝绕环': { muscles:['踝'], steps:['坐或站、抬起一只脚','脚踝带动脚掌缓慢画大圈','顺/逆时针各转后换脚'], tips:['幅度尽量大、速度慢','穿高跟前后都该常做'], mistakes:['只动脚趾不动踝','转太快'] },
+  '腓肠肌拉伸': { muscles:['腓肠肌(小腿上部)'], steps:['弓步，后腿伸直、脚跟踩地','重心前压，感受后小腿上部拉伸','两侧各30-60秒'], tips:['后脚尖朝正前、脚跟别离地'], mistakes:['脚跟抬起','含胸弓背'] },
+  '比目鱼肌拉伸': { muscles:['比目鱼肌(小腿深层)'], steps:['弓步，后腿微屈膝、脚跟踩地','身体下沉，感受小腿更深处','两侧各30-60秒'], tips:['和腓肠肌拉伸的区别在后膝微弯'], mistakes:['膝盖打太直(变成拉腓肠肌)'] },
+  '跪姿踝背屈': { muscles:['踝背屈'], steps:['跪姿，一脚在前屈膝','身体前压让膝越过脚尖、脚跟不离地','感受脚踝前侧打开，换边'], tips:['增加踝背屈→深蹲更深、穿高跟更稳'], mistakes:['脚跟离地','膝盖内扣'] },
+  // === 姿势保持 / 稳定 / 体态（柔韧·体态 模块）===
   '靠墙静蹲': { muscles:['股四头','臀'], steps:['背紧贴墙，双脚前移约与肩同宽','下蹲到大腿与地面平行、膝约90°','静态保持，均匀呼吸'], tips:['膝盖对准脚尖、不超脚尖','想加难度可单手扶或踮脚尖'], mistakes:['臀高于膝偷懒','憋气'] },
   '深蹲保持': { muscles:['髋','踝','股四头'], steps:['双脚略宽于肩、脚尖微外','全蹲到底，脚掌(尤其脚跟)踩实','胸口打开，放松髋踝静态保持'], tips:['脚跟踩不住可垫薄物','用手肘轻顶膝盖帮助开髋'], mistakes:['脚跟离地','含胸圆背'] },
   '臀桥保持': { muscles:['臀','腘绳'], steps:['仰卧屈膝，脚跟离臀约一拳','顶髋至肩-髋-膝成一条线','顶端夹臀静态保持，肋骨不外翻'], tips:['用臀发力而非腰','可在膝上加弹力带'], mistakes:['塌腰用腰顶','髋没顶到位'] },
@@ -3506,7 +3515,11 @@ document.getElementById('ex-modal-title').textContent=name;
 document.getElementById('ex-modal-muscles').innerHTML=muscles.map(m=>`<span class="jchip">${m}</span>`).join('');
 const _e1rm=typeof estimate1RM==='function'?estimate1RM(name):null;
 const _strEl=document.getElementById('ex-modal-strength');
-if(_strEl)_strEl.innerHTML=_e1rm?`<div style="background:var(--surface2);border-radius:8px;padding:8px 10px;margin-bottom:1rem;font-size:12px"><div style="display:flex;justify-content:space-between"><span>预计 1RM（基于你的历史）</span><b style="color:var(--terra)">≈ ${_e1rm} kg</b></div><div style="font-size:11px;color:var(--ink3);margin-top:4px">目标重量参考：力量5次≈${weightForReps(_e1rm,5)}・增肌10次≈${weightForReps(_e1rm,10)}・塑形15次≈${weightForReps(_e1rm,15)} kg</div></div>`:'';
+if(_strEl){
+const _demo=`<a href="https://search.bilibili.com/all?keyword=${encodeURIComponent(name+' 动作教学')}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:4px;font-size:12px;color:var(--terra);text-decoration:none;margin-bottom:10px"><i class="ti ti-player-play"></i>看视频示范（B站搜索）</a>`;
+const _str=_e1rm?`<div style="background:var(--surface2);border-radius:8px;padding:8px 10px;margin-bottom:10px;font-size:12px"><div style="display:flex;justify-content:space-between"><span>预计 1RM（基于你的历史）</span><b style="color:var(--terra)">≈ ${_e1rm} kg</b></div><div style="font-size:11px;color:var(--ink3);margin-top:4px">目标重量参考：力量5次≈${weightForReps(_e1rm,5)}・增肌10次≈${weightForReps(_e1rm,10)}・塑形15次≈${weightForReps(_e1rm,15)} kg</div></div>`:'';
+_strEl.innerHTML=_demo+_str;
+}
 document.getElementById('ex-modal-steps').innerHTML=steps.map((s,i)=>`<div class="ex-step"><span class="ex-step-n">${i+1}</span><span>${s}</span></div>`).join('');
 document.getElementById('ex-modal-tips').innerHTML=tips.length?tips.map(t=>`<div class="ex-tip">${t}</div>`).join(''):'';
 document.getElementById('ex-modal-mistakes').innerHTML=mistakes.length?`<p style="font-size:11px;font-weight:600;color:var(--terra);margin:8px 0 4px">常见错误</p>`+mistakes.map(m=>`<div class="ex-tip" style="border-color:var(--terra-br);color:var(--terra)">${m}</div>`).join(''):'';

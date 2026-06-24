@@ -60,7 +60,7 @@ function updateThemeBtn(theme){
 
 // ══ State Persistence ════════════════════════════════════
 function saveState(){
-ls(K.settings,{goal:S.goal,level:S.level,days:S.days,dur:S.dur,equip:S.equip,focus:S.focus,limits:S.limits,volumeMultiplier:S.volumeMultiplier,restDur:S.restDur,swimLevel:S.swimLevel,periodMode:S.periodMode,displayName:S.displayName,sealChar:S.sealChar,cycleEnabled:S.cycleEnabled,cycleDay:S.cycleDay,cycleLength:S.cycleLength});
+ls(K.settings,{goal:S.goal,level:S.level,days:S.days,dur:S.dur,equip:S.equip,focus:S.focus,limits:S.limits,volumeMultiplier:S.volumeMultiplier,restDur:S.restDur,swimLevel:S.swimLevel,periodMode:S.periodMode,displayName:S.displayName,sealChar:S.sealChar,cycleEnabled:S.cycleEnabled,cycleDay:S.cycleDay,cycleLength:S.cycleLength,vacuumDays:S.vacuumDays});
 if(S.plan)ls(K.plan,{plan:S.plan,prog:S.prog,adj:S.adj,weights:S.weights,unlockedDates:S.unlockedDates});
 localStorage.setItem(nsKey('fit_selDate'), S.selDate || '');
 }
@@ -287,6 +287,12 @@ if(confirm('警告：确定要清空所有计划、打卡记录和统计数据�
 }
 
 // ══ Body metrics (体重/围度 — 体型进度, 腰臀比 WHR) ════════
+function logVacuum(){
+  const t=todayStr(); if(!S.vacuumDays)S.vacuumDays=[];
+  if(S.vacuumDays.includes(t)){if(typeof showToast==='function')showToast('今天已打卡');return;}
+  S.vacuumDays.push(t); if(S.vacuumDays.length>400)S.vacuumDays=S.vacuumDays.slice(-400);
+  saveState(); if(typeof showToast==='function')showToast('真空吸已打卡 ✓'); if(typeof renderStats==='function')renderStats();
+}
 function logBody(){
   const g=id=>{const el=document.getElementById(id);if(!el)return null;const v=parseFloat(el.value);return isFinite(v)&&v>0?Math.round(v*10)/10:null;};
   const e={date:todayStr(),weight:g('b-weight'),waist:g('b-waist'),hip:g('b-hip'),thigh:g('b-thigh')};
@@ -329,7 +335,7 @@ function renderBodyPanel(){
   }
   const charts=['weight','waist','hip','thigh'].map(f=>spark(f,f==='weight'?'kg':'cm',f==='waist'?'down':f==='hip'?'up':null)).join('');
   const hist=BODY_LOG.length?`<details style="margin-top:6px"><summary style="font-size:11px;color:var(--ink3);cursor:pointer">历史记录 (${BODY_LOG.length})</summary><div style="margin-top:6px">${[...BODY_LOG].reverse().slice(0,40).map(x=>`<div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;padding:4px 0;border-bottom:1px solid var(--border)"><span>${x.date}</span><span style="color:var(--ink3);flex:1;text-align:right;margin-right:8px">${[x.weight!=null?x.weight+'kg':'',x.waist!=null?'腰'+x.waist:'',x.hip!=null?'臀'+x.hip:'',x.thigh!=null?'腿'+x.thigh:''].filter(Boolean).join(' · ')}</span><span onclick="delBody('${x.date}')" style="color:var(--terra);cursor:pointer;padding:0 4px">✕</span></div>`).join('')}</div></details>`:'';
-  return `<div class="panel"><p class="panel-title">身体记录 📏 <span style="font-size:11px;color:var(--ink3);font-weight:400">体型才是真正的进度</span></p><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">${fld('b-weight','体重','kg')}${fld('b-waist','腰围','cm')}${fld('b-hip','臀围','cm')}${fld('b-thigh','大腿围','cm')}</div><button onclick="logBody()" class="exp-btn" style="width:100%;margin-top:10px">保存今日数据</button>${whrBlock}${charts}${hist}</div>`;
+  return `<div class="panel"><p class="panel-title">身体记录 📏 <span style="font-size:11px;color:var(--ink3);font-weight:400">体型才是真正的进度</span></p><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">${fld('b-weight','体重','kg')}${fld('b-waist','腰围','cm')}${fld('b-hip','臀围','cm')}${fld('b-thigh','大腿围','cm')}</div><button onclick="logBody()" class="exp-btn" style="width:100%;margin-top:10px">保存今日数据</button>${(()=>{const d=S.vacuumDays||[],t=todayStr();let st=0;for(let i=0;i<400;i++){const ds=addDays(t,-i);if(d.includes(ds))st++;else if(i>0)break;}const dn=d.includes(t);return `<div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px;padding:8px 10px;background:var(--surface2);border-radius:8px"><div><div style="font-size:12px;font-weight:600">真空吸收腰打卡</div><div style="font-size:10px;color:var(--ink3)">连续 ${st} 天 · 累计 ${d.length} 次</div></div><button onclick="logVacuum()" class="exp-btn" style="font-size:12px;padding:6px 12px${dn?';opacity:.5':''}">${dn?'今日已打 ✓':'今日打卡'}</button></div>`;})()}${whrBlock}${charts}${hist}</div>`;
 }
 
 // ══ Stats ════════════════════════════════════════════════
