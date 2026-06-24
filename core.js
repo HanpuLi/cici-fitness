@@ -1004,7 +1004,7 @@ function pickPeriodAlternative(){
   return exercises;
 }
 
-function genPlan(isRecalibrate = false){
+function genPlan(isRecalibrate = false, preserveFuture = false){
 _skipAutoRegen=false; // Reset so future auto-regen can trigger
 const hasPool=S.equip.includes('泳池');
 const excluded=getExcluded();
@@ -1055,7 +1055,7 @@ if (S.plan) {
         if (!isRecalibrate) {
             if (isLocked(d)) preserve[d.date] = d;
         } else {
-            if (d.date < today || hasProgress || isLocked(d)) preserve[d.date] = d;
+            if (d.date < today || hasProgress || isLocked(d) || (preserveFuture && d.date > today)) preserve[d.date] = d;
         }
     }
 }
@@ -2134,9 +2134,12 @@ function submitRPE(rpe, isSkip=false) {
             }
             showToast(toastMsg);
             
-            // Auto recalibrate remaining days of the plan
+            // Auto-adjust has stored the new volume multiplier. Preserve future days'
+            // exercise selection so a check-in never reshuffles the upcoming plan; the
+            // new multiplier takes effect on genuinely new days (window roll / 重新生成)
+            // and on explicit 重排剩余. (recalibratePlan / autoAlignPlan still re-pick.)
             setTimeout(() => {
-                genPlan(true);
+                genPlan(true, true);
             }, 100);
             
             checkGymMilestone();
