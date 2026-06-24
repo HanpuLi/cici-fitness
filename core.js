@@ -697,7 +697,7 @@ let cnt=split.pick[g]||1;
 cnt=Math.round(cnt*(totalTarget/baseTotal));
 cnt=Math.max(1,cnt);
 // Focus groups get one extra exercise
-if(favGroups.includes(g))cnt=Math.min(cnt+1,cnt+1);
+if(favGroups.includes(g))cnt=cnt+1;
 groupBudget[g]=cnt;
 });
 
