@@ -677,11 +677,19 @@ if(changed){loadState();renderLog();showToast('已从云端同步')}
 setTimeout(()=>pushToCloud(),1000);
 }
 
+let _dirtyId=0; // bumped on every local change; lets a push detect changes that arrive mid-flight
 function schedulePush(){
 if(!_db||!_user)return;
-_localDirty=true; // Block cloud-to-local until push completes
+_localDirty=true; _dirtyId++; // Block cloud→local until pushed
 clearTimeout(_pushTimer);
 _pushTimer=setTimeout(pushToCloud,2000);
+}
+// Flush a pending push immediately when the page is hidden/closed, so a change made within the
+// 2s debounce isn't lost (otherwise the next launch's snapshot overwrites it with stale cloud).
+function flushPush(){ if(_db&&_user&&_localDirty&&!_pushing){ clearTimeout(_pushTimer); pushToCloud(); } }
+if(typeof document!=='undefined'){
+  document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='hidden') flushPush(); });
+  window.addEventListener('pagehide',flushPush);
 }
 
 async function pushToCloud(){
@@ -690,17 +698,26 @@ if(typeof _mockSyncFail !== 'undefined' && _mockSyncFail) {
     console.log('[sync] simulated push failure (offline)');
     const pill=document.getElementById('sync-pill');
     if(pill){pill.textContent='X';pill.className='auth-pill-sync err'}
+    clearTimeout(_pushTimer); _pushTimer=setTimeout(pushToCloud,5000); // keep dirty + retry
     return;
 }
 _pushing=true;
+const sentId=_dirtyId;
 const data={};
 CLOUD_KEYS.forEach(k=>{const v=localStorage.getItem(nsKey(k));if(v!==null){try{data[k]=JSON.parse(v)}catch{data[k]=v}}});
 try{
 await _db.collection('users').doc(_user.uid).set(data,{merge:true});
-_localDirty=false; // Push succeeded — safe to accept cloud updates again
+// Only stop blocking cloud→local if no newer change arrived during the await; else keep dirty + reschedule.
+if(_dirtyId===sentId){ _localDirty=false; } else { clearTimeout(_pushTimer); _pushTimer=setTimeout(pushToCloud,2000); }
 const pill=document.getElementById('sync-pill');
 if(pill){pill.textContent='✓';pill.className='auth-pill-sync ok'}
-}catch(e){console.warn('Push failed:',e);_localDirty=false}
+}catch(e){
+console.warn('Push failed:',e);
+// Keep _localDirty=true so the snapshot listener can't overwrite the unpushed change; retry with backoff.
+const pill=document.getElementById('sync-pill');
+if(pill){pill.textContent='X';pill.className='auth-pill-sync err'}
+clearTimeout(_pushTimer); _pushTimer=setTimeout(pushToCloud,5000);
+}
 _pushing=false;
 }
 
