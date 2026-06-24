@@ -2304,7 +2304,18 @@ function doSwap(date,ei,altIdx){
 const alt=window._swapAlts[altIdx];
 const sel=S.plan.days.find(d=>d.date===date);
 const ex=sel.exercises[ei];
-sel.exercises[ei]={name:alt.n,note:alt.note||'',sets:ex.sets,reps:alt.u==='秒'?30:(alt.u==='分钟'?1:ex.reps),unit:alt.u||'次',isWarmup:false,isStretch:false,bi:!!alt.bi};
+const newUnit=alt.u||'次';
+// Keep reps when the unit is unchanged (e.g. swim 分钟↔分钟, gym 次↔次); the old code
+// forced 分钟→reps:1, collapsing every swapped swim drill to 1 minute.
+const newReps=(newUnit===ex.unit)?ex.reps:(newUnit==='秒'?30:newUnit==='分钟'?10:(ex.reps||12));
+// Carry muscle/group/diff/swimPhase so render tags, the swim-phase grouping, and a
+// second swap's swim-detection don't break.
+sel.exercises[ei]={name:alt.n,note:alt.note||'',sets:ex.sets,reps:newReps,unit:newUnit,group:ex.group,muscle:alt.muscle||[],diff:alt.diff,isWarmup:false,isStretch:false,bi:!!alt.bi};
+if(alt.swimPhase)sel.exercises[ei].swimPhase=alt.swimPhase;
+// The new exercise inherits a fresh slot — drop the previous exercise's weight/adjust/done.
+if(S.weights)delete S.weights[date+'-'+ei];
+if(S.adj){delete S.adj[date+'-'+ei+'-s'];delete S.adj[date+'-'+ei+'-r'];}
+if(S.prog[date])delete S.prog[date][ei];
 document.getElementById('swap-modal').classList.remove('open');
 saveState();render();
 showToast(`已替换为 ${alt.n}`);
@@ -2355,10 +2366,15 @@ if(si<0||ti<0)return;
 const src=days[si],tgt=days[ti];
 // Only allow swapping unlocked workout days
 if(isLocked(src)||isLocked(tgt))return;
-// Swap workout content (keep dates fixed)
+// Don't rearrange a day that's already checked in — it would orphan its LOG/progress
+// and (since the dup-guard keys on date) let the day be checked in twice.
+if(LOG.some(l=>l.date===src.date)||LOG.some(l=>l.date===tgt.date))return;
+// Swap workout content (keep dates fixed). isSwimDay must travel with the content,
+// or the moved day renders/logs in the wrong (swim vs gym) mode.
 [src.workoutType,tgt.workoutType]=[tgt.workoutType,src.workoutType];
 [src.exercises,tgt.exercises]=[tgt.exercises,src.exercises];
 [src.isRest,tgt.isRest]=[tgt.isRest,src.isRest];
+[src.isSwimDay,tgt.isSwimDay]=[tgt.isSwimDay,src.isSwimDay];
 [src.duration,tgt.duration]=[tgt.duration,src.duration];
 saveState();render();
 showToast('已交换训练顺序');
@@ -2406,11 +2422,13 @@ function initTouchDrag(){
         const target=document.elementFromPoint(touch.clientX,touch.clientY)?.closest('.dc');
         if(target&&target!==_touchEl){
             const tDate=target.getAttribute('onclick')?.match(/selectDate\('([^']+)'\)/)?.[1];
-            if(tDate)dragDrop({preventDefault(){}},tDate);
+            // dragDrop reads the source from _dragSrc (set by the mouse path); the touch
+            // path stores it in _touchSrc, so bridge it or the drop is a silent no-op.
+            if(tDate){_dragSrc=_touchSrc;dragDrop({preventDefault(){}},tDate);}
         }
         if(_touchEl)_touchEl.classList.remove('dragging');
         if(_touchClone) _touchClone.remove();
-        _touchSrc=null;_touchEl=null;_touchClone=null;
+        _dragSrc=null;_touchSrc=null;_touchEl=null;_touchClone=null;
     },{passive:true});
 }
 
