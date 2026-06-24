@@ -603,6 +603,10 @@ firebase.auth().onAuthStateChanged(handleAuth);
 function handleAuth(user){
 _user=user;
 updateProfileUI();
+// Recover pre-namespace data into this account before reading state. If anything
+// was migrated, mark local dirty so the realtime listener can't overwrite the
+// just-recovered keys with a stale/empty cloud doc before our first push.
+if(user && typeof migrateLegacyKeys==='function' && migrateLegacyKeys(user.uid)) _localDirty=true;
 loadState();
 if(typeof render === 'function') render();
 if(typeof renderLog === 'function') renderLog();

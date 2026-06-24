@@ -8,6 +8,30 @@ function nsKey(k){ return currentUid() + '__' + k; }
 function lg(k){try{const v=localStorage.getItem(nsKey(k));return v?JSON.parse(v):null}catch{return null}}
 function ls(k,v){try{localStorage.setItem(nsKey(k),JSON.stringify(v));if(typeof schedulePush==='function')schedulePush()}catch{}}
 
+// One-time migration: copy pre-namespace "bare" keys (fit_s1 …) into the current
+// uid's namespace. Read-only copy — never deletes the bare keys, so it stays a safe
+// recovery net even if the app was already opened after the namespacing change.
+// __legacy_owner_uid__ stops a shared device from re-migrating one person's data to
+// another account; __ns_migrated__<uid> makes it run at most once per account.
+// Returns true if anything was actually copied (caller uses this to guard sync).
+function migrateLegacyKeys(uid){
+  if(!uid || uid==='anon') return false;
+  if(localStorage.getItem('__ns_migrated__'+uid)) return false;
+  const owner=localStorage.getItem('__legacy_owner_uid__');
+  if(owner && owner!==uid){ localStorage.setItem('__ns_migrated__'+uid,'1'); return false; }
+  const BARE=['fit_s1','fit_p1','fit_pr1','fit_log1','fit_adj1','fit_wh1','fit_pr','fit_swim','fit_gym_ach','fit_selDate'];
+  let any=false;
+  BARE.forEach(k=>{
+    const src=localStorage.getItem(k);
+    if(src===null) return;
+    const dst=uid+'__'+k;
+    if(localStorage.getItem(dst)===null){ localStorage.setItem(dst,src); any=true; }
+  });
+  if(any && !owner) localStorage.setItem('__legacy_owner_uid__',uid);
+  localStorage.setItem('__ns_migrated__'+uid,'1');
+  return any;
+}
+
 // ══ State ════════════════════════════════════════════════
 const S={goal:'女性薄肌',level:'初级',days:3,dur:60,equip:['健身房全套'],focus:['均衡全身'],limits:'',plan:null,selDate:null,prog:{},adj:{},weights:{},volumeMultiplier:1.0,restDur:45,swimLevel:'入门',periodMode:false};
 let LOG=lg(K.log)||[];
