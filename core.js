@@ -550,6 +550,29 @@ function currentGoalKey(){
   return '女性薄肌';
 }
 function currentScheme(){ return SCHEMES[currentGoalKey()]; }
+// Apply a goal toggle to S.goal/focus/equip with the exclusivity + canonical-order rules.
+// Used by BOTH the settings chip (app.js) and onboarding (selectOnboardGoal) so the two can't
+// drift into producing invalid keys like '倒三角矫正+翘臀美背'. Caller persists + re-renders.
+function applyGoalToggle(goal){
+  const EXCLUSIVE=['倒三角矫正','翘臀美背']; // 整套预设方案，不与其他目标组合
+  const ORDER=['女性薄肌','臀腿塑形'];        // 规范组合顺序，命中 '女性薄肌+臀腿塑形' key
+  let goals = S.goal ? S.goal.split('+') : [];
+  if(EXCLUSIVE.includes(goal)){
+    goals = goals.includes(goal) ? [] : [goal];            // 互斥：选它即清空其他；再点一次取消
+  } else {
+    goals = goals.filter(g=>!EXCLUSIVE.includes(g));        // 选普通目标时先去掉互斥预设
+    goals = goals.includes(goal) ? goals.filter(g=>g!==goal) : [...goals, goal];
+  }
+  if(goals.length===0) goals.push('女性薄肌');
+  goals.sort((a,b)=>ORDER.indexOf(a)-ORDER.indexOf(b));
+  S.goal = goals.join('+');
+  if(hasGoal('倒三角矫正')||hasGoal('臀腿塑形')||hasGoal('翘臀美背')){
+    S.focus=['下肢'];
+    ['健身房全套','弹力带','无器材'].forEach(x=>{ if(!S.equip.includes(x)) S.equip.push(x); }); // 臀中肌动作多在弹力带/徒手池
+  } else {
+    S.focus=['均衡全身'];
+  }
+}
 const SWIM_TIPS={
 '入门':'蛙泳腿口诀：收翻蹬夹。每次蹬腿后享受2-3秒滑行，不要急着做下一个动作。扶池边是你最好的练习伙伴。',
 '进阶':'好的蛙泳70%时间在滑行。关注节奏而非速度，累了就加长滑行而不是加快频率。',
@@ -1406,21 +1429,7 @@ function renderOnboarding(){
 }
 
 globalThis.selectOnboardGoal = function(goal) {
-    let goals = S.goal ? S.goal.split('+') : [];
-    if(goals.includes(goal)){
-        goals = goals.filter(g => g !== goal);
-    } else {
-        goals.push(goal);
-    }
-    if(goals.length === 0) goals.push('女性薄肌');
-    S.goal = goals.join('+');
-
-    if(hasGoal('倒三角矫正') || hasGoal('臀腿塑形') || hasGoal('翘臀美背')){
-        S.focus = ['下肢'];
-        if (!S.equip.includes('健身房全套')) S.equip.push('健身房全套');
-    } else {
-        S.focus = ['均衡全身'];
-    }
+    applyGoalToggle(goal); // shared exclusivity + canonical-order + equipment rules — was a blind toggle that could build invalid combos
     if (typeof saveState === 'function') saveState();
     if (typeof applySettingsToUI === 'function') applySettingsToUI();
     renderOnboarding();

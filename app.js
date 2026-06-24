@@ -732,28 +732,9 @@ flashSaved();
 }
 (function(){
 const el=document.getElementById('g-goal');if(!el)return;
-const EXCLUSIVE=['倒三角矫正','翘臀美背']; // 整套预设方案，不与其他目标组合
-const ORDER=['女性薄肌','臀腿塑形'];        // 规范组合顺序，保证命中 '女性薄肌+臀腿塑形' key
 el.addEventListener('click',e=>{
 const b=e.target.closest('.chip');if(!b)return;
-const goal=b.dataset.v;
-let goals = S.goal ? S.goal.split('+') : [];
-if(EXCLUSIVE.includes(goal)){
-    goals = goals.includes(goal) ? [] : [goal];           // 互斥：选它即清空其他；再点一次取消
-}else{
-    goals = goals.filter(g=>!EXCLUSIVE.includes(g));       // 选普通目标时先去掉互斥预设
-    goals = goals.includes(goal) ? goals.filter(g=>g!==goal) : [...goals, goal];
-}
-if(goals.length === 0) goals.push('女性薄肌');
-goals.sort((a,b)=>ORDER.indexOf(a)-ORDER.indexOf(b));      // 规范顺序，命中组合 SCHEME key
-S.goal = goals.join('+');
-
-if(hasGoal('倒三角矫正') || hasGoal('臀腿塑形') || hasGoal('翘臀美背')){
-S.focus=['下肢'];
-['健身房全套','弹力带','无器材'].forEach(x=>{ if(!S.equip.includes(x)) S.equip.push(x); }); // 臀中肌动作多在弹力带/徒手池，见 P1-2
-}else{
-S.focus=['均衡全身'];
-}
+applyGoalToggle(b.dataset.v); // shared exclusivity + canonical-order + equipment rules (core.js)
 saveState();
 applySettingsToUI();
 flashSaved();
