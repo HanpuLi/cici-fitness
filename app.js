@@ -281,7 +281,7 @@ else if(i>0)break;
 
 // Month stats
 const monthLogs=LOG.filter(l=>l.date.startsWith(thisMonth));
-const t7str=addDays(tStr,-7);
+const t7str=addDays(tStr,-6); // -6 + 双闭区间 = 7 天窗口(原 -7 是 8 天)
 const weekDays=S.plan?S.plan.days.filter(d=>!d.isRest&&d.date>=t7str&&d.date<=tStr):[];
 const weekDone=weekDays.filter(d=>isDone(d)).length;
 const weekTotal=weekDays.length;
@@ -301,7 +301,7 @@ return`<div class="heat-cell${c.active?' heat-on':''}${isToday?' heat-today':''}
 
 // Muscle distribution with bar
 const dist={};
-LOG.slice(-60).forEach(l=>{
+LOG.filter(l=>l.date>=addDays(tStr,-60)).forEach(l=>{ // 近60「天」(原 slice(-60) 是最近60「条」)
 if(l.exercises)l.exercises.forEach(ex=>{
 let found = false;
 for(const[grp,exs]of Object.entries(DB)){
@@ -504,7 +504,7 @@ return `<div class="panel">
 
 // ══ Export / Import ══════════════════════════════════════
 function exportForAI(){
-const recent=LOG.slice(-30).reverse();
+const recent=LOG.filter(l=>l.date>=addDays(todayStr(),-30)).sort((a,b)=>b.date.localeCompare(a.date)); // 近30「天」, 最新在前(原 slice(-30) 取的是最旧30条)
 if(!recent.length){alert('暂无日志记录');return}
 const dist={};
 recent.forEach(l=>{
