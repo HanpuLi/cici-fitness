@@ -2613,6 +2613,12 @@ function startTimer(seconds, label = "休息中") {
   }
 
   lblEl.innerText = label;
+  lblEl.style.color = '';
+  timeEl.style.color = '';
+  bar.style.background = '';
+  bar.style.boxShadow = '';
+  delete bar.dataset.insulting;
+  delete bar.dataset.dinged;
   bar.classList.add('show');
   unlockAudio();
   playRestStartSound();
@@ -2628,10 +2634,48 @@ function startTimer(seconds, label = "休息中") {
     prog.style.width = ((total - remain) / total * 100) + '%';
 
     if (remain <= 0) {
-      clearInterval(_timerInterval);
-      _releaseWakeLock();
-      playDing();
-      setTimeout(() => { bar.classList.remove('show'); }, 3000);
+      if (remain === 0 && !bar.dataset.dinged) {
+        playDing();
+        bar.dataset.dinged = '1';
+        if (!(_globalSubMode && _ownerSession() && hasGoal('女性曲线'))) {
+          setTimeout(() => { bar.classList.remove('show'); }, 3000);
+        }
+      }
+      
+      if (_globalSubMode && _ownerSession() && hasGoal('女性曲线')) {
+        const overtime = -Math.floor((endTime - Date.now()) / 1000);
+        if (overtime >= 3) {
+          if (!bar.dataset.insulting) {
+            bar.dataset.insulting = '1';
+            bar.style.background = 'rgba(150, 0, 0, 0.9)';
+            lblEl.style.color = '#fff';
+            timeEl.style.color = '#ff6b6b';
+            
+            const db = _getSubDb();
+            const dec = s => { try { return decodeURIComponent(atob(s)); } catch(e) { return ''; } };
+            const insults = db?.timeout_insults?.map(dec).filter(Boolean) || [
+              '休息够了吗？立刻给我爬起来继续做！',
+              '时间到了！别像条死狗一样趴着！',
+              '滚起来继续！'
+            ];
+            lblEl.innerText = insults[Math.floor(Math.random() * insults.length)];
+            if ('vibrate' in navigator) {
+              const pulse = setInterval(() => {
+                if (!document.getElementById('universal-timer').classList.contains('show')) clearInterval(pulse);
+                else navigator.vibrate([100, 50, 100]);
+              }, 2000);
+            }
+          }
+          if (overtime % 2 === 0) {
+            bar.style.boxShadow = '0 0 30px rgba(255, 0, 0, 0.8)';
+          } else {
+            bar.style.boxShadow = '0 0 10px rgba(255, 0, 0, 0.4)';
+          }
+        }
+      } else if (remain <= -3) {
+         clearInterval(_timerInterval);
+         _releaseWakeLock();
+      }
     }
   }
 
