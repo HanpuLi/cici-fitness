@@ -1246,6 +1246,36 @@ function pickPrivateDayExercises() {
   }));
 }
 
+const _PRIV_MUSCLE_MAP = {
+  hamglutes: ['臀', '臀大肌', '盆底肌', '内收肌', '髋外旋', '髋屈肌'],
+  quads:     ['股四头', '下肢', '内收肌', '髋屈肌'],
+  core:      ['核心', '骨盆控制', '脊柱'],
+  chest:     ['胸大肌', '上肢'],
+  back:      ['上肢'],
+  shoulder:  ['上肢'],
+  stretch:   ['下肢', '全身', '核心'],
+};
+function pickPrivateForSplit(split, excluded, usedSet) {
+  const relevantMuscles = new Set();
+  (split.groups || []).forEach(g => (_PRIV_MUSCLE_MAP[g] || []).forEach(m => relevantMuscles.add(m)));
+  const ps = new Set(_PRIVATE_POOL);
+  const pool = [];
+  Object.entries(DB).forEach(([, exs]) => {
+    exs.forEach(ex => {
+      if (ps.has(ex.n) && !excluded.has(ex.n) && !usedSet.has(ex.n) &&
+          ex.eq.some(e => e === '无器材' || S.equip.includes(e)) &&
+          (ex.muscle || []).some(m => relevantMuscles.has(m)))
+        pool.push(ex);
+    });
+  });
+  for (let i = pool.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [pool[i], pool[j]] = [pool[j], pool[i]]; }
+  return pool.slice(0, 2).map(ex => {
+    usedSet.add(ex.n);
+    return { name: ex.n, sets: 2, reps: ex.u === '秒' ? 45 : 15, unit: ex.u || '次',
+             note: ex.note, diff: ex.diff, bi: !!ex.bi, muscle: ex.muscle || [] };
+  });
+}
+
 function genPlan(isRecalibrate = false, preserveFuture = false) {
   _skipAutoRegen = false; // Reset so future auto-regen can trigger
   const hasPool = S.equip.includes('泳池');
@@ -1335,6 +1365,7 @@ hasGoal('翘臀美背') ? (GLUTE_BACK_SPLITS[gymPerWeek] || GLUTE_BACK_SPLITS[3]
   }
 
   let generatedGymCount = 0;
+  const _usedPrivate = new Set();
 
   for (let i = 0; i < 14; i++) {
     const ds = addDays(startDate, i);
@@ -1351,7 +1382,11 @@ hasGoal('翘臀美背') ? (GLUTE_BACK_SPLITS[gymPerWeek] || GLUTE_BACK_SPLITS[3]
       // Gym day
       const split = splits[(startSplitIdx + generatedGymCount) % splits.length];
       generatedGymCount++;
-      days.push({ date: ds, isRest: false, workoutType: split.type, duration: S.dur, exercises: pickExercises(split, excluded) });
+      const exs = pickExercises(split, excluded);
+      if (_ownerSession()) {
+        pickPrivateForSplit(split, excluded, _usedPrivate).forEach(e => exs.push(e));
+      }
+      days.push({ date: ds, isRest: false, workoutType: split.type, duration: S.dur, exercises: exs });
     } else if (dayType === 2) {
       // Swim day (or period alternative)
       if (S.periodMode) {
@@ -1364,20 +1399,6 @@ hasGoal('翘臀美背') ? (GLUTE_BACK_SPLITS[gymPerWeek] || GLUTE_BACK_SPLITS[3]
     }
   }
 
-  // Owner: inject one 柔韧流动 day per 7-day block (replaces a mid-week rest day)
-  if (_ownerSession()) {
-    [0, 7].forEach(wk => {
-      const restIdxs = [];
-      for (let i = wk; i < Math.min(wk + 7, days.length); i++) {
-        if (days[i].isRest && !preserve[days[i].date]) restIdxs.push(i);
-      }
-      if (restIdxs.length >= 2) {
-        const pick = restIdxs[Math.floor(restIdxs.length / 2)];
-        const exs = pickPrivateDayExercises();
-        if (exs.length) days[pick] = { date: days[pick].date, isRest: false, isPrivateDay: true, workoutType: '柔韧流动', duration: 30, exercises: exs };
-      }
-    });
-  }
 
   const sch = currentScheme();
   const isSwimPlan = hasPool && swimPerWeek > 0;
