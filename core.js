@@ -2,7 +2,7 @@
 const firebaseConfig = { apiKey: "AIzaSyB12HcJxsqqmWoih3wnfpyqu9LDzEE9nXs", authDomain: "cici-fitness.firebaseapp.com", projectId: "cici-fitness", storageBucket: "cici-fitness.firebasestorage.app", messagingSenderId: "375793627351", appId: "1:375793627351:web:f2dbfd8e107206417f4092", measurementId: "G-ZHCCRWZ57P" };
 
 // ══ Storage Layer ════════════════════════════════════════
-const K = { settings: 'fit_s1', plan: 'fit_p1', prog: 'fit_pr1', log: 'fit_log1', adj: 'fit_adj1', wh: 'fit_wh1', pr: 'fit_pr', swim_log: 'fit_swim', gym_log: 'fit_gym_ach', body: 'fit_body1' };
+const K = { settings: 'fit_s1', plan: 'fit_p1', prog: 'fit_pr1', log: 'fit_log1', adj: 'fit_adj1', wh: 'fit_wh1', pr: 'fit_pr', swim_log: 'fit_swim', gym_log: 'fit_gym_ach', body: 'fit_body1', sub_depth: 'fit_sub_depth' };
 function currentUid() { return (typeof firebase !== 'undefined' && firebase.auth().currentUser && firebase.auth().currentUser.uid) || 'anon'; }
 function _ownerSession() { try { const u = typeof firebase !== 'undefined' && firebase.auth && firebase.auth().currentUser; return !!u && u.email === atob('Y2FpdGx5ZUBnbWFpbC5jb20='); } catch { return false; } }
 function nsKey(k) { return currentUid() + '__' + k; }
@@ -40,7 +40,8 @@ let W_HIST = lg(K.wh) || {};
 let PR_LIST = lg(K.pr) || []; // {date,exercise,weight,prev}
 let SWIM_LOG = lg(K.swim_log) || { count: 0, milestones: [] };
 let GYM_LOG = lg(K.gym_log) || { count: 0, milestones: [] };
-let BODY_LOG = lg(K.body) || []; // [{date,weight,waist,hip,thigh}] 体重/围度——体型进度 + 腰臀比
+let BODY_LOG = lg(K.body) || [];
+let SUB_DEPTH = lg(K.sub_depth) || { count: 0, metrics: [] }; // [{date,weight,waist,hip,thigh}] 体重/围度——体型进度 + 腰臀比
 let _logShowAll = false;
 let _calWeekOffset = 0;
 
@@ -781,7 +782,7 @@ GYM_LOG = lg('fit_gym_ach') || { count: 0, milestones: [] };
 function _subMilestoneText() {
   if (!_globalSubMode || !_ownerSession()) return null;
   const db = _getSubDb(), dec = s => { try { return decodeURIComponent(atob(s)); } catch(e) { return ''; } };
-  const msgs = db?.milestone_texts?.map(dec).filter(Boolean);
+  const msgs = _subTierSlice(db?.milestone_texts?.map(dec).filter(Boolean));
   return msgs && msgs.length ? msgs[Math.floor(Math.random() * msgs.length)] : null;
 }
 
@@ -1309,7 +1310,13 @@ function pickPrivateForSplit(split, excluded, usedSet) {
         pool.push(ex);
     });
   });
-  for (let i = pool.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [pool[i], pool[j]] = [pool[j], pool[i]]; }
+  const depthScore = _subDepthScore();
+  pool.sort((a, b) => {
+    const da = a.diff || 2, db2 = b.diff || 2;
+    if (depthScore >= 2.5) return db2 - da;
+    if (depthScore <= 1.5) return da - db2;
+    return Math.random() - 0.5;
+  });
   return pool.slice(0, 2).map(ex => {
     usedSet.add(ex.n);
     return { name: ex.n, sets: 2, reps: ex.u === '秒' ? 45 : 15, unit: ex.u || '次',
@@ -1819,7 +1826,7 @@ function render() {
 
   if (_globalSubMode && _ownerSession()) {
     const _db = _getSubDb(), _dec = s => { try { return decodeURIComponent(atob(s)); } catch(e) { return ''; } };
-    const _dts = _db?.daily_texts?.map(_dec).filter(Boolean);
+    const _dts = _subTierSlice(_db?.daily_texts?.map(_dec).filter(Boolean));
     if (_dts && _dts.length) {
       const _di = Math.floor(new Date(today).getTime() / 86400000) % _dts.length;
       h += `<div class="sub-daily-quote">${_dts[_di]}</div>`;
@@ -2343,6 +2350,29 @@ function _applySubTheme() {
   document.body.classList.toggle('sub-active', !!((_globalSubMode && _ownerSession())));
 }
 
+function _subTier() {
+  const n = SUB_DEPTH.count || 0;
+  if (n >= 15) return 4;
+  if (n >= 7)  return 3;
+  if (n >= 3)  return 2;
+  return 1;
+}
+
+function _subTierSlice(arr) {
+  if (!arr || !arr.length) return arr;
+  const fracs = [0.25, 0.5, 0.75, 1.0];
+  const avail = Math.max(1, Math.ceil(arr.length * fracs[_subTier() - 1]));
+  return arr.slice(0, avail);
+}
+
+function _subDepthScore() {
+  const m = SUB_DEPTH.metrics || [];
+  if (!m.length) return 1;
+  const recent = m.slice(-5);
+  const avg = f => recent.reduce((s, r) => s + (r?.[f] || 1), 0) / recent.length;
+  return (avg('sec') + avg('lock') + avg('mental')) / 3;
+}
+
 function _getSubDb() {
   try { const c = localStorage.getItem('__obfuscated_v2_cache__'); return c ? JSON.parse(c) : null; } catch(e) { return null; }
 }
@@ -2363,7 +2393,7 @@ function _showPrivDesc(name) {
 function _showRitual(cb) {
   const db = _getSubDb();
   const dec = s => { try { return decodeURIComponent(atob(s)); } catch(e) { return ''; } };
-  const texts = db?.ritual_texts?.map(dec).filter(Boolean);
+  const texts = _subTierSlice(db?.ritual_texts?.map(dec).filter(Boolean));
   if (!texts || !texts.length) { cb(); return; }
   const text = texts[Math.floor(Math.random() * texts.length)];
   const div = document.createElement('div');
@@ -2389,7 +2419,7 @@ function startTimer(seconds, label = "休息中") {
   if (_globalSubMode && _ownerSession() && label === '组间休息') {
     const db = _getSubDb();
     const dec = s => { try { return decodeURIComponent(atob(s)); } catch(e) { return ''; } };
-    const cues = db?.rest_cues?.map(dec).filter(Boolean) || [
+    const cues = _subTierSlice(db?.rest_cues?.map(dec).filter(Boolean)) || [
       '保持低姿态，闭眼调整放松适应呼吸控制',
       '放松盆底与内收肌群，放弃全部躯体防御',
       '感受地面完全承载，交出躯体支配权',
@@ -2618,9 +2648,12 @@ function submitRPE(rpe, isSkip = false) {
     ls(K.log, LOG);
 
     if (_globalSubMode && _ownerSession()) {
+      SUB_DEPTH.count = (SUB_DEPTH.count || 0) + 1;
+      SUB_DEPTH.metrics = [...(SUB_DEPTH.metrics || []).slice(-9), subMetrics || {}];
+      ls(K.sub_depth, SUB_DEPTH);
       const db = _getSubDb();
       const dec = s => { try { return decodeURIComponent(atob(s)); } catch(e) { return ''; } };
-      const msgs = db?.finish_toast?.map(dec).filter(Boolean);
+      const msgs = _subTierSlice(db?.finish_toast?.map(dec).filter(Boolean));
       if (msgs && msgs.length) setTimeout(() => showToast(msgs[Math.floor(Math.random() * msgs.length)], 4000), 1800);
     }
 
@@ -2718,7 +2751,7 @@ function tog(date, ei) {
     if (_globalSubMode && _ownerSession()) {
       const db = _getSubDb();
       const dec = s => { try { return decodeURIComponent(atob(s)); } catch(e) { return ''; } };
-      const msgs = db?.tog_toast?.map(dec).filter(Boolean);
+      const msgs = _subTierSlice(db?.tog_toast?.map(dec).filter(Boolean));
       if (msgs && msgs.length) showToast(msgs[Math.floor(Math.random() * msgs.length)], 2500);
     }
   }
@@ -2744,7 +2777,7 @@ function tog(date, ei) {
       const _openRpe = () => { updateRpeModalLabels(); document.getElementById('rpe-modal').classList.add('open'); };
       if (_globalSubMode && _ownerSession()) {
         const db = _getSubDb(), dec = s => { try { return decodeURIComponent(atob(s)); } catch(e) { return ''; } };
-        const msgs = db?.complete_texts?.map(dec).filter(Boolean);
+        const msgs = _subTierSlice(db?.complete_texts?.map(dec).filter(Boolean));
         if (msgs && msgs.length) {
           const text = msgs[Math.floor(Math.random() * msgs.length)];
           const div = document.createElement('div');

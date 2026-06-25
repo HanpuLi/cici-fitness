@@ -577,7 +577,7 @@ textarea:focus {
 
 /* ══ Generate Button ══════════════════════════════════ */
 #gen-btn {
-    width: 100%;
+    flex: 1;
     padding: 14px;
     margin-top: 16px;
     cursor: pointer;
@@ -597,6 +597,29 @@ textarea:focus {
     transform: translateY(-1px);
     box-shadow: 0 6px 20px rgba(193, 86, 58, .32), inset 0 1px 0 rgba(255, 255, 255, .15);
 }
+
+#recal-btn {
+    flex: 1;
+    padding: 14px;
+    margin-top: 16px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 500;
+    background: transparent;
+    color: var(--ink2);
+    border: 1.5px solid var(--border2);
+    border-radius: var(--radius-sm);
+    font-family: var(--font-body);
+    letter-spacing: .03em;
+    transition: all .2s ease;
+}
+#recal-btn:hover {
+    border-color: var(--sage);
+    color: var(--sage);
+    background: var(--sage-bg);
+    transform: translateY(-1px);
+}
+#recal-btn:active { transform: translateY(0); }
 
 /* ══ Weight Input ════════════════════════════════════════ */
 .wt-row {
