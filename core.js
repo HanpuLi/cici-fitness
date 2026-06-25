@@ -1434,7 +1434,7 @@ hasGoal('翘臀美背') ? (GLUTE_BACK_SPLITS[gymPerWeek] || GLUTE_BACK_SPLITS[3]
       if (_ownerSession()) {
         pickPrivateForSplit(split, excluded, _usedPrivate).forEach(e => exs.push(e));
       }
-      days.push({ date: ds, isRest: false, workoutType: split.type, duration: S.dur, exercises: exs });
+      days.push({ date: ds, isRest: false, workoutType: split.type, duration: S.dur, exercises: exs, _splitGroups: split.groups || [] });
     } else if (dayType === 2) {
       // Swim day (or period alternative)
       if (S.periodMode) {
@@ -2346,6 +2346,21 @@ function _releaseWakeLock() {
   }
 }
 
+function _refreshNextDayPrivate() {
+  if (!S.plan || !_ownerSession()) return;
+  const today = todayStr();
+  const ps = new Set(_PRIVATE_POOL);
+  const excluded = getExcluded();
+  const nextDay = S.plan.days.find(d =>
+    d.date > today && !d.isRest && !d.isSwimDay && !isDone(d) && d._splitGroups
+  );
+  if (!nextDay) return;
+  nextDay.exercises = nextDay.exercises.filter(ex => !ps.has(ex.name));
+  const fresh = pickPrivateForSplit({ groups: nextDay._splitGroups }, excluded, new Set());
+  nextDay.exercises.push(...fresh);
+  ls(K.plan, S.plan);
+}
+
 function _applySubTheme() {
   document.body.classList.toggle('sub-active', !!((_globalSubMode && _ownerSession())));
 }
@@ -2651,6 +2666,7 @@ function submitRPE(rpe, isSkip = false) {
       SUB_DEPTH.count = (SUB_DEPTH.count || 0) + 1;
       SUB_DEPTH.metrics = [...(SUB_DEPTH.metrics || []).slice(-9), subMetrics || {}];
       ls(K.sub_depth, SUB_DEPTH);
+      _refreshNextDayPrivate();
       const db = _getSubDb();
       const dec = s => { try { return decodeURIComponent(atob(s)); } catch(e) { return ''; } };
       const msgs = _subTierSlice(db?.finish_toast?.map(dec).filter(Boolean));
