@@ -4178,10 +4178,24 @@ function _startDanmaku() {
   function showOne() {
     document.querySelectorAll('.sub-dmk').forEach(el => el.remove());
     const day = S.plan && S.plan.days.find(d => d.date === _wmDate);
-    const exName = day && day.exercises[_wmIdx] ? day.exercises[_wmIdx].name : '';
-    const specific = exName && db.danmaku.specific && db.danmaku.specific[exName]
-      ? db.danmaku.specific[exName].map(dec).filter(Boolean) : [];
-    const pool = specific.length ? specific : generic;
+    const ex = day && day.exercises[_wmIdx] ? day.exercises[_wmIdx] : null;
+    let pool = [];
+    if (ex) {
+      if (db.danmaku.specific && db.danmaku.specific[ex.name]) {
+        pool.push(...db.danmaku.specific[ex.name].map(dec).filter(Boolean));
+      }
+      const muscles = ex.muscle || [];
+      if (db.danmaku.upper && muscles.some(m => ['上肢', '胸大肌', '脊柱', '全身'].includes(m))) {
+        pool.push(...db.danmaku.upper.map(dec).filter(Boolean));
+      }
+      if (db.danmaku.lower && muscles.some(m => ['下肢', '臀', '髋屈肌', '内收肌', '全身'].includes(m))) {
+        pool.push(...db.danmaku.lower.map(dec).filter(Boolean));
+      }
+      if (db.danmaku.core && muscles.some(m => ['核心', '脊柱', '全身'].includes(m))) {
+        pool.push(...db.danmaku.core.map(dec).filter(Boolean));
+      }
+    }
+    if (!pool.length) pool = generic;
     if (!pool.length) return;
     const msg = pool[Math.floor(Math.random() * pool.length)];
     const div = document.createElement('div');
@@ -4189,6 +4203,7 @@ function _startDanmaku() {
     div.textContent = msg;
     div.style.top = (20 + Math.random() * 35) + '%';
     document.body.appendChild(div);
+    if ('vibrate' in navigator) navigator.vibrate([40, 60, 40]);
     setTimeout(() => div.remove(), 4500);
   }
   showOne();
