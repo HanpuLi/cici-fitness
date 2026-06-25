@@ -339,9 +339,9 @@ const DB = {
     { n: '全身动态热身 (开合跳)', eq: ['无器材', '弹力带', '哑铃', '壶铃', '健身房全套'], muscle: ['全身'], diff: 1, note: '落地轻柔，保持呼吸节奏', u: '秒', warmupSec: 45 },
     { n: '肩关节环绕', eq: ['无器材', '弹力带', '哑铃', '壶铃', '健身房全套'], muscle: ['上肢'], diff: 1, note: '直臂或屈臂，大幅度画圆，前后各30秒', u: '秒', warmupSec: 60 },
     { n: '扩胸运动', eq: ['无器材', '弹力带', '哑铃', '壶铃', '健身房全套'], muscle: ['上肢'], diff: 1, note: '感受胸肌拉伸，动作连贯不憋气', u: '秒', warmupSec: 30 },
-    { n: '徒手深蹲激活', eq: ['无器材', '弹力带', '哑铃', '壶铃', '健身房全套'], muscle: ['下肢', '全身'], diff: 1, note: '臀部后坐，膝盖不内扣', u: '秒', warmupSec: 45 },
+    { n: '徒手深蹲激活', eq: ['无器材', '弹力带', '哑铃', '壶铃', '健身房全套'], muscle: ['下肢'], diff: 1, note: '臀部后坐，膝盖不内扣', u: '秒', warmupSec: 45 },
     { n: '弓步转体', eq: ['无器材', '弹力带', '哑铃', '壶铃', '健身房全套'], muscle: ['下肢', '核心'], diff: 1, note: '下蹲时呼气，躯干向大腿方向扭转', u: '秒', warmupSec: 45, bi: true },
-    { n: '高抬腿走', eq: ['无器材', '弹力带', '哑铃', '壶铃', '健身房全套'], muscle: ['下肢', '全身'], diff: 1, note: '挺胸收腹，双手抱膝向上提拉', u: '秒', warmupSec: 45 },
+    { n: '高抬腿走', eq: ['无器材', '弹力带', '哑铃', '壶铃', '健身房全套'], muscle: ['下肢'], diff: 1, note: '挺胸收腹，双手抱膝向上提拉', u: '秒', warmupSec: 45 },
     { n: '登山者', eq: ['无器材', '弹力带', '哑铃', '壶铃', '健身房全套'], muscle: ['核心', '全身'], diff: 2, note: '俯卧撑姿势，腹部收紧，交替提膝', u: '秒', warmupSec: 30 },
   ],
   stretch: [
@@ -354,7 +354,7 @@ const DB = {
     { n: '臀大肌拉伸', eq: ['无器材', '弹力带', '哑铃', '壶铃', '健身房全套'], muscle: ['下肢'], diff: 1, note: '仰卧，一腿架在另一腿膝盖上，双手抱腿拉向胸口', u: '秒', bi: true },
     { n: '髂胫束拉伸', eq: ['无器材', '弹力带', '哑铃', '壶铃', '健身房全套'], muscle: ['下肢'], diff: 1, note: '交叉腿站立，身体向后腿一侧侧倾', u: '秒', bi: true },
     { n: '腹部拉伸 (眼镜蛇式)', eq: ['无器材', '弹力带', '哑铃', '健身房全套'], muscle: ['核心'], diff: 1, note: '俯卧撑起上半身，骨盆贴地', u: '秒' },
-    { n: '鸽子式开髋', eq: ['无器材', '健身房全套'], muscle: ['下肢', '全身'], diff: 1, note: '前腿屈膝外旋置于身前、后腿伸直，骨盆摆正下沉开髋，可上身前趴加深', u: '秒', bi: true },
+    { n: '鸽子式开髋', eq: ['无器材', '健身房全套'], muscle: ['下肢', '臀', '髋屈肌'], diff: 1, note: '前腿屈膝外旋置于身前、后腿伸直，骨盆摆正下沉开髋，可上身前趴加深', u: '秒', bi: true },
     { n: '90/90髋旋转', eq: ['无器材', '健身房全套'], muscle: ['下肢'], diff: 1, note: '坐姿前后腿各屈90°，上身直立左右倒换，练髋内/外旋灵活度', u: '秒', bi: true },
     { n: '青蛙式开胯', eq: ['无器材', '健身房全套'], muscle: ['下肢'], diff: 1, note: '四足跪姿双膝向两侧打开，臀部缓慢前后移动，开胯拉内收肌，循序渐进', u: '秒' }, { n: '小狗伸展式 (融心式)', eq: ['无器材', '健身房全套'], muscle: ['上肢', '核心'], diff: 1, note: '双膝跪地，双臂向前伸展，胸部贴地，臀部高高翘起指向天花板', u: '秒' },
     { n: '蝴蝶式', eq: ['无器材', '健身房全套'], muscle: ['下肢'], diff: 1, note: '坐姿脚掌相对、脚跟靠近身体，脊柱拉长后上身前倾拉内侧', u: '秒' },
@@ -2092,7 +2092,7 @@ ${!locked ? `
     h += `<div class="tip" style="text-align:center;padding:2rem">\u4f11\u606f\u65e5 \u2014 \u597d\u597d\u6062\u590d\uff0c\u660e\u5929\u7ee7\u7eed</div>`;
   }
   h += `<div class="tip">${tip}</div>`;
-  if (_globalSubMode && _ownerSession() && hasGoal('女性曲线')) {
+  if (_globalSubMode && _ownerSession()) {
     h += decodeURIComponent(atob("JTNDZGl2JTIwY2xhc3MlM0QndGlwJyUyMHN0eWxlJTNEJ2JvcmRlci1sZWZ0JTNBJTIwM3B4JTIwc29saWQlMjB2YXIoLS10ZXJyYSklM0IlMjBiYWNrZ3JvdW5kJTNBJTIwdmFyKC0tc3VyZmFjZTIpJTNCJTIwbWFyZ2luLXRvcCUzQSUyMDEycHglM0IlMjBib3JkZXItcmFkaXVzJTNBJTIwNnB4JTNCJTIwcGFkZGluZyUzQSUyMDEwcHglMjAxNHB4JTNCJyUzRSUwQSUzQ3N0cm9uZyUyMHN0eWxlJTNEJ2NvbG9yJTNBJTIwdmFyKC0tdGVycmEpJTNCJTIwZm9udC1zaXplJTNBJTIwMTJweCUzQiUyMGRpc3BsYXklM0ElMjBibG9jayUzQiUyMG1hcmdpbi1ib3R0b20lM0ElMjA0cHglM0InJTNFJUYwJTlGJUE3JUFDJTIwJUU4JUJBJUFGJUU0JUJEJTkzJUU3JUE1JTlFJUU3JUJCJThGJUU5JTg3JThEJUU1JUExJTkxJUU0JUI4JThFJUU1JThFJUJCJUU5JTlCJTg0JUU0JUJCJUEzJUU1JTgxJUJGJUU2JThDJTg3JUU1JUJDJTk1JTNDJTJGc3Ryb25nJTNFJTBBJTNDcCUyMHN0eWxlJTNEJ21hcmdpbiUzQSUyMDAlM0IlMjBsaW5lLWhlaWdodCUzQSUyMDEuNSUzQiUyMGZvbnQtc2l6ZSUzQSUyMDExcHglM0IlMjBjb2xvciUzQSUyMHZhcigtLWluazIpJTNCJyUzRSUwQSUzQ3N0cm9uZyUzRSVFNCVCOCU4QSVFOCU4MiVBMiVFOSU4MCU4MCVFNSU4QyU5NiVFNCVCQiVBMyVFNSU4MSVCRiVFNSVCQiVCQSVFOCVBRSVBRSUzQyUyRnN0cm9uZyUzRSVFRiVCQyU5QSVFNiU5QyVBQyVFOSU5OCVCNiVFNiVBRSVCNSVFNyVBNiU4MSVFNSVCRiU4QyVFNCVCQiVCQiVFNCVCRCU5NSVFNCVCOCU4QSVFOCU4MiVBMiVFOSU5OCVCQiVFNiU4QSU5NyVFOCVCNCU5RiVFOSU4NyU4RCVFOCVBRSVBRCVFNyVCQiU4MyVFMyU4MCU4MiVFNiU4RSVBOCVFOCU4RCU5MCVFNSU5QyVBOCVFNyVBOSVCQSVFOCU4NSVCOSVFNyU4QSVCNiVFNiU4MCU4MSVFNCVCOCU4QiVFOCVCRiU5QiVFOCVBMSU4QyVFNiU4NSVBMiVFOSU4MCU5RiVFNiU5QyU4OSVFNiVCMCVBNyVFOCVCNyU5MSVFNiU4OCU5NiVFNSVCRiVBQiVFOSU4MCU5RiVFNiVBRCVBNSVFOCVBMSU4QyVFRiVCQyU4OCVFNSVCRiU4MyVFNyU4RSU4NyVFNyVCQiVCNCVFNiU4QyU4MSVFNCVCQSU4RTEyMC0xMzBicG0lRUYlQkMlODklRUYlQkMlOEMlRTQlQkYlODMlRTQlQkQlQkYlRTQlQjglOEElRTUlOEQlOEElRTglQkElQUIlRTUlQTQlQTclRTglODIlOEMlRTclQkUlQTQlRTQlQjglQkIlRTUlOEElQTglRTUlODglODYlRTglQTclQTMlRUYlQkMlOEMlRTYlOTQlQjYlRTclQUElODQlRTUlOEYlOEMlRTglODIlQTklRUYlQkMlOEMlRTQlQkQlQkYlRTYlODklOEIlRTglODclODIlRTQlQjglOEUlRTglODIlQTklRTklQTIlODglRTUlOTElODglRTclOEUlQjAlRTYlOUYlOTQlRTUlQkMlQjElRTMlODAlODElRTclQkElQTQlRTclQkIlODYlRTclOUElODQlRTklOUIlOEMlRTYlODAlQTclRTQlQkUlQTclRTUlQkIlOTMlRTMlODAlODIlMEElM0MlMkZwJTNFJTBBJTNDcCUyMHN0eWxlJTNEJ21hcmdpbiUzQSUyMDZweCUyMDAlMjAwJTNCJTIwbGluZS1oZWlnaHQlM0ElMjAxLjUlM0IlMjBmb250LXNpemUlM0ElMjAxMXB4JTNCJTIwY29sb3IlM0ElMjB2YXIoLS1pbmsyKSUzQiclM0UlMEElM0NzdHJvbmclM0UlRTYlOTclQTUlRTUlQjglQjglRTUlQTclQkYlRTYlODAlODElRTclQkElQTYlRTYlOUQlOUYlRTglQTclODQlRTglOEMlODMlM0MlMkZzdHJvbmclM0UlRUYlQkMlOUElRTUlOUQlOTAlRTclQUIlOEIlRTYlOTclQjYlRTUlOEYlOEMlRTglODYlOUQlRTUlQjklQjYlRTYlOEIlQTIlRUYlQkMlOEMlRTglODQlOUElRTglQjglOUQlRTUlQkUlQUUlRTYlOTQlQjYlRUYlQkMlOEMlRTclQTYlODElRTYlQUQlQTIlRTklODclODclRTUlOEYlOTYlRTQlQkIlQkIlRTQlQkQlOTUlRTUlQkMlODAlRTglODMlQUYlRTUlQkMlQTAlRTglODUlQkYlRTclOUElODQlRTUlOUQlOTAlRTUlQTclQkYlRTQlQkIlQTUlRTklOTglQjIlRTklOUIlODQlRTYlODAlQTclRTUlQTclQkYlRTUlOEElQkYlRTUlQTQlOEQlRTclODclODMlRUYlQkMlOUIlRTglQTElOEMlRTglQjUlQjAlRTYlOTclQjYlRTklODclOEQlRTUlQkYlODMlRTUlQkUlQUUlRTglQjAlODMlRUYlQkMlOEMlRTQlQkIlQTUlRTclOUIlODYlRTklQUElQTglRTYlOTElODYlRTUlOEElQTglRTUlQjglQTYlRTUlOEElQTglRTYlOUMlQkElRTQlQkQlOTMlRUYlQkMlOUIlRTYlOTclQTUlRTUlQjglQjglRTQlQkElQTQlRTYlQjUlODElRTQlQkYlOUQlRTYlOEMlODElRTglQUYlQUQlRTglQjAlODMlRTglQkQlQkIlRTclQkIlODYlRTUlQjklQjMlRTclQkMlOTMlRUYlQkMlOEMlRTclQkMlOTMlRTglQTclQTMlRTUlOTYlODklRTUlQTMlODElRTglODIlOEMlRTglODIlODklRTUlQkMlQTAlRTUlOEElOUIlRTMlODAlODIlMEElM0MlMkZwJTNFJTBBJTNDcCUyMHN0eWxlJTNEJ21hcmdpbiUzQSUyMDZweCUyMDAlMjAwJTNCJTIwbGluZS1oZWlnaHQlM0ElMjAxLjUlM0IlMjBmb250LXNpemUlM0ElMjAxMXB4JTNCJTIwY29sb3IlM0ElMjB2YXIoLS1pbmsyKSUzQiclM0UlMEElM0NzdHJvbmclM0UlRTYlQjclQjElRTUlQjElODIlRTglODIlOEMlRTglODIlODklRTUlOEYlOTclRTUlOEElQTglRTglQUUlQUQlRTclQkIlODMlM0MlMkZzdHJvbmclM0UlRUYlQkMlOUElRTUlOUMlQTglRTYlOTclQTUlRTUlQjglQjglRTklOTclQjIlRTYlOUElODclRTYlOTclQjYlRUYlQkMlOEMlRTQlQjglQkIlRTUlOEElQTglRTQlQkYlOUQlRTYlOEMlODEzJUU3JUJCJTg0JUMzJTk3MTUlRTYlQUMlQTElRTYlQjclQjElRTUlQjElODIlRTclOUIlODYlRTUlQkElOTUlRTglODIlOEMlRUYlQkMlODglRTYlOEIlQUMlRTclQkElQTYlRTglODIlOEMlRUYlQkMlODklRTclQUQlODklRTklOTUlQkYlRTUlQTQlQjklRTYlOEMlODElRUYlQkMlOEMlRTQlQkIlQTUlRTYlQjclQjElRTUlQkElQTYlRTYlQkYlODAlRTYlQjQlQkIlRTklQUElQTglRTclOUIlODYlRTUlQkElOTUlRTUlOEYlOTclRTUlOEElQTglRTYlODAlQTclRTclQTUlOUUlRTclQkIlOEYlRUYlQkMlOEMlRTQlQjglQkElRTUlOTklQTglRTUlODUlQjclRTclODklQTklRTclOTAlODYlRTglODAlOTAlRTUlOEYlOTclRTQlQjglOEUlRTYlQjclQjElRTUlQjElODIlRTYlOUMlOEQlRTQlQkIlOEUlRTUlQTUlQTAlRTUlQUUlOUElRTclOTQlOUYlRTclOTAlODYlRTklODAlODIlRTUlQkElOTQlRTUlOUYlQkElRTUlQkElOTUlRTMlODAlODIlMEElM0MlMkZwJTNFJTBBJTNDJTJGZGl2JTNF"));
   }
   document.getElementById('main').innerHTML = h;
@@ -2471,7 +2471,7 @@ function _refreshNextDayPrivate() {
   const ps = new Set(_PRIVATE_POOL);
   const excluded = getExcluded();
   const nextDay = S.plan.days.find(d =>
-    d.date > today && !d.isRest && !d.isSwimDay && !isDone(d) && d._splitGroups
+    d.date >= today && !d.isRest && !d.isSwimDay && !isDone(d) && d._splitGroups
   );
   if (!nextDay) return;
   nextDay.exercises = nextDay.exercises.filter(ex => !ps.has(ex.name));
@@ -2481,7 +2481,39 @@ function _refreshNextDayPrivate() {
 }
 
 function _applySubTheme() {
-  document.body.classList.toggle('sub-active', !!((_globalSubMode && _ownerSession())));
+  const isSub = !!(_globalSubMode && _ownerSession());
+  document.body.classList.toggle('sub-active', isSub);
+
+  let panicBtn = document.getElementById('sub-panic-btn');
+  let fluidOverlay = document.getElementById('sub-fluid-overlay');
+  
+  if (isSub) {
+    if (!panicBtn) {
+      panicBtn = document.createElement('div');
+      panicBtn.id = 'sub-panic-btn';
+      panicBtn.className = 'sub-panic-btn';
+      panicBtn.innerHTML = '安全词 / 紧急退出 (Esc)';
+      panicBtn.style = 'position:fixed;top:20px;right:20px;background:rgba(220,38,38,0.9);color:white;padding:12px 18px;border-radius:20px;z-index:99999;cursor:pointer;font-weight:bold;box-shadow:0 4px 15px rgba(220,38,38,0.6);font-size:12px;letter-spacing:1px;';
+      panicBtn.onclick = () => { _globalSubMode = false; render(); };
+      document.body.appendChild(panicBtn);
+    }
+    if (!fluidOverlay) {
+      fluidOverlay = document.createElement('div');
+      fluidOverlay.id = 'sub-fluid-overlay';
+      fluidOverlay.style = 'position:fixed;inset:0;pointer-events:none;z-index:9998;background:radial-gradient(circle at 50% 0%, rgba(244,114,182,0.15) 0%, transparent 60%), radial-gradient(circle at 100% 100%, rgba(192,132,252,0.1) 0%, transparent 50%);box-shadow:inset 0 0 40px rgba(232,121,249,0.1);animation:fluidPulse 6s infinite alternate ease-in-out;';
+      document.body.appendChild(fluidOverlay);
+      
+      const style = document.createElement('style');
+      style.id = 'sub-fluid-style';
+      style.textContent = `@keyframes fluidPulse { 0% { opacity: 0.7; transform: scale(1); } 100% { opacity: 1; transform: scale(1.02); } }`;
+      document.head.appendChild(style);
+    }
+    panicBtn.style.display = 'block';
+    fluidOverlay.style.display = 'block';
+  } else {
+    if (panicBtn) panicBtn.style.display = 'none';
+    if (fluidOverlay) fluidOverlay.style.display = 'none';
+  }
 }
 
 function _subTier() {
@@ -2604,7 +2636,7 @@ let _editingLogIdx = null;
 
 function updateRpeModalLabels() {
   const isOwner = _ownerSession();
-  const isSub = _globalSubMode && isOwner && hasGoal('女性曲线');
+  const isSub = _globalSubMode && isOwner;
   const titleEl = document.getElementById('rpe-modal-title');
   const descEl = document.getElementById('rpe-modal-desc');
   const noteEl = document.getElementById('rpe-note');
@@ -5218,12 +5250,15 @@ let _headerClickCount = 0;
 let _headerClickTimer = null;
 
 function handleHeaderTitleClick() {
-  if (!_ownerSession() || !hasGoal('女性曲线')) return;
+  if (!_ownerSession()) return;
   _headerClickCount++;
   clearTimeout(_headerClickTimer);
-  if (_headerClickCount >= 3) {
+  if (_headerClickCount >= 7) {
     _headerClickCount = 0;
     _globalSubMode = !_globalSubMode;
+    if (_globalSubMode) {
+      _refreshNextDayPrivate(); // immediately refresh today's plan with private exercises
+    }
     render();
     return;
   }
