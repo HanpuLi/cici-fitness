@@ -64,7 +64,7 @@
                 const el = document.getElementById('dev-sub-status');
                 if (el) {
                     const on = typeof _globalSubMode !== 'undefined' && _globalSubMode;
-                    el.innerHTML = (on ? '● 专项已开启' : '○ 标准模式') + '<br><span style="opacity:.6">账号: ✓ owner · 女性曲线: ✓ 已选</span>';
+                    el.innerHTML = (on ? '●' : '○') + ' <span style="opacity:.45">✓ ✓</span>';
                 }
             }
             return;
@@ -172,8 +172,7 @@
                     <div id="dev-panel-sim" class="dev-panel" style="display: block;">
                         <p class="sec" id="dev-sub-sec" style="margin-top: 0; font-weight: 600; font-size: 13px; color: var(--ink); cursor: default; user-select: none;" onclick="_devSubClick()">专项模式</p>
                         <div style="margin-bottom: 4px; font-size: 11px; color: var(--ink3); line-height: 1.8;" id="dev-sub-status">
-                            ${typeof _globalSubMode !== 'undefined' && _globalSubMode ? '● 专项已开启' : '○ 标准模式'}<br>
-                            <span style="opacity:.6">账号: ${(typeof _ownerSession === 'function' && _ownerSession()) ? '✓ owner' : '✗ 非owner'} · 女性曲线: ${(typeof hasGoal === 'function' && hasGoal('女性曲线')) ? '✓ 已选' : '✗ 未选（先在设置里选上）'}</span>
+                            ${typeof _globalSubMode !== 'undefined' && _globalSubMode ? '●' : '○'} <span style="opacity:.45">${(typeof _ownerSession === 'function' && _ownerSession()) ? '✓' : '✗'} ${(typeof hasGoal === 'function' && hasGoal('女性曲线')) ? '✓' : '✗'}</span>
                         </div>
                         <button class="btn-dev" style="width:100%;margin-bottom:12px;font-size:10px" onclick="(function(){
                             const owner = typeof _ownerSession==='function'&&_ownerSession();
