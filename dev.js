@@ -138,7 +138,13 @@
                 <div class="dev-modal-body">
                     <!-- Tab 1: Simulation -->
                     <div id="dev-panel-sim" class="dev-panel" style="display: block;">
-                        <p class="sec" style="margin-top: 0; font-weight: 600; font-size: 13px; color: var(--ink);">数据隔离沙箱 (Sandbox)</p>
+                        <p class="sec" style="margin-top: 0; font-weight: 600; font-size: 13px; color: var(--ink);">专项模式</p>
+                        <div style="margin-bottom: 12px;">
+                            <button id="dev-submode-btn" class="btn-dev" style="width:100%" onclick="toggleSubMode(); document.getElementById('dev-submode-btn').textContent = (typeof _globalSubMode !== 'undefined' && _globalSubMode) ? '关闭专项模式' : '开启专项模式'">
+                                ${typeof _globalSubMode !== 'undefined' && _globalSubMode ? '关闭专项模式' : '开启专项模式'}
+                            </button>
+                        </div>
+                        <p class="sec" style="font-weight: 600; font-size: 13px; color: var(--ink);">数据隔离沙箱 (Sandbox)</p>
                         <div style="background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px; margin-bottom: 12px; font-size: 11px; line-height: 1.5; color: var(--ink2);">
                             开启沙箱后，系统会将当前真实数据复制 to 临时存储，之后的所有修改、打卡和重排都在隔离沙箱进行，退出沙箱后恢复真实数据，100% 安全。
                             <div style="margin-top: 8px; display: flex; align-items: center; gap: 10px;">

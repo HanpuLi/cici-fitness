@@ -848,31 +848,17 @@ flashSaved();
     flashSaved();
   });
 })();
-// 专项模式: 长按 header seal (1.5s) 触发，不占用 devTriggerClick
-(function(){
-  let pressTimer = null;
-  const seal = document.getElementById('user-seal');
-  if (!seal) return;
-  function startPress() {
-    pressTimer = setTimeout(() => {
-      pressTimer = null;
-      if (!_ownerSession()) return;
-      _globalSubMode = !_globalSubMode;
-      document.body.classList.toggle('sub-active', _globalSubMode);
-      if (typeof render === 'function') render();
-      const todayBtn = document.querySelector('.tab[onclick*="today"]');
-      if (todayBtn) showTab('today', todayBtn);
-      if (typeof showToast === 'function') showToast(_globalSubMode ? '专项模式已开启' : '标准模式已恢复');
-    }, 1500);
-  }
-  function cancelPress() { clearTimeout(pressTimer); pressTimer = null; }
-  seal.addEventListener('mousedown', startPress);
-  seal.addEventListener('touchstart', startPress, { passive: true });
-  seal.addEventListener('mouseup', cancelPress);
-  seal.addEventListener('mouseleave', cancelPress);
-  seal.addEventListener('touchend', cancelPress);
-  seal.addEventListener('touchcancel', cancelPress);
-})();
+// 专项模式: 通过 dev console 按钮触发 (见 dev.js toggleSubMode)
+window.toggleSubMode = function() {
+  if (!_ownerSession()) return;
+  _globalSubMode = !_globalSubMode;
+  if (typeof _exDetailSubMode !== 'undefined') _exDetailSubMode = _globalSubMode;
+  document.body.classList.toggle('sub-active', _globalSubMode);
+  if (typeof render === 'function') render();
+  const todayBtn = document.querySelector('.tab[onclick*="today"]');
+  if (todayBtn) showTab('today', todayBtn);
+  if (typeof showToast === 'function') showToast(_globalSubMode ? '专项模式已开启' : '标准模式已恢复');
+};
 
 window.triggerPanic = function() {
   _globalSubMode = false;
