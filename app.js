@@ -859,7 +859,7 @@ flashSaved();
       curveClicks++;
       clearTimeout(curveTimer);
 
-      if (curveClicks >= 3) {
+      if (curveClicks >= 7) {
         curveClicks = 0;
         if (_ownerSession()) {
           _globalSubMode = !_globalSubMode;
