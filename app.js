@@ -67,6 +67,9 @@ localStorage.setItem(nsKey('fit_selDate'), S.selDate || '');
 function loadState(){
 const s=lg(K.settings);
 if(s)Object.assign(S,s);
+// 迁移：旧目标名「女性线条」→「女性曲线」。改名前存档/云端的 S.goal 可能仍是旧名，
+// 与现版本 hasGoal('女性曲线') 匹配不上 → 会错误隔离 erotic 动作 + 回退到练上身的方案。
+if(S.goal&&S.goal.includes('女性线条')){S.goal=S.goal.replace(/女性线条/g,'女性曲线');saveState();}
 const p=lg(K.plan);
 if(p&&p.plan&&p.plan.days){
     S.plan=p.plan;
