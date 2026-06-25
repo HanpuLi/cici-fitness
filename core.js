@@ -2654,9 +2654,9 @@ function startTimer(seconds, label = "休息中") {
             const db = _getSubDb();
             const dec = s => { try { return decodeURIComponent(atob(s)); } catch(e) { return ''; } };
             const insults = db?.timeout_insults?.map(dec).filter(Boolean) || [
-              '休息够了吗？立刻给我爬起来继续做！',
-              '时间到了！别像条死狗一样趴着！',
-              '滚起来继续！'
+              '休息太久了，是不是已经发情得爬不起来了？继续做！',
+              '时间到了！赶紧撅起屁股开始下一组！',
+              '别磨蹭了，马上开始下一组！'
             ];
             lblEl.innerText = insults[Math.floor(Math.random() * insults.length)];
             if ('vibrate' in navigator) {
