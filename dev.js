@@ -164,6 +164,7 @@
                     <button id="dev-tab-sim-btn" class="dev-tab-btn active" onclick="switchDevTab('sim')">模拟控制</button>
                     <button id="dev-tab-inspector-btn" class="dev-tab-btn" onclick="switchDevTab('inspector')">状态监视</button>
                     <button id="dev-tab-import-btn" class="dev-tab-btn" onclick="switchDevTab('import')">导入/导出</button>
+                    <button id="dev-tab-writer-btn" class="dev-tab-btn" onclick="switchDevTab('writer')">内容编写</button>
                 </div>
 
                 <div class="dev-modal-body">
@@ -246,6 +247,37 @@
                             <button class="btn-dev" style="flex: 1; background: var(--terra); color: #fff; border-color: var(--terra);" onclick="importDevStateJSON()">保存并载入</button>
                         </div>
                     </div>
+
+                    <!-- Tab 4: Content Writer -->
+                    <div id="dev-panel-writer" class="dev-panel" style="display: none;">
+                        <div style="font-size:11px;color:var(--ink3);margin-bottom:10px;line-height:1.5">为动作编写专项描述。写完点「预览+应用」可立即在动作详情里测试，确认后再把下方代码粘进 core.js 的 EX_SUB_DESC。</div>
+
+                        <p class="sec" style="font-size:12px;font-weight:600">动作名</p>
+                        <select id="dw-ex-select" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface2);color:var(--ink);font-size:12px;margin-bottom:6px" onchange="dwSelectExercise(this.value)">
+                            <option value="">— 从当前计划选择 —</option>
+                        </select>
+                        <input id="dw-ex-name" placeholder="或直接输入动作名" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface2);color:var(--ink);font-size:12px;box-sizing:border-box;margin-bottom:10px" oninput="dwUpdateOutput()">
+
+                        <p class="sec" style="font-size:12px;font-weight:600">专项名称 <span style="font-weight:400;opacity:.6">（调教模式里显示的标题，可留空用原名）</span></p>
+                        <input id="dw-subname" placeholder="例：【秘密训练】仰卧分腿悬挂" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface2);color:var(--ink);font-size:12px;box-sizing:border-box;margin-bottom:10px" oninput="dwUpdateOutput()">
+
+                        <p class="sec" style="font-size:12px;font-weight:600">步骤描述</p>
+                        <textarea id="dw-step1" rows="2" placeholder="步骤 1" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface2);color:var(--ink);font-size:12px;box-sizing:border-box;margin-bottom:6px;resize:vertical" oninput="dwUpdateOutput()"></textarea>
+                        <textarea id="dw-step2" rows="2" placeholder="步骤 2（可选）" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface2);color:var(--ink);font-size:12px;box-sizing:border-box;margin-bottom:6px;resize:vertical" oninput="dwUpdateOutput()"></textarea>
+                        <textarea id="dw-step3" rows="2" placeholder="步骤 3（可选）" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface2);color:var(--ink);font-size:12px;box-sizing:border-box;margin-bottom:10px;resize:vertical" oninput="dwUpdateOutput()"></textarea>
+
+                        <p class="sec" style="font-size:12px;font-weight:600">提示</p>
+                        <textarea id="dw-tip1" rows="2" placeholder="提示 1（可选）" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface2);color:var(--ink);font-size:12px;box-sizing:border-box;margin-bottom:6px;resize:vertical" oninput="dwUpdateOutput()"></textarea>
+                        <textarea id="dw-tip2" rows="2" placeholder="提示 2（可选）" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface2);color:var(--ink);font-size:12px;box-sizing:border-box;margin-bottom:10px;resize:vertical" oninput="dwUpdateOutput()"></textarea>
+
+                        <div style="display:flex;gap:8px;margin-bottom:10px">
+                            <button class="btn-dev" style="flex:1;background:var(--terra);color:#fff;border-color:var(--terra)" onclick="dwApplyAndPreview()">预览+应用（临时）</button>
+                            <button class="btn-dev" style="flex:1" onclick="dwCopyOutput()">复制代码到剪贴板</button>
+                        </div>
+
+                        <p class="sec" style="font-size:12px;font-weight:600">生成代码 <span style="font-weight:400;opacity:.6">粘贴到 core.js EX_SUB_DESC 末尾的 <code>}</code> 前</span></p>
+                        <div id="dw-output" style="font-family:var(--font-mono,monospace);font-size:10px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:8px;overflow-x:auto;white-space:pre;color:var(--ink2);min-height:60px;line-height:1.5"></div>
+                    </div>
                 </div>
 
                 <div style="border-top: 1px solid var(--border); padding-top: 8px; display: flex; justify-content: space-between; align-items: center;">
@@ -289,7 +321,100 @@
             refreshStateInspector();
         } else if (tab === 'import') {
             populateExportTextarea();
+        } else if (tab === 'writer') {
+            dwPopulateSelect();
         }
+    };
+
+    // ══ Content Writer ═══════════════════════════════════════════
+    const _enc = t => btoa(encodeURIComponent(t));
+
+    function dwPopulateSelect() {
+        const sel = document.getElementById('dw-ex-select');
+        if (!sel) return;
+        const names = new Set();
+        try {
+            if (typeof S !== 'undefined' && S.plan && S.plan.days) {
+                S.plan.days.forEach(d => (d.exercises || []).forEach(e => e.name && names.add(e.name)));
+            }
+            if (typeof DB !== 'undefined') {
+                Object.values(DB).forEach(arr => arr.forEach(e => e.n && names.add(e.n)));
+            }
+        } catch(e) {}
+        // keep existing selected value
+        const cur = sel.value;
+        sel.innerHTML = '<option value="">— 从当前计划/数据库选择 —</option>' +
+            [...names].sort().map(n => {
+                const has = typeof EX_SUB_DESC !== 'undefined' && EX_SUB_DESC[n] ? ' ✓' : '';
+                return '<option value="' + n.replace(/"/g, '&quot;') + '"' + (n === cur ? ' selected' : '') + '>' + n + has + '</option>';
+            }).join('');
+    }
+
+    window.dwSelectExercise = function(name) {
+        const nameInput = document.getElementById('dw-ex-name');
+        if (nameInput) nameInput.value = name;
+        // pre-fill existing entry if any
+        if (typeof EX_SUB_DESC !== 'undefined' && EX_SUB_DESC[name]) {
+            const entry = EX_SUB_DESC[name];
+            const dec = s => { try { return decodeURIComponent(atob(s)); } catch(e) { return s; } };
+            const fill = (id, val) => { const el = document.getElementById(id); if (el) el.value = val || ''; };
+            fill('dw-subname', dec(entry.name));
+            fill('dw-step1', entry.steps[0] ? dec(entry.steps[0]) : '');
+            fill('dw-step2', entry.steps[1] ? dec(entry.steps[1]) : '');
+            fill('dw-step3', entry.steps[2] ? dec(entry.steps[2]) : '');
+            fill('dw-tip1',  entry.tips[0]  ? dec(entry.tips[0])  : '');
+            fill('dw-tip2',  entry.tips[1]  ? dec(entry.tips[1])  : '');
+        }
+        dwUpdateOutput();
+    };
+
+    window.dwUpdateOutput = function() {
+        const g = id => (document.getElementById(id) || {}).value || '';
+        const exName = g('dw-ex-name') || g('dw-ex-select');
+        const subname = g('dw-subname') || exName;
+        const steps = [g('dw-step1'), g('dw-step2'), g('dw-step3')].filter(Boolean);
+        const tips  = [g('dw-tip1'),  g('dw-tip2')].filter(Boolean);
+        if (!exName) { const o = document.getElementById('dw-output'); if (o) o.textContent = '请先输入动作名'; return; }
+        const entry = {
+            name:  _enc(subname),
+            steps: steps.map(_enc),
+            tips:  tips.map(_enc)
+        };
+        const out = '  ' + JSON.stringify(exName) + ': ' + JSON.stringify(entry, null, 2).replace(/\n/g, '\n  ') + ',';
+        const o = document.getElementById('dw-output');
+        if (o) o.textContent = out;
+    };
+
+    window.dwApplyAndPreview = function() {
+        const g = id => (document.getElementById(id) || {}).value || '';
+        const exName = g('dw-ex-name') || g('dw-ex-select');
+        const subname = g('dw-subname') || exName;
+        const steps = [g('dw-step1'), g('dw-step2'), g('dw-step3')].filter(Boolean);
+        const tips  = [g('dw-tip1'),  g('dw-tip2')].filter(Boolean);
+        if (!exName) { if (typeof showToast === 'function') showToast('请先输入动作名'); return; }
+        if (!steps.length) { if (typeof showToast === 'function') showToast('请至少填写一个步骤'); return; }
+        if (typeof EX_SUB_DESC !== 'undefined') {
+            EX_SUB_DESC[exName] = { name: _enc(subname), steps: steps.map(_enc), tips: tips.map(_enc) };
+            if (typeof showToast === 'function') showToast('已临时应用 — 去点 "' + exName.slice(0,8) + '…" 查看效果', 3000);
+            dwPopulateSelect();
+        }
+    };
+
+    window.dwCopyOutput = function() {
+        const o = document.getElementById('dw-output');
+        if (!o || !o.textContent.trim()) { if (typeof showToast === 'function') showToast('先填写内容'); return; }
+        navigator.clipboard.writeText(o.textContent).then(() => {
+            if (typeof showToast === 'function') showToast('已复制 — 粘贴到 core.js EX_SUB_DESC 末尾');
+        }).catch(() => {
+            // fallback
+            const ta = document.createElement('textarea');
+            ta.value = o.textContent;
+            document.body.appendChild(ta);
+            ta.select();
+            document.execCommand('copy');
+            document.body.removeChild(ta);
+            if (typeof showToast === 'function') showToast('已复制');
+        });
     };
 
     window.lockDevConsole = function() {
