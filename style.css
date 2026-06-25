@@ -2951,16 +2951,8 @@ body.sub-active .chip.active {
 
 /* Strobing Overlay during Guided Mode */
 @keyframes subStrobe {
-    0%, 100% { background: rgba(140, 60, 200, 0.04); }
-    50% { background: rgba(140, 60, 200, 0.18); }
-}
-
-body.sub-active .sub-strobing-overlay {
-    position: fixed;
-    inset: 0;
-    pointer-events: none;
-    z-index: 1000;
-    animation: subStrobe 2s infinite ease-in-out;
+    0%, 100% { background: rgba(140, 60, 200, 0.06); }
+    50% { background: rgba(160, 40, 220, 0.28); }
 }
 
 /* Sub Diary Styles */

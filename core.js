@@ -3828,12 +3828,12 @@ function startGuided(date) {
   _wmIdx = s < 0 ? 0 : s; _wmSet = 1;
   const m = document.getElementById('workout-modal'); if (m) m.classList.add('open');
   
-  if (_globalSubMode && _ownerSession() && hasGoal('女性曲线')) {
+  if (_globalSubMode && _ownerSession()) {
     if (!document.getElementById('sub-strobing-overlay-guided')) {
-        const overlay = document.createElement('div');
-        overlay.id = 'sub-strobing-overlay-guided';
-        overlay.className = 'sub-strobing-overlay';
-        document.body.appendChild(overlay);
+      const overlay = document.createElement('div');
+      overlay.id = 'sub-strobing-overlay-guided';
+      overlay.style.cssText = 'position:fixed;inset:0;pointer-events:none;z-index:1500;animation:subStrobe 1.5s infinite ease-in-out;';
+      document.body.appendChild(overlay);
     }
   }
 
@@ -4110,9 +4110,9 @@ function handleTitleClick() {
 
 function showExDetail(name) {
   _currentExDetailName = name;
-  _exDetailSubMode = false;
+  _exDetailSubMode = !!_globalSubMode;
   _titleClickCount = 0;
-  
+
   renderExDetailContent();
   document.getElementById('ex-modal').classList.add('open');
 }
