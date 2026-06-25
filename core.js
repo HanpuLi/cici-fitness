@@ -1826,13 +1826,18 @@ function render() {
 
   if (_globalSubMode && _ownerSession()) {
     const _db = _getSubDb(), _dec = s => { try { return decodeURIComponent(atob(s)); } catch(e) { return ''; } };
-    const _dts = _subTierSlice(_db?.daily_texts?.map(_dec).filter(Boolean));
+    const _dts = _subPool('daily_texts');
     if (_dts && _dts.length) {
       const _di = Math.floor(new Date(today).getTime() / 86400000) % _dts.length;
       h += `<div class="sub-daily-quote">${_dts[_di]}</div>`;
     }
     const _streak = SUB_DEPTH.streak || 0;
     if (_streak >= 2) h += `<div style="text-align:center;margin:-4px 0 10px"><span style="font-size:10px;color:rgba(232,121,249,0.55);border:1px solid rgba(232,121,249,0.18);border-radius:20px;padding:2px 12px;letter-spacing:0.1em">连续 ${_streak} 天</span></div>`;
+    const _recentM = (SUB_DEPTH.metrics || []).slice(-8);
+    if (_recentM.length >= 2) {
+      const _mrow = (k, lbl) => `<div class="smc-row"><span class="smc-lbl">${lbl}</span><div>${_recentM.map(m => { const v = ((m?.[k] || 1) - 1) / 3; return `<span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:rgba(232,121,249,${(0.15 + v * 0.8).toFixed(2)});margin:0 2px;vertical-align:middle"></span>`; }).join('')}</div></div>`;
+      h += `<div class="sub-metrics-chart">${_mrow('sec','sec')}${_mrow('lock','lock')}${_mrow('mental','◇')}</div>`;
+    }
   }
 
   const intensityInfo = assessPlanIntensity();
@@ -2367,6 +2372,55 @@ function _releaseWakeLock() {
 
 const _STREAK_MILESTONES = [2, 3, 5, 7, 10, 14, 21, 30];
 
+function _timeSlot() {
+  const h = new Date().getHours();
+  if (h >= 5 && h < 12) return 'morning';
+  if (h >= 17 || h < 1) return 'evening';
+  return 'any';
+}
+
+function _subPool(dbKey, fallbackKey) {
+  const db = _getSubDb(), dec = s => { try { return decodeURIComponent(atob(s)); } catch(e) { return ''; } };
+  const slot = _timeSlot();
+  const slotKey = slot === 'morning' ? 'morning_' + dbKey : slot === 'evening' ? 'evening_' + dbKey : null;
+  const pool = (slotKey && db?.[slotKey]?.map(dec).filter(Boolean)) || db?.[dbKey]?.map(dec).filter(Boolean) || (fallbackKey ? db?.[fallbackKey]?.map(dec).filter(Boolean) : null);
+  return _subTierSlice(pool);
+}
+
+function _showSetMsg(text) {
+  const existing = document.getElementById('_set-msg-overlay');
+  if (existing) existing.remove();
+  const div = document.createElement('div');
+  div.id = '_set-msg-overlay';
+  div.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(8,4,16,0.93);border:1px solid rgba(232,121,249,0.22);border-radius:12px;padding:14px 22px;z-index:2500;text-align:center;pointer-events:none;max-width:280px';
+  div.innerHTML = `<div style="color:rgba(240,171,252,0.88);font-size:13px;line-height:1.65">${text}</div>`;
+  document.body.appendChild(div);
+  setTimeout(() => { if (document.body.contains(div)) div.remove(); }, 2200);
+}
+
+function _openSubDiary(date) {
+  const entry = LOG.find(l => l.date === date);
+  if (!entry) return;
+  const BTN = 'padding:8px 20px;border-radius:8px;font-size:13px;cursor:pointer;font-family:inherit;border:1px solid rgba(232,121,249,0.3)';
+  const div = document.createElement('div');
+  div.id = '_sub-diary-overlay';
+  div.style.cssText = 'position:fixed;inset:0;background:rgba(6,3,14,0.96);z-index:3200;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px;gap:14px';
+  div.innerHTML = `<div style="font-size:10px;color:rgba(232,121,249,0.4);letter-spacing:0.12em">${date}</div><textarea id="_sdt" style="width:100%;max-width:320px;min-height:130px;background:rgba(20,11,30,0.9);border:1px solid rgba(232,121,249,0.2);border-radius:10px;color:#f0abfc;font-size:13px;line-height:1.75;padding:12px;font-family:inherit;resize:none;outline:none" placeholder="…">${entry.subDiary || ''}</textarea><div style="display:flex;gap:12px"><button style="${BTN};background:rgba(232,121,249,0.12);color:#f0abfc" onclick="_saveSubDiary('${date}')">保存</button><button style="${BTN};background:transparent;color:rgba(192,132,252,0.5)" onclick="document.getElementById('_sub-diary-overlay').remove()">取消</button></div>`;
+  document.body.appendChild(div);
+  setTimeout(() => { const t = document.getElementById('_sdt'); if (t) t.focus(); }, 50);
+}
+window._openSubDiary = _openSubDiary;
+
+function _saveSubDiary(date) {
+  const ta = document.getElementById('_sdt');
+  const entry = LOG.find(l => l.date === date);
+  if (entry && ta) { entry.subDiary = ta.value.trim(); ls(K.log, LOG); }
+  const ov = document.getElementById('_sub-diary-overlay');
+  if (ov) ov.remove();
+  if (typeof showHistoryDetail === 'function') showHistoryDetail(date);
+}
+window._saveSubDiary = _saveSubDiary;
+
 function _subTaskToggle(date, idx) {
   if (!SUB_DEPTH.taskDone) SUB_DEPTH.taskDone = {};
   if (!SUB_DEPTH.taskDone[date]) SUB_DEPTH.taskDone[date] = [];
@@ -2457,7 +2511,7 @@ function _showPrivDesc(name) {
 function _showRitual(cb) {
   const db = _getSubDb();
   const dec = s => { try { return decodeURIComponent(atob(s)); } catch(e) { return ''; } };
-  const texts = _subTierSlice(db?.ritual_texts?.map(dec).filter(Boolean));
+  const texts = _subPool('ritual_texts');
   if (!texts || !texts.length) { cb(); return; }
   const text = texts[Math.floor(Math.random() * texts.length)];
   const div = document.createElement('div');
@@ -4137,7 +4191,15 @@ function renderGuided() {
 function wmDoneSet() {
   const date = _wmDate, day = S.plan && S.plan.days.find(d => d.date === date); if (!day) return;
   const ex = day.exercises[_wmIdx], simple = _wmIsSimple(ex), sets = simple ? 1 : getAdj(date, _wmIdx, 's', ex.sets);
-  if (!simple && _wmSet < sets) { _wmSet++; if ((S.restDur || 0) > 0 && typeof startTimer === 'function') startTimer(S.restDur, '组间休息'); renderGuided(); return; }
+  if (!simple && _wmSet < sets) {
+    _wmSet++;
+    if (_globalSubMode && _ownerSession()) {
+      const msgs = _subPool('set_texts');
+      if (msgs && msgs.length) _showSetMsg(msgs[Math.floor(Math.random() * msgs.length)]);
+    }
+    if ((S.restDur || 0) > 0 && typeof startTimer === 'function') startTimer(S.restDur, '组间休息');
+    renderGuided(); return;
+  }
   if (!S.prog[date]) S.prog[date] = {}; S.prog[date][_wmIdx] = true; saveState();
   _wmSet = 1; let n = _wmIdx + 1; while (n < day.exercises.length && S.prog[date] && S.prog[date][n]) n++; _wmIdx = n;
   if (_wmIdx >= day.exercises.length) { wmClose(); render(); endWorkoutEarly(date); return; }
@@ -4421,6 +4483,10 @@ function showHistoryDetail(dateStr) {
         `<span style="display:inline-block;width:6px;height:6px;border-radius:50%;margin:0 2px;background:${i < val ? '#e879f9' : 'rgba(232,121,249,0.15)'}"></span>`
       ).join('');
       html += `<div style="padding:6px 12px 2px;display:flex;gap:12px;align-items:center"><span style="font-size:10px;color:rgba(192,132,252,0.5)">sec</span>${dots(sm.sec)}<span style="font-size:10px;color:rgba(192,132,252,0.5)">lock</span>${dots(sm.lock)}<span style="font-size:10px;color:rgba(192,132,252,0.5)">◇</span>${dots(sm.mental)}</div>`;
+    }
+    if (_globalSubMode && _ownerSession()) {
+      const diary = entry.subDiary || '';
+      html += `<div class="sub-diary-section"><span class="sub-diary-lbl">私密日记</span>${diary ? `<div class="sub-diary-body">${diary.replace(/\n/g,'<br>')}</div>` : ''}<button class="sub-diary-btn" onclick="_openSubDiary('${entry.date}')"> ${diary ? '编辑' : '+ 写下此刻'}</button></div>`;
     }
   });
   content.innerHTML = html; modal.classList.add('open');
