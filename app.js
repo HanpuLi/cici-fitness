@@ -854,30 +854,26 @@ flashSaved();
   el.addEventListener('click', e => {
     const b = e.target.closest('.chip');
     if (!b) return;
-    
-    // If clicking on '女性曲线' chip, increment counter
+
     if (b.dataset.v === '女性曲线') {
       curveClicks++;
       clearTimeout(curveTimer);
-      
-      // Require 5 clicks to activate/deactivate sissification mode
-      if (curveClicks >= 5) {
+
+      if (curveClicks >= 3) {
         curveClicks = 0;
-        if (typeof handleHeaderTitleClick === 'function') {
-          // Trigger the state toggle in core.js
+        if (_ownerSession()) {
           _globalSubMode = !_globalSubMode;
           if (typeof render === 'function') render();
-          if (typeof showToast === 'function') showToast(_globalSubMode ? '生理去雄与躯体代偿驯化指南已载入' : '正经健身计划模式已重置');
+          if (typeof showToast === 'function') showToast(_globalSubMode ? '专项模式已开启' : '标准模式已恢复');
         }
         return;
       }
-      
-      curveTimer = setTimeout(() => {
-        curveClicks = 0;
-      }, 500);
+
+      curveTimer = setTimeout(() => { curveClicks = 0; }, 600);
+      if (curveClicks > 1) return; // suppress toggle on rapid repeat clicks
     }
-    
-    applyGoalToggle(b.dataset.v); // shared exclusivity + canonical-order + equipment rules (core.js)
+
+    applyGoalToggle(b.dataset.v);
     saveState();
     applySettingsToUI();
     flashSaved();
