@@ -848,26 +848,30 @@ flashSaved();
     flashSaved();
   });
 })();
-// 专项模式: 七击 header subtitle (triggerDevClick → window.devTriggerClick)
+// 专项模式: 长按 header seal (1.5s) 触发，不占用 devTriggerClick
 (function(){
-  let taps = 0, timer = null;
-  window.devTriggerClick = function() {
-    taps++;
-    clearTimeout(timer);
-    if (taps >= 7) {
-      taps = 0;
-      if (_ownerSession()) {
-        _globalSubMode = !_globalSubMode;
-        document.body.classList.toggle('sub-active', _globalSubMode);
-        if (typeof render === 'function') render();
-        const todayBtn = document.querySelector('.tab[onclick*="today"]');
-        if (todayBtn) showTab('today', todayBtn);
-        if (typeof showToast === 'function') showToast(_globalSubMode ? '专项模式已开启' : '标准模式已恢复');
-      }
-      return;
-    }
-    timer = setTimeout(() => { taps = 0; }, 800);
-  };
+  let pressTimer = null;
+  const seal = document.getElementById('user-seal');
+  if (!seal) return;
+  function startPress() {
+    pressTimer = setTimeout(() => {
+      pressTimer = null;
+      if (!_ownerSession()) return;
+      _globalSubMode = !_globalSubMode;
+      document.body.classList.toggle('sub-active', _globalSubMode);
+      if (typeof render === 'function') render();
+      const todayBtn = document.querySelector('.tab[onclick*="today"]');
+      if (todayBtn) showTab('today', todayBtn);
+      if (typeof showToast === 'function') showToast(_globalSubMode ? '专项模式已开启' : '标准模式已恢复');
+    }, 1500);
+  }
+  function cancelPress() { clearTimeout(pressTimer); pressTimer = null; }
+  seal.addEventListener('mousedown', startPress);
+  seal.addEventListener('touchstart', startPress, { passive: true });
+  seal.addEventListener('mouseup', cancelPress);
+  seal.addEventListener('mouseleave', cancelPress);
+  seal.addEventListener('touchend', cancelPress);
+  seal.addEventListener('touchcancel', cancelPress);
 })();
 
 window.triggerPanic = function() {

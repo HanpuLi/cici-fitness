@@ -164,6 +164,13 @@
                             </span>
                         </div>
 
+                        <p class="sec" style="font-weight: 600; font-size: 13px; color: var(--ink);">Service Worker / 缓存</p>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px;">
+                            <button class="btn-dev dev-danger" style="grid-column:1/-1" onclick="forceSwUpdate()">⚡ 注销SW + 清缓存 + 重载</button>
+                            <button class="btn-dev" onclick="checkSwVersion()">查当前SW版本</button>
+                            <button class="btn-dev" onclick="skipSwWaiting()">激活等待中的SW</button>
+                        </div>
+
                         <p class="sec" style="font-weight: 600; font-size: 13px; color: var(--ink);">通用调试小工具</p>
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px;">
                             <button class="btn-dev" onclick="testSystemSounds('start')">测倒计时开始音</button>
@@ -969,6 +976,45 @@
             }
         } catch (e) {
             alert(`导入失败，语法错误：${e.message}`);
+        }
+    };
+    // ══ SW / Cache Tools ════════════════════════════════════════
+    window.forceSwUpdate = async function() {
+        if (!confirm('注销 Service Worker 并清除所有缓存，然后重载页面？')) return;
+        try {
+            if ('serviceWorker' in navigator) {
+                const regs = await navigator.serviceWorker.getRegistrations();
+                await Promise.all(regs.map(r => r.unregister()));
+            }
+            if ('caches' in window) {
+                const keys = await caches.keys();
+                await Promise.all(keys.map(k => caches.delete(k)));
+            }
+        } catch(e) { console.warn('SW cleanup:', e); }
+        location.reload(true);
+    };
+
+    window.checkSwVersion = async function() {
+        try {
+            const resp = await fetch('sw.js?_t=' + Date.now());
+            const text = await resp.text();
+            const m = text.match(/cici-fitness-v\d+/);
+            const ver = m ? m[0] : '未找到版本号';
+            const reg = await navigator.serviceWorker.getRegistration();
+            const active = reg?.active?.scriptURL || '无';
+            showToast('服务器: ' + ver + ' | SW状态: ' + (reg?.active ? '激活' : '无'), 4000);
+            console.log('server sw.js:', ver, '| active SW:', active);
+        } catch(e) { showToast('查询失败: ' + e.message); }
+    };
+
+    window.skipSwWaiting = async function() {
+        const reg = await navigator.serviceWorker.getRegistration();
+        if (reg?.waiting) {
+            reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+            showToast('已发送 skipWaiting，稍后重载...');
+            setTimeout(() => location.reload(), 800);
+        } else {
+            showToast('没有等待中的 SW');
         }
     };
 })();
