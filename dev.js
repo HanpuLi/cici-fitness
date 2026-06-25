@@ -65,8 +65,9 @@
                 if (el) {
                     const on = typeof _globalSubMode !== 'undefined' && _globalSubMode;
                     const depth = (typeof SUB_DEPTH !== 'undefined' && SUB_DEPTH.count) || 0;
+                    const streak = (typeof SUB_DEPTH !== 'undefined' && SUB_DEPTH.streak) || 0;
                     const tier = depth >= 15 ? 4 : depth >= 7 ? 3 : depth >= 3 ? 2 : 1;
-                    el.innerHTML = (on ? '●' : '○') + ` <span style="opacity:.45">✓ ✓</span> <span style="opacity:.5;font-size:10px">T${tier}·${depth}</span>`;
+                    el.innerHTML = (on ? '●' : '○') + ` <span style="opacity:.45">✓ ✓</span> <span style="opacity:.5;font-size:10px">T${tier}·${depth}${streak >= 2 ? ' ×' + streak : ''}</span>`;
                 }
             }
             return;

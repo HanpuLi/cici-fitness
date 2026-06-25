@@ -1831,6 +1831,8 @@ function render() {
       const _di = Math.floor(new Date(today).getTime() / 86400000) % _dts.length;
       h += `<div class="sub-daily-quote">${_dts[_di]}</div>`;
     }
+    const _streak = SUB_DEPTH.streak || 0;
+    if (_streak >= 2) h += `<div style="text-align:center;margin:-4px 0 10px"><span style="font-size:10px;color:rgba(232,121,249,0.55);border:1px solid rgba(232,121,249,0.18);border-radius:20px;padding:2px 12px;letter-spacing:0.1em">连续 ${_streak} 天</span></div>`;
   }
 
   const intensityInfo = assessPlanIntensity();
@@ -2346,6 +2348,27 @@ function _releaseWakeLock() {
   }
 }
 
+const _STREAK_MILESTONES = [2, 3, 5, 7, 10, 14, 21, 30];
+
+function _checkStreakMilestone(streak) {
+  if (!_STREAK_MILESTONES.includes(streak)) return;
+  const db = _getSubDb();
+  const dec = s => { try { return decodeURIComponent(atob(s)); } catch(e) { return ''; } };
+  const texts = db?.streak_texts?.map(dec).filter(Boolean);
+  if (!texts || !texts.length) return;
+  const idx = Math.min(_STREAK_MILESTONES.indexOf(streak), texts.length - 1);
+  setTimeout(() => _showStreakReward(streak, texts[idx]), 2500);
+}
+
+function _showStreakReward(streak, text) {
+  const div = document.createElement('div');
+  div.style.cssText = 'position:fixed;inset:0;background:rgba(6,3,14,0.98);z-index:3100;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px;text-align:center;cursor:pointer';
+  div.innerHTML = `<div style="font-size:10px;letter-spacing:0.18em;color:rgba(232,121,249,0.45);margin-bottom:18px">连续 ${streak} 天</div><div style="color:rgba(240,171,252,0.97);font-size:15px;line-height:2.1;max-width:290px;text-shadow:0 0 24px rgba(232,121,249,0.9),0 0 60px rgba(167,139,250,0.4)">${text}</div><div style="margin-top:28px;width:32px;height:1px;background:rgba(232,121,249,0.25)"></div>`;
+  document.body.appendChild(div);
+  div.addEventListener('click', () => div.remove());
+  setTimeout(() => { if (document.body.contains(div)) div.remove(); }, 6000);
+}
+
 function _refreshNextDayPrivate() {
   if (!S.plan || !_ownerSession()) return;
   const today = todayStr();
@@ -2665,8 +2688,16 @@ function submitRPE(rpe, isSkip = false) {
     if (_globalSubMode && _ownerSession()) {
       SUB_DEPTH.count = (SUB_DEPTH.count || 0) + 1;
       SUB_DEPTH.metrics = [...(SUB_DEPTH.metrics || []).slice(-9), subMetrics || {}];
+      const _prev = SUB_DEPTH.lastSubDate || '';
+      const _yest = addDays(date, -1);
+      if (_prev !== date) {
+        SUB_DEPTH.streak = _prev === _yest ? (SUB_DEPTH.streak || 0) + 1 : 1;
+        SUB_DEPTH.lastSubDate = date;
+        SUB_DEPTH.maxStreak = Math.max(SUB_DEPTH.maxStreak || 0, SUB_DEPTH.streak);
+      }
       ls(K.sub_depth, SUB_DEPTH);
       _refreshNextDayPrivate();
+      _checkStreakMilestone(SUB_DEPTH.streak);
       const db = _getSubDb();
       const dec = s => { try { return decodeURIComponent(atob(s)); } catch(e) { return ''; } };
       const msgs = _subTierSlice(db?.finish_toast?.map(dec).filter(Boolean));
