@@ -850,12 +850,15 @@ flashSaved();
 
   let curveClicks = 0;
   let curveTimer = null;
+  let _curveTouchHandled = false;
 
-  // touchend for reliable rapid-tap detection on iOS (no 300ms click delay)
   el.addEventListener('touchend', e => {
     const b = e.target.closest('.chip');
     if (!b || b.dataset.v !== '女性曲线') return;
-    e.preventDefault(); // suppress subsequent click event
+    e.preventDefault();
+    _curveTouchHandled = true;
+    setTimeout(() => { _curveTouchHandled = false; }, 500);
+
     curveClicks++;
     clearTimeout(curveTimer);
 
@@ -871,7 +874,6 @@ flashSaved();
 
     curveTimer = setTimeout(() => { curveClicks = 0; }, 800);
     if (curveClicks === 1) {
-      // only first tap triggers the goal toggle
       applyGoalToggle(b.dataset.v);
       saveState();
       applySettingsToUI();
@@ -879,11 +881,10 @@ flashSaved();
     }
   });
 
-  // fallback click handler for non-touch (desktop)
   el.addEventListener('click', e => {
     const b = e.target.closest('.chip');
     if (!b) return;
-    if (b.dataset.v === '女性曲线' && e.sourceCapabilities && e.sourceCapabilities.firesTouchEvents) return;
+    if (b.dataset.v === '女性曲线' && _curveTouchHandled) return; // touchend already handled
     applyGoalToggle(b.dataset.v);
     saveState();
     applySettingsToUI();
