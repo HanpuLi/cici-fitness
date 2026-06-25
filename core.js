@@ -2366,24 +2366,15 @@ function updateRpeModalLabels() {
   });
 
   if (isSub) {
-    // Read cached/synced obfuscated strings overrides
     let subDatabase = null;
     try {
       const cached = localStorage.getItem('__obfuscated_v2_cache__');
       if (cached) subDatabase = JSON.parse(cached);
     } catch(e) {}
-    
-    const dec = (s) => {
-      try { return decodeURIComponent(atob(s)); } catch(e) { return s; }
-    };
-
-    const titleOverride = subDatabase?.textOverrides?.title ? dec(subDatabase.textOverrides.title) : "去雄度与服从性综合评估";
-    const descOverride = subDatabase?.textOverrides?.desc ? dec(subDatabase.textOverrides.desc) : "今天身体被彻底驯化与重塑的深度评估：";
-    const placeholderOverride = subDatabase?.textOverrides?.notePlaceholder ? dec(subDatabase.textOverrides.notePlaceholder) : "在这里献上你最下贱的受动记录与去雄反馈……";
-
-    titleEl.innerText = titleOverride;
-    descEl.innerText = descOverride;
-    noteEl.placeholder = placeholderOverride;
+    const dec = (s) => { try { return decodeURIComponent(atob(s)); } catch(e) { return s; } };
+    titleEl.innerText = subDatabase?.textOverrides?.title ? dec(subDatabase.textOverrides.title) : "去雄度与服从性综合评估";
+    descEl.innerText = subDatabase?.textOverrides?.desc ? dec(subDatabase.textOverrides.desc) : "今天身体被彻底驯化与重塑的深度评估：";
+    noteEl.placeholder = subDatabase?.textOverrides?.notePlaceholder ? dec(subDatabase.textOverrides.notePlaceholder) : "在这里献上你最下贱的受动记录与去雄反馈……";
 
     // Draw customized BDSM questionnaires options
     if (subContainer) {
@@ -2431,15 +2422,14 @@ function updateRpeModalLabels() {
     }
   } else {
     if (subContainer) subContainer.style.display = 'none';
+    // always reset to standard text so sub-mode text never leaks
     if (isOwner) {
-      if (titleEl.innerText.includes('疲劳度')) {
-        titleEl.innerText = titleEl.innerText.replace('疲劳度', '训练强度');
-      }
-      if (descEl.innerText.includes('今天训练感受')) {
-        descEl.innerText = '选择最接近你今天身体训练强度与身体感受的感受分值';
-      }
+      titleEl.innerText = '训练强度评估';
+      descEl.innerText = '选择最接近你今天身体训练强度与身体感受的感受分值';
       noteEl.placeholder = '记录你的训练表现与身体反馈（选填，如：双腿颤抖强烈、盆底完全放松）';
     } else {
+      titleEl.innerText = '疲劳度评估';
+      descEl.innerText = '选择最接近你今天训练感受的分数';
       noteEl.placeholder = '有什么想记录的？（选填，如：今天状态不好、卧推加了5kg）';
     }
   }
@@ -3890,7 +3880,7 @@ function wmNav(dir) { const day = S.plan && S.plan.days.find(d => d.date === _wm
 function wmFinish() { wmClose(); render(); endWorkoutEarly(_wmDate); }
 
 let _currentExDetailName = '';
-let _exDetailSubMode = false;
+var _exDetailSubMode = false;
 
 function _decodeSub(s) {
   try {
