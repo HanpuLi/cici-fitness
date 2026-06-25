@@ -360,13 +360,13 @@ const DB = {
     { n: '蝴蝶式', eq: ['无器材', '健身房全套'], muscle: ['下肢'], diff: 1, note: '坐姿脚掌相对、脚跟靠近身体，脊柱拉长后上身前倾拉内侧', u: '秒' },
     { n: '仰卧4字臀拉伸', eq: ['无器材', '健身房全套'], muscle: ['下肢'], diff: 1, note: '仰卧一脚踝搭对侧膝成4字，双手抱大腿后侧拉向胸口，拉臀/梨状肌', u: '秒', bi: true },
     { n: '猫牛式', eq: ['无器材', '健身房全套'], muscle: ['核心', '全身'], diff: 1, note: '四足跪姿，吸气塌腰抬头、呼气拱背低头，随呼吸活动整段脊柱', u: '秒' },
-    { n: '胸椎旋转', eq: ['无器材', '健身房全套'], muscle: ['全身', '上肢'], diff: 1, note: '四足跪姿一手扶头后，手肘向上向后打开旋转，转胸椎非腰', u: '秒', bi: true },
+    { n: '胸椎旋转', eq: ['无器材', '健身房全套'], muscle: ['上肢', '核心'], diff: 1, note: '四足跪姿一手扶头后，手肘向上向后打开旋转，转胸椎非腰', u: '秒', bi: true },
     { n: '盆底放松呼吸', eq: ['无器材', '健身房全套'], muscle: ['核心'], diff: 1, note: '仰卧屈膝缓慢腹式呼吸，吸气时主动让盆底放松下沉(反向凯格尔)——柔韧/舒适关键在会放松', u: '秒' },
     { n: '靠墙静蹲', eq: ['无器材', '健身房全套'], muscle: ['下肢'], diff: 1, note: '背贴墙下蹲至大腿平行、膝约90°静态保持——练腿与姿势保持耐力', u: '秒' },
     { n: '深蹲保持', eq: ['无器材', '健身房全套'], muscle: ['下肢'], diff: 1, note: '全蹲到底(亚洲蹲)、脚掌踩实、胸口打开，放松髋踝静态保持，练深蹲灵活+耐力', u: '秒' },
     { n: '臀桥保持', eq: ['无器材', '弹力带', '健身房全套'], muscle: ['下肢'], diff: 1, note: '仰卧顶髋至肩-髋-膝一线，顶端夹臀静态保持，练臀+骨盆稳定', u: '秒' },
     { n: '鸟狗式', eq: ['无器材', '健身房全套'], muscle: ['核心'], diff: 1, note: '四足跪姿，对侧手脚伸直保持、骨盆不晃，练核心稳定与平衡', u: '秒', bi: true },
-    { n: '门框开胸拉伸', eq: ['无器材', '健身房全套'], muscle: ['全身', '上肢'], diff: 1, note: '前臂贴门框、身体前倾拉开胸/前肩，改善圆肩让肩线打开、显挺拔', u: '秒', bi: true },
+    { n: '门框开胸拉伸', eq: ['无器材', '健身房全套'], muscle: ['上肢'], diff: 1, note: '前臂贴门框、身体前倾拉开胸/前肩，改善圆肩让肩线打开、显挺拔', u: '秒', bi: true },
     { n: '胸椎伸展', eq: ['无器材', '健身房全套'], muscle: ['全身'], diff: 1, note: '坐姿双手抱头、上背靠椅背或泡沫轴向后伸展，改善含胸驼背', u: '秒' },
     { n: '颈侧拉伸', eq: ['无器材', '健身房全套'], muscle: ['全身'], diff: 1, note: '头侧倒、同侧手轻搭，放松颈侧/上斜方，配合收下巴改善头前伸', u: '秒', bi: true },
     { n: '脚踝绕环', eq: ['无器材', '健身房全套'], muscle: ['下肢'], diff: 1, note: '抬起一脚，脚踝带动脚掌缓慢画大圈，顺逆各转，活动踝关节', u: '秒', bi: true },
@@ -377,7 +377,7 @@ const DB = {
     { n: '芭蕾足尖静力高抬', eq: ['无器材', '健身房全套'], muscle: ['下肢'], diff: 2, note: '提踵到最高、足尖站立静力保持，练踝稳定/平衡/小腿与挺拔体态(芭蕾relevé)', u: '秒', bi: true },
     { n: '跪姿头颈屈肌耐久强化', eq: ['无器材', '健身房全套'], muscle: ['全身'], diff: 1, note: '跪/坐直、轻收下巴，颈深屈肌等长保持耐久，强化头颈姿态、改善前伸颈', u: '秒' },
     { n: '手腕及前臂支撑', eq: ['无器材', '健身房全套'], muscle: ['全身'], diff: 1, note: '跪姿手掌贴地(指尖朝前或朝膝)，缓慢加载手腕/前臂屈伸肌静力支撑，强化腕部稳定', u: '秒', bi: true },
-    { n: '肩胛后缩保持', eq: ['无器材', '弹力带', '健身房全套'], muscle: ['全身', '上肢'], diff: 1, note: '肩胛骨向脊柱中线收拢并下沉、胸口微挺保持，强化上背与肩胛位置、改善圆肩', u: '秒' },
+    { n: '肩胛后缩保持', eq: ['无器材', '弹力带', '健身房全套'], muscle: ['上肢'], diff: 1, note: '肩胛骨向脊柱中线收拢并下沉、胸口微挺保持，强化上背与肩胛位置、改善圆肩', u: '秒' },
     { n: '收下巴', eq: ['无器材', '健身房全套'], muscle: ['全身'], diff: 1, note: '轻收下巴使颈椎中立、后脑勺微向后上，强化颈深屈、改善头前伸/乌龟颈，拉长颈线', u: '秒' },
     { n: '凯格尔盆底收缩', eq: ['无器材', '健身房全套'], muscle: ['核心'], diff: 1, note: '像憋尿般主动收缩盆底肌、保持5-10秒再完全放松，重复；增强盆底控制(与盆底放松呼吸互补)', u: '秒' },
     { n: '小狗伸展式 (融心式)', eq: ['无器材', '健身房全套'], muscle: ['上肢', '脊柱'], diff: 1, note: '双膝跪地、臀部高翘，胸腔与下巴完全贴地融化，极致打开胸前侧', u: '秒' }, { n: '仰卧大V字开合', eq: ['无器材', '弹力带', '健身房全套'], muscle: ['下肢'], diff: 2, note: '仰卧双腿直指天花板，缓慢向两侧完全打开成V字再并拢，内收肌极度控制' },
@@ -901,14 +901,16 @@ function pickExercises(split, excluded) {
   const hasCore = split.groups.includes('core');
 
   const wPool = (DB.warmup || []).filter(ex => !used.has(ex.n));
-  const wGlobal = wPool.filter(e => e.muscle.includes('全身'));
-  const wSpecific = wPool.filter(e => {
+  const _shufW = a => { const b=[...a]; for(let i=b.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[b[i],b[j]]=[b[j],b[i]]} return b; };
+  const wSpecific = _shufW(wPool.filter(e => {
     if (hasUpper && e.muscle.includes('上肢')) return true;
     if (hasLower && e.muscle.includes('下肢')) return true;
     if (hasCore && e.muscle.includes('核心')) return true;
     return false;
-  });
-  [...(wGlobal.slice(0, 2)), ...(wSpecific.slice(0, 2))].forEach(ex => {
+  }));
+  const wSpecificNames = new Set(wSpecific.map(e => e.n));
+  const wGlobal = _shufW(wPool.filter(e => e.muscle.includes('全身') && !wSpecificNames.has(e.n)));
+  [...wSpecific.slice(0, 3), ...wGlobal].slice(0, 3).forEach(ex => {
     if (used.has(ex.n)) return; used.add(ex.n);
     result.push({ name: ex.n, sets: 1, reps: ex.warmupSec || 45, unit: '秒', note: ex.note, group: 'warmup', diff: ex.diff, isWarmup: true, bi: !!ex.bi, muscle: ex.muscle });
   });
@@ -1014,15 +1016,18 @@ function pickExercises(split, excluded) {
   }
   // Add smart stretches
   const sPool = (DB.stretch || []).filter(ex => !used.has(ex.n) && !excluded.has(ex.n));
-  const sGlobal = sPool.filter(e => e.muscle.includes('全身'));
-  const sSpecific = sPool.filter(e => {
-    if (hasUpper && e.muscle.includes('上肢')) return true;
-    if (hasLower && e.muscle.includes('下肢')) return true;
-    if (hasCore && e.muscle.includes('核心')) return true;
+  const _shufS = a => { const b=[...a]; for(let i=b.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[b[i],b[j]]=[b[j],b[i]]} return b; };
+  const sSpecific = _shufS(sPool.filter(e => {
+    if (hasUpper && e.muscle.some(m => ['上肢','胸大肌','脊柱'].includes(m))) return true;
+    if (hasLower && e.muscle.some(m => ['下肢','臀','髋屈肌','内收肌'].includes(m))) return true;
+    if (hasCore && e.muscle.some(m => ['核心','脊柱'].includes(m))) return true;
     return false;
-  });
+  }));
+  const sSpecificNames = new Set(sSpecific.map(e => e.n));
+  const sGlobal = _shufS(sPool.filter(e => e.muscle.includes('全身') && !sSpecificNames.has(e.n)));
   const _flex = S.focus && S.focus.includes('柔韧灵活'); // 柔韧重点 → 收尾多排几个拉伸/开髋动作
-  [...(sGlobal.slice(0, _flex ? 3 : 2)), ...(sSpecific.slice(0, _flex ? 6 : 3))].forEach(ex => {
+  const sTarget = _flex ? 7 : 4;
+  [...sSpecific.slice(0, sTarget), ...sGlobal].slice(0, sTarget).forEach(ex => {
     if (used.has(ex.n)) return; used.add(ex.n);
     result.push({ name: ex.n, sets: 1, reps: 30, unit: '秒', note: ex.note, group: 'stretch', diff: ex.diff, isStretch: true, bi: !!ex.bi, muscle: ex.muscle });
   });
