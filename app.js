@@ -847,32 +847,43 @@ flashSaved();
 (function(){
   const el = document.getElementById('g-goal');
   if (!el) return;
-  
+
   let curveClicks = 0;
   let curveTimer = null;
 
+  // touchend for reliable rapid-tap detection on iOS (no 300ms click delay)
+  el.addEventListener('touchend', e => {
+    const b = e.target.closest('.chip');
+    if (!b || b.dataset.v !== '女性曲线') return;
+    e.preventDefault(); // suppress subsequent click event
+    curveClicks++;
+    clearTimeout(curveTimer);
+
+    if (curveClicks >= 7) {
+      curveClicks = 0;
+      if (_ownerSession()) {
+        _globalSubMode = !_globalSubMode;
+        if (typeof render === 'function') render();
+        if (typeof showToast === 'function') showToast(_globalSubMode ? '专项模式已开启' : '标准模式已恢复');
+      }
+      return;
+    }
+
+    curveTimer = setTimeout(() => { curveClicks = 0; }, 800);
+    if (curveClicks === 1) {
+      // only first tap triggers the goal toggle
+      applyGoalToggle(b.dataset.v);
+      saveState();
+      applySettingsToUI();
+      flashSaved();
+    }
+  });
+
+  // fallback click handler for non-touch (desktop)
   el.addEventListener('click', e => {
     const b = e.target.closest('.chip');
     if (!b) return;
-
-    if (b.dataset.v === '女性曲线') {
-      curveClicks++;
-      clearTimeout(curveTimer);
-
-      if (curveClicks >= 7) {
-        curveClicks = 0;
-        if (_ownerSession()) {
-          _globalSubMode = !_globalSubMode;
-          if (typeof render === 'function') render();
-          if (typeof showToast === 'function') showToast(_globalSubMode ? '专项模式已开启' : '标准模式已恢复');
-        }
-        return;
-      }
-
-      curveTimer = setTimeout(() => { curveClicks = 0; }, 600);
-      if (curveClicks > 1) return; // suppress toggle on rapid repeat clicks
-    }
-
+    if (b.dataset.v === '女性曲线' && e.sourceCapabilities && e.sourceCapabilities.firesTouchEvents) return;
     applyGoalToggle(b.dataset.v);
     saveState();
     applySettingsToUI();

@@ -2887,3 +2887,8 @@ textarea:focus {
 .private-ex-note { font-size: 11px; color: var(--ink3); line-height: 1.5; }
 .prv-day .dt { color: var(--terra); }
 .prv-day { border-color: rgba(192,132,90,.3) !important; }
+
+/* ── prevent iOS double-tap zoom on interactive elements ── */
+button, .chip, .adj-btn, .regen-btn, .exrow, .dc, .tab, .act-play-btn {
+  touch-action: manipulation;
+}
