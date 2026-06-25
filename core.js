@@ -1208,14 +1208,17 @@ function pickSwimExercises() {
   const phases = ['warmup', 'tech', 'main', 'cooldown'];
   const phaseTimes = { warmup: 5, tech: level === '入门' ? 25 : level === '进阶' ? 20 : 20, main: level === '入门' ? 15 : level === '进阶' ? 20 : 20, cooldown: 5 };
   const _sps = _ownerSession() ? new Set(_PRIVATE_POOL) : null;
+  // Owner: skip lap-swimming main phase entirely, expand tech quota
+  const _ownerPool = !!_sps;
   phases.forEach(phase => {
+    if (_ownerPool && phase === 'main') return; // no lap swimming for owner
     const pExs = pool.filter(ex => ex.swimPhase === phase);
     // Shuffle within phase for variety
     for (let i = pExs.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1));[pExs[i], pExs[j]] = [pExs[j], pExs[i]] }
     // Private exercises float to front in tech phase
     if (_sps && phase === 'tech') pExs.sort((a, b) => (_sps.has(a.n) ? 0 : 1) - (_sps.has(b.n) ? 0 : 1));
-    // Pick exercises: warmup/cooldown = 1, tech = up to 3-4, main = up to 2
-    const pick = phase === 'warmup' ? 1 : phase === 'cooldown' ? 1 : phase === 'tech' ? Math.min(pExs.length, level === '入门' ? 4 : 3) : Math.min(pExs.length, 2);
+    // Pick exercises: warmup/cooldown = 1, tech = owner gets up to 6, standard up to 3-4, main = up to 2
+    const pick = phase === 'warmup' ? 1 : phase === 'cooldown' ? 1 : phase === 'tech' ? Math.min(pExs.length, _ownerPool ? 6 : (level === '入门' ? 4 : 3)) : Math.min(pExs.length, 2);
     const totalTime = phaseTimes[phase];
     pExs.slice(0, pick).forEach((ex, i) => {
       const mins = Math.max(3, Math.round(totalTime / pick));
@@ -1267,6 +1270,23 @@ function pickPeriodAlternative() {
   // 3. Cool-down stretch 5min
   exercises.push({ name: '全身拉伸放松', sets: 1, reps: 5, unit: '分钟', note: '针对下背、髋屈肌和腿后侧进行缓慢拉伸', group: 'cardio', diff: 1, isStretch: true, bi: false });
   return exercises;
+}
+
+function pickPrivateDayExercises() {
+  const excluded = getExcluded();
+  const ps = new Set(_PRIVATE_POOL);
+  const pool = [];
+  Object.entries(DB).forEach(([grp, exs]) => {
+    exs.forEach(ex => {
+      if (ps.has(ex.n) && !excluded.has(ex.n) && ex.eq.some(e => e === '无器材' || S.equip.includes(e)))
+        pool.push({ ...ex, _g: grp });
+    });
+  });
+  for (let i = pool.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [pool[i], pool[j]] = [pool[j], pool[i]]; }
+  return pool.slice(0, 8).map(ex => ({
+    name: ex.n, sets: 2, reps: ex.u === '秒' ? 45 : 15, unit: ex.u || '次',
+    note: ex.note, group: ex._g, diff: ex.diff, bi: !!ex.bi, muscle: ex.muscle || []
+  }));
 }
 
 function genPlan(isRecalibrate = false, preserveFuture = false) {
@@ -1334,7 +1354,7 @@ function genPlan(isRecalibrate = false, preserveFuture = false) {
     const sortedPreserved = Object.values(preserve).sort((a, b) => a.date.localeCompare(b.date));
     for (let j = sortedPreserved.length - 1; j >= 0; j--) {
       const d = sortedPreserved[j];
-      if (!d.isRest && !d.isSwimDay && d.workoutType !== '轻量替代' && isDone(d)) {
+      if (!d.isRest && !d.isSwimDay && !d.isPrivateDay && d.workoutType !== '轻量替代' && isDone(d)) {
         lastGymWorkoutType = d.workoutType;
         break;
       }
@@ -1386,6 +1406,21 @@ function genPlan(isRecalibrate = false, preserveFuture = false) {
     } else {
       days.push({ date: ds, isRest: true, workoutType: '休息', duration: 0, exercises: [] });
     }
+  }
+
+  // Owner: inject one 柔韧流动 day per 7-day block (replaces a mid-week rest day)
+  if (_ownerSession()) {
+    [0, 7].forEach(wk => {
+      const restIdxs = [];
+      for (let i = wk; i < Math.min(wk + 7, days.length); i++) {
+        if (days[i].isRest && !preserve[days[i].date]) restIdxs.push(i);
+      }
+      if (restIdxs.length >= 2) {
+        const pick = restIdxs[Math.floor(restIdxs.length / 2)];
+        const exs = pickPrivateDayExercises();
+        if (exs.length) days[pick] = { date: days[pick].date, isRest: false, isPrivateDay: true, workoutType: '柔韧流动', duration: 30, exercises: exs };
+      }
+    });
   }
 
   const sch = currentScheme();
@@ -1504,7 +1539,7 @@ function autoAlignPlan() {
   const sortedPast = pastDays.sort((a, b) => a.date.localeCompare(b.date));
   for (let j = sortedPast.length - 1; j >= 0; j--) {
     const d = sortedPast[j];
-    if (!d.isRest && !d.isSwimDay && d.workoutType !== '轻量替代' && isDone(d)) {
+    if (!d.isRest && !d.isSwimDay && !d.isPrivateDay && d.workoutType !== '轻量替代' && isDone(d)) {
       lastCompletedType = d.workoutType;
       break;
     }
@@ -1530,7 +1565,7 @@ function autoAlignPlan() {
   }
 
   // 3. Find first future gym day
-  const firstFutureGymDay = S.plan.days.find(d => d.date >= today && !d.isRest && !d.isSwimDay && d.workoutType !== '轻量替代');
+  const firstFutureGymDay = S.plan.days.find(d => d.date >= today && !d.isRest && !d.isSwimDay && !d.isPrivateDay && d.workoutType !== '轻量替代');
 
   if (firstFutureGymDay) {
     const scheduledType = firstFutureGymDay.workoutType;
@@ -1804,6 +1839,7 @@ ${!isCurrentView ? `<button class="cal-nav-btn today-btn" onclick="calGoToday()"
     if (isToday) cls += ' today';
     if (locked && !d.isRest) cls += ' locked';
     if (d.isSwimDay) cls += ' swim-day';
+    if (d.isPrivateDay) cls += ' prv-day';
     if (isSel && !isNone && !(d.isRest && isPlan)) cls += ' sel';
     const drag = (isPlan && !d.isRest && !locked) ? `draggable="true" ondragstart="dragStart(event,'${d.date}')" ondragover="dragOver(event)" ondrop="dragDrop(event,'${d.date}')" ondragend="dragEnd()"` :
       (isPlan && !d.isRest && locked ? `ondragover="dragOver(event)" ondrop="dragDrop(event,'${d.date}')"` : '');
@@ -1925,10 +1961,12 @@ ${!done ? `<button class="act-play-btn" onclick="event.stopPropagation();startTi
           }
           h += `</div>`; // close pool-mode
 
-          // ── Standard gym day render (unchanged) ──
+          // ── Standard gym / private day render ──
         } else {
+          const _isPrivate = !!sel.isPrivateDay;
           h += `<div class="wh">
 <span class="wh-title">${fmtDate(sel.date)} \u00b7 ${sel.workoutType}</span>
+${_isPrivate ? `<span class="badge" style="background:rgba(192,132,90,.12);color:var(--terra);border:1px solid rgba(192,132,90,.25)">私享</span>` : ""}
 <span class="badge">${sel.duration}\u5206\u949f</span>
 ${_isSwimDay ? `<span class="badge" style="background:rgba(59,130,246,.12);color:#3b82f6">${S.swimLevel || '\u5165\u95e8'}</span>` : ''}
 ${!locked && !_isSwimDay ? `<button class="regen-btn" style="margin-left:auto;font-size:10px;padding:2px 8px" onclick="startTimer(45, '\u7ec4\u95f4\u4f11\u606f')">45s</button><button class="regen-btn" style="margin-left:4px;font-size:10px;padding:2px 8px" onclick="startTimer(60, '\u7ec4\u95f4\u4f11\u606f')">60s</button>` : ''}

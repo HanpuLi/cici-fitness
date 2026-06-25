@@ -2885,3 +2885,5 @@ textarea:focus {
 .private-ex-body { flex: 1; min-width: 0; }
 .private-ex-name { font-size: 13px; font-weight: 600; color: var(--ink); margin-bottom: 3px; }
 .private-ex-note { font-size: 11px; color: var(--ink3); line-height: 1.5; }
+.prv-day .dt { color: var(--terra); }
+.prv-day { border-color: rgba(192,132,90,.3) !important; }
