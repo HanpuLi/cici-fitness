@@ -44,20 +44,32 @@
     // ══ 专项模式 secret trigger ══════════════════════════════════
     let _devSubClicks = 0, _devSubTimer = null;
     window._devSubClick = function() {
-        if (typeof _ownerSession !== 'function' || !_ownerSession()) return;
-        if (typeof hasGoal !== 'function' || !hasGoal('女性曲线')) return;
+        const isOwner = typeof _ownerSession === 'function' && _ownerSession();
+        const hasCurve = typeof hasGoal === 'function' && hasGoal('女性曲线');
+        if (!isOwner || !hasCurve) {
+            // flash red to signal blocked
+            const sec = document.getElementById('dev-sub-sec');
+            if (sec) { sec.style.color = 'var(--terra)'; setTimeout(() => { sec.style.color = ''; }, 400); }
+            return;
+        }
         _devSubClicks++;
+        // flash to show tap registered
+        const sec = document.getElementById('dev-sub-sec');
+        if (sec) { sec.style.opacity = '0.4'; setTimeout(() => { sec.style.opacity = ''; }, 150); }
         clearTimeout(_devSubTimer);
         if (_devSubClicks >= 7) {
             _devSubClicks = 0;
             if (typeof toggleSubMode === 'function') {
                 toggleSubMode();
                 const el = document.getElementById('dev-sub-status');
-                if (el) el.textContent = (typeof _globalSubMode !== 'undefined' && _globalSubMode) ? '● 专项已开启' : '○ 标准模式';
+                if (el) {
+                    const on = typeof _globalSubMode !== 'undefined' && _globalSubMode;
+                    el.innerHTML = (on ? '● 专项已开启' : '○ 标准模式') + '<br><span style="opacity:.6">账号: ✓ owner · 女性曲线: ✓ 已选</span>';
+                }
             }
             return;
         }
-        _devSubTimer = setTimeout(() => { _devSubClicks = 0; }, 600);
+        _devSubTimer = setTimeout(() => { _devSubClicks = 0; }, 1200);
     };
 
     // ══ Unlock Triggers & State ═════════════════════════════════
@@ -158,10 +170,22 @@
                     <!-- Tab 1: Simulation -->
                     <div id="dev-panel-sim" class="dev-panel" style="display: block;">
                         <p class="sec" id="dev-sub-sec" style="margin-top: 0; font-weight: 600; font-size: 13px; color: var(--ink); cursor: default; user-select: none;" onclick="_devSubClick()">专项模式</p>
-                        <div style="margin-bottom: 12px; font-size: 11px; color: var(--ink3); line-height: 1.8;" id="dev-sub-status">
+                        <div style="margin-bottom: 4px; font-size: 11px; color: var(--ink3); line-height: 1.8;" id="dev-sub-status">
                             ${typeof _globalSubMode !== 'undefined' && _globalSubMode ? '● 专项已开启' : '○ 标准模式'}<br>
-                            <span style="opacity:.6">账号: ${(typeof _ownerSession === 'function' && _ownerSession()) ? '✓ owner' : '✗ 非owner'} · 女性曲线: ${(typeof hasGoal === 'function' && hasGoal('女性曲线')) ? '✓ 已选' : '✗ 未选'}</span>
+                            <span style="opacity:.6">账号: ${(typeof _ownerSession === 'function' && _ownerSession()) ? '✓ owner' : '✗ 非owner'} · 女性曲线: ${(typeof hasGoal === 'function' && hasGoal('女性曲线')) ? '✓ 已选' : '✗ 未选（先在设置里选上）'}</span>
                         </div>
+                        <button class="btn-dev" style="width:100%;margin-bottom:12px;font-size:10px" onclick="(function(){
+                            const owner = typeof _ownerSession==='function'&&_ownerSession();
+                            const curve = typeof hasGoal==='function'&&hasGoal('女性曲线');
+                            const gMode = typeof _globalSubMode!=='undefined'?_globalSubMode:'undefined';
+                            const exMode = typeof _exDetailSubMode!=='undefined'?_exDetailSubMode:'undefined';
+                            let dec='ERROR';
+                            try{dec=decodeURIComponent(atob('JUU0JUJCJUIwJUU1JThEJUE3'));}catch(e){}
+                            const msg='globalSubMode='+gMode+'\\nexDetailSubMode='+exMode+'\\nownerSession='+owner+'\\nhasGoal(女性曲线)='+curve+'\\n解码测试(仰卧)='+dec;
+                            console.log(msg);
+                            if(typeof showToast==='function')showToast('见控制台 / '+dec.slice(0,6),5000);
+                            alert(msg);
+                        })()">诊断专项模式状态</button>
                         <p class="sec" style="font-weight: 600; font-size: 13px; color: var(--ink);">数据隔离沙箱 (Sandbox)</p>
                         <div style="background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px; margin-bottom: 12px; font-size: 11px; line-height: 1.5; color: var(--ink2);">
                             开启沙箱后，系统会将当前真实数据复制 to 临时存储，之后的所有修改、打卡和重排都在隔离沙箱进行，退出沙箱后恢复真实数据，100% 安全。
