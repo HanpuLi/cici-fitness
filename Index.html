@@ -3,7 +3,8 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title id="doc-title">我的健身计划</title>
     <link rel="manifest" href="manifest.json">
     <link rel="icon" href="icon.svg" type="image/svg+xml">
@@ -29,7 +30,8 @@
         <div class="masthead-seal" id="user-seal">健</div>
         <div class="masthead-titles">
             <h1 id="user-name">我的健身计划</h1>
-            <p class="masthead-sub" id="masthead-sub" style="cursor: default; user-select: none;" onclick="triggerDevClick()">FITNESS & WELLNESS</p>
+            <p class="masthead-sub" id="masthead-sub" style="cursor: default; user-select: none;"
+                onclick="triggerDevClick()">FITNESS & WELLNESS</p>
         </div>
         <div class="masthead-right" style="display:flex;align-items:center;gap:8px">
             <button class="theme-toggle" id="theme-btn" onclick="toggleTheme()" title="切换模式"></button>
@@ -42,7 +44,8 @@
         <div class="timer-content">
             <div class="timer-left">
                 <i class="ti ti-clock"></i>
-                <span id="timer-time" style="font-family:var(--font-mono);font-size:18px;font-weight:700;letter-spacing:1px;margin-left:4px">00:00</span>
+                <span id="timer-time"
+                    style="font-family:var(--font-mono);font-size:18px;font-weight:700;letter-spacing:1px;margin-left:4px">00:00</span>
                 <span id="timer-label" style="font-size:11px;opacity:0.8;margin-left:8px;font-weight:500"></span>
             </div>
             <div class="timer-right">
@@ -75,7 +78,7 @@
         <div class="panel-tab" id="settings">
             <div class="panel">
                 <p class="panel-title">训练设置 <span class="saved-dot" id="saved-dot"></span></p>
-                
+
                 <p class="sec">训练目标 <span style="font-size:11px;color:var(--ink3);font-weight:400">（可多选）</span></p>
                 <div class="chips" id="g-goal">
                     <button class="chip" data-v="女性薄肌">女性薄肌</button>
@@ -84,8 +87,10 @@
                     <button class="chip" data-v="翘臀美背">翘臀美背</button>
                     <button class="chip" data-v="女性曲线">女性曲线</button>
                 </div>
-                <div id="goal-info" style="font-size:11px;color:var(--ink3);margin:-4px 0 8px;padding:4px 8px;background:var(--surface2);border-radius:6px"></div>
-                
+                <div id="goal-info"
+                    style="font-size:11px;color:var(--ink3);margin:-4px 0 8px;padding:4px 8px;background:var(--surface2);border-radius:6px">
+                </div>
+
                 <p class="sec">当前水平</p>
                 <div class="chips" id="g-level">
                     <button class="chip on" data-v="初级">初级</button>
@@ -97,7 +102,9 @@
                     <input type="range" id="sl-days" min="2" max="7" step="1" value="3">
                     <span class="sval" id="v-days">3天</span>
                 </div>
-                <div id="swim-breakdown" style="display:none;font-size:11px;color:var(--ink3);margin:-4px 0 8px;padding:4px 8px;background:var(--surface2);border-radius:6px"></div>
+                <div id="swim-breakdown"
+                    style="display:none;font-size:11px;color:var(--ink3);margin:-4px 0 8px;padding:4px 8px;background:var(--surface2);border-radius:6px">
+                </div>
                 <p class="sec">每次时长</p>
                 <div class="srow">
                     <input type="range" id="sl-dur" min="20" max="90" step="5" value="60">
@@ -112,101 +119,109 @@
                     <button class="chip on" data-v="健身房全套">健身房全套</button>
                     <button class="chip" data-v="泳池">泳池</button>
                 </div>
-<div class="tecnogym-ref" style="margin:8px 0 4px">
-    <details>
-        <summary style="font-size:11px;color:var(--ink3);cursor:pointer;user-select:none">Tecnogym 设备对照表（点击展开）</summary>
-        <div style="font-size:11px;color:var(--ink3);margin-top:8px;line-height:1.8;padding:8px 12px;background:var(--surface2);border-radius:8px">
-            <p style="font-weight:600;margin:0 0 4px;color:var(--ink2)">力量器械 (Plurima / Selection / Biostrength)</p>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:2px 12px">
-                <span>Chest Press → 坐姿推胸机</span>
-                <span>Shoulder Press → 器械推举</span>
-                <span>Pectoral → 器械夹胸</span>
-                <span>Reverse Fly → 反向飞鸟机</span>
-                <span>Lat Machine → 高位下拉</span>
-                <span>Low Row → 坐姿划船</span>
-                <span>Upper Back → 器械上背划船</span>
-                <span>Leg Press → 倒蹬机</span>
-                <span>Leg Extension → 腿屈伸</span>
-                <span>Leg Curl → 腿弯举/坐姿腿弯举</span>
-                <span>Adductor → 器械内收机</span>
-                <span>Abductor → 器械外展机</span>
-                <span>Arm Curl → 器械弯举</span>
-                <span>Arm Extension → 器械三头下压</span>
-                <span>Delts Machine → 坐姿侧平举机</span>
-                <span>Multi Hip → 绳索后踢腿</span>
-                <span>Abdominal → 坐姿卷腹机</span>
-                <span>Lower Back → 山羊挺身</span>
-            </div>
-            <p style="font-weight:600;margin:10px 0 4px;color:var(--ink2)">有氧器械 (Excite / Skill)</p>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:2px 12px">
-                <span>Excite Run → 跑步机慢跑</span>
-                <span>Skillmill → 弧形跑步机</span>
-                <span>Synchro/Vario → 椭圆机</span>
-                <span>Excite Bike → 骑行机</span>
-                <span>Skillbike → 动感单车</span>
-                <span>Excite Climb → 攀爬机</span>
-                <span>Skillrow → 划船机</span>
-                <span>Excite Top → 上肢功率车</span>
-            </div>
-            <p style="font-weight:600;margin:10px 0 4px;color:var(--ink2)">自由重量 & 配件</p>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:2px 12px">
-                <span>Dumbbells → 哑铃动作</span>
-                <span>Kettlebells → 壶铃动作</span>
-                <span>Bench → 卧推凳动作</span>
-                <span>Bands → 弹力带动作</span>
-            </div>
-            <p style="margin:8px 0 0;font-size:10px;opacity:.7">选择「健身房全套」已覆盖 Tecnogym Plurima / Selection / Biostrength / Excite / Skill 全系列</p>
-        </div>
-    </details>
-</div>
-<div id="swim-settings" style="display:none">
-                <p class="sec">游泳水平</p>
-                <div class="chips" id="g-swim-level">
-                    <button class="chip on" data-v="入门">入门（水性+蛙泳基础）</button>
-                    <button class="chip" data-v="进阶">进阶（蛙泳巩固+耐力）</button>
-                    <button class="chip" data-v="挑战">挑战（+自由泳入门）</button>
+                <div class="tecnogym-ref" style="margin:8px 0 4px">
+                    <details>
+                        <summary style="font-size:11px;color:var(--ink3);cursor:pointer;user-select:none">Tecnogym
+                            设备对照表（点击展开）</summary>
+                        <div
+                            style="font-size:11px;color:var(--ink3);margin-top:8px;line-height:1.8;padding:8px 12px;background:var(--surface2);border-radius:8px">
+                            <p style="font-weight:600;margin:0 0 4px;color:var(--ink2)">力量器械 (Plurima / Selection /
+                                Biostrength)</p>
+                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:2px 12px">
+                                <span>Chest Press → 坐姿推胸机</span>
+                                <span>Shoulder Press → 器械推举</span>
+                                <span>Pectoral → 器械夹胸</span>
+                                <span>Reverse Fly → 反向飞鸟机</span>
+                                <span>Lat Machine → 高位下拉</span>
+                                <span>Low Row → 坐姿划船</span>
+                                <span>Upper Back → 器械上背划船</span>
+                                <span>Leg Press → 倒蹬机</span>
+                                <span>Leg Extension → 腿屈伸</span>
+                                <span>Leg Curl → 腿弯举/坐姿腿弯举</span>
+                                <span>Adductor → 器械内收机</span>
+                                <span>Abductor → 器械外展机</span>
+                                <span>Arm Curl → 器械弯举</span>
+                                <span>Arm Extension → 器械三头下压</span>
+                                <span>Delts Machine → 坐姿侧平举机</span>
+                                <span>Multi Hip → 绳索后踢腿</span>
+                                <span>Abdominal → 坐姿卷腹机</span>
+                                <span>Lower Back → 山羊挺身</span>
+                            </div>
+                            <p style="font-weight:600;margin:10px 0 4px;color:var(--ink2)">有氧器械 (Excite / Skill)</p>
+                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:2px 12px">
+                                <span>Excite Run → 跑步机慢跑</span>
+                                <span>Skillmill → 弧形跑步机</span>
+                                <span>Synchro/Vario → 椭圆机</span>
+                                <span>Excite Bike → 骑行机</span>
+                                <span>Skillbike → 动感单车</span>
+                                <span>Excite Climb → 攀爬机</span>
+                                <span>Skillrow → 划船机</span>
+                                <span>Excite Top → 上肢功率车</span>
+                            </div>
+                            <p style="font-weight:600;margin:10px 0 4px;color:var(--ink2)">自由重量 & 配件</p>
+                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:2px 12px">
+                                <span>Dumbbells → 哑铃动作</span>
+                                <span>Kettlebells → 壶铃动作</span>
+                                <span>Bench → 卧推凳动作</span>
+                                <span>Bands → 弹力带动作</span>
+                            </div>
+                            <p style="margin:8px 0 0;font-size:10px;opacity:.7">选择「健身房全套」已覆盖 Tecnogym Plurima /
+                                Selection / Biostrength / Excite / Skill 全系列</p>
+                        </div>
+                    </details>
                 </div>
-                <p style="font-size:11px;color:var(--ink3);margin-top:4px">游泳等级独立于健身等级，可单独调节进度</p>
-</div>
-<div class="period-toggle-row" id="cycle-enable-row" style="margin: 15px 0;">
-    <div class="period-toggle-info">
-        <div>
-            <span class="period-toggle-label">生理期 / 周期功能</span>
-            <span class="period-toggle-hint">没有生理周期可关闭，下方相关选项会隐藏</span>
-        </div>
-    </div>
-    <label class="switch" for="cycle-enable-switch">
-        <input type="checkbox" id="cycle-enable-switch">
-        <span class="switch-slider"></span>
-    </label>
-</div>
-<div id="cycle-block">
-<div class="period-toggle-row" id="period-toggle-row" style="margin: 15px 0;">
-    <div class="period-toggle-info">
-        <div>
-            <span class="period-toggle-label">生理期模式</span>
-            <span class="period-toggle-hint">游泳日替换为陆地训练，力量日降低负重并避免高腹压动作</span>
-        </div>
-    </div>
-    <label class="switch" for="period-switch">
-        <input type="checkbox" id="period-switch">
-        <span class="switch-slider"></span>
-    </label>
-</div>
-<p class="sec">月经周期（把滑块拖到"今天"在周期里的位置）</p>
-<div class="srow">
-    <input type="range" id="sl-cycle" min="1" max="40" step="1" value="1">
-    <span class="sval" id="v-cycle">第1天</span>
-</div>
-<div style="display:flex;gap:8px;align-items:center;margin:-2px 0 8px">
-    <span style="font-size:11px;color:var(--ink3)">周期长度</span>
-    <input type="number" id="cycle-len" min="20" max="40" value="28" style="width:54px;padding:4px 6px;border:1px solid var(--border);border-radius:6px;background:var(--surface2);color:var(--ink);font-size:13px">
-    <span style="font-size:11px;color:var(--ink3)">天</span>
-    <button class="exp-btn" style="margin-left:auto;font-size:11px;padding:4px 10px" onclick="cyclePeriodStart()">今天来月经了</button>
-</div>
-<div id="cycle-phase" style="font-size:12px;color:var(--ink2);line-height:1.6;padding:8px 10px;background:var(--surface2);border-radius:8px"></div>
-<p style="font-size:10px;color:var(--ink3);margin:6px 2px 0">仅供参考，以身体感受为准；训练量仍会随你每次打卡的 RPE 自动微调。</p>
-</div>
+                <div id="swim-settings" style="display:none">
+                    <p class="sec">游泳水平</p>
+                    <div class="chips" id="g-swim-level">
+                        <button class="chip on" data-v="入门">入门（水性+蛙泳基础）</button>
+                        <button class="chip" data-v="进阶">进阶（蛙泳巩固+耐力）</button>
+                        <button class="chip" data-v="挑战">挑战（+自由泳入门）</button>
+                    </div>
+                    <p style="font-size:11px;color:var(--ink3);margin-top:4px">游泳等级独立于健身等级，可单独调节进度</p>
+                </div>
+                <div class="period-toggle-row" id="cycle-enable-row" style="margin: 15px 0;">
+                    <div class="period-toggle-info">
+                        <div>
+                            <span class="period-toggle-label">生理期 / 周期功能</span>
+                            <span class="period-toggle-hint">没有生理周期可关闭，下方相关选项会隐藏</span>
+                        </div>
+                    </div>
+                    <label class="switch" for="cycle-enable-switch">
+                        <input type="checkbox" id="cycle-enable-switch">
+                        <span class="switch-slider"></span>
+                    </label>
+                </div>
+                <div id="cycle-block">
+                    <div class="period-toggle-row" id="period-toggle-row" style="margin: 15px 0;">
+                        <div class="period-toggle-info">
+                            <div>
+                                <span class="period-toggle-label">生理期模式</span>
+                                <span class="period-toggle-hint">游泳日替换为陆地训练，力量日降低负重并避免高腹压动作</span>
+                            </div>
+                        </div>
+                        <label class="switch" for="period-switch">
+                            <input type="checkbox" id="period-switch">
+                            <span class="switch-slider"></span>
+                        </label>
+                    </div>
+                    <p class="sec">月经周期（把滑块拖到"今天"在周期里的位置）</p>
+                    <div class="srow">
+                        <input type="range" id="sl-cycle" min="1" max="40" step="1" value="1">
+                        <span class="sval" id="v-cycle">第1天</span>
+                    </div>
+                    <div style="display:flex;gap:8px;align-items:center;margin:-2px 0 8px">
+                        <span style="font-size:11px;color:var(--ink3)">周期长度</span>
+                        <input type="number" id="cycle-len" min="20" max="40" value="28"
+                            style="width:54px;padding:4px 6px;border:1px solid var(--border);border-radius:6px;background:var(--surface2);color:var(--ink);font-size:13px">
+                        <span style="font-size:11px;color:var(--ink3)">天</span>
+                        <button class="exp-btn" style="margin-left:auto;font-size:11px;padding:4px 10px"
+                            onclick="cyclePeriodStart()">今天来月经了</button>
+                    </div>
+                    <div id="cycle-phase"
+                        style="font-size:12px;color:var(--ink2);line-height:1.6;padding:8px 10px;background:var(--surface2);border-radius:8px">
+                    </div>
+                    <p style="font-size:10px;color:var(--ink3);margin:6px 2px 0">仅供参考，以身体感受为准；训练量仍会随你每次打卡的 RPE 自动微调。</p>
+                </div>
                 <p class="sec">重点部位（可多选）</p>
                 <div class="chips" id="g-focus">
                     <button class="chip on" data-v="均衡全身">均衡全身 (无偏好)</button>
@@ -231,7 +246,8 @@
                 </div>
                 <div style="display:flex;gap:8px">
                     <button id="gen-btn" onclick="genPlan()" style="flex:1">生成全新计划</button>
-                    <button id="recal-btn" onclick="recalibratePlan()" style="flex:1;display:none;background:var(--surface2);color:var(--ink);border:1px solid var(--border)">重排剩余天数</button>
+                    <button id="recal-btn" onclick="recalibratePlan()"
+                        style="flex:1;display:none;background:var(--surface2);color:var(--ink);border:1px solid var(--border)">重排剩余天数</button>
                 </div>
             </div>
             <div class="panel">
@@ -244,7 +260,8 @@
                             onchange="importJSON(this)" style="display:none"></label>
                 </div>
                 <div style="margin-top:12px;">
-                    <button class="exp-btn" onclick="clearAllData()" style="width:100%;color:var(--terra);border-color:var(--terra-br)">清空所有数据 (恢复出厂)</button>
+                    <button class="exp-btn" onclick="clearAllData()"
+                        style="width:100%;color:var(--terra);border-color:var(--terra-br)">清空所有数据 (恢复出厂)</button>
                 </div>
             </div>
 
@@ -275,25 +292,57 @@
 
     <div id="rpe-modal" class="ex-modal-overlay" onclick="if(event.target===this)closeRpeModal()">
         <div class="ex-modal-card" style="text-align:center" onclick="event.stopPropagation()">
-            <h3 id="rpe-modal-title" style="margin-bottom:8px;font-family:var(--font-display);font-size:20px;color:var(--ink)">今日疲劳度评估</h3>
+            <h3 id="rpe-modal-title"
+                style="margin-bottom:8px;font-family:var(--font-display);font-size:20px;color:var(--ink)">今日疲劳度评估</h3>
             <p id="rpe-modal-desc" style="margin-bottom:20px;font-size:13px;color:var(--ink3)">选择最接近你今天训练感受的分数</p>
-            
+
             <div class="rpe-grid">
-                <button class="rpe-btn rpe-low" onclick="submitRPE(1)"><div class="rpe-val">1</div><div class="rpe-lbl">毫无感觉</div></button>
-                <button class="rpe-btn rpe-low" onclick="submitRPE(2)"><div class="rpe-val">2</div><div class="rpe-lbl">极度轻松</div></button>
-                <button class="rpe-btn rpe-low" onclick="submitRPE(3)"><div class="rpe-val">3</div><div class="rpe-lbl">轻松</div></button>
-                <button class="rpe-btn rpe-mid" onclick="submitRPE(4)"><div class="rpe-val">4</div><div class="rpe-lbl">略感疲劳</div></button>
-                <button class="rpe-btn rpe-mid" onclick="submitRPE(5)"><div class="rpe-val">5</div><div class="rpe-lbl">适中</div></button>
-                <button class="rpe-btn rpe-mid" onclick="submitRPE(6)"><div class="rpe-val">6</div><div class="rpe-lbl">正常训练</div></button>
-                <button class="rpe-btn rpe-high" onclick="submitRPE(7)"><div class="rpe-val">7</div><div class="rpe-lbl">偏难</div></button>
-                <button class="rpe-btn rpe-high" onclick="submitRPE(8)"><div class="rpe-val">8</div><div class="rpe-lbl">困难</div></button>
-                <button class="rpe-btn rpe-max" onclick="submitRPE(9)"><div class="rpe-val">9</div><div class="rpe-lbl">极限</div></button>
-                <button class="rpe-btn rpe-max" onclick="submitRPE(10)"><div class="rpe-val">10</div><div class="rpe-lbl">力竭</div></button>
+                <button class="rpe-btn rpe-low" onclick="submitRPE(1)">
+                    <div class="rpe-val">1</div>
+                    <div class="rpe-lbl">毫无感觉</div>
+                </button>
+                <button class="rpe-btn rpe-low" onclick="submitRPE(2)">
+                    <div class="rpe-val">2</div>
+                    <div class="rpe-lbl">极度轻松</div>
+                </button>
+                <button class="rpe-btn rpe-low" onclick="submitRPE(3)">
+                    <div class="rpe-val">3</div>
+                    <div class="rpe-lbl">轻松</div>
+                </button>
+                <button class="rpe-btn rpe-mid" onclick="submitRPE(4)">
+                    <div class="rpe-val">4</div>
+                    <div class="rpe-lbl">略感疲劳</div>
+                </button>
+                <button class="rpe-btn rpe-mid" onclick="submitRPE(5)">
+                    <div class="rpe-val">5</div>
+                    <div class="rpe-lbl">适中</div>
+                </button>
+                <button class="rpe-btn rpe-mid" onclick="submitRPE(6)">
+                    <div class="rpe-val">6</div>
+                    <div class="rpe-lbl">正常训练</div>
+                </button>
+                <button class="rpe-btn rpe-high" onclick="submitRPE(7)">
+                    <div class="rpe-val">7</div>
+                    <div class="rpe-lbl">偏难</div>
+                </button>
+                <button class="rpe-btn rpe-high" onclick="submitRPE(8)">
+                    <div class="rpe-val">8</div>
+                    <div class="rpe-lbl">困难</div>
+                </button>
+                <button class="rpe-btn rpe-max" onclick="submitRPE(9)">
+                    <div class="rpe-val">9</div>
+                    <div class="rpe-lbl">极限</div>
+                </button>
+                <button class="rpe-btn rpe-max" onclick="submitRPE(10)">
+                    <div class="rpe-val">10</div>
+                    <div class="rpe-lbl">力竭</div>
+                </button>
             </div>
-            
+
             <textarea id="rpe-note" class="rpe-note-input" placeholder="有什么想记录的？（选填，如：今天状态不好、卧推加了5kg）"></textarea>
-            
-            <button class="btn btn-out" style="width:100%;margin-top:16px;font-size:13px" onclick="submitRPE(6, true)">跳过</button>
+
+            <button class="btn btn-out" style="width:100%;margin-top:16px;font-size:13px"
+                onclick="submitRPE(6, true)">跳过</button>
         </div>
     </div>
 
@@ -329,39 +378,55 @@
     <div id="share-modal" class="ex-modal-overlay" onclick="if(event.target===this)closeShareModal()">
         <div class="ex-modal-card" onclick="event.stopPropagation()" style="max-width: 460px; text-align: center;">
             <div class="ex-modal-hdr" style="margin-bottom: 12px;">
-                <h3 class="ex-modal-title" style="font-family: var(--font-display); font-size: 18px; color: var(--ink);">分享今日打卡</h3>
+                <h3 class="ex-modal-title"
+                    style="font-family: var(--font-display); font-size: 18px; color: var(--ink);">分享今日打卡</h3>
                 <button class="ex-modal-close" onclick="closeShareModal()">&#10005;</button>
             </div>
-            <div id="share-card-preview-container" style="margin-bottom: 16px; display: flex; justify-content: center; box-shadow: 0 4px 16px rgba(0,0,0,0.1); border-radius: 8px; overflow: hidden; background: var(--surface2); min-height: 200px; align-items: center;">
+            <div id="share-card-preview-container"
+                style="margin-bottom: 16px; display: flex; justify-content: center; box-shadow: 0 4px 16px rgba(0,0,0,0.1); border-radius: 8px; overflow: hidden; background: var(--surface2); min-height: 200px; align-items: center;">
                 <!-- Preview image will be injected here -->
             </div>
-            <p style="font-size: 11px; color: var(--ink3); margin-bottom: 16px; line-height: 1.4;">提示：手机端可长按上方图片直接保存或转发分享</p>
+            <p style="font-size: 11px; color: var(--ink3); margin-bottom: 16px; line-height: 1.4;">
+                提示：手机端可长按上方图片直接保存或转发分享</p>
             <div style="display: flex; gap: 10px;">
-                <button id="download-card-btn" class="btn" style="flex: 1; background: var(--sage); color: #fff; border: none; padding: 12px; border-radius: var(--radius-sm); font-weight: 600;" onclick="downloadShareCard()">下载分享图</button>
+                <button id="download-card-btn" class="btn"
+                    style="flex: 1; background: var(--sage); color: #fff; border: none; padding: 12px; border-radius: var(--radius-sm); font-weight: 600;"
+                    onclick="downloadShareCard()">下载分享图</button>
             </div>
         </div>
     </div>
 
     <!-- Achievement Detail Modal -->
     <div id="achievement-modal" class="ex-modal-overlay" onclick="if(event.target===this)closeAchievementModal()">
-        <div class="ex-modal-card" onclick="event.stopPropagation()" style="max-width: 400px; text-align: center; position: relative;">
+        <div class="ex-modal-card" onclick="event.stopPropagation()"
+            style="max-width: 400px; text-align: center; position: relative;">
             <div class="ex-modal-hdr" style="margin-bottom: 8px; border-bottom: none;">
-                <h3 id="ach-modal-title" class="ex-modal-title" style="font-size: 18px; color: var(--ink); margin: 0 auto 0 0;">成就详情</h3>
+                <h3 id="ach-modal-title" class="ex-modal-title"
+                    style="font-size: 18px; color: var(--ink); margin: 0 auto 0 0;">成就详情</h3>
                 <button class="ex-modal-close" onclick="closeAchievementModal()">&#10005;</button>
             </div>
             <div id="ach-modal-badge-container" style="display:flex;justify-content:center;margin: 24px 0 16px 0;">
                 <!-- SVG Badge here -->
             </div>
-            <h4 id="ach-modal-name" style="font-family: var(--font-display); font-size: 24px; font-weight: 700; color: var(--ink); margin-bottom: 8px;">力量萌新</h4>
-            <p id="ach-modal-status" style="font-size: 12px; font-weight: 600; color: var(--sage); margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px;">已解锁 · 2026-06-01</p>
-            <p id="ach-modal-desc" style="font-size: 14px; color: var(--ink2); line-height: 1.5; margin-bottom: 24px; padding: 0 16px;">完成第一次力量训练！</p>
-            
-            <div id="ach-modal-share-container" style="display:none; justify-content:center; box-shadow: 0 4px 20px rgba(0,0,0,0.1); border-radius: var(--radius); overflow: hidden; background: var(--surface2); margin: 16px auto; max-width: 320px; transition: all 0.3s ease;">
+            <h4 id="ach-modal-name"
+                style="font-family: var(--font-display); font-size: 24px; font-weight: 700; color: var(--ink); margin-bottom: 8px;">
+                力量萌新</h4>
+            <p id="ach-modal-status"
+                style="font-size: 12px; font-weight: 600; color: var(--sage); margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px;">
+                已解锁 · 2026-06-01</p>
+            <p id="ach-modal-desc"
+                style="font-size: 14px; color: var(--ink2); line-height: 1.5; margin-bottom: 24px; padding: 0 16px;">
+                完成第一次力量训练！</p>
+
+            <div id="ach-modal-share-container"
+                style="display:none; justify-content:center; box-shadow: 0 4px 20px rgba(0,0,0,0.1); border-radius: var(--radius); overflow: hidden; background: var(--surface2); margin: 16px auto; max-width: 320px; transition: all 0.3s ease;">
                 <!-- Preview image will be injected here -->
             </div>
-            
+
             <div style="display: flex; gap: 10px; padding: 0 16px;">
-                <button id="ach-action-btn" class="btn" style="flex: 1; background: var(--sage); color: #fff; border: none; padding: 12px; border-radius: var(--radius-sm); font-weight: 600; transition: background 0.2s;" onclick="toggleAchShareCard()">生成成就卡片</button>
+                <button id="ach-action-btn" class="btn"
+                    style="flex: 1; background: var(--sage); color: #fff; border: none; padding: 12px; border-radius: var(--radius-sm); font-weight: 600; transition: background 0.2s;"
+                    onclick="toggleAchShareCard()">生成成就卡片</button>
             </div>
         </div>
     </div>
@@ -371,7 +436,7 @@
 
     <script src="core.js"></script>
     <script src="app.js"></script>
-    <script>if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});</script>
+    <script>if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => { });</script>
 </body>
 
 </html>

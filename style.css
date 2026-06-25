@@ -86,6 +86,31 @@ html.dark {
     --shadow-lg: 0 6px 16px rgba(0, 0, 0, .38), 0 22px 54px rgba(0, 0, 0, .48);
 }
 
+body.theme-curve {
+    /* ── Sensory Velvet Dark Mode ── */
+    --bg: #120e15;
+    --surface: #1b1420;
+    --surface2: #271d2e;
+    --border: #3c2a47;
+    --border2: #593f69;
+    --ink: #f0e6f5;
+    --ink2: #cbb4db;
+    --ink3: #9578aa;
+    
+    /* ── Sensual Accents ── */
+    --terra: #d8577e;
+    --terra-bg: rgba(216, 87, 126, 0.12);
+    --terra-br: rgba(216, 87, 126, 0.35);
+    --sage: #9b5bb8;
+    --sage-bg: rgba(155, 91, 184, 0.12);
+    --sage-br: rgba(155, 91, 184, 0.3);
+    --amber: #e58753;
+    --amber-bg: rgba(229, 135, 83, 0.12);
+    --blue: #8faefc;
+    --blue-bg: rgba(143, 174, 252, 0.12);
+}
+
+
 /* Manual light mode override (force light even if system is dark) */
 html.light {
     color-scheme: light;
@@ -2848,3 +2873,15 @@ textarea:focus {
 .ach-badge-card:active {
     transform: translateY(0) scale(0.98);
 }
+/* ── 调教计划 ── */
+.prv-btn { background: rgba(192,132,90,.1) !important; color: var(--terra) !important; border-color: rgba(192,132,90,.3) !important; }
+.prv-btn:hover { background: rgba(192,132,90,.18) !important; }
+.pdot { display: inline-block; width: 5px; height: 5px; border-radius: 50%; background: var(--terra); vertical-align: middle; margin-left: 4px; opacity: .65; flex-shrink: 0; }
+.private-section { margin-top: 16px; padding: 14px 14px 10px; background: var(--surface2); border-radius: 12px; border: 1px solid rgba(192,132,90,.2); }
+.private-section-hdr { font-size: 13px; font-weight: 600; color: var(--terra); margin-bottom: 10px; display: flex; align-items: center; letter-spacing: .02em; }
+.private-flow { display: flex; flex-direction: column; gap: 7px; }
+.private-ex { display: flex; align-items: flex-start; gap: 10px; padding: 10px 10px 8px; background: var(--surface); border-radius: 9px; border: 1px solid var(--border); }
+.private-ex-n { min-width: 20px; height: 20px; border-radius: 50%; background: var(--terra); color: #fff; font-size: 10px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px; }
+.private-ex-body { flex: 1; min-width: 0; }
+.private-ex-name { font-size: 13px; font-weight: 600; color: var(--ink); margin-bottom: 3px; }
+.private-ex-note { font-size: 11px; color: var(--ink3); line-height: 1.5; }

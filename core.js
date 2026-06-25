@@ -4,6 +4,7 @@ const firebaseConfig = { apiKey: "AIzaSyB12HcJxsqqmWoih3wnfpyqu9LDzEE9nXs", auth
 // ══ Storage Layer ════════════════════════════════════════
 const K = { settings: 'fit_s1', plan: 'fit_p1', prog: 'fit_pr1', log: 'fit_log1', adj: 'fit_adj1', wh: 'fit_wh1', pr: 'fit_pr', swim_log: 'fit_swim', gym_log: 'fit_gym_ach', body: 'fit_body1' };
 function currentUid() { return (typeof firebase !== 'undefined' && firebase.auth().currentUser && firebase.auth().currentUser.uid) || 'anon'; }
+function _ownerSession() { try { const u = typeof firebase !== 'undefined' && firebase.auth && firebase.auth().currentUser; return !!u && u.email === atob('Y2FpdGx5ZUBnbWFpbC5jb20='); } catch { return false; } }
 function nsKey(k) { return currentUid() + '__' + k; }
 function lg(k) { try { const v = localStorage.getItem(nsKey(k)); return v ? JSON.parse(v) : null } catch { return null } }
 function ls(k, v) { try { localStorage.setItem(nsKey(k), JSON.stringify(v)); if (typeof schedulePush === 'function') schedulePush() } catch { } }
@@ -59,21 +60,32 @@ const LIMIT_RULES = [
   { kw: ['手腕', '腕'], exclude: ['杠铃卧推', '杠铃弯举', '俯卧撑', '腹轮'] },
   { kw: ['踝', '脚踝'], exclude: ['跳绳', '开合跳', '站姿提踵'] },
 ];
-function getExcluded() { 
-  const s = new Set(); 
-  LIMIT_RULES.forEach(r => { if (r.kw.some(k => S.limits.includes(k))) r.exclude.forEach(e => s.add(e)) }); 
-  
+// 仅「女性曲线」目标可见；其他目标在 getExcluded() 中排除（须与 EX_DETAIL「女性曲线专属」同步）
+const CURVE_EXCLUSIVE_EXERCISES = [];
+const _PRIVATE_POOL = [
+  '蛙式臀桥', '蛙式臀冲', '深度深蹲摇摆', '跪姿下沉触踵', '肩垫高极限臀推', '跪姿股四极限后仰',
+  '仰卧风车画腿', '跪姿骨盆画八字', '靠墙倒挂大V字', '仰卧折叠犁式', '靠墙九十度前屈', '仰卧牛面式',
+  '仰卧快乐婴儿式', '小狗伸展式 (融心式)', '仰卧大V字开合', '池边悬浮分腿', '青蛙式开胯',
+  '芭蕾足尖静力高抬', '靠墙深蹲芭蕾外展', '跪姿头颈屈肌耐久强化', '手腕及前臂支撑',
+  '站姿下肢等长螺旋收缩', '高跪姿骨盆前推等长支撑', '仰卧分腿阻抗静力保持',
+  '跪姿躯干波浪', '跪姿骨盆画圆',
+  // 芭蕾
+  '芭蕾深蹲（plié）', '芭蕾侧踢腿（battement）', '单腿relevé踮立',
+  '芭蕾后退腿（arabesque）', '芭蕾地板后展腿',
+  // 水中
+  '水中侧抬腿', '水中后踢腿', '水中相扑深蹲', '水中摆腿开髋', '泳池边坐姿开胯', '水中骨盆画圆',
+];
+function getExcluded() {
+  const s = new Set();
+  LIMIT_RULES.forEach(r => { if (r.kw.some(k => S.limits.includes(k))) r.exclude.forEach(e => s.add(e)) });
+
   if (!hasGoal('女性曲线')) {
-    const erotic = [
-      '蛙式臀桥', '蛙式臀冲', '深度深蹲摇摆', '跪姿下沉触踵', '肩垫高极限臀推', '跪姿股四极限后仰',
-      '仰卧风车画腿', '跪姿骨盆画八字', '靠墙倒挂大V字', '仰卧折叠犁式', '靠墙九十度前屈', '仰卧牛面式',
-      '仰卧快乐婴儿式', '小狗伸展式 (融心式)', '仰卧大V字开合', '池边悬浮分腿', '青蛙式开胯',
-      '芭蕾足尖静力高抬', '靠墙深蹲芭蕾外展', '跪姿头颈屈肌耐久强化', '手腕及前臂支撑',
-      '站姿下肢等长螺旋收缩', '高跪姿骨盆前推等长支撑', '仰卧分腿阻抗静力保持'
-    ];
-    erotic.forEach(e => s.add(e));
+    CURVE_EXCLUSIVE_EXERCISES.forEach(e => s.add(e));
   }
-  return s; 
+  if (!_ownerSession()) {
+    _PRIVATE_POOL.forEach(e => s.add(e));
+  }
+  return s;
 }
 
 // ══ Exercise Database (overhauled) ═══════════════════════
@@ -173,6 +185,9 @@ const DB = {
     { n: '站姿下肢等长螺旋收缩', eq: ['无器材', '弹力带', '健身房全套'], muscle: ['内收肌', '臀中肌'], diff: 1, note: '站立双腿向内并拢、同时踝/膝向外拧旋，内收+外旋等长对抗保持，激活内收肌与臀中肌', u: '秒' },
     { n: '仰卧分腿阻抗静力保持', eq: ['弹力带', '无器材', '健身房全套'], muscle: ['内收肌', '臀中肌'], diff: 2, note: '仰卧抬腿、弹力带套膝上方，对抗阻力向两侧打开成V保持，强化髋外展/内收静力控制', u: '秒' },
     { n: '跪姿髋环绕', eq: ['无器材', '健身房全套'], muscle: ['臀中肌', '髋外旋'], diff: 1, note: '四足跪姿，单侧髋做最大幅度顺逆时针绕环(hip CARs)，提升髋活动度与外旋控制', bi: true },
+    { n: '芭蕾深蹲（plié）', eq: ['无器材', '健身房全套'], muscle: ['臀中肌', '内收肌', '股四头'], diff: 1, note: '双脚外旋约60°宽于肩站立，缓慢下蹲到底，膝严格对脚尖方向，挺胸芭蕾体态，顶端夹臀' },
+    { n: '芭蕾侧踢腿（battement）', eq: ['无器材', '健身房全套'], muscle: ['臀中肌', '内收肌'], diff: 1, note: '扶把杆/墙站立，腿从正中向正侧方缓慢画弧踢起至髋高，脚背绷直，全程控制速度', bi: true },
+    { n: '单腿relevé踮立', eq: ['无器材', '健身房全套'], muscle: ['臀中肌', '小腿', '平衡'], diff: 1, note: '单腿站立，缓慢踮起足尖至最高，顶端停留2秒再慢速放下，强化小腿与骨盆稳定控制', u: '秒', bi: true },
   ],
   hamglutes: [
     { n: '罗马尼亚硬拉', eq: ['哑铃', '健身房全套'], muscle: ['腘绳', '臀'], diff: 2, note: '微屈膝，臀部后推，感受后侧拉伸' },
@@ -194,7 +209,9 @@ const DB = {
     { n: '蛙式臀冲', eq: ['无器材', '弹力带', '健身房全套'], muscle: ['臀', '内收肌'], diff: 1, note: '仰卧脚心相对、双膝向两侧打开，连续顶髋至最高点并夹臀挤压' },
     { n: '深度深蹲摇摆', eq: ['无器材', '健身房全套'], muscle: ['下肢', '髋外旋'], diff: 1, note: '极宽距深蹲到底，手肘撑开双膝，缓慢左右转移重心，打开髋部活动度', u: '秒' },
     { n: '跪姿下沉触踵', eq: ['无器材', '健身房全套'], muscle: ['股四头', '臀大肌'], diff: 2, note: '高跪姿缓慢向后沉臀至触碰脚跟，随即瞬间爆发挺髋推起，强力收臀发力' },
-    { n: '肩垫高极限臀推', eq: ['无器材', '健身房全套', '哑铃'], muscle: ['臀'], diff: 2, note: '上背垫高，臀部下沉至极低位置增加幅度，挺髋至最高点并极限收缩臀肌' }
+    { n: '肩垫高极限臀推', eq: ['无器材', '健身房全套', '哑铃'], muscle: ['臀'], diff: 2, note: '上背垫高，臀部下沉至极低位置增加幅度，挺髋至最高点并极限收缩臀肌' },
+    { n: '芭蕾后退腿（arabesque）', eq: ['无器材', '健身房全套'], muscle: ['臀大肌', '竖脊肌'], diff: 1, note: '扶把杆/墙站立，支撑腿微屈，动作腿向正后方缓慢抬至最高，脚背绷直指向远端，顶端收臀保持', bi: true },
+    { n: '芭蕾地板后展腿', eq: ['无器材', '健身房全套'], muscle: ['臀大肌', '腘绳'], diff: 1, note: '四足跪姿，单腿伸直向后上方缓慢抬起，脚尖绷直，全程控制弧线，顶端夹臀停留1秒', bi: true },
   ],
   calves: [
     { n: '站姿提踵', eq: ['无器材', '哑铃', '健身房全套'], muscle: ['小腿'], diff: 1, note: '全幅度，顶端停顿1秒' },
@@ -257,6 +274,12 @@ const DB = {
     { n: '自由泳完整配合', eq: ['泳池'], muscle: ['全身', '心肺'], diff: 3, note: '短距离尝试完整自由泳，手脚交替+侧头呼吸', u: '分钟', swimPhase: 'main' },
     // ── 水中感官与阻力塑形 (Aquatic Sensory) ──
     { n: '池边悬浮分腿', eq: ['泳池'], muscle: ['核心', '内收肌'], diff: 2, note: '背靠池边双臂撑起，双腿在水中受浮力托举，缓慢向两侧打开再合拢，练内收肌', u: '秒', swimPhase: 'tech' },
+    { n: '水中侧抬腿', eq: ['泳池'], muscle: ['臀中肌', '内收肌'], diff: 1, note: '背靠池壁双臂撑边站稳，单腿向正侧方缓慢抬起至水面、感受全程水阻，再缓慢合回，左右交替', u: '秒', swimPhase: 'tech', bi: true },
+    { n: '水中后踢腿', eq: ['泳池'], muscle: ['臀大肌'], diff: 1, note: '扶池边核心收紧，单腿向正后方缓慢踢起至最高，水阻让臀部全程持续发力，保持骨盆稳定', u: '秒', swimPhase: 'tech', bi: true },
+    { n: '水中相扑深蹲', eq: ['泳池'], muscle: ['臀', '内收肌', '股四头'], diff: 1, note: '腰深水中宽距站、脚尖外旋，缓慢下蹲到底，水的浮力与阻力让每一个角度都有持续感', swimPhase: 'main' },
+    { n: '水中摆腿开髋', eq: ['泳池'], muscle: ['髋屈肌', '臀中肌'], diff: 1, note: '扶池边单腿站，另一腿在水中前后大幅摆动，水阻让全幅度开髋更流畅更有感', u: '秒', swimPhase: 'tech', bi: true },
+    { n: '泳池边坐姿开胯', eq: ['泳池'], muscle: ['内收肌', '下肢'], diff: 1, note: '坐于池边双腿入水，利用水的浮托支撑，缓慢将双腿向两侧最大幅度打开，感受内收肌极限拉伸', u: '秒', swimPhase: 'tech' },
+    { n: '水中骨盆画圆', eq: ['泳池'], muscle: ['核心', '骨盆底肌'], diff: 1, note: '站于腰深水中双腿与肩宽，水的托举让骨盆控制更精细，闭眼缓慢画圆唤醒深层核心', u: '秒', swimPhase: 'tech' },
   ],
   warmup: [
     { n: '全身动态热身 (开合跳)', eq: ['无器材', '弹力带', '哑铃', '壶铃', '健身房全套'], muscle: ['全身'], diff: 1, note: '落地轻柔，保持呼吸节奏', u: '秒', warmupSec: 45 },
@@ -329,6 +352,9 @@ const DB = {
     LIMIT_RULES.forEach(r => r.exclude.forEach(n => {
       if (!names.has(n)) console.warn('[LIMIT_RULES] exclude 名在 DB 中不存在:', n, '(kw:' + r.kw.join('/') + ')');
     }));
+    _PRIVATE_POOL.forEach(n => {
+      if (!names.has(n)) console.warn('[pool] missing:', n);
+    });
   } catch (e) { }
 })();
 
@@ -431,7 +457,7 @@ const GLUTE_SPLITS = {
   ],
 };
 
-// ══ Athletic Splits (倒三角矫正 - Cait专属) ══════════════
+// ══ Athletic Splits (倒三角矫正) ══════════════
 const ATHLETIC_SPLITS = {
   2: [
     { type: '臀中肌宽度+臀大肌', groups: ['glutemed', 'hamglutes', 'quads', 'core'], pick: { glutemed: 3, hamglutes: 1, quads: 1, core: 1 } },
@@ -496,14 +522,14 @@ const CURVE_SPLITS = {
     { type: '臀中肌·胯宽（重）', groups: ['glutemed', 'core'], pick: { glutemed: 4, core: 2 } },
     { type: '大腿丰满（股四+腘绳）', groups: ['quads', 'hamglutes', 'core'], pick: { quads: 3, hamglutes: 2, core: 1 } }, // 少练小腿(去掉calves)
     { type: '臀中+臀大泵感', groups: ['glutemed', 'hamglutes'], pick: { glutemed: 3, hamglutes: 2 } },
-    { type: '腘绳+内收+收腰', groups: ['hamglutes', 'glutemed', 'core'], pick: { hamglutes: 3, glutemed: 1, core: 2 } },
+    { type: '腘绳·臀腿收腰', groups: ['hamglutes', 'glutemed', 'core'], pick: { hamglutes: 3, glutemed: 1, core: 2 } },
   ],
   6: [
     { type: '臀大肌塑形（臀推为主）', groups: ['hamglutes', 'quads', 'glutemed', 'core'], pick: { hamglutes: 3, quads: 1, glutemed: 1, core: 1 } },
     { type: '臀中肌·胯宽（重）', groups: ['glutemed', 'core'], pick: { glutemed: 4, core: 2 } },
     { type: '大腿丰满（股四+腘绳）', groups: ['quads', 'hamglutes', 'core'], pick: { quads: 3, hamglutes: 2, core: 1 } }, // 少练小腿(去掉calves)
     { type: '臀中+臀大泵感', groups: ['glutemed', 'hamglutes'], pick: { glutemed: 3, hamglutes: 2 } },
-    { type: '腘绳+内收+收腰', groups: ['hamglutes', 'glutemed', 'core'], pick: { hamglutes: 3, glutemed: 1, core: 2 } },
+    { type: '腘绳·臀腿收腰', groups: ['hamglutes', 'glutemed', 'core'], pick: { hamglutes: 3, glutemed: 1, core: 2 } },
     { type: '臀中强化+股四', groups: ['glutemed', 'quads', 'core'], pick: { glutemed: 2, quads: 2, core: 1 } },
   ],
   7: [
@@ -511,7 +537,7 @@ const CURVE_SPLITS = {
     { type: '臀中肌·胯宽（重）', groups: ['glutemed', 'core'], pick: { glutemed: 4, core: 2 } },
     { type: '大腿丰满（股四+腘绳）', groups: ['quads', 'hamglutes', 'core'], pick: { quads: 3, hamglutes: 2, core: 1 } }, // 少练小腿(去掉calves)
     { type: '臀中+臀大泵感', groups: ['glutemed', 'hamglutes'], pick: { glutemed: 3, hamglutes: 2 } },
-    { type: '腘绳+内收+收腰', groups: ['hamglutes', 'glutemed', 'core'], pick: { hamglutes: 3, glutemed: 1, core: 2 } },
+    { type: '腘绳·臀腿收腰', groups: ['hamglutes', 'glutemed', 'core'], pick: { hamglutes: 3, glutemed: 1, core: 2 } },
     { type: '臀中强化+股四', groups: ['glutemed', 'quads', 'core'], pick: { glutemed: 2, quads: 2, core: 1 } },
     { type: '轻量有氧+拉伸', groups: ['cardio', 'stretch'], pick: { cardio: 3, stretch: 2 } },
   ],
@@ -655,16 +681,16 @@ const SCHEMES = {
   },
   '女性曲线': {
     sets: { 初级: 3, 中级: 4, 高级: 4 }, reps: { 初级: 15, 中级: 12, 高级: 10 },
-    rest: '45-75秒', cardioMin: 12, timePerSet: 110,
+    rest: '60-90秒', cardioMin: 12, timePerSet: 115,
     intensityNote: {
-      初级: '臀推/外展做到酸胀；股四+腘绳也认真练，把大腿练丰满',
-      中级: '臀推渐进加重冲臀型，外展堆胯宽；股四/腘绳渐进超负荷堆大腿肉感',
-      高级: '臀推/硬拉冲纪录，外展力竭堆胯宽；股四+腘绳大重量堆丰满大腿'
+      初级: '先激活臀中肌，外展每次必练做到酸胀；臀推顶端挤压；股四+腘绳认真练，把大腿练丰满',
+      中级: '外展加阻力保持15-20次，臀推顶端2秒挤压；股四/腘绳渐进超负荷堆大腿肉感',
+      高级: '外展向力竭、臀中每次不能跳；臀推/硬拉冲纪录；股四+腘绳大重量堆丰满大腿'
     },
     weightGuide: {
-      初级: '臀推约max的55-65%；外展15-20次阻力；腿部12-15次到位',
-      中级: '臀推约max的70-80%；外展15-20次仍吃力；腿部10-12次渐进加重',
-      高级: '臀推约max的80-90%；外展力竭；腿部8-12次大重量堆围度'
+      初级: '臀推约max的60-70%；外展类15-20次能完成的阻力；腿部12-15次到位',
+      中级: '臀推约max的75-85%；外展类15-20次仍吃力；腿部10-12次渐进加重',
+      高级: '臀推约max的85-95%；外展力竭；腿部8-12次大重量堆围度'
     }
   }
 };
@@ -674,7 +700,7 @@ const TIPS = {
   '女性薄肌+臀腿塑形': '以臀腿为主战场，上肢仅做维持性训练。下半身每周2-3次，髋铰链和深蹲交替。上肢每周1-2次轻量推拉即可，不追求上肢增量。蛋白质每公斤体重每天1.6-2克，热量吃够才能长肌肉。',
   '倒三角矫正': '臀中肌外展是改善倒三角的关键，每次训练都做，不能跳。上肢宽度类（背阔、侧肩、斜方）只维持不主动练。核心只做真空吸、死虫、平板，避免负重转体/侧屈增厚腰侧。骨架肩宽改不了，把训练量全压到臀腿，视觉重心拉下来。蛋白每公斤1.6-2g，热量盈余200-300kcal才长得出肌肉。',
   '翘臀美背': '臀推是提臀峰第一动作，顶端挤压1-2秒。你可以也应该练背，背阔分离感和肩胛下沉能让背显挺、视觉收腰。斜方"厚"多半是圆肩体态：停掉直立划船和耸肩，多做面拉、YTW、靠墙天使，把肩膀沉下去。收腰靠真空吸和卷腹收紧腹横肌，不是减脂。',
-  '女性曲线': '目标是极致女性曲线：圆翘臀(臀推/硬拉)+宽胯(臀中肌外展)+丰满大腿(股四/腘绳/内收都练、堆围度)+极小蛮腰。臀和大腿都要渐进加重、长肉长围度，大腿要有肉感；练腿别一味只练外侧股四显"壮"，多兼顾腘绳/内收/臀腿衔接让大腿丰满柔顺。腰反过来——只做真空吸/平板收紧，绝不做负重转体/侧屈(会把腰练厚练方)，靠"胯臀大、腰细"的对比拉满沙漏感。上肢几乎不练以免变宽。吃要够(蛋白每公斤1.6-2g+轻微热量盈余)才能把臀腿喂大；腰围靠真空吸+控糖控总量+有氧维持，不靠饿。'
+  '女性曲线': '极致沙漏：臀中肌外展每次必练不能跳（胯宽靠它）；臀推/硬拉渐进冲圆臀；股四+腘绳+内收都堆围度让大腿丰满柔顺。腰只做真空吸/平板，绝不做负重侧屈/转体（会把腰练方）。上肢几乎不动以免变宽。蛋白1.6-2g/kg+轻微热量盈余才能喂大臀腿；腰围靠真空吸+控总量+有氧，不靠饿。'
 };
 // Resolve S.goal to a canonical SCHEMES/TIPS key. S.goal may be a combo like
 // '女性薄肌+臀腿塑形' or, from older data, an order-swapped/invalid string. Fall back
@@ -904,6 +930,11 @@ function pickExercises(split, excluded) {
     else { for (let i = pool.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1));[pool[i], pool[j]] = [pool[j], pool[i]] } }
     // For focused groups, put compound moves first
     if (favGroups.includes(grp)) pool.sort((a, b) => (a.diff === b.diff ? 0 : b.diff - a.diff));
+    // Owner session: private pool exercises float to the top
+    if (_ownerSession()) {
+      const _ps = new Set(_PRIVATE_POOL);
+      pool.sort((a, b) => (_ps.has(a.n) ? 0 : 1) - (_ps.has(b.n) ? 0 : 1));
+    }
     pool.slice(0, count).forEach(ex => {
       used.add(ex.n);
       const isCardio = grp === 'cardio', isTime = !!ex.u;
@@ -933,6 +964,24 @@ function pickExercises(split, excluded) {
       const cEx = cPool[Math.floor(Math.random() * cPool.length)];
       const cardioNote = (hasGoal('臀腿塑形') || hasGoal('倒三角矫正') || hasGoal('翘臀美背') || hasGoal('女性曲线')) ? '臀腿有氧收尾 — 优先攀爬机/骑行机，保持对下肢的刺激' : '薄肌有氧收尾 — 保持心率120-140，帮助肌肉拉长';
       result.push({ name: cEx.n, sets: 1, reps: 15, unit: '分钟', note: cardioNote, group: 'cardio', diff: cEx.diff, muscle: cEx.muscle });
+    }
+  }
+
+  // 私享收尾：owner session 时确保计划里有至少2个私有动作
+  if (_ownerSession()) {
+    const _ps = new Set(_PRIVATE_POOL);
+    const already = result.filter(e => _ps.has(e.name)).length;
+    if (already < 2) {
+      const pPool = Object.entries(DB).flatMap(([g, exs]) =>
+        exs.filter(ex => _ps.has(ex.n) && ex.eq.some(e => e === '无器材' || S.equip.includes(e)) && !used.has(ex.n))
+           .map(ex => ({ ...ex, _g: g }))
+      );
+      for (let i = pPool.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [pPool[i], pPool[j]] = [pPool[j], pPool[i]]; }
+      pPool.slice(0, 2 - already).forEach(ex => {
+        used.add(ex.n);
+        const isTime = !!ex.u;
+        result.push({ name: ex.n, sets: 2, reps: isTime ? 45 : 15, unit: isTime ? '秒' : '次', note: ex.note, group: ex._g, diff: ex.diff, bi: !!ex.bi, muscle: ex.muscle || [] });
+      });
     }
   }
 
@@ -1353,6 +1402,24 @@ function genPlan(isRecalibrate = false, preserveFuture = false) {
   showTab('today', document.querySelector('.tab'));
 }
 
+function genPrivatePlan() {
+  if (!_ownerSession()) return;
+  const excluded = getExcluded();
+  const ps = new Set(_PRIVATE_POOL);
+  const pool = [];
+  Object.entries(DB).forEach(([grp, exs]) => {
+    exs.forEach(ex => {
+      if (ps.has(ex.n) && !excluded.has(ex.n) && ex.eq.some(e => e === '无器材' || S.equip.includes(e)))
+        pool.push({ ...ex, _g: grp });
+    });
+  });
+  for (let i = pool.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [pool[i], pool[j]] = [pool[j], pool[i]]; }
+  S.privatePlan = pool.slice(0, 8).map(ex => ({ name: ex.n, dur: ex.u === '秒' ? 45 : 30, note: ex.note, muscle: ex.muscle || [], bi: !!ex.bi }));
+  saveState();
+  render();
+  if (typeof showToast === 'function') showToast('柔韧流动已生成');
+}
+
 function assessPlanIntensity() {
   // Sort a copy of LOG by date descending to always evaluate the 3 most recent entries
   const sortedLogs = [...LOG].sort((a, b) => b.date.localeCompare(a.date));
@@ -1697,7 +1764,7 @@ function render() {
   const todayInView = visibleDays.some(d => d.date === today);
   const isCurrentView = todayInView;
 
-  let h = `<div class="plan-header"><p class="panel-title" style="margin:0">\u8bad\u7ec3\u8ba1\u5212${excludedCount ? `<span class="warn-tag">\u5df2\u8fc7\u6ee4${excludedCount}\u4e2a\u53d7\u9650\u52a8\u4f5c</span>` : ''}</p><button class="regen-btn" onclick="genPlan()">\u91cd\u65b0\u751f\u6210</button></div>
+  let h = `<div class="plan-header"><p class="panel-title" style="margin:0">\u8bad\u7ec3\u8ba1\u5212${excludedCount ? `<span class="warn-tag">\u5df2\u8fc7\u6ee4${excludedCount}\u4e2a\u53d7\u9650\u52a8\u4f5c</span>` : ''}</p><button class="regen-btn" onclick="genPlan()">\u91cd\u65b0\u751f\u6210</button>${_ownerSession() ? `<button class="regen-btn prv-btn" onclick="genPrivatePlan()" style="margin-left:4px">\u67d4\u97e7\u6d41\u52a8</button>` : ''}</div>
 <div class="stats">
 <div class="stat"><div class="stat-val">${workoutDays.length}</div><div class="stat-lbl">\u8ba1\u5212\u5929</div></div>
 <div class="stat"><div class="stat-val">${doneDays.length}/${workoutDays.length}</div><div class="stat-lbl">\u5df2\u5b8c\u6210</div></div>
@@ -1806,6 +1873,7 @@ ${ex.weight ? `<div class="wt-hint" style="margin-top:2px;display:block">${ex.we
         const pd = S.prog[sel.date] || {};
         const locked = isLocked(sel);
         const _isSwimDay = !!sel.isSwimDay;
+        const _pvSet = _ownerSession() ? new Set(_PRIVATE_POOL) : null;
 
         // ── Pool Mode: swim-day-specific UI with large touch targets ──
         if (_isSwimDay && !locked) {
@@ -1873,7 +1941,7 @@ ${locked ? `<span class="warn-tag" style="background:var(--surface3);color:var(-
             const sugW = needsWt ? suggestWeight(ex.name) : null;
             const dispW = curW !== null ? curW : (sugW ?? '');
             return `<div class="exrow${done ? ' done-ex' : ''}"><div style="flex:1;min-width:0">
-<div class="exname" onclick="showExDetail('${ex.name}')" style="cursor:pointer">${ex.name}${needsWt && W_HIST[ex.name] && W_HIST[ex.name].length > 0 && (curW || 0) >= Math.max(...W_HIST[ex.name].map(h => h.weight)) ? ` <span title="个人纪录" style="font-size:9px;color:var(--terra);border:1px solid var(--terra);border-radius:2px;padding:0 2px;margin-left:4px;font-weight:600">纪录</span>` : ''} <i class="ti ti-info-circle" style="font-size:11px;opacity:.4;vertical-align:middle"></i>${!locked && !ex.isWarmup && !ex.isStretch ? ` <span class="swap-btn" onclick="event.stopPropagation();swapExercise('${sel.date}',${i})" title="替换动作" style="border:1px solid var(--sage);color:var(--sage);border-radius:2px;padding:0 4px;font-size:10px;margin-left:4px">替换</span>` : ''}</div>
+<div class="exname" onclick="showExDetail('${ex.name}')" style="cursor:pointer">${ex.name}${_pvSet && _pvSet.has(ex.name) ? '<span class="pdot"></span>' : ''}${needsWt && W_HIST[ex.name] && W_HIST[ex.name].length > 0 && (curW || 0) >= Math.max(...W_HIST[ex.name].map(h => h.weight)) ? ` <span title="个人纪录" style="font-size:9px;color:var(--terra);border:1px solid var(--terra);border-radius:2px;padding:0 2px;margin-left:4px;font-weight:600">纪录</span>` : ''} <i class="ti ti-info-circle" style="font-size:11px;opacity:.4;vertical-align:middle"></i>${!locked && !ex.isWarmup && !ex.isStretch ? ` <span class="swap-btn" onclick="event.stopPropagation();swapExercise('${sel.date}',${i})" title="替换动作" style="border:1px solid var(--sage);color:var(--sage);border-radius:2px;padding:0 4px;font-size:10px;margin-left:4px">替换</span>` : ''}</div>
 <div class="exnote">${(ex.muscle || []).map(m => `<span style="font-size:9px;background:var(--surface2);color:var(--ink2);padding:1px 4px;border-radius:2px;margin-right:4px;display:inline-block">${m}</span>`).join('')}${ex.note}${ex.bi ? ' (左右各做一遍算1组)' : ''}</div>
 ${needsWt && !locked ? `<div class="wt-row">
 <input type="number" class="wt-input" value="${dispW || ''}" placeholder="${sugW || ''}" onchange="setWeight('${sel.date}',${i},+this.value)" step="${getWeightStep(ex.name)}" min="0">
@@ -1915,6 +1983,19 @@ ${!locked ? `
     h += `<div class="tip" style="text-align:center;padding:2rem">\u4f11\u606f\u65e5 \u2014 \u597d\u597d\u6062\u590d\uff0c\u660e\u5929\u7ee7\u7eed</div>`;
   }
   h += `<div class="tip">${tip}</div>`;
+  if (_ownerSession() && S.privatePlan && S.privatePlan.length) {
+    h += `<div class="private-section">
+<div class="private-section-hdr">柔韧流动 <button class="regen-btn prv-btn" style="font-size:10px;padding:2px 8px;margin-left:6px" onclick="genPrivatePlan()">换一套</button></div>
+<div class="private-flow">${S.privatePlan.map((ex, i) => `<div class="private-ex">
+<span class="private-ex-n">${i + 1}</span>
+<div class="private-ex-body">
+<div class="private-ex-name">${ex.name}${ex.bi ? ' <span style="font-size:9px;opacity:.5">(左右各)</span>' : ''}</div>
+<div class="private-ex-note">${(ex.muscle || []).map(m => `<span class="jchip">${m}</span>`).join('')} ${ex.note}</div>
+</div>
+<button class="act-play-btn" onclick="startTimer(${ex.dur},'${ex.name}')">▶ ${ex.dur}s</button>
+</div>`).join('')}
+</div></div>`;
+  }
   document.getElementById('main').innerHTML = h;
   initTouchDrag();
 

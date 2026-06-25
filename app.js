@@ -68,7 +68,7 @@ function loadState(){
 const s=lg(K.settings);
 if(s)Object.assign(S,s);
 // 迁移：旧目标名「女性线条」→「女性曲线」。改名前存档/云端的 S.goal 可能仍是旧名，
-// 与现版本 hasGoal('女性曲线') 匹配不上 → 会错误隔离 erotic 动作 + 回退到练上身的方案。
+// 与现版本 hasGoal('女性曲线') 匹配不上 → 会错误回退到练上身的方案。
 if(S.goal&&S.goal.includes('女性线条')){S.goal=S.goal.replace(/女性线条/g,'女性曲线');saveState();}
 const p=lg(K.plan);
 if(p&&p.plan&&p.plan.days){
@@ -94,6 +94,7 @@ if(S.plan && typeof autoAlignPlan==='function') autoAlignPlan();
 _initialLoad = false;
 }
 function applySettingsToUI(){
+document.body.classList.toggle('theme-curve', hasGoal('女性曲线'));
 document.querySelectorAll('#g-goal .chip').forEach(b=>b.classList.toggle('on',hasGoal(b.dataset.v)));
 document.querySelectorAll('#g-level .chip').forEach(b=>b.classList.toggle('on',b.dataset.v===S.level));
 document.getElementById('sl-days').value=S.days;
@@ -122,6 +123,9 @@ if (goalInfo) {
         goalInfo.style.display = "block";
     } else if (hasGoal('翘臀美背')) {
         goalInfo.innerHTML = "臀推顶端挤压优先；美背日强化背阔与体态（圆肩改善）；收腰靠真空吸而非减脂；避免直立划船/耸肩。";
+        goalInfo.style.display = "block";
+    } else if (hasGoal('女性曲线')) {
+        goalInfo.innerHTML = "极致沙漏：臀大+胯宽+腿丰满同步堆围度，腰只靠真空吸/平板维持，绝不做负重侧屈/转体。大腿要练腘绳/内收/衔接，不只堆股四。上肢几乎不动以免变宽。吃够蛋白(1.6-2g/kg)+轻微热量盈余才能喂大下半身。";
         goalInfo.style.display = "block";
     } else {
         goalInfo.style.display = "none";
@@ -895,7 +899,7 @@ updateSwimBreakdown();
 document.getElementById('sl-days').addEventListener('input',e=>{S.days=+e.target.value;document.getElementById('v-days').textContent=S.days+'天';saveState();updateSwimBreakdown()});
 document.getElementById('sl-dur').addEventListener('input',e=>{S.dur=+e.target.value;document.getElementById('v-dur').textContent=S.dur+'分钟';saveState()});
 document.getElementById('limits').addEventListener('input',e=>{S.limits=e.target.value;saveState()});
-// Cycle controls (manual slider; whole block hidden when 「生理期/周期功能」 is off — e.g. for Cait)
+// Cycle controls (manual slider; whole block hidden when 「生理期/周期功能」 is off)
 const cyEnSw=document.getElementById('cycle-enable-switch');
 if(cyEnSw) cyEnSw.addEventListener('change',function(){S.cycleEnabled=this.checked;let ch=false;if(!this.checked&&S.periodMode){S.periodMode=false;ch=true;}saveState();applySettingsToUI();flashSaved();if(ch&&S.plan){genPlan(true);render();}});
 const slCycle=document.getElementById('sl-cycle');
