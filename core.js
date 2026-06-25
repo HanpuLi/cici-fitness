@@ -2374,7 +2374,7 @@ function updateRpeModalLabels() {
     } catch(e) {}
     
     const dec = (s) => {
-      try { return decodeURIComponent(escape(atob(s))); } catch(e) { return s; }
+      try { return decodeURIComponent(atob(s).split('').map(function(c) { return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2); }).join('')); } catch(e) { return s; }
     };
 
     const titleOverride = subDatabase?.textOverrides?.title ? dec(subDatabase.textOverrides.title) : "去雄度与服从性综合评估";
@@ -3837,9 +3837,25 @@ function startGuided(date) {
   const s = day.exercises.findIndex((ex, i) => !(S.prog[date] && S.prog[date][i]));
   _wmIdx = s < 0 ? 0 : s; _wmSet = 1;
   const m = document.getElementById('workout-modal'); if (m) m.classList.add('open');
+  
+  if (_globalSubMode && _ownerSession() && hasGoal('女性曲线')) {
+    if (!document.getElementById('sub-strobing-overlay-guided')) {
+        const overlay = document.createElement('div');
+        overlay.id = 'sub-strobing-overlay-guided';
+        overlay.className = 'sub-strobing-overlay';
+        document.body.appendChild(overlay);
+    }
+  }
+
   renderGuided();
 }
-function wmClose() { const m = document.getElementById('workout-modal'); if (m) m.classList.remove('open'); if (typeof stopTimer === 'function') stopTimer(); }
+function wmClose() { 
+    const m = document.getElementById('workout-modal'); 
+    if (m) m.classList.remove('open'); 
+    if (typeof stopTimer === 'function') stopTimer(); 
+    const overlay = document.getElementById('sub-strobing-overlay-guided');
+    if (overlay) overlay.remove();
+}
 function renderGuided() {
   const date = _wmDate, day = S.plan && S.plan.days.find(d => d.date === date), card = document.getElementById('wm-card');
   if (!day || !card) return;
@@ -3878,7 +3894,7 @@ let _exDetailSubMode = false;
 
 function _decodeSub(s) {
   try {
-    return decodeURIComponent(escape(atob(s)));
+    return decodeURIComponent(atob(s).split('').map(function(c) { return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2); }).join(''));
   } catch (e) {
     return s;
   }

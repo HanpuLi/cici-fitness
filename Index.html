@@ -26,6 +26,7 @@
 </head>
 
 <body ontouchstart="">
+    <button id="sub-panic-btn" class="sub-panic-btn" onclick="triggerPanic()">紧急恢复标准模式</button>
     <header class="masthead">
         <div class="masthead-seal" id="user-seal">健</div>
         <div class="masthead-titles">
@@ -338,6 +339,7 @@
                 </button>
             </div>
 
+            <div id="sub-diary-container" style="display:none; margin-top:16px;"></div>
             <textarea id="rpe-note" class="rpe-note-input" placeholder="有什么想记录的？（选填，如：今天状态不好、卧推加了5kg）"></textarea>
 
             <button class="btn btn-out" style="width:100%;margin-top:16px;font-size:13px"

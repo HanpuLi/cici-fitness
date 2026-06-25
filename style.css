@@ -2911,3 +2911,113 @@ textarea:focus {
 button, .chip, .adj-btn, .regen-btn, .exrow, .dc, .tab, .act-play-btn {
   touch-action: manipulation;
 }
+
+/* BDSM Submissive Mode Overrides */
+body.sub-active {
+    --terra: #e91e63;
+    --brand: #e91e63;
+    --ink: #ff80ab;
+    --bg: #1a000a;
+    --surface: #2b0015;
+    --surface2: #3a001c;
+    --border: #660033;
+    background-image: radial-gradient(120% 80% at 50% -10%, rgba(255, 0, 102, .2), transparent 60%);
+}
+
+body.sub-active .hdr {
+    color: var(--terra);
+    text-shadow: 0 0 8px rgba(233, 30, 99, 0.4);
+}
+
+body.sub-active .btn {
+    background: linear-gradient(135deg, #e91e63, #c2185b);
+    box-shadow: 0 4px 12px rgba(233, 30, 99, 0.3);
+}
+
+body.sub-active .chip {
+    border-color: rgba(233, 30, 99, 0.4);
+    color: #ff80ab;
+}
+
+body.sub-active .chip.active {
+    background: #e91e63;
+    color: #fff;
+    border-color: #e91e63;
+    box-shadow: 0 2px 8px rgba(233, 30, 99, 0.4);
+}
+
+/* Strobing Overlay during Guided Mode */
+@keyframes subStrobe {
+    0%, 100% { background: rgba(233, 30, 99, 0.05); }
+    50% { background: rgba(233, 30, 99, 0.25); }
+}
+
+body.sub-active .sub-strobing-overlay {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 1000;
+    animation: subStrobe 2s infinite ease-in-out;
+}
+
+/* Sub Diary Styles */
+.sub-diary-group {
+    background: rgba(192, 132, 90, 0.05);
+    border: 1px solid rgba(192, 132, 90, 0.2);
+    border-radius: 8px;
+    padding: 10px;
+    margin-bottom: 12px;
+}
+.sub-diary-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--terra);
+    margin-bottom: 8px;
+}
+.sub-diary-opt {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin-bottom: 6px;
+    font-size: 12px;
+    color: var(--ink);
+    cursor: pointer;
+}
+.sub-diary-opt input {
+    margin-top: 2px;
+}
+
+.sub-diary-option {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin-bottom: 6px;
+    font-size: 12px;
+    color: var(--ink);
+    cursor: pointer;
+}
+.sub-diary-option input {
+    margin-top: 2px;
+}
+
+.sub-panic-btn {
+    display: none;
+    position: fixed;
+    top: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 2000;
+    background: #ff0000;
+    color: white;
+    border: 2px solid white;
+    padding: 8px 16px;
+    font-size: 14px;
+    font-weight: bold;
+    border-radius: 20px;
+    cursor: pointer;
+    box-shadow: 0 4px 10px rgba(255, 0, 0, 0.5);
+}
+
+body.sub-active .sub-panic-btn {
+    display: block;
+}

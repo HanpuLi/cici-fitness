@@ -860,6 +860,11 @@ flashSaved();
       taps = 0;
       if (_ownerSession()) {
         _globalSubMode = !_globalSubMode;
+        if (_globalSubMode) {
+          document.body.classList.add('sub-active');
+        } else {
+          document.body.classList.remove('sub-active');
+        }
         if (typeof render === 'function') render();
         // switch to today tab so the mode change is visible
         const todayBtn = document.querySelector('.tab[onclick*="today"]');
@@ -872,6 +877,16 @@ flashSaved();
   }
   trigger.addEventListener('click', onTap);
 })();
+
+window.triggerPanic = function() {
+  _globalSubMode = false;
+  document.body.classList.remove('sub-active');
+  const overlay = document.getElementById('sub-strobing-overlay-guided');
+  if (overlay) overlay.remove();
+  if (typeof render === 'function') render();
+  if (typeof showToast === 'function') showToast('标准模式已恢复');
+};
+
 single('g-level','level');
 multi('g-equip','equip');multi('g-focus','focus');
 (function(){
