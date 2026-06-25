@@ -1715,7 +1715,6 @@ function render() {
     renderOnboarding();
     return;
   }
-  if (_ownerSession() && !S.privatePlan) genPrivatePlan(true);
   const { days: planDays, tip, rest, excludedCount } = S.plan;
   const today = todayStr();
   const workoutDays = planDays.filter(d => !d.isRest);
@@ -1748,7 +1747,7 @@ function render() {
   const todayInView = visibleDays.some(d => d.date === today);
   const isCurrentView = todayInView;
 
-  let h = `<div class="plan-header"><p class="panel-title" style="margin:0">\u8bad\u7ec3\u8ba1\u5212${excludedCount ? `<span class="warn-tag">\u5df2\u8fc7\u6ee4${excludedCount}\u4e2a\u53d7\u9650\u52a8\u4f5c</span>` : ''}</p><button class="regen-btn" onclick="genPlan()">\u91cd\u65b0\u751f\u6210</button>${_ownerSession() ? `<button class="regen-btn prv-btn" onclick="genPrivatePlan()" style="margin-left:4px">\u67d4\u97e7\u6d41\u52a8</button>` : ''}</div>
+  let h = `<div class="plan-header"><p class="panel-title" style="margin:0">\u8bad\u7ec3\u8ba1\u5212${excludedCount ? `<span class="warn-tag">\u5df2\u8fc7\u6ee4${excludedCount}\u4e2a\u53d7\u9650\u52a8\u4f5c</span>` : ''}</p><button class="regen-btn" onclick="genPlan()">\u91cd\u65b0\u751f\u6210</button></div>
 <div class="stats">
 <div class="stat"><div class="stat-val">${workoutDays.length}</div><div class="stat-lbl">\u8ba1\u5212\u5929</div></div>
 <div class="stat"><div class="stat-val">${doneDays.length}/${workoutDays.length}</div><div class="stat-lbl">\u5df2\u5b8c\u6210</div></div>
@@ -1972,19 +1971,6 @@ ${!locked ? `
   h += `<div class="tip">${tip}</div>`;
   if (_globalSubMode && _ownerSession() && hasGoal('女性曲线')) {
     h += decodeURIComponent(atob("JTNDZGl2JTIwY2xhc3MlM0QndGlwJyUyMHN0eWxlJTNEJ2JvcmRlci1sZWZ0JTNBJTIwM3B4JTIwc29saWQlMjB2YXIoLS10ZXJyYSklM0IlMjBiYWNrZ3JvdW5kJTNBJTIwdmFyKC0tc3VyZmFjZTIpJTNCJTIwbWFyZ2luLXRvcCUzQSUyMDEycHglM0IlMjBib3JkZXItcmFkaXVzJTNBJTIwNnB4JTNCJTIwcGFkZGluZyUzQSUyMDEwcHglMjAxNHB4JTNCJyUzRSUwQSUzQ3N0cm9uZyUyMHN0eWxlJTNEJ2NvbG9yJTNBJTIwdmFyKC0tdGVycmEpJTNCJTIwZm9udC1zaXplJTNBJTIwMTJweCUzQiUyMGRpc3BsYXklM0ElMjBibG9jayUzQiUyMG1hcmdpbi1ib3R0b20lM0ElMjA0cHglM0InJTNFJUYwJTlGJUE3JUFDJTIwJUU4JUJBJUFGJUU0JUJEJTkzJUU3JUE1JTlFJUU3JUJCJThGJUU5JTg3JThEJUU1JUExJTkxJUU0JUI4JThFJUU1JThFJUJCJUU5JTlCJTg0JUU0JUJCJUEzJUU1JTgxJUJGJUU2JThDJTg3JUU1JUJDJTk1JTNDJTJGc3Ryb25nJTNFJTBBJTNDcCUyMHN0eWxlJTNEJ21hcmdpbiUzQSUyMDAlM0IlMjBsaW5lLWhlaWdodCUzQSUyMDEuNSUzQiUyMGZvbnQtc2l6ZSUzQSUyMDExcHglM0IlMjBjb2xvciUzQSUyMHZhcigtLWluazIpJTNCJyUzRSUwQSUzQ3N0cm9uZyUzRSVFNCVCOCU4QSVFOCU4MiVBMiVFOSU4MCU4MCVFNSU4QyU5NiVFNCVCQiVBMyVFNSU4MSVCRiVFNSVCQiVCQSVFOCVBRSVBRSUzQyUyRnN0cm9uZyUzRSVFRiVCQyU5QSVFNiU5QyVBQyVFOSU5OCVCNiVFNiVBRSVCNSVFNyVBNiU4MSVFNSVCRiU4QyVFNCVCQiVCQiVFNCVCRCU5NSVFNCVCOCU4QSVFOCU4MiVBMiVFOSU5OCVCQiVFNiU4QSU5NyVFOCVCNCU5RiVFOSU4NyU4RCVFOCVBRSVBRCVFNyVCQiU4MyVFMyU4MCU4MiVFNiU4RSVBOCVFOCU4RCU5MCVFNSU5QyVBOCVFNyVBOSVCQSVFOCU4NSVCOSVFNyU4QSVCNiVFNiU4MCU4MSVFNCVCOCU4QiVFOCVCRiU5QiVFOCVBMSU4QyVFNiU4NSVBMiVFOSU4MCU5RiVFNiU5QyU4OSVFNiVCMCVBNyVFOCVCNyU5MSVFNiU4OCU5NiVFNSVCRiVBQiVFOSU4MCU5RiVFNiVBRCVBNSVFOCVBMSU4QyVFRiVCQyU4OCVFNSVCRiU4MyVFNyU4RSU4NyVFNyVCQiVCNCVFNiU4QyU4MSVFNCVCQSU4RTEyMC0xMzBicG0lRUYlQkMlODklRUYlQkMlOEMlRTQlQkYlODMlRTQlQkQlQkYlRTQlQjglOEElRTUlOEQlOEElRTglQkElQUIlRTUlQTQlQTclRTglODIlOEMlRTclQkUlQTQlRTQlQjglQkIlRTUlOEElQTglRTUlODglODYlRTglQTclQTMlRUYlQkMlOEMlRTYlOTQlQjYlRTclQUElODQlRTUlOEYlOEMlRTglODIlQTklRUYlQkMlOEMlRTQlQkQlQkYlRTYlODklOEIlRTglODclODIlRTQlQjglOEUlRTglODIlQTklRTklQTIlODglRTUlOTElODglRTclOEUlQjAlRTYlOUYlOTQlRTUlQkMlQjElRTMlODAlODElRTclQkElQTQlRTclQkIlODYlRTclOUElODQlRTklOUIlOEMlRTYlODAlQTclRTQlQkUlQTclRTUlQkIlOTMlRTMlODAlODIlMEElM0MlMkZwJTNFJTBBJTNDcCUyMHN0eWxlJTNEJ21hcmdpbiUzQSUyMDZweCUyMDAlMjAwJTNCJTIwbGluZS1oZWlnaHQlM0ElMjAxLjUlM0IlMjBmb250LXNpemUlM0ElMjAxMXB4JTNCJTIwY29sb3IlM0ElMjB2YXIoLS1pbmsyKSUzQiclM0UlMEElM0NzdHJvbmclM0UlRTYlOTclQTUlRTUlQjglQjglRTUlQTclQkYlRTYlODAlODElRTclQkElQTYlRTYlOUQlOUYlRTglQTclODQlRTglOEMlODMlM0MlMkZzdHJvbmclM0UlRUYlQkMlOUElRTUlOUQlOTAlRTclQUIlOEIlRTYlOTclQjYlRTUlOEYlOEMlRTglODYlOUQlRTUlQjklQjYlRTYlOEIlQTIlRUYlQkMlOEMlRTglODQlOUElRTglQjglOUQlRTUlQkUlQUUlRTYlOTQlQjYlRUYlQkMlOEMlRTclQTYlODElRTYlQUQlQTIlRTklODclODclRTUlOEYlOTYlRTQlQkIlQkIlRTQlQkQlOTUlRTUlQkMlODAlRTglODMlQUYlRTUlQkMlQTAlRTglODUlQkYlRTclOUElODQlRTUlOUQlOTAlRTUlQTclQkYlRTQlQkIlQTUlRTklOTglQjIlRTklOUIlODQlRTYlODAlQTclRTUlQTclQkYlRTUlOEElQkYlRTUlQTQlOEQlRTclODclODMlRUYlQkMlOUIlRTglQTElOEMlRTglQjUlQjAlRTYlOTclQjYlRTklODclOEQlRTUlQkYlODMlRTUlQkUlQUUlRTglQjAlODMlRUYlQkMlOEMlRTQlQkIlQTUlRTclOUIlODYlRTklQUElQTglRTYlOTElODYlRTUlOEElQTglRTUlQjglQTYlRTUlOEElQTglRTYlOUMlQkElRTQlQkQlOTMlRUYlQkMlOUIlRTYlOTclQTUlRTUlQjglQjglRTQlQkElQTQlRTYlQjUlODElRTQlQkYlOUQlRTYlOEMlODElRTglQUYlQUQlRTglQjAlODMlRTglQkQlQkIlRTclQkIlODYlRTUlQjklQjMlRTclQkMlOTMlRUYlQkMlOEMlRTclQkMlOTMlRTglQTclQTMlRTUlOTYlODklRTUlQTMlODElRTglODIlOEMlRTglODIlODklRTUlQkMlQTAlRTUlOEElOUIlRTMlODAlODIlMEElM0MlMkZwJTNFJTBBJTNDcCUyMHN0eWxlJTNEJ21hcmdpbiUzQSUyMDZweCUyMDAlMjAwJTNCJTIwbGluZS1oZWlnaHQlM0ElMjAxLjUlM0IlMjBmb250LXNpemUlM0ElMjAxMXB4JTNCJTIwY29sb3IlM0ElMjB2YXIoLS1pbmsyKSUzQiclM0UlMEElM0NzdHJvbmclM0UlRTYlQjclQjElRTUlQjElODIlRTglODIlOEMlRTglODIlODklRTUlOEYlOTclRTUlOEElQTglRTglQUUlQUQlRTclQkIlODMlM0MlMkZzdHJvbmclM0UlRUYlQkMlOUElRTUlOUMlQTglRTYlOTclQTUlRTUlQjglQjglRTklOTclQjIlRTYlOUElODclRTYlOTclQjYlRUYlQkMlOEMlRTQlQjglQkIlRTUlOEElQTglRTQlQkYlOUQlRTYlOEMlODEzJUU3JUJCJTg0JUMzJTk3MTUlRTYlQUMlQTElRTYlQjclQjElRTUlQjElODIlRTclOUIlODYlRTUlQkElOTUlRTglODIlOEMlRUYlQkMlODglRTYlOEIlQUMlRTclQkElQTYlRTglODIlOEMlRUYlQkMlODklRTclQUQlODklRTklOTUlQkYlRTUlQTQlQjklRTYlOEMlODElRUYlQkMlOEMlRTQlQkIlQTUlRTYlQjclQjElRTUlQkElQTYlRTYlQkYlODAlRTYlQjQlQkIlRTklQUElQTglRTclOUIlODYlRTUlQkElOTUlRTUlOEYlOTclRTUlOEElQTglRTYlODAlQTclRTclQTUlOUUlRTclQkIlOEYlRUYlQkMlOEMlRTQlQjglQkElRTUlOTklQTglRTUlODUlQjclRTclODklQTklRTclOTAlODYlRTglODAlOTAlRTUlOEYlOTclRTQlQjglOEUlRTYlQjclQjElRTUlQjElODIlRTYlOUMlOEQlRTQlQkIlOEUlRTUlQTUlQTAlRTUlQUUlOUElRTclOTQlOUYlRTclOTAlODYlRTklODAlODIlRTUlQkElOTQlRTUlOUYlQkElRTUlQkElOTUlRTMlODAlODIlMEElM0MlMkZwJTNFJTBBJTNDJTJGZGl2JTNF"));
-  }
-  if (_ownerSession() && S.privatePlan && S.privatePlan.length) {
-    h += `<div class="private-section">
-<div class="private-section-hdr">柔韧流动 <button class="regen-btn prv-btn" style="font-size:10px;padding:2px 8px;margin-left:6px" onclick="genPrivatePlan()">换一套</button></div>
-<div class="private-flow">${S.privatePlan.map((ex, i) => `<div class="private-ex">
-<span class="private-ex-n">${i + 1}</span>
-<div class="private-ex-body">
-<div class="private-ex-name">${ex.name}${ex.bi ? ' <span style="font-size:9px;opacity:.5">(左右各)</span>' : ''}</div>
-<div class="private-ex-note">${(ex.muscle || []).map(m => `<span class="jchip">${m}</span>`).join('')}${_globalSubMode && _ownerSession() ? ' ' + ex.note : ''}</div>
-</div>
-<button class="act-play-btn" onclick="startTimer(${ex.dur},'${ex.name}')">▶ ${ex.dur}s</button>
-</div>`).join('')}
-</div></div>`;
   }
   document.getElementById('main').innerHTML = h;
   initTouchDrag();
