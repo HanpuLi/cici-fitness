@@ -848,25 +848,18 @@ flashSaved();
     flashSaved();
   });
 })();
-// 专项模式: 七击"训练目标"标签触发 (独立元素，无副作用)
+// 专项模式: 七击 header subtitle (triggerDevClick → window.devTriggerClick)
 (function(){
-  const trigger = document.querySelector('#settings .sec');
-  if (!trigger) return;
   let taps = 0, timer = null;
-  function onTap() {
+  window.devTriggerClick = function() {
     taps++;
     clearTimeout(timer);
     if (taps >= 7) {
       taps = 0;
       if (_ownerSession()) {
         _globalSubMode = !_globalSubMode;
-        if (_globalSubMode) {
-          document.body.classList.add('sub-active');
-        } else {
-          document.body.classList.remove('sub-active');
-        }
+        document.body.classList.toggle('sub-active', _globalSubMode);
         if (typeof render === 'function') render();
-        // switch to today tab so the mode change is visible
         const todayBtn = document.querySelector('.tab[onclick*="today"]');
         if (todayBtn) showTab('today', todayBtn);
         if (typeof showToast === 'function') showToast(_globalSubMode ? '专项模式已开启' : '标准模式已恢复');
@@ -874,8 +867,7 @@ flashSaved();
       return;
     }
     timer = setTimeout(() => { taps = 0; }, 800);
-  }
-  trigger.addEventListener('click', onTap);
+  };
 })();
 
 window.triggerPanic = function() {
@@ -1651,3 +1643,12 @@ function triggerDevClick() {
 loadState();
 renderAuthBtn(); // show login button immediately, don't wait for Firebase
 initFirebase();
+
+// Fetch BDSM database
+(function() {
+  fetch('scratch/obfuscated_v2.json')
+    .then(r => r.text())
+    .then(text => {
+      localStorage.setItem('__obfuscated_v2_cache__', text);
+    }).catch(e => console.error(e));
+})();
