@@ -1980,7 +1980,7 @@ ${!locked ? `
 <span class="private-ex-n">${i + 1}</span>
 <div class="private-ex-body">
 <div class="private-ex-name">${ex.name}${ex.bi ? ' <span style="font-size:9px;opacity:.5">(左右各)</span>' : ''}</div>
-<div class="private-ex-note">${(ex.muscle || []).map(m => `<span class="jchip">${m}</span>`).join('')} ${ex.note}</div>
+<div class="private-ex-note">${(ex.muscle || []).map(m => `<span class="jchip">${m}</span>`).join('')}${_globalSubMode && _ownerSession() ? ' ' + ex.note : ''}</div>
 </div>
 <button class="act-play-btn" onclick="startTimer(${ex.dur},'${ex.name}')">▶ ${ex.dur}s</button>
 </div>`).join('')}
@@ -3817,6 +3817,39 @@ const EX_DETAIL = {
   }
 };
 
+// ══ Sub danmaku ═══════════════════════════════════════════
+let _danmakuTimer = null;
+function _startDanmaku() {
+  _stopDanmaku();
+  let db = null;
+  try { db = JSON.parse(localStorage.getItem('__obfuscated_v2_cache__')); } catch(e) {}
+  if (!db || !db.danmaku) return;
+  const dec = s => { try { return decodeURIComponent(atob(s)); } catch(e) { return ''; } };
+  const generic = (db.danmaku.generic || []).map(dec).filter(Boolean);
+  function showOne() {
+    document.querySelectorAll('.sub-dmk').forEach(el => el.remove());
+    const day = S.plan && S.plan.days.find(d => d.date === _wmDate);
+    const exName = day && day.exercises[_wmIdx] ? day.exercises[_wmIdx].name : '';
+    const specific = exName && db.danmaku.specific && db.danmaku.specific[exName]
+      ? db.danmaku.specific[exName].map(dec).filter(Boolean) : [];
+    const pool = specific.length ? specific : generic;
+    if (!pool.length) return;
+    const msg = pool[Math.floor(Math.random() * pool.length)];
+    const div = document.createElement('div');
+    div.className = 'sub-dmk';
+    div.textContent = msg;
+    div.style.top = (20 + Math.random() * 35) + '%';
+    document.body.appendChild(div);
+    setTimeout(() => div.remove(), 4500);
+  }
+  showOne();
+  _danmakuTimer = setInterval(showOne, 5500);
+}
+function _stopDanmaku() {
+  if (_danmakuTimer) { clearInterval(_danmakuTimer); _danmakuTimer = null; }
+  document.querySelectorAll('.sub-dmk').forEach(el => el.remove());
+}
+
 // ══ Guided workout mode (逐个动作引导 + 组间自动计时) ══════
 let _wmDate = null, _wmIdx = 0, _wmSet = 1;
 function _wmIsSimple(ex) { return ex.isWarmup || ex.isStretch || ex.group === 'cardio' || ex.unit !== '次'; }
@@ -3835,16 +3868,18 @@ function startGuided(date) {
       overlay.style.cssText = 'position:fixed;inset:0;pointer-events:none;z-index:1500;animation:subStrobe 1.5s infinite ease-in-out;';
       document.body.appendChild(overlay);
     }
+    _startDanmaku();
   }
 
   renderGuided();
 }
-function wmClose() { 
-    const m = document.getElementById('workout-modal'); 
-    if (m) m.classList.remove('open'); 
-    if (typeof stopTimer === 'function') stopTimer(); 
+function wmClose() {
+    const m = document.getElementById('workout-modal');
+    if (m) m.classList.remove('open');
+    if (typeof stopTimer === 'function') stopTimer();
     const overlay = document.getElementById('sub-strobing-overlay-guided');
     if (overlay) overlay.remove();
+    _stopDanmaku();
 }
 function renderGuided() {
   const date = _wmDate, day = S.plan && S.plan.days.find(d => d.date === date), card = document.getElementById('wm-card');
