@@ -158,8 +158,9 @@
                     <!-- Tab 1: Simulation -->
                     <div id="dev-panel-sim" class="dev-panel" style="display: block;">
                         <p class="sec" id="dev-sub-sec" style="margin-top: 0; font-weight: 600; font-size: 13px; color: var(--ink); cursor: default; user-select: none;" onclick="_devSubClick()">专项模式</p>
-                        <div style="margin-bottom: 12px; font-size: 11px; color: var(--ink3);" id="dev-sub-status">
-                            ${typeof _globalSubMode !== 'undefined' && _globalSubMode ? '● 专项已开启' : '○ 标准模式'}
+                        <div style="margin-bottom: 12px; font-size: 11px; color: var(--ink3); line-height: 1.8;" id="dev-sub-status">
+                            ${typeof _globalSubMode !== 'undefined' && _globalSubMode ? '● 专项已开启' : '○ 标准模式'}<br>
+                            <span style="opacity:.6">账号: ${(typeof _ownerSession === 'function' && _ownerSession()) ? '✓ owner' : '✗ 非owner'} · 女性曲线: ${(typeof hasGoal === 'function' && hasGoal('女性曲线')) ? '✓ 已选' : '✗ 未选'}</span>
                         </div>
                         <p class="sec" style="font-weight: 600; font-size: 13px; color: var(--ink);">数据隔离沙箱 (Sandbox)</p>
                         <div style="background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px; margin-bottom: 12px; font-size: 11px; line-height: 1.5; color: var(--ink2);">

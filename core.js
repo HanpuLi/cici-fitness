@@ -3884,7 +3884,7 @@ var _exDetailSubMode = false;
 
 function _decodeSub(s) {
   try {
-    return decodeURIComponent(atob(s).split('').map(function(c) { return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2); }).join(''));
+    return decodeURIComponent(atob(s));
   } catch (e) {
     return s;
   }
