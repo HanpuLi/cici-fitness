@@ -861,6 +861,9 @@ flashSaved();
       if (_ownerSession()) {
         _globalSubMode = !_globalSubMode;
         if (typeof render === 'function') render();
+        // switch to today tab so the mode change is visible
+        const todayBtn = document.querySelector('.tab[onclick*="today"]');
+        if (todayBtn) showTab('today', todayBtn);
         if (typeof showToast === 'function') showToast(_globalSubMode ? '专项模式已开启' : '标准模式已恢复');
       }
       return;
