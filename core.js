@@ -69,6 +69,10 @@ const _PRIVATE_POOL = [
   '芭蕾足尖静力高抬', '靠墙深蹲芭蕾外展', '跪姿头颈屈肌耐久强化', '手腕及前臂支撑',
   '站姿下肢等长螺旋收缩', '高跪姿骨盆前推等长支撑', '仰卧分腿阻抗静力保持',
   '跪姿躯干波浪', '跪姿骨盆画圆',
+  '颈部深层屈肌激活训练', '前胸壁静力抗压与呼吸耐受训练', '高跪位对称性牵引抗阻挺立',
+  '仰卧悬臀盆底夹持静力保持', '盆底深层肌放松适应与深层放松训练', '骨盆区等长控制训练',
+  '俯跪姿骨盆极限高翘与呼吸抗阻', '仰卧全身大字形放松适应张力释放', '高跪姿躯干后倾胸廓充分展露',
+  '仰卧束角式极限重力开胯与受力位控息', '跪位极低姿态躯干伏地放松适应牵伸', '仰卧高位分腿等长抗阻盆底悬挂',
   // 芭蕾
   '芭蕾深蹲（plié）', '芭蕾侧踢腿（battement）', '单腿relevé踮立',
   '芭蕾后退腿（arabesque）', '芭蕾地板后展腿',
@@ -104,6 +108,7 @@ const DB = {
     { n: '哑铃仰卧屈臂上拉', eq: ['哑铃', '健身房全套'], muscle: ['胸', '背阔'], diff: 2, note: '横躺在凳上，哑铃放至头后' },
     { n: '上斜哑铃飞鸟', eq: ['哑铃', '健身房全套'], muscle: ['上胸'], diff: 2, note: '微弯肘，感受胸肌拉伸' },
     { n: '俯卧撑', eq: ['无器材', '弹力带', '哑铃', '健身房全套'], muscle: ['胸', '三头'], diff: 1, note: '核心收紧，身体一直线' },
+    { n: '前胸壁静力抗压与呼吸耐受训练', eq: ['无器材'], muscle: ['胸大肌'], diff: 1, note: '俯卧于垫，用重力进行温和压迫，深长腹式呼吸钝化浅表感受器敏感度', u: '秒' },
   ],
   shoulder: [
     { n: '杠铃推举', eq: ['健身房全套'], muscle: ['前束', '中束'], diff: 2, note: '核心收紧，不要过度后仰' },
@@ -212,6 +217,11 @@ const DB = {
     { n: '肩垫高极限臀推', eq: ['无器材', '健身房全套', '哑铃'], muscle: ['臀'], diff: 2, note: '上背垫高，臀部下沉至极低位置增加幅度，挺髋至最高点并极限收缩臀肌' },
     { n: '芭蕾后退腿（arabesque）', eq: ['无器材', '健身房全套'], muscle: ['臀大肌', '竖脊肌'], diff: 1, note: '扶把杆/墙站立，支撑腿微屈，动作腿向正后方缓慢抬至最高，脚背绷直指向远端，顶端收臀保持', bi: true },
     { n: '芭蕾地板后展腿', eq: ['无器材', '健身房全套'], muscle: ['臀大肌', '腘绳'], diff: 1, note: '四足跪姿，单腿伸直向后上方缓慢抬起，脚尖绷直，全程控制弧线，顶端夹臀停留1秒', bi: true },
+    { n: '仰卧悬臀盆底夹持静力保持', eq: ['无器材'], muscle: ['臀', '盆底肌'], diff: 2, note: '仰卧高桥位，双膝夹紧阻力物，主动收缩盆底深层肌与盆底肌群，抗重力静力保持', u: '秒' },
+    { n: '盆底深层肌放松适应与深层放松训练', eq: ['无器材'], muscle: ['臀', '盆底肌'], diff: 1, note: '仰卧双膝折叠贴胸，吸气时主动放松盆底后腔，呼气时缓慢等长收缩，强化深层容受性与控制力', u: '秒' },
+    { n: '骨盆区等长控制训练', eq: ['无器材'], muscle: ['臀', '内收肌'], diff: 2, note: '高跪姿，大腿上部夹紧滚轴，挺髋收臀，对骨盆区施加持续温和静力压迫并配合控息', u: '秒' },
+    { n: '俯跪姿骨盆极限高翘与呼吸抗阻', eq: ['无器材'], muscle: ['臀', '盆底肌'], diff: 2, note: '四足俯跪臀部高翘，腹股沟与腹部贴垫，维持骨盆高位极限倾斜，顺从体位深腹式呼吸放松盆底', u: '秒' },
+    { n: '仰卧高位分腿等长抗阻盆底悬挂', eq: ['无器材'], muscle: ['臀', '盆底肌'], diff: 3, note: '仰卧双腿垂直抬起并极度分腿成大V字，双手搭膝内侧，无支撑下等长承载，训练深层肌群耐受与控制', u: '秒' },
   ],
   calves: [
     { n: '站姿提踵', eq: ['无器材', '哑铃', '健身房全套'], muscle: ['小腿'], diff: 1, note: '全幅度，顶端停顿1秒' },
@@ -238,7 +248,9 @@ const DB = {
     { n: '跪姿躯干波浪', eq: ['无器材', '健身房全套'], muscle: ['核心', '脊柱'], diff: 2, note: '四足跪姿下，下巴与胸口贴地向前滑动，拱背退回，脊柱S型连贯波动', u: '秒' },
     { n: '跪姿骨盆画圆', eq: ['无器材', '健身房全套'], muscle: ['核心', '骨盆控制'], diff: 1, note: '四足跪姿，控制骨盆缓慢在空中画圆，唤醒深层控制与流动力', u: '秒', bi: true },
     { n: '仰卧风车画腿', eq: ['无器材', '健身房全套'], muscle: ['核心', '髋屈肌'], diff: 3, note: '仰卧双腿伸直绷脚背，在空中缓慢画巨大折扇形半圆，极致控制与核心炫耀' },
-    { n: '跪姿骨盆画八字', eq: ['无器材', '健身房全套'], muscle: ['核心', '骨盆控制'], diff: 1, note: '四足跪姿，控制骨盆在水平面做缓慢平滑的八字形轨迹移动，深度激活与放松盆底肌', u: '秒', bi: true }
+    { n: '跪姿骨盆画八字', eq: ['无器材', '健身房全套'], muscle: ['核心', '骨盆控制'], diff: 1, note: '四足跪姿，控制骨盆在水平面做缓慢平滑的八字形轨迹移动，深度激活与放松盆底肌', u: '秒', bi: true },
+    { n: '高跪位对称性牵引抗阻挺立', eq: ['无器材'], muscle: ['核心', '股四头'], diff: 2, note: '高跪姿，双臂后伸并在手腕锁定，挺胸收腹，向后倾斜15-30度等长抗阻，维持颈部与核心高度紧张', u: '秒' },
+    { n: '高跪姿躯干后倾胸廓充分展露', eq: ['无器材'], muscle: ['核心'], diff: 2, note: '高跪姿，双手置于腰后，躯干向后倾斜并展露胸部与颈部，在不稳定的后仰中建立躯体信任感与稳定性', u: '秒' }
   ],
   cardio: [
     { n: '跑步机慢跑', eq: ['健身房全套'], muscle: ['心肺'], diff: 1, note: '心率维持最大心率65-75%', u: '分钟' },
@@ -337,7 +349,11 @@ const DB = {
     { n: '下犬式', eq: ['无器材', '健身房全套'], muscle: ['全身', '下肢'], diff: 1, note: '双手双脚撑地、臀向上顶成倒V，背伸直、脚跟下踩，拉伸腿后侧/小腿与肩背', u: '秒' },
     { n: '跪姿股四极限后仰', eq: ['无器材', '健身房全套'], muscle: ['下肢'], diff: 2, note: '高跪姿，保持躯干与大腿呈一直线并向后倾斜，极限拉伸大腿前侧与伸髋', u: '秒' },
     { n: '靠墙倒挂大V字', eq: ['无器材', '健身房全套'], muscle: ['下肢'], diff: 1, note: '仰卧臀部贴墙，双腿沿墙面竖直向上并自然向两侧极度打开，重力开胯拉伸内收肌', u: '秒' },
-    { n: '靠墙九十度前屈', eq: ['无器材', '健身房全套'], muscle: ['下肢'], diff: 1, note: '背贴墙站立，前移双脚并向下折叠前屈，使骨盆后部完全贴靠墙面，深度拉伸腿后侧', u: '秒' }
+    { n: '靠墙九十度前屈', eq: ['无器材', '健身房全套'], muscle: ['下肢'], diff: 1, note: '背贴墙站立，前移双脚并向下折叠前屈，使骨盆后部完全贴靠墙面，深度拉伸腿后侧', u: '秒' },
+    { n: '颈部深层屈肌激活训练', eq: ['无器材'], muscle: ['全身'], diff: 1, note: '保持颈部中立位，控制咽部屈肌做等长对抗并吞咽，深呼吸克服阻滞感，强化颈部控制力与控制力', u: '秒' },
+    { n: '仰卧全身大字形放松适应张力释放', eq: ['无器材'], muscle: ['全身'], diff: 1, note: '仰卧全身大字形极度摊开，手心向上闭眼，在完全暴露且无防御的姿态下进行深长控息，建立完全放松感', u: '秒' },
+    { n: '仰卧束角式极限重力开胯与受力位控息', eq: ['无器材'], muscle: ['下肢'], diff: 1, note: '仰卧脚心相对，双膝自然下坠贴垫，双手置于腹股沟，配合吸气主动下沉盆底肌，强化深层适应状态', u: '秒' },
+    { n: '跪位极低姿态躯干伏地放松适应牵伸', eq: ['无器材'], muscle: ['全身'], diff: 1, note: '跪坐于足跟，上半身完全向前贴地，手臂向后伸直掌心向上，在极端低伏与顺从的姿态下进行深度呼吸', u: '秒' }
   ],
 };
 
@@ -2339,6 +2355,18 @@ function startTimer(seconds, label = "休息中") {
   const prog = document.getElementById('timer-progress');
   if (!bar) return;
 
+  if (_ownerSession() && label === '组间休息') {
+    const cues = [
+      '保持低姿态，闭眼调整放松适应控息',
+      '放松盆底与内收肌群，放弃全部躯体防御',
+      '感受地面完全承载，交出躯体支配权',
+      '深长呼吸专注承受区充血，维持心理臣服',
+      '等待酸胀感退去，享受躯体放松的绝对服从',
+      '每一次呼气，加深一次身体的深层适应性'
+    ];
+    label = cues[Math.floor(Math.random() * cues.length)];
+  }
+
   lblEl.innerText = label;
   bar.classList.add('show');
   unlockAudio();
@@ -2377,6 +2405,44 @@ let _pendingRpeDate = null;
 let _pendingRpeDay = null;
 let _editingLogIdx = null;
 
+function updateRpeModalLabels() {
+  const isOwner = _ownerSession();
+  const titleEl = document.getElementById('rpe-modal-title');
+  const descEl = document.getElementById('rpe-modal-desc');
+  const noteEl = document.getElementById('rpe-note');
+  if (!titleEl || !descEl || !noteEl) return;
+
+  const buttons = document.querySelectorAll('#rpe-modal .rpe-btn');
+  const labels = isOwner ? [
+    '躯体无感', '温和承受', '完全放松适应', '轻度充血',
+    '正常承载', '深度沉浸', '强烈挤压', '肌肉颤抖',
+    '极限酸胀', '力竭放松'
+  ] : [
+    '毫无感觉', '极度轻松', '轻松', '略感疲劳',
+    '适中', '正常训练', '偏难', '困难',
+    '极限', '力竭'
+  ];
+
+  buttons.forEach((btn, idx) => {
+    const lbl = btn.querySelector('.rpe-lbl');
+    if (lbl && labels[idx]) {
+      lbl.innerText = labels[idx];
+    }
+  });
+
+  if (isOwner) {
+    if (titleEl.innerText.includes('疲劳度')) {
+      titleEl.innerText = titleEl.innerText.replace('疲劳度', '训练强度');
+    }
+    if (descEl.innerText.includes('今天训练感受')) {
+      descEl.innerText = '选择最接近你今天身体训练强度与身体感受的感受分值';
+    }
+    noteEl.placeholder = '记录你的训练表现与身体反馈（选填，如：双腿颤抖强烈、盆底完全放松）';
+  } else {
+    noteEl.placeholder = '有什么想记录的？（选填，如：今天状态不好、卧推加了5kg）';
+  }
+}
+
 function closeRpeModal() {
   document.getElementById('rpe-modal').classList.remove('open');
   _pendingRpeDate = null;
@@ -2396,6 +2462,7 @@ function editLog(idx) {
   const noteEl = document.getElementById('rpe-note');
   if (noteEl) noteEl.value = l.note || '';
 
+  updateRpeModalLabels();
   document.getElementById('rpe-modal').classList.add('open');
 }
 
@@ -2520,6 +2587,7 @@ function endWorkoutEarly(date) {
     _pendingRpeDay = day;
     document.getElementById('rpe-modal-title').innerText = checkedCount < totalEx ? '训练提前结束打卡' : '训练完成打卡';
     document.getElementById('rpe-modal-desc').innerText = `已完成 ${checkedCount}/${totalEx} 个动作，请评估今日的疲劳度：`;
+    updateRpeModalLabels();
     document.getElementById('rpe-modal').classList.add('open');
   }
 }
@@ -2556,6 +2624,7 @@ function tog(date, ei) {
         document.getElementById('rpe-modal-desc').innerText = '评估今天游泳的累计程度';
       }
       setTimeout(() => {
+        updateRpeModalLabels();
         document.getElementById('rpe-modal').classList.add('open');
       }, 100);
     }
