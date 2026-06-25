@@ -41,6 +41,25 @@
         window._mockSyncFail = true;
     }
 
+    // ══ 专项模式 secret trigger ══════════════════════════════════
+    let _devSubClicks = 0, _devSubTimer = null;
+    window._devSubClick = function() {
+        if (typeof _ownerSession !== 'function' || !_ownerSession()) return;
+        if (typeof hasGoal !== 'function' || !hasGoal('女性曲线')) return;
+        _devSubClicks++;
+        clearTimeout(_devSubTimer);
+        if (_devSubClicks >= 7) {
+            _devSubClicks = 0;
+            if (typeof toggleSubMode === 'function') {
+                toggleSubMode();
+                const el = document.getElementById('dev-sub-status');
+                if (el) el.textContent = (typeof _globalSubMode !== 'undefined' && _globalSubMode) ? '● 专项已开启' : '○ 标准模式';
+            }
+            return;
+        }
+        _devSubTimer = setTimeout(() => { _devSubClicks = 0; }, 600);
+    };
+
     // ══ Unlock Triggers & State ═════════════════════════════════
     let clicks = 0;
     let lastClick = 0;
@@ -138,11 +157,9 @@
                 <div class="dev-modal-body">
                     <!-- Tab 1: Simulation -->
                     <div id="dev-panel-sim" class="dev-panel" style="display: block;">
-                        <p class="sec" style="margin-top: 0; font-weight: 600; font-size: 13px; color: var(--ink);">专项模式</p>
-                        <div style="margin-bottom: 12px;">
-                            <button id="dev-submode-btn" class="btn-dev" style="width:100%" onclick="toggleSubMode(); document.getElementById('dev-submode-btn').textContent = (typeof _globalSubMode !== 'undefined' && _globalSubMode) ? '关闭专项模式' : '开启专项模式'">
-                                ${typeof _globalSubMode !== 'undefined' && _globalSubMode ? '关闭专项模式' : '开启专项模式'}
-                            </button>
+                        <p class="sec" id="dev-sub-sec" style="margin-top: 0; font-weight: 600; font-size: 13px; color: var(--ink); cursor: default; user-select: none;" onclick="_devSubClick()">专项模式</p>
+                        <div style="margin-bottom: 12px; font-size: 11px; color: var(--ink3);" id="dev-sub-status">
+                            ${typeof _globalSubMode !== 'undefined' && _globalSubMode ? '● 专项已开启' : '○ 标准模式'}
                         </div>
                         <p class="sec" style="font-weight: 600; font-size: 13px; color: var(--ink);">数据隔离沙箱 (Sandbox)</p>
                         <div style="background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px; margin-bottom: 12px; font-size: 11px; line-height: 1.5; color: var(--ink2);">
