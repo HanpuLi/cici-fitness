@@ -4038,14 +4038,19 @@ const EX_SUB_DESC = {
 
 function renderExDetailContent() {
   const name = _currentExDetailName;
+  const inDict = !!(_exDetailSubMode && EX_SUB_DESC[name]);
   const subActive = _exDetailSubMode && _ownerSession() && EX_SUB_DESC[name];
-  
+
+  if (_exDetailSubMode && typeof showToast === 'function') {
+    showToast(inDict ? '🟣 专项描述' : '○ 此动作暂无专项描述', 2000);
+  }
+
   const info = EX_DETAIL[name];
   let dbEx = null;
   for (const exs of Object.values(DB)) { const f = exs.find(e => e.n === name); if (f) { dbEx = f; break } }
-  
+
   const muscles = info?.muscles || (dbEx?.muscle?.map(m => m) || ['—']);
-  
+
   const dispName = subActive ? _decodeSub(EX_SUB_DESC[name].name) : name;
   const steps = subActive ? EX_SUB_DESC[name].steps.map(_decodeSub) : (info?.steps || [dbEx?.note || '暂无详细步骤']);
   const tips = subActive ? EX_SUB_DESC[name].tips.map(_decodeSub) : (info?.tips || []);
