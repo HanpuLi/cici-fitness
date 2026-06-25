@@ -661,12 +661,12 @@ if (imported) {
 
 // ══ Sync Toast ═══════════════════════════════════════════
 let _toastTimer=null;
-function showToast(msg){
+function showToast(msg, dur){
 const el=document.getElementById('sync-toast');
 if(!el)return;
 el.textContent=msg;el.classList.add('show');
 clearTimeout(_toastTimer);
-_toastTimer=setTimeout(()=>el.classList.remove('show'),3500);
+_toastTimer=setTimeout(()=>el.classList.remove('show'), dur || 3500);
 }
 
 // ══ Firebase Auth & Cloud Sync ═══════════════════════════
