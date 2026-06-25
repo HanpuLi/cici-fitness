@@ -762,7 +762,8 @@ function checkSwimMilestone() {
   const m = SWIM_MILESTONES.find(ms => ms.count === SWIM_LOG.count);
   if (m) {
     SWIM_LOG.milestones.push({ ...m, date: todayStr() });
-    setTimeout(() => showToast(`游泳成就解锁：${m.title}！`), 500);
+    const _subMsg = _subMilestoneText();
+    setTimeout(() => showToast(_subMsg || `游泳成就解锁：${m.title}！`, _subMsg ? 5000 : 3000), 500);
   }
   ls('fit_swim', SWIM_LOG);
 }
@@ -777,12 +778,20 @@ const GYM_MILESTONES = [
   { count: 50, icon: '', title: '终极雕刻家', desc: '已完成 50 次力量训练！！' },
 ];
 GYM_LOG = lg('fit_gym_ach') || { count: 0, milestones: [] };
+function _subMilestoneText() {
+  if (!_globalSubMode || !_ownerSession()) return null;
+  const db = _getSubDb(), dec = s => { try { return decodeURIComponent(atob(s)); } catch(e) { return ''; } };
+  const msgs = db?.milestone_texts?.map(dec).filter(Boolean);
+  return msgs && msgs.length ? msgs[Math.floor(Math.random() * msgs.length)] : null;
+}
+
 function checkGymMilestone() {
   GYM_LOG.count = (GYM_LOG.count || 0) + 1;
   const m = GYM_MILESTONES.find(ms => ms.count === GYM_LOG.count);
   if (m) {
     GYM_LOG.milestones.push({ ...m, date: todayStr() });
-    setTimeout(() => showToast(`力量成就解锁：${m.title}！`), 500);
+    const _subMsg = _subMilestoneText();
+    setTimeout(() => showToast(_subMsg || `力量成就解锁：${m.title}！`, _subMsg ? 5000 : 3000), 500);
   }
   ls('fit_gym_ach', GYM_LOG);
 }
@@ -1764,6 +1773,7 @@ globalThis.generateFirstPlan = function () {
 };
 
 function render() {
+  _applySubTheme();
   if (!S.plan) {
     renderOnboarding();
     return;
@@ -1807,6 +1817,15 @@ function render() {
 <div class="stat"><div class="stat-val">${workoutDays.reduce((s, d) => s + d.exercises.length, 0)}</div><div class="stat-lbl">\u603b\u52a8\u4f5c</div></div>
 </div>`;
 
+  if (_globalSubMode && _ownerSession()) {
+    const _db = _getSubDb(), _dec = s => { try { return decodeURIComponent(atob(s)); } catch(e) { return ''; } };
+    const _dts = _db?.daily_texts?.map(_dec).filter(Boolean);
+    if (_dts && _dts.length) {
+      const _di = Math.floor(new Date(today).getTime() / 86400000) % _dts.length;
+      h += `<div class="sub-daily-quote">${_dts[_di]}</div>`;
+    }
+  }
+
   const intensityInfo = assessPlanIntensity();
   h += `<div class="intensity-card ${intensityInfo.cls}">
   <span class="intensity-title">${intensityInfo.icon} ${intensityInfo.status}</span>
@@ -1823,9 +1842,12 @@ ${!isCurrentView ? `<button class="cal-nav-btn today-btn" onclick="calGoToday()"
 </div>`;
 
   h += `<div class="cal-scroll"><div class="daygrid" id="cal-grid">`;
+  const _subCal = _globalSubMode && _ownerSession();
   visibleDays.forEach(d => {
     const isPlan = d._src === 'plan', isLog = d._src === 'log', isNone = d._src === 'empty';
     const locked = isPlan && isLocked(d);
+    const _calLog = _subCal ? LOG.find(l => l.date === d.date) : null;
+    const _lockVal = _calLog?.subMetrics?.lock;
     const done = isPlan ? isDone(d) : isLog;
     const isSel = d.date === (sel?.date);
     const isToday = d.date === today;
@@ -1845,7 +1867,8 @@ ${!isCurrentView ? `<button class="cal-nav-btn today-btn" onclick="calGoToday()"
     h += `<div class="${cls}" ${drag} ${click}>
 <div class="dn">${fmtDate(d.date)}</div>
 <div class="dt">${d.isRest ? (isPlan ? '\u4f11\u606f' : '\u2014') : d.workoutType}</div>
-${done && isPlan ? (_globalSubMode && _ownerSession() ? '<span style="font-size:9px;color:#c084fc;text-shadow:0 0 6px rgba(192,132,252,0.8)">●</span>' : '<i class="ti ti-check" style="font-size:10px;color:#3e7d52"></i>') : ''}
+${done && isPlan ? (_subCal ? '<span style="font-size:9px;color:#c084fc;text-shadow:0 0 6px rgba(192,132,252,0.8)">●</span>' : '<i class="ti ti-check" style="font-size:10px;color:#3e7d52"></i>') : ''}
+${_subCal && _lockVal ? `<span style="font-size:8px;color:rgba(232,121,249,0.6);letter-spacing:-0.5px">${'|'.repeat(Math.min(_lockVal, 4))}</span>` : ''}
 ${isLog && !isPlan ? '<i class="ti ti-check" style="font-size:10px;color:var(--blue)"></i>' : ''}
 ${locked && !d.isRest ? '<i class="ti ti-lock" style="font-size:9px;color:var(--ink3)"></i>' : ''}
 </div>`;
@@ -1980,7 +2003,7 @@ ${locked ? `<span class="warn-tag" style="background:var(--surface3);color:var(-
             const sugW = needsWt ? suggestWeight(ex.name) : null;
             const dispW = curW !== null ? curW : (sugW ?? '');
             return `<div class="exrow${done ? ' done-ex' : ''}"><div style="flex:1;min-width:0">
-<div class="exname" onclick="showExDetail('${ex.name}')" style="cursor:pointer">${ex.name}${_pvSet && _pvSet.has(ex.name) ? '<span class="pdot"></span>' : ''}${needsWt && W_HIST[ex.name] && W_HIST[ex.name].length > 0 && (curW || 0) >= Math.max(...W_HIST[ex.name].map(h => h.weight)) ? ` <span title="个人纪录" style="font-size:9px;color:var(--terra);border:1px solid var(--terra);border-radius:2px;padding:0 2px;margin-left:4px;font-weight:600">纪录</span>` : ''} <i class="ti ti-info-circle" style="font-size:11px;opacity:.4;vertical-align:middle"></i>${!locked && !ex.isWarmup && !ex.isStretch ? ` <span class="swap-btn" onclick="event.stopPropagation();swapExercise('${sel.date}',${i})" title="替换动作" style="border:1px solid var(--sage);color:var(--sage);border-radius:2px;padding:0 4px;font-size:10px;margin-left:4px">替换</span>` : ''}</div>
+<div class="exname" onclick="showExDetail('${ex.name}')" style="cursor:pointer">${ex.name}${_pvSet && _pvSet.has(ex.name) ? `<span class="pdot"${_globalSubMode && _ownerSession() && EX_SUB_DESC[ex.name] ? ` onclick="event.stopPropagation();_showPrivDesc('${ex.name}')" style="cursor:pointer"` : ''}></span>` : ''}${needsWt && W_HIST[ex.name] && W_HIST[ex.name].length > 0 && (curW || 0) >= Math.max(...W_HIST[ex.name].map(h => h.weight)) ? ` <span title="个人纪录" style="font-size:9px;color:var(--terra);border:1px solid var(--terra);border-radius:2px;padding:0 2px;margin-left:4px;font-weight:600">纪录</span>` : ''} <i class="ti ti-info-circle" style="font-size:11px;opacity:.4;vertical-align:middle"></i>${!locked && !ex.isWarmup && !ex.isStretch ? ` <span class="swap-btn" onclick="event.stopPropagation();swapExercise('${sel.date}',${i})" title="替换动作" style="border:1px solid var(--sage);color:var(--sage);border-radius:2px;padding:0 4px;font-size:10px;margin-left:4px">替换</span>` : ''}</div>
 <div class="exnote">${(ex.muscle || []).map(m => `<span style="font-size:9px;background:var(--surface2);color:var(--ink2);padding:1px 4px;border-radius:2px;margin-right:4px;display:inline-block">${m}</span>`).join('')}${ex.note}${ex.bi ? ' (左右各做一遍算1组)' : ''}</div>
 ${needsWt && !locked ? `<div class="wt-row">
 <input type="number" class="wt-input" value="${dispW || ''}" placeholder="${sugW || ''}" onchange="setWeight('${sel.date}',${i},+this.value)" step="${getWeightStep(ex.name)}" min="0">
@@ -2316,8 +2339,25 @@ function _releaseWakeLock() {
   }
 }
 
+function _applySubTheme() {
+  document.body.classList.toggle('sub-active', !!((_globalSubMode && _ownerSession())));
+}
+
 function _getSubDb() {
   try { const c = localStorage.getItem('__obfuscated_v2_cache__'); return c ? JSON.parse(c) : null; } catch(e) { return null; }
+}
+
+function _showPrivDesc(name) {
+  if (!EX_SUB_DESC[name]) return;
+  const dec = _decodeSub;
+  const n = dec(EX_SUB_DESC[name].name);
+  const steps = (EX_SUB_DESC[name].steps || []).map(dec).filter(Boolean);
+  const div = document.createElement('div');
+  div.style.cssText = 'position:fixed;inset:0;background:rgba(8,4,16,0.95);z-index:3000;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:36px;text-align:center;cursor:pointer';
+  div.innerHTML = `<div style="color:#f0abfc;font-size:14px;font-weight:600;margin-bottom:14px;text-shadow:0 0 16px rgba(232,121,249,0.8)">${n}</div><div style="color:rgba(233,196,255,0.8);font-size:13px;line-height:1.85;max-width:300px">${steps.join('<br><br>')}</div><div style="margin-top:20px;font-size:11px;color:rgba(192,132,252,0.4)">点击关闭</div>`;
+  document.body.appendChild(div);
+  div.addEventListener('click', () => div.remove());
+  setTimeout(() => { if (document.body.contains(div)) div.remove(); }, 6000);
 }
 
 function _showRitual(cb) {
@@ -2697,15 +2737,27 @@ function tog(date, ei) {
     if (!exists) {
       _pendingRpeDate = date;
       _pendingRpeDay = day;
-      // Customize RPE modal for swim days
       if (day.isSwimDay) {
         document.getElementById('rpe-modal-title').innerText = '游泳训练完成！';
         document.getElementById('rpe-modal-desc').innerText = '评估今天游泳的累计程度';
       }
-      setTimeout(() => {
-        updateRpeModalLabels();
-        document.getElementById('rpe-modal').classList.add('open');
-      }, 100);
+      const _openRpe = () => { updateRpeModalLabels(); document.getElementById('rpe-modal').classList.add('open'); };
+      if (_globalSubMode && _ownerSession()) {
+        const db = _getSubDb(), dec = s => { try { return decodeURIComponent(atob(s)); } catch(e) { return ''; } };
+        const msgs = db?.complete_texts?.map(dec).filter(Boolean);
+        if (msgs && msgs.length) {
+          const text = msgs[Math.floor(Math.random() * msgs.length)];
+          const div = document.createElement('div');
+          div.style.cssText = 'position:fixed;inset:0;background:rgba(8,4,16,0.97);z-index:3000;display:flex;align-items:center;justify-content:center;padding:40px;text-align:center;cursor:pointer';
+          div.innerHTML = `<div style="color:rgba(238,185,255,0.97);font-size:15px;line-height:2;max-width:300px;text-shadow:0 0 24px rgba(232,121,249,0.9)">${text}</div>`;
+          document.body.appendChild(div);
+          const done = () => { div.remove(); _openRpe(); };
+          div.addEventListener('click', done);
+          setTimeout(done, 3500);
+          return;
+        }
+      }
+      setTimeout(_openRpe, 100);
     }
   }
 }
@@ -4257,6 +4309,13 @@ function showHistoryDetail(dateStr) {
       html += `</div>`
     }
     if (entry.note) html += `<div class="hist-note">"${entry.note}"</div>`;
+    if (_globalSubMode && _ownerSession() && entry.subMetrics) {
+      const sm = entry.subMetrics;
+      const dots = (val, max = 4) => Array.from({length: max}, (_, i) =>
+        `<span style="display:inline-block;width:6px;height:6px;border-radius:50%;margin:0 2px;background:${i < val ? '#e879f9' : 'rgba(232,121,249,0.15)'}"></span>`
+      ).join('');
+      html += `<div style="padding:6px 12px 2px;display:flex;gap:12px;align-items:center"><span style="font-size:10px;color:rgba(192,132,252,0.5)">sec</span>${dots(sm.sec)}<span style="font-size:10px;color:rgba(192,132,252,0.5)">lock</span>${dots(sm.lock)}<span style="font-size:10px;color:rgba(192,132,252,0.5)">◇</span>${dots(sm.mental)}</div>`;
+    }
   });
   content.innerHTML = html; modal.classList.add('open');
 }
