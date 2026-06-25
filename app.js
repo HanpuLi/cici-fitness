@@ -834,26 +834,30 @@ saveState();
 flashSaved();
 });
 }
+// goal chip: plain toggle; 女性曲线 won't deselect once active
 (function(){
   const el = document.getElementById('g-goal');
   if (!el) return;
-
-  let curveClicks = 0;
-  let curveTimer = null;
-  let _curveTouchHandled = false;
-
-  el.addEventListener('touchend', e => {
+  el.addEventListener('click', e => {
     const b = e.target.closest('.chip');
-    if (!b || b.dataset.v !== '女性曲线') return;
-    e.preventDefault();
-    _curveTouchHandled = true;
-    setTimeout(() => { _curveTouchHandled = false; }, 500);
-
-    curveClicks++;
-    clearTimeout(curveTimer);
-
-    if (curveClicks >= 7) {
-      curveClicks = 0;
+    if (!b) return;
+    if (b.dataset.v === '女性曲线' && hasGoal('女性曲线')) return;
+    applyGoalToggle(b.dataset.v);
+    saveState();
+    applySettingsToUI();
+    flashSaved();
+  });
+})();
+// 专项模式: 七击"训练目标"标签触发 (独立元素，无副作用)
+(function(){
+  const trigger = document.querySelector('#settings .sec');
+  if (!trigger) return;
+  let taps = 0, timer = null;
+  function onTap() {
+    taps++;
+    clearTimeout(timer);
+    if (taps >= 7) {
+      taps = 0;
       if (_ownerSession()) {
         _globalSubMode = !_globalSubMode;
         if (typeof render === 'function') render();
@@ -861,28 +865,9 @@ flashSaved();
       }
       return;
     }
-
-    curveTimer = setTimeout(() => { curveClicks = 0; }, 800);
-    if (curveClicks === 1 && !hasGoal('女性曲线')) {
-      applyGoalToggle(b.dataset.v);
-      saveState();
-      applySettingsToUI();
-      flashSaved();
-    }
-  });
-
-  el.addEventListener('click', e => {
-    const b = e.target.closest('.chip');
-    if (!b) return;
-    if (b.dataset.v === '女性曲线') {
-      if (_curveTouchHandled) return; // touchend already handled
-      if (hasGoal('女性曲线')) return; // already selected — ignore, don't deselect
-    }
-    applyGoalToggle(b.dataset.v);
-    saveState();
-    applySettingsToUI();
-    flashSaved();
-  });
+    timer = setTimeout(() => { taps = 0; }, 800);
+  }
+  trigger.addEventListener('click', onTap);
 })();
 single('g-level','level');
 multi('g-equip','equip');multi('g-focus','focus');
