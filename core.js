@@ -4065,7 +4065,7 @@ function renderExDetailContent() {
   document.getElementById('ex-modal-mistakes').innerHTML = mistakes.length ? `<p style="font-size:11px;font-weight:600;color:var(--terra);margin:8px 0 4px">常见错误</p>` + mistakes.map(m => `<div class="ex-tip" style="border-color:var(--terra-br);color:var(--terra)">${m}</div>`).join('') : '';
 }
 
-let _globalSubMode = false;
+var _globalSubMode = false;
 let _headerClickCount = 0;
 let _headerClickTimer = null;
 
