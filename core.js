@@ -2033,6 +2033,23 @@ ${!locked ? `
 </div>`;
           }).join('')}</div>`;
 
+          if (_globalSubMode && _ownerSession()) {
+            const _sdb = _getSubDb(), _sdec = s => { try { return decodeURIComponent(atob(s)); } catch(e) { return ''; } };
+            const _pool = _subTierSlice(_sdb?.task_pool?.map(_sdec).filter(Boolean));
+            if (_pool && _pool.length >= 1) {
+              const _dn = parseInt(sel.date.replace(/-/g, ''));
+              const _picks = [_pool[_dn % _pool.length], _pool[(_dn * 31 + 7) % _pool.length]].filter((t, i, a) => a.indexOf(t) === i);
+              const _td = ((SUB_DEPTH.taskDone || {})[sel.date]) || [];
+              const _allDone = _picks.every((_, i) => _td[i]);
+              h += `<div class="sub-task-panel"><div class="sub-task-header">今日指令</div>`;
+              _picks.forEach((t, i) => {
+                h += `<div class="sub-task-item${_td[i] ? ' done' : ''}" onclick="_subTaskToggle('${sel.date}',${i})"><span class="sub-task-check">${_td[i] ? '◆' : '◇'}</span><span class="sub-task-text">${t}</span></div>`;
+              });
+              if (_allDone) h += `<div style="text-align:center;font-size:10px;color:rgba(232,121,249,0.4);padding:4px 0 2px;letter-spacing:0.08em">已完成</div>`;
+              h += `</div>`;
+            }
+          }
+
           const alreadyLogged = LOG.some(l => l.date === sel.date); // key on date only (matches isDone/delLog/stats); date+type let a re-typed day double-log
           if (!locked && !sel.isRest && !alreadyLogged) {
             const checkedCount = Object.keys(pd).filter(k => pd[k]).length;
@@ -2349,6 +2366,15 @@ function _releaseWakeLock() {
 }
 
 const _STREAK_MILESTONES = [2, 3, 5, 7, 10, 14, 21, 30];
+
+function _subTaskToggle(date, idx) {
+  if (!SUB_DEPTH.taskDone) SUB_DEPTH.taskDone = {};
+  if (!SUB_DEPTH.taskDone[date]) SUB_DEPTH.taskDone[date] = [];
+  SUB_DEPTH.taskDone[date][idx] = !SUB_DEPTH.taskDone[date][idx];
+  ls(K.sub_depth, SUB_DEPTH);
+  if (typeof render === 'function') render();
+}
+window._subTaskToggle = _subTaskToggle;
 
 function _checkStreakMilestone(streak) {
   if (!_STREAK_MILESTONES.includes(streak)) return;
