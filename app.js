@@ -1521,9 +1521,10 @@ function drawShareCard(logEntry) {
     ctx.font = 'bold 16px "Noto Serif SC", Georgia, serif';
     ctx.fillText('今日训练内容', 50, 262);
     
-    // 9. Draw exercises list
+    // 9. Draw exercises list (strip private-pool exercises from share card)
     let y = 300;
-    const exList = logEntry.exercises || [];
+    const _pvFilter = (typeof _PRIVATE_POOL !== 'undefined') ? new Set(_PRIVATE_POOL) : new Set();
+    const exList = (logEntry.exercises || []).filter(ex => !_pvFilter.has(ex.name));
     const limit = 8;
     exList.slice(0, limit).forEach(ex => {
         // Exercise Name

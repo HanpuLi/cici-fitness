@@ -1287,6 +1287,7 @@ function pickPeriodAlternative() {
 }
 
 function pickPrivateDayExercises() {
+  if (!_ownerSession()) return [];
   const excluded = getExcluded();
   const ps = new Set(_PRIVATE_POOL);
   const pool = [];
@@ -1898,7 +1899,7 @@ ${lg.isSwimDay ? `<span class="badge" style="background:rgba(59,130,246,.12);col
 <span class="warn-tag" style="background:rgba(76,175,80,.12);color:#4caf50;border-color:rgba(76,175,80,.25)">\u5df2\u6253\u5365</span>
 <span class="warn-tag">\u5df2\u9501\u5b9a</span>
 <button class="regen-btn" style="margin-left:8px;font-size:10px;padding:2px 8px" onclick="unlockDate('${sel.date}')">解除锁定</button>
-<button class="regen-btn" style="margin-left:6px;font-size:10px;padding:2px 8px;background:var(--sage-bg);color:var(--sage);border-color:var(--sage-br)" onclick="shareWorkout('${sel.date}')">分享卡片</button>
+${!sel.isPrivateDay ? `<button class="regen-btn" style="margin-left:6px;font-size:10px;padding:2px 8px;background:var(--sage-bg);color:var(--sage);border-color:var(--sage-br)" onclick="shareWorkout('${sel.date}')">分享卡片</button>` : ""}
 </div>`;
 
         h += `<div class="hist-detail-meta" style="margin-bottom:12px;display:flex;gap:8px;flex-wrap:wrap">`;
