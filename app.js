@@ -873,7 +873,7 @@ flashSaved();
     }
 
     curveTimer = setTimeout(() => { curveClicks = 0; }, 800);
-    if (curveClicks === 1) {
+    if (curveClicks === 1 && !hasGoal('女性曲线')) {
       applyGoalToggle(b.dataset.v);
       saveState();
       applySettingsToUI();
@@ -884,7 +884,10 @@ flashSaved();
   el.addEventListener('click', e => {
     const b = e.target.closest('.chip');
     if (!b) return;
-    if (b.dataset.v === '女性曲线' && _curveTouchHandled) return; // touchend already handled
+    if (b.dataset.v === '女性曲线') {
+      if (_curveTouchHandled) return; // touchend already handled
+      if (hasGoal('女性曲线')) return; // already selected — ignore, don't deselect
+    }
     applyGoalToggle(b.dataset.v);
     saveState();
     applySettingsToUI();
