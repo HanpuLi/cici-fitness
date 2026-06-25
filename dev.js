@@ -997,7 +997,8 @@
                 await Promise.all(keys.map(k => caches.delete(k)));
             }
         } catch(e) { console.warn('SW cleanup:', e); }
-        location.reload(true);
+        // timestamp busts Safari's HTTP cache for the HTML page itself
+        location.href = location.pathname + '?_=' + Date.now();
     };
 
     window.checkSwVersion = async function() {
