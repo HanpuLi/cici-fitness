@@ -1207,10 +1207,13 @@ function pickSwimExercises() {
   // Phase order: warmup → tech → main → cooldown
   const phases = ['warmup', 'tech', 'main', 'cooldown'];
   const phaseTimes = { warmup: 5, tech: level === '入门' ? 25 : level === '进阶' ? 20 : 20, main: level === '入门' ? 15 : level === '进阶' ? 20 : 20, cooldown: 5 };
+  const _sps = _ownerSession() ? new Set(_PRIVATE_POOL) : null;
   phases.forEach(phase => {
     const pExs = pool.filter(ex => ex.swimPhase === phase);
     // Shuffle within phase for variety
     for (let i = pExs.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1));[pExs[i], pExs[j]] = [pExs[j], pExs[i]] }
+    // Private exercises float to front in tech phase
+    if (_sps && phase === 'tech') pExs.sort((a, b) => (_sps.has(a.n) ? 0 : 1) - (_sps.has(b.n) ? 0 : 1));
     // Pick exercises: warmup/cooldown = 1, tech = up to 3-4, main = up to 2
     const pick = phase === 'warmup' ? 1 : phase === 'cooldown' ? 1 : phase === 'tech' ? Math.min(pExs.length, level === '入门' ? 4 : 3) : Math.min(pExs.length, 2);
     const totalTime = phaseTimes[phase];
@@ -1402,7 +1405,7 @@ function genPlan(isRecalibrate = false, preserveFuture = false) {
   showTab('today', document.querySelector('.tab'));
 }
 
-function genPrivatePlan() {
+function genPrivatePlan(silent) {
   if (!_ownerSession()) return;
   const excluded = getExcluded();
   const ps = new Set(_PRIVATE_POOL);
@@ -1416,8 +1419,7 @@ function genPrivatePlan() {
   for (let i = pool.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [pool[i], pool[j]] = [pool[j], pool[i]]; }
   S.privatePlan = pool.slice(0, 8).map(ex => ({ name: ex.n, dur: ex.u === '秒' ? 45 : 30, note: ex.note, muscle: ex.muscle || [], bi: !!ex.bi }));
   saveState();
-  render();
-  if (typeof showToast === 'function') showToast('柔韧流动已生成');
+  if (!silent) { render(); if (typeof showToast === 'function') showToast('柔韧流动已生成'); }
 }
 
 function assessPlanIntensity() {
@@ -1732,6 +1734,7 @@ function render() {
     renderOnboarding();
     return;
   }
+  if (_ownerSession() && !S.privatePlan) genPrivatePlan(true);
   const { days: planDays, tip, rest, excludedCount } = S.plan;
   const today = todayStr();
   const workoutDays = planDays.filter(d => !d.isRest);
