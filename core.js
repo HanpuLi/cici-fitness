@@ -2067,8 +2067,8 @@ ${!locked ? `
     }
   }
 
-  const isIos = /iphone|ipad|ipod/.test(window.navigator.userAgent.toLowerCase());
-  const isStandalone = ('standalone' in window.navigator) && window.navigator.standalone;
+  const isIos = (typeof window !== 'undefined' && window.navigator && /iphone|ipad|ipod/.test(window.navigator.userAgent.toLowerCase()));
+  const isStandalone = (typeof window !== 'undefined' && window.navigator && ('standalone' in window.navigator) && window.navigator.standalone);
   let promptEl = document.getElementById('ios-install-prompt');
   if (isIos && !isStandalone && !localStorage.getItem('hideInstallPrompt')) {
     if (!promptEl) {
@@ -2408,9 +2408,11 @@ let _editingLogIdx = null;
 
 function updateRpeModalLabels() {
   const isOwner = _ownerSession();
+  const isSub = _globalSubMode && isOwner && hasGoal('女性曲线');
   const titleEl = document.getElementById('rpe-modal-title');
   const descEl = document.getElementById('rpe-modal-desc');
   const noteEl = document.getElementById('rpe-note');
+  const subContainer = document.getElementById('sub-diary-container');
   if (!titleEl || !descEl || !noteEl) return;
 
   const buttons = document.querySelectorAll('#rpe-modal .rpe-btn');
@@ -2431,16 +2433,83 @@ function updateRpeModalLabels() {
     }
   });
 
-  if (isOwner) {
-    if (titleEl.innerText.includes('疲劳度')) {
-      titleEl.innerText = titleEl.innerText.replace('疲劳度', '训练强度');
+  if (isSub) {
+    // Read cached/synced obfuscated strings overrides
+    let subDatabase = null;
+    try {
+      const cached = localStorage.getItem('__obfuscated_v2_cache__');
+      if (cached) subDatabase = JSON.parse(cached);
+    } catch(e) {}
+    
+    const dec = (s) => {
+      try { return decodeURIComponent(escape(atob(s))); } catch(e) { return s; }
+    };
+
+    const titleOverride = subDatabase?.textOverrides?.title ? dec(subDatabase.textOverrides.title) : "去雄度与服从性综合评估";
+    const descOverride = subDatabase?.textOverrides?.desc ? dec(subDatabase.textOverrides.desc) : "今天身体被彻底驯化与重塑的深度评估：";
+    const placeholderOverride = subDatabase?.textOverrides?.notePlaceholder ? dec(subDatabase.textOverrides.notePlaceholder) : "在这里献上你最下贱的受动记录与去雄反馈……";
+
+    titleEl.innerText = titleOverride;
+    descEl.innerText = descOverride;
+    noteEl.placeholder = placeholderOverride;
+
+    // Draw customized BDSM questionnaires options
+    if (subContainer) {
+      subContainer.style.display = 'block';
+      const secretions = subDatabase?.checkinOptions?.secretions || [];
+      const lockStatus = subDatabase?.checkinOptions?.lockStatus || [];
+      const mentalState = subDatabase?.checkinOptions?.mentalState || [];
+
+      let html = '';
+      
+      // Secretion list
+      html += `<div class="sub-diary-group">
+        <div class="sub-diary-title">体液渗漏反馈 (Secretions)</div>`;
+      secretions.forEach((opt, idx) => {
+        html += `<label class="sub-diary-option">
+          <input type="radio" name="sub-secretion" value="${opt.v}" ${idx === 0 ? 'checked' : ''}>
+          <span>${dec(opt.lbl)}</span>
+        </label>`;
+      });
+      html += `</div>`;
+
+      // Chastity Lock list
+      html += `<div class="sub-diary-group">
+        <div class="sub-diary-title">束缚惩罚压力 (Chastity Lock)</div>`;
+      lockStatus.forEach((opt, idx) => {
+        html += `<label class="sub-diary-option">
+          <input type="radio" name="sub-lock" value="${opt.v}" ${idx === 0 ? 'checked' : ''}>
+          <span>${dec(opt.lbl)}</span>
+        </label>`;
+      });
+      html += `</div>`;
+
+      // Mental State list
+      html += `<div class="sub-diary-group">
+        <div class="sub-diary-title">精神雌堕纯度 (Feminization)</div>`;
+      mentalState.forEach((opt, idx) => {
+        html += `<label class="sub-diary-option">
+          <input type="radio" name="sub-mental" value="${opt.v}" ${idx === 0 ? 'checked' : ''}>
+          <span>${dec(opt.lbl)}</span>
+        </label>`;
+      });
+      html += `</div>`;
+
+      subContainer.innerHTML = html;
     }
-    if (descEl.innerText.includes('今天训练感受')) {
-      descEl.innerText = '选择最接近你今天身体训练强度与身体感受的感受分值';
-    }
-    noteEl.placeholder = '记录你的训练表现与身体反馈（选填，如：双腿颤抖强烈、盆底完全放松）';
   } else {
-    noteEl.placeholder = '有什么想记录的？（选填，如：今天状态不好、卧推加了5kg）';
+    if (subContainer) subContainer.style.display = 'none';
+    if (isOwner) {
+      if (titleEl.innerText.includes('疲劳度')) {
+        titleEl.innerText = titleEl.innerText.replace('疲劳度', '训练强度');
+      }
+      if (descEl.innerText.includes('今天训练感受')) {
+        descEl.innerText = '选择最接近你今天身体训练强度与身体感受的感受分值';
+      }
+      noteEl.placeholder = '记录你的训练表现与身体反馈（选填，如：双腿颤抖强烈、盆底完全放松）';
+    } else {
+      noteEl.placeholder = '有什么想记录的？（选填，如：今天状态不好、卧推加了5kg）';
+    }
   }
 }
 
@@ -2492,6 +2561,19 @@ function submitRPE(rpe, isSkip = false) {
     const checkedCount = Object.keys(S.prog[date] || {}).filter(k => S.prog[date][k]).length;
     const totalEx = day.exercises.length;
 
+    const isSub = _globalSubMode && _ownerSession() && hasGoal('女性曲线');
+    let subMetrics = null;
+    if (isSub) {
+      const secretionEl = document.querySelector('input[name="sub-secretion"]:checked');
+      const lockEl = document.querySelector('input[name="sub-lock"]:checked');
+      const mentalEl = document.querySelector('input[name="sub-mental"]:checked');
+      subMetrics = {
+        sec: secretionEl ? parseInt(secretionEl.value) : 1,
+        lock: lockEl ? parseInt(lockEl.value) : 1,
+        mental: mentalEl ? parseInt(mentalEl.value) : 1
+      };
+    }
+
     LOG.unshift({
       date: date,
       workout: day.workoutType,
@@ -2508,7 +2590,8 @@ function submitRPE(rpe, isSkip = false) {
       })),
       mood: moods[actualRpe - 1] || '一般',
       note: note,
-      isSwimDay: _dayIsSwim
+      isSwimDay: _dayIsSwim,
+      subMetrics: subMetrics
     });
     ls(K.log, LOG);
 
@@ -4126,5 +4209,39 @@ function showHistoryDetail(dateStr) {
   content.innerHTML = html; modal.classList.add('open');
 }
 function closeHistModal() { document.getElementById('hist-modal').classList.remove('open') }
+
+// ══ Emergency Safety Bypass Panic triggers ═════════════════
+// Hitting Escape or double-clicking on non-interactive regions instantly disables sissification view
+(function() {
+  function forceSafetyReset() {
+    if (_globalSubMode) {
+      _globalSubMode = false;
+      if (typeof clearInterval === 'function') clearInterval(_guidedSubInterval);
+      if (typeof stopTimer === 'function') stopTimer();
+      // Dismiss RPE and workouts overlay modals immediately
+      const mWorkout = document.getElementById('workout-modal');
+      if (mWorkout) mWorkout.classList.remove('open');
+      const mRpe = document.getElementById('rpe-modal');
+      if (mRpe) mRpe.classList.remove('open');
+      
+      if (typeof render === 'function') render();
+    }
+  }
+
+  // Escape key trigger
+  window.addEventListener('keydown', e => {
+    if (e.key === 'Escape') {
+      forceSafetyReset();
+    }
+  });
+
+  // Double-click background trigger
+  window.addEventListener('dblclick', e => {
+    // Only fire if clicking bare container body or static tags, bypassing inputs/buttons
+    if (e.target === document.body || e.target.classList.contains('wrap') || e.target.id === 'main') {
+      forceSafetyReset();
+    }
+  });
+})();
 
 

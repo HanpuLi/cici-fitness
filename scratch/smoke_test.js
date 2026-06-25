@@ -36,7 +36,11 @@ global.document = {
   querySelectorAll: () => ({ forEach(){}, length: 0, [Symbol.iterator]: function*(){} }),
   querySelector: () => mockEl(),
   createElement: () => mockEl(),
+  addEventListener: () => {},
   body: mockEl()
+};
+global.window = {
+  addEventListener: () => {}
 };
 global.showToast = msg => {};
 global.showTab = () => {};

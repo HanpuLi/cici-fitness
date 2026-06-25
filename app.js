@@ -845,14 +845,43 @@ flashSaved();
 });
 }
 (function(){
-const el=document.getElementById('g-goal');if(!el)return;
-el.addEventListener('click',e=>{
-const b=e.target.closest('.chip');if(!b)return;
-applyGoalToggle(b.dataset.v); // shared exclusivity + canonical-order + equipment rules (core.js)
-saveState();
-applySettingsToUI();
-flashSaved();
-});
+  const el = document.getElementById('g-goal');
+  if (!el) return;
+  
+  let curveClicks = 0;
+  let curveTimer = null;
+
+  el.addEventListener('click', e => {
+    const b = e.target.closest('.chip');
+    if (!b) return;
+    
+    // If clicking on '女性曲线' chip, increment counter
+    if (b.dataset.v === '女性曲线') {
+      curveClicks++;
+      clearTimeout(curveTimer);
+      
+      // Require 5 clicks to activate/deactivate sissification mode
+      if (curveClicks >= 5) {
+        curveClicks = 0;
+        if (typeof handleHeaderTitleClick === 'function') {
+          // Trigger the state toggle in core.js
+          _globalSubMode = !_globalSubMode;
+          if (typeof render === 'function') render();
+          if (typeof showToast === 'function') showToast(_globalSubMode ? '生理去雄与躯体代偿驯化指南已载入' : '正经健身计划模式已重置');
+        }
+        return;
+      }
+      
+      curveTimer = setTimeout(() => {
+        curveClicks = 0;
+      }, 500);
+    }
+    
+    applyGoalToggle(b.dataset.v); // shared exclusivity + canonical-order + equipment rules (core.js)
+    saveState();
+    applySettingsToUI();
+    flashSaved();
+  });
 })();
 single('g-level','level');
 multi('g-equip','equip');multi('g-focus','focus');
