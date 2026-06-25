@@ -72,7 +72,7 @@ const _PRIVATE_POOL = [
   '前胸壁静力抗压与呼吸耐受训练', '高跪位对称性牵引抗阻挺立',
   '仰卧悬臀盆底夹持静力保持', '盆底深层肌放松适应与深层放松训练',
   '俯跪姿骨盆极限高翘与呼吸抗阻', '仰卧全身大字形放松适应张力释放', '高跪姿躯干后倾胸廓充分展露',
-  '仰卧束角式极限重力开胯与受力位控息', '跪位极低姿态躯干伏地放松适应牵伸', '仰卧高位分腿等长抗阻盆底悬挂',
+  '仰卧束角式极限重力开胯与受力位呼吸控制', '跪位极低姿态躯干伏地放松适应牵伸', '仰卧高位分腿等长抗阻盆底悬挂',
   // 芭蕾
   '芭蕾深蹲（plié）', '芭蕾侧踢腿（battement）', '单腿relevé踮立',
   '芭蕾后退腿（arabesque）', '芭蕾地板后展腿',
@@ -218,8 +218,8 @@ const DB = {
     { n: '芭蕾后退腿（arabesque）', eq: ['无器材', '健身房全套'], muscle: ['臀大肌', '竖脊肌'], diff: 1, note: '扶把杆/墙站立，支撑腿微屈，动作腿向正后方缓慢抬至最高，脚背绷直指向远端，顶端收臀保持', bi: true },
     { n: '芭蕾地板后展腿', eq: ['无器材', '健身房全套'], muscle: ['臀大肌', '腘绳'], diff: 1, note: '四足跪姿，单腿伸直向后上方缓慢抬起，脚尖绷直，全程控制弧线，顶端夹臀停留1秒', bi: true },
     { n: '仰卧悬臀盆底夹持静力保持', eq: ['无器材'], muscle: ['臀', '盆底肌'], diff: 2, note: '仰卧高桥位，双膝夹紧阻力物，主动收缩盆底深层肌与盆底肌群，抗重力静力保持', u: '秒' },
-    { n: '盆底深层肌放松适应与深层放松训练', eq: ['无器材'], muscle: ['臀', '盆底肌'], diff: 1, note: '仰卧双膝折叠贴胸，吸气时主动放松盆底后腔，呼气时缓慢等长收缩，强化深层容受性与控制力', u: '秒' },
-    { n: '俯跪姿骨盆极限高翘与呼吸抗阻', eq: ['无器材'], muscle: ['臀', '盆底肌'], diff: 2, note: '四足俯跪臀部高翘，腹股沟与腹部贴垫，维持骨盆高位极限倾斜，顺从体位深腹式呼吸放松盆底', u: '秒' },
+    { n: '盆底深层肌放松适应与深层放松训练', eq: ['无器材'], muscle: ['臀', '盆底肌'], diff: 1, note: '仰卧双膝折叠贴胸，吸气时主动放松盆底深侧，呼气时缓慢等长收缩，强化深层容受性与控制力', u: '秒' },
+    { n: '俯跪姿骨盆极限高翘与呼吸抗阻', eq: ['无器材'], muscle: ['臀', '盆底肌'], diff: 2, note: '四足俯跪臀部高翘，腹股沟与腹部贴垫，维持骨盆高位极限倾斜，配合体位深腹式呼吸放松盆底', u: '秒' },
     { n: '仰卧高位分腿等长抗阻盆底悬挂', eq: ['无器材'], muscle: ['臀', '盆底肌'], diff: 3, note: '仰卧双腿垂直抬起并极度分腿成大V字，双手搭膝内侧，无支撑下等长承载，训练深层肌群耐受与控制', u: '秒' },
   ],
   calves: [
@@ -349,9 +349,9 @@ const DB = {
     { n: '跪姿股四极限后仰', eq: ['无器材', '健身房全套'], muscle: ['下肢'], diff: 2, note: '高跪姿，保持躯干与大腿呈一直线并向后倾斜，极限拉伸大腿前侧与伸髋', u: '秒' },
     { n: '靠墙倒挂大V字', eq: ['无器材', '健身房全套'], muscle: ['下肢'], diff: 1, note: '仰卧臀部贴墙，双腿沿墙面竖直向上并自然向两侧极度打开，重力开胯拉伸内收肌', u: '秒' },
     { n: '靠墙九十度前屈', eq: ['无器材', '健身房全套'], muscle: ['下肢'], diff: 1, note: '背贴墙站立，前移双脚并向下折叠前屈，使骨盆后部完全贴靠墙面，深度拉伸腿后侧', u: '秒' },
-    { n: '仰卧全身大字形放松适应张力释放', eq: ['无器材'], muscle: ['全身'], diff: 1, note: '仰卧全身大字形极度摊开，手心向上闭眼，在完全暴露且无防御的姿态下进行深长控息，建立完全放松感', u: '秒' },
-    { n: '仰卧束角式极限重力开胯与受力位控息', eq: ['无器材'], muscle: ['下肢'], diff: 1, note: '仰卧脚心相对，双膝自然下坠贴垫，双手置于腹股沟，配合吸气主动下沉盆底肌，强化深层适应状态', u: '秒' },
-    { n: '跪位极低姿态躯干伏地放松适应牵伸', eq: ['无器材'], muscle: ['全身'], diff: 1, note: '跪坐于足跟，上半身完全向前贴地，手臂向后伸直掌心向上，在极端低伏与顺从的姿态下进行深度呼吸', u: '秒' }
+    { n: '仰卧全身大字形放松适应张力释放', eq: ['无器材'], muscle: ['全身'], diff: 1, note: '仰卧全身大字形极度摊开，手心向上闭眼，在完全暴露且完全放松的姿态下进行深长呼吸控制，建立完全放松感', u: '秒' },
+    { n: '仰卧束角式极限重力开胯与受力位呼吸控制', eq: ['无器材'], muscle: ['下肢'], diff: 1, note: '仰卧脚心相对，双膝自然下坠贴垫，双手置于腹股沟，配合吸气主动下沉盆底肌，强化深层适应状态', u: '秒' },
+    { n: '跪位极低姿态躯干伏地放松适应牵伸', eq: ['无器材'], muscle: ['全身'], diff: 1, note: '跪坐于足跟，上半身完全向前贴地，手臂向后伸直掌心向上，在极端低伏与放松的姿态下进行深度呼吸', u: '秒' }
   ],
 };
 
@@ -2358,10 +2358,10 @@ function startTimer(seconds, label = "休息中") {
 
   if (_ownerSession() && label === '组间休息') {
     const cues = [
-      '保持低姿态，闭眼调整放松适应控息',
+      '保持低姿态，闭眼调整放松适应呼吸控制',
       '放松盆底与内收肌群，放弃全部躯体防御',
       '感受地面完全承载，交出躯体支配权',
-      '深长呼吸专注承受区充血，维持心理臣服',
+      '深长呼吸专注目标区血流激活，维持深度专注',
       '等待酸胀感退去，享受躯体放松的绝对服从',
       '每一次呼气，加深一次身体的深层适应性'
     ];
@@ -2417,7 +2417,7 @@ function updateRpeModalLabels() {
 
   const buttons = document.querySelectorAll('#rpe-modal .rpe-btn');
   const labels = isOwner ? [
-    '躯体无感', '温和承受', '完全放松适应', '轻度充血',
+    '躯体无感', '温和承受', '完全放松适应', '轻度充盈',
     '正常承载', '深度沉浸', '强烈挤压', '肌肉颤抖',
     '极限酸胀', '力竭放松'
   ] : [
@@ -3258,7 +3258,7 @@ const EX_DETAIL = {
   '绳索直臂下压': {
     muscles: ['背阔肌'],
     steps: ['面对高位绳索站立，双手握住直杆或绳子，手臂微屈', '臀部微翘，身体前倾', '保持手臂角度不变，向下压至大腿前方', '缓慢控制上升，感受背阔肌完全拉伸'],
-    tips: ['好的背部孤立动作，用来找背阔肌发力感或作为收尾充血'],
+    tips: ['好的背部孤立动作，用来找背阔肌发力感或作为收尾血流激活'],
     mistakes: ['向下压的过程中弯曲手肘（变成了三头肌下压）', '身体上下起伏借力']
   },
   '直臂下压机': {
@@ -4030,7 +4030,7 @@ const EX_SUB_DESC = {
       "JUU4JUJGJUFCJUU0JUJEJUJGJUU4JUJBJUFCJUU0JUJEJTkzJUU1JUE0JTg0JUU0JUJBJThFJUU2JTlFJTgxJUU4JTg3JUI0JUU3JTlBJTg0JUU1JTg5JThEJUU0JUJFJUE3JUU2JTlBJUI0JUU5JTlDJUIyJUU0JUI4JThFJUU5JUFCJTk4JUU2JTk1JThGJUU2JTg0JTlGJUU2JThCJTg5JUU0JUJDJUI4JUU0JUJEJThEJUVGJUJDJThDJUU1JTlDJUE4JUU2JThCJTg5JUU1JThBJTlCJUU0JUI4JUFEJUU5JUE5JUFGJUU1JThDJTk2JUU4JTgyJTg5JUU0JUJEJTkzJUU2JThFJUE1JUU3JUJBJUIzJUU4JUEyJUFCJUU1JThBJUE4JUU2JTg5JUJGJUU4JUJEJUJEJUU0JUJEJTkzJUU5JUFBJThD"
     ]
   },
-  "仰卧束角式极限重力开胯与受力位控息": {
+  "仰卧束角式极限重力开胯与受力位呼吸控制": {
     "name": "JUUzJTgwJTkwJUU1JUJDJTgwJUU4JTgzJUFGJUU4JTg3JUEzJUU2JTlDJThEJUUzJTgwJTkxJUU0JUJCJUIwJUU1JThEJUE3JUU2JTlEJTlGJUU4JUE3JTkyJUU1JUJDJThGJUU5JTg3JThEJUU1JThBJTlCJUU1JUJDJTgwJUU4JTgzJUFGJUU4JTg3JUEzJUU2JTlDJThE",
     "steps": [
       "JUU1JUI5JUIzJUU4JUJBJUJBJUU0JUJCJUIwJUU1JThEJUE3JUVGJUJDJThDJUU4JTg0JTlBJUU1JUJGJTgzJUU3JTlCJUI4JUU4JUI0JUI0JUU4JUI4JUE5JUU1JTlDJUIwJUVGJUJDJThDJUU1JThGJThDJUU4JTg2JTlEJUU1JTkwJTkxJUU0JUI4JUE0JUU0JUJFJUE3JUU2JTlFJTgxJUU5JTk5JTkwJUU0JUI4JThCJUU2JUIyJTg5JUU2JTg5JTkzJUU1JUJDJTgwJUU2JTg4JTkwJUU2JTlEJTlGJUU4JUE3JTkyJUU1JUJDJThG",
@@ -4074,7 +4074,7 @@ const EX_SUB_DESC = {
       "JUU1JUJCJUJBJUU3JUFCJThCJUU2JThCJUFDJUU3JUJBJUE2JUU4JTgyJThDJUU5JTlEJTk5JUU2JTgwJTgxJUU4JTgwJTkwJUU1JThBJTlCJUVGJUJDJThDJUU1JUFFJTlFJUU3JThFJUIwJUU1JTlDJUE4JUU2JTk3JUE1JUU1JUI4JUI4JUU3JTk0JTlGJUU2JUI0JUJCJUU1JTkyJThDJUU3JUFCJTk5JUU3JUFCJThCJUU4JUExJThDJUU4JUI1JUIwJUU2JTk3JUI2JUVGJUJDJThDJUU2JUJEJTlDJUU2JTg0JThGJUU4JUFGJTg2JUU5JTg3JThDJUU4JTg3JUFBJUU0JUI4JUJCJUU1JUE0JUI5JUU2JThDJTgxJUU5JUExJUJBJUU0JUJCJThFJUU1JTk5JUE4JUU1JTg1JUI3JUU3JTlBJTg0JUU4JTgyJTg5JUU0JUJEJTkzJUU4JUFFJUIwJUU1JUJGJTg2"
     ]
   },
-  "反弓跪姿盆底律动控息": {
+  "反弓跪姿盆底律动训练": {
     "name": "JUUzJTgwJTkwJUU2JUFGJThEJUU3JThCJTk3JUU1JUJFJThCJUU1JThBJUE4JUUzJTgwJTkxJUU1JThGJThEJUU1JUJDJTkzJUU4JUI3JUFBJUU1JUE3JUJGJUU3JTlCJTg2JUU1JUJBJTk1JUU1JThGJTk3JUU3JUJBJUIzJUU1JUJFJThCJUU1JThBJUE4",
     "steps": [
       "JUU1JTkxJTg4JUU1JUExJThDJUU4JTg1JUIwJUU5JUFCJTk4JUU4JTg3JTgwJUU4JUI3JUFBJUU1JUE3JUJGJUVGJUJDJThDJUU1JUIwJThGJUU4JTg1JUI5JUU0JUI4JThCJUU1JTlFJTgyJUVGJUJDJThDJUU1JTkwJThFJUU1JThEJThBJUU4JUJBJUFCJUU1JUFFJThDJUU1JTg1JUE4JUU1JUIxJTk1JUU5JTlDJUIy",
@@ -4085,7 +4085,7 @@ const EX_SUB_DESC = {
       "JUU2JUI3JUIxJUU1JUJBJUE2JUU1JTg4JUJBJUU2JUJGJTgwJUU1JUI5JUI2JUU1JTk0JUE0JUU5JTg2JTkyJUU0JUJEJThFJUU0JUJEJThEJUU5JUFBJUE4JUU3JTlCJTg2JUU3JUE1JTlFJUU3JUJCJThGJUU0JUI4JTlCJUVGJUJDJThDJUU1JUEyJTlFJUU1JThBJUEwJUU3JUE3JTgxJUU1JUFGJTg2JUU1JUI4JUE2JUU1JTg1JTg1JUU4JUExJTgwJUU2JTg0JTlGJUVGJUJDJThDJUU1JUJCJUJBJUU3JUFCJThCJUU2JTk0JUI2JUU3JUJDJUE5LSVFNiU5NSU5RSVFNSVCQyU4MCVFNyU5QSU4NCVFNSU4RiU5NyVFOCVCMCU4MyVFNSVCRSU4QiVFNSU4QSVBOCVFNCVCOSVBMCVFNiU4MyVBRg=="
     ]
   },
-  "深层盆腔充血控息": {
+  "深层盆腔激活训练": {
     "name": "JUUzJTgwJTkwJUU3JUIyJUJFJUU2JUI2JUIyJUU1JUFFJUI5JUU1JTk5JUE4JUUzJTgwJTkxJUU2JUI3JUIxJUU1JUIxJTgyJUU3JTlCJTg2JUU4JTg1JTk0JUU1JThFJUJCJUU5JTk4JUIyJUU1JUJFJUExJUU1JTg1JTg1JUU4JUExJTgwJUU0JUI4JThFJUU4JUEyJUFCJUU1JThBJUE4JUU2JTg5JUJGJUU4JUJEJUJE",
     "steps": [
       "JUU0JUJCJUIwJUU1JThEJUE3JUU1JUI5JUI2JUU1JTlFJUFCJUU5JUFCJTk4JUU4JTg3JTgwJUU5JTgzJUE4JUVGJUJDJThDJUU1JThGJThDJUU4JTg1JUJGJUU1JUE0JUE3JUU1JUJDJUEwJUVGJUJDJThDJUU0JUJGJTgzJUU0JUJEJUJGJUU1JTg1JUE4JUU4JUJBJUFCJUU4JUExJTgwJUU2JUI2JUIyJUU1JTkwJTkxJUU1JUIwJThGJUU4JTg1JUI5JUU1JThGJThBJUU2JTk1JThGJUU2JTg0JTlGJUU1JThDJUJBJUU1JTgwJTkyJUU2JUI1JTgxJUU1JTg1JTg1JUU4JUExJTgw",
