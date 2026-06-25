@@ -103,25 +103,15 @@ document.getElementById('sl-dur').value=S.dur;
 document.getElementById('v-dur').textContent=S.dur+'分钟';
 document.querySelectorAll('#g-equip .chip').forEach(b=>b.classList.toggle('on',S.equip.includes(b.dataset.v)));
 document.querySelectorAll('#g-focus .chip').forEach(b=>{
-    const v = b.dataset.v;
-    if (hasGoal('倒三角矫正') && (v === '上肢' || v === '均衡全身')) {
-        b.classList.add('disabled');
-        b.style.opacity = 0.5;
-        b.style.pointerEvents = 'none';
-    } else {
-        b.classList.remove('disabled');
-        b.style.opacity = 1;
-        b.style.pointerEvents = 'auto';
-    }
-    b.classList.toggle('on',S.focus.includes(v));
+    b.classList.remove('disabled');
+    b.style.opacity = 1;
+    b.style.pointerEvents = 'auto';
+    b.classList.toggle('on',S.focus.includes(b.dataset.v));
 });
 
 const goalInfo = document.getElementById('goal-info');
 if (goalInfo) {
-    if (hasGoal('倒三角矫正')) {
-        goalInfo.innerHTML = "你的目标是降低上半身视觉宽度，下肢已自动启用，上肢仅维持不主动增长。<br>臀中肌外展每次必练；核心只做真空吸/死虫/plank；建议蛋白 1.6-2g/kg、热量盈余 200-300kcal。";
-        goalInfo.style.display = "block";
-    } else if (hasGoal('翘臀美背')) {
+    if (hasGoal('翘臀美背')) {
         goalInfo.innerHTML = "臀推顶端挤压优先；美背日强化背阔与体态（圆肩改善）；收腰靠真空吸而非减脂；避免直立划船/耸肩。";
         goalInfo.style.display = "block";
     } else if (hasGoal('女性曲线')) {
