@@ -2914,42 +2914,45 @@ button, .chip, .adj-btn, .regen-btn, .exrow, .dc, .tab, .act-play-btn {
 
 /* BDSM Submissive Mode Overrides */
 body.sub-active {
-    --terra: #e91e63;
-    --brand: #e91e63;
-    --ink: #ff80ab;
-    --bg: #1a000a;
-    --surface: #2b0015;
-    --surface2: #3a001c;
-    --border: #660033;
-    background-image: radial-gradient(120% 80% at 50% -10%, rgba(255, 0, 102, .2), transparent 60%);
+    --terra: #b06ad4;
+    --brand: #b06ad4;
+    --ink: #e8d5f5;
+    --ink2: #c4a0e0;
+    --ink3: #9870b8;
+    --bg: #0b0818;
+    --surface: #160d2a;
+    --surface2: #1e1238;
+    --border: #3a1d60;
+    --border2: #5a3280;
+    background-image: radial-gradient(120% 80% at 50% -10%, rgba(130, 60, 200, .18), transparent 60%);
 }
 
 body.sub-active .hdr {
     color: var(--terra);
-    text-shadow: 0 0 8px rgba(233, 30, 99, 0.4);
+    text-shadow: 0 0 8px rgba(160, 80, 220, 0.35);
 }
 
 body.sub-active .btn {
-    background: linear-gradient(135deg, #e91e63, #c2185b);
-    box-shadow: 0 4px 12px rgba(233, 30, 99, 0.3);
+    background: linear-gradient(135deg, #8b3fc8, #6a25a0);
+    box-shadow: 0 4px 12px rgba(140, 60, 200, 0.3);
 }
 
 body.sub-active .chip {
-    border-color: rgba(233, 30, 99, 0.4);
-    color: #ff80ab;
+    border-color: rgba(160, 80, 220, 0.4);
+    color: #d0a0f0;
 }
 
 body.sub-active .chip.active {
-    background: #e91e63;
+    background: #8b3fc8;
     color: #fff;
-    border-color: #e91e63;
-    box-shadow: 0 2px 8px rgba(233, 30, 99, 0.4);
+    border-color: #8b3fc8;
+    box-shadow: 0 2px 8px rgba(140, 60, 200, 0.4);
 }
 
 /* Strobing Overlay during Guided Mode */
 @keyframes subStrobe {
-    0%, 100% { background: rgba(233, 30, 99, 0.05); }
-    50% { background: rgba(233, 30, 99, 0.25); }
+    0%, 100% { background: rgba(140, 60, 200, 0.04); }
+    50% { background: rgba(140, 60, 200, 0.18); }
 }
 
 body.sub-active .sub-strobing-overlay {
@@ -3007,15 +3010,15 @@ body.sub-active .sub-strobing-overlay {
     left: 50%;
     transform: translateX(-50%);
     z-index: 2000;
-    background: #ff0000;
-    color: white;
-    border: 2px solid white;
+    background: #4a1a7a;
+    color: #e8d5f5;
+    border: 1px solid #8b3fc8;
     padding: 8px 16px;
     font-size: 14px;
     font-weight: bold;
     border-radius: 20px;
     cursor: pointer;
-    box-shadow: 0 4px 10px rgba(255, 0, 0, 0.5);
+    box-shadow: 0 4px 10px rgba(100, 40, 160, 0.5);
 }
 
 body.sub-active .sub-panic-btn {

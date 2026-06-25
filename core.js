@@ -2374,7 +2374,7 @@ function updateRpeModalLabels() {
     } catch(e) {}
     
     const dec = (s) => {
-      try { return decodeURIComponent(atob(s).split('').map(function(c) { return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2); }).join('')); } catch(e) { return s; }
+      try { return decodeURIComponent(atob(s)); } catch(e) { return s; }
     };
 
     const titleOverride = subDatabase?.textOverrides?.title ? dec(subDatabase.textOverrides.title) : "去雄度与服从性综合评估";
@@ -2493,7 +2493,7 @@ function submitRPE(rpe, isSkip = false) {
     const checkedCount = Object.keys(S.prog[date] || {}).filter(k => S.prog[date][k]).length;
     const totalEx = day.exercises.length;
 
-    const isSub = _globalSubMode && _ownerSession() && hasGoal('女性曲线');
+    const isSub = _globalSubMode && _ownerSession();
     let subMetrics = null;
     if (isSub) {
       const secretionEl = document.querySelector('input[name="sub-secretion"]:checked');
