@@ -1845,7 +1845,7 @@ ${!isCurrentView ? `<button class="cal-nav-btn today-btn" onclick="calGoToday()"
     h += `<div class="${cls}" ${drag} ${click}>
 <div class="dn">${fmtDate(d.date)}</div>
 <div class="dt">${d.isRest ? (isPlan ? '\u4f11\u606f' : '\u2014') : d.workoutType}</div>
-${done && isPlan ? '<i class="ti ti-check" style="font-size:10px;color:#3e7d52"></i>' : ''}
+${done && isPlan ? (_globalSubMode && _ownerSession() ? '<span style="font-size:9px;color:#c084fc;text-shadow:0 0 6px rgba(192,132,252,0.8)">●</span>' : '<i class="ti ti-check" style="font-size:10px;color:#3e7d52"></i>') : ''}
 ${isLog && !isPlan ? '<i class="ti ti-check" style="font-size:10px;color:var(--blue)"></i>' : ''}
 ${locked && !d.isRest ? '<i class="ti ti-lock" style="font-size:9px;color:var(--ink3)"></i>' : ''}
 </div>`;
@@ -2316,6 +2316,25 @@ function _releaseWakeLock() {
   }
 }
 
+function _getSubDb() {
+  try { const c = localStorage.getItem('__obfuscated_v2_cache__'); return c ? JSON.parse(c) : null; } catch(e) { return null; }
+}
+
+function _showRitual(cb) {
+  const db = _getSubDb();
+  const dec = s => { try { return decodeURIComponent(atob(s)); } catch(e) { return ''; } };
+  const texts = db?.ritual_texts?.map(dec).filter(Boolean);
+  if (!texts || !texts.length) { cb(); return; }
+  const text = texts[Math.floor(Math.random() * texts.length)];
+  const div = document.createElement('div');
+  div.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.93);z-index:2000;display:flex;align-items:center;justify-content:center;padding:40px;text-align:center;cursor:pointer';
+  div.innerHTML = `<div style="color:rgba(238,185,255,0.95);font-size:15px;line-height:1.9;max-width:300px;text-shadow:0 0 20px rgba(180,60,240,0.7)">${text}</div>`;
+  document.body.appendChild(div);
+  const dismiss = () => { div.remove(); cb(); };
+  div.addEventListener('click', dismiss);
+  setTimeout(dismiss, 4000);
+}
+
 function startTimer(seconds, label = "休息中") {
   clearInterval(_timerInterval);
   _releaseWakeLock();
@@ -2327,8 +2346,10 @@ function startTimer(seconds, label = "休息中") {
   const prog = document.getElementById('timer-progress');
   if (!bar) return;
 
-  if (_ownerSession() && label === '组间休息') {
-    const cues = [
+  if (_globalSubMode && _ownerSession() && label === '组间休息') {
+    const db = _getSubDb();
+    const dec = s => { try { return decodeURIComponent(atob(s)); } catch(e) { return ''; } };
+    const cues = db?.rest_cues?.map(dec).filter(Boolean) || [
       '保持低姿态，闭眼调整放松适应呼吸控制',
       '放松盆底与内收肌群，放弃全部躯体防御',
       '感受地面完全承载，交出躯体支配权',
@@ -2556,6 +2577,13 @@ function submitRPE(rpe, isSkip = false) {
     });
     ls(K.log, LOG);
 
+    if (_globalSubMode && _ownerSession()) {
+      const db = _getSubDb();
+      const dec = s => { try { return decodeURIComponent(atob(s)); } catch(e) { return ''; } };
+      const msgs = db?.finish_toast?.map(dec).filter(Boolean);
+      if (msgs && msgs.length) setTimeout(() => showToast(msgs[Math.floor(Math.random() * msgs.length)], 4000), 1800);
+    }
+
     if (!_dayIsSwim) {
       // Assess intensity and auto-volume adjustment
       const assessment = assessPlanIntensity();
@@ -2647,6 +2675,12 @@ function tog(date, ei) {
 
   if (S.prog[date][ei]) {
     playExerciseDoneSound();
+    if (_globalSubMode && _ownerSession()) {
+      const db = _getSubDb();
+      const dec = s => { try { return decodeURIComponent(atob(s)); } catch(e) { return ''; } };
+      const msgs = db?.tog_toast?.map(dec).filter(Boolean);
+      if (msgs && msgs.length) showToast(msgs[Math.floor(Math.random() * msgs.length)], 2500);
+    }
   }
 
   saveState(); render();
@@ -3908,9 +3942,10 @@ function startGuided(date) {
       document.body.appendChild(overlay);
     }
     _startDanmaku();
+    _showRitual(() => renderGuided());
+  } else {
+    renderGuided();
   }
-
-  renderGuided();
 }
 function wmClose() {
     const m = document.getElementById('workout-modal');
