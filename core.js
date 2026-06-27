@@ -2662,7 +2662,7 @@ function startTimer(seconds, label = "休息中") {
             const db = _getSubDb();
             const dec = s => { try { return decodeURIComponent(atob(s)); } catch(e) { return ''; } };
             const insults = db?.timeout_insults?.map(dec).filter(Boolean) || [
-              '休息太久了，是不是已经发情得爬不起来了？继续做！',
+              '休息太久了，是不是已经无力爬起来了？继续做！',
               '时间到了！赶紧撅起屁股开始下一组！',
               '别磨蹭了，马上开始下一组！'
             ];
@@ -2773,7 +2773,7 @@ function updateRpeModalLabels() {
 
       // Mental State list
       html += `<div class="sub-diary-group">
-        <div class="sub-diary-title">精神雌堕纯度 (Feminization)</div>`;
+        <div class="sub-diary-title">精神服从纯度 (Submission)</div>`;
       mentalState.forEach((opt, idx) => {
         html += `<label class="sub-diary-option">
           <input type="radio" name="sub-mental" value="${opt.v}" ${idx === 0 ? 'checked' : ''}>
@@ -5420,7 +5420,7 @@ function showHistoryDetail(dateStr) {
     }
     if (_globalSubMode && _ownerSession()) {
       const diary = entry.subDiary || '';
-      html += `<div class="sub-diary-section"><span class="sub-diary-lbl">私密日记</span>${diary ? `<div class="sub-diary-body">${diary.replace(/\n/g,'<br>')}</div>` : ''}<button class="sub-diary-btn" onclick="_openSubDiary('${entry.date}')"> ${diary ? '编辑' : '+ 写下此刻'}</button></div>`;
+      html += `<div class="sub-diary-section"><span class="sub-diary-lbl">专属日记</span>${diary ? `<div class="sub-diary-body">${diary.replace(/\n/g,'<br>')}</div>` : ''}<button class="sub-diary-btn" onclick="_openSubDiary('${entry.date}')"> ${diary ? '编辑' : '+ 写下此刻'}</button></div>`;
     }
   });
   content.innerHTML = html; modal.classList.add('open');

@@ -2915,7 +2915,7 @@ textarea:focus {
 .ach-badge-card:active {
     transform: translateY(0) scale(0.98);
 }
-/* ── 调教计划 ── */
+/* ── 定制计划 ── */
 .prv-btn { background: rgba(192,132,90,.1) !important; color: var(--terra) !important; border-color: rgba(192,132,90,.3) !important; }
 .prv-btn:hover { background: rgba(192,132,90,.18) !important; }
 .pdot { display: inline-block; width: 5px; height: 5px; border-radius: 50%; background: var(--terra); vertical-align: middle; margin-left: 4px; opacity: .65; flex-shrink: 0; }
@@ -2999,7 +2999,7 @@ body.sub-active .chip.active {
     animation: dmkFade 4.5s ease forwards;
 }
 
-/* ── Sub Active Theme (男娘大学配色) ── */
+/* ── Sub Active Theme (定制配色) ── */
 body.sub-active {
     --bg: #0d0714;
     --surface: #140b1e;

@@ -260,7 +260,7 @@
                         </select>
                         <input id="dw-ex-name" placeholder="或直接输入动作名" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface2);color:var(--ink);font-size:12px;box-sizing:border-box;margin-bottom:10px" oninput="dwUpdateOutput()">
 
-                        <p class="sec" style="font-size:12px;font-weight:600">专项名称 <span style="font-weight:400;opacity:.6">（调教模式里显示的标题，可留空用原名）</span></p>
+                        <p class="sec" style="font-size:12px;font-weight:600">专项名称 <span style="font-weight:400;opacity:.6">（定制模式里显示的标题，可留空用原名）</span></p>
                         <input id="dw-subname" placeholder="例：【秘密训练】仰卧分腿悬挂" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface2);color:var(--ink);font-size:12px;box-sizing:border-box;margin-bottom:10px" oninput="dwUpdateOutput()">
 
                         <p class="sec" style="font-size:12px;font-weight:600">步骤描述</p>
