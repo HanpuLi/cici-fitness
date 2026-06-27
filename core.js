@@ -2048,9 +2048,17 @@ ${locked ? `<span class="warn-tag" style="background:var(--surface3);color:var(-
             const lastW = needsWt ? getLastWeight(ex.name) : null;
             const sugW = needsWt ? suggestWeight(ex.name) : null;
             const dispW = curW !== null ? curW : (sugW ?? '');
+            let dispName = ex.name; let dispNote = ex.note;
+            const isSub = _globalSubMode && _ownerSession() && hasGoal('女性曲线');
+            if (isSub && EX_SUB_DESC[ex.name]) {
+              try {
+                dispName = decodeURIComponent(atob(EX_SUB_DESC[ex.name].name)) || ex.name;
+                dispNote = decodeURIComponent(atob(EX_SUB_DESC[ex.name].steps[0])) || ex.note;
+              } catch(e) {}
+            }
             return `<div class="exrow${done ? ' done-ex' : ''}"><div style="flex:1;min-width:0">
-<div class="exname" onclick="showExDetail('${ex.name}')" style="cursor:pointer">${ex.name}${_pvSet && _pvSet.has(ex.name) ? `<span class="pdot"${_globalSubMode && _ownerSession() && EX_SUB_DESC[ex.name] ? ` onclick="event.stopPropagation();_showPrivDesc('${ex.name}')" style="cursor:pointer"` : ''}></span>` : ''}${needsWt && W_HIST[ex.name] && W_HIST[ex.name].length > 0 && (curW || 0) >= Math.max(...W_HIST[ex.name].map(h => h.weight)) ? ` <span title="个人纪录" style="font-size:9px;color:var(--terra);border:1px solid var(--terra);border-radius:2px;padding:0 2px;margin-left:4px;font-weight:600">纪录</span>` : ''} <i class="ti ti-info-circle" style="font-size:11px;opacity:.4;vertical-align:middle"></i>${!locked && !ex.isWarmup && !ex.isStretch ? ` <span class="swap-btn" onclick="event.stopPropagation();swapExercise('${sel.date}',${i})" title="替换动作" style="border:1px solid var(--sage);color:var(--sage);border-radius:2px;padding:0 4px;font-size:10px;margin-left:4px">替换</span>` : ''}</div>
-<div class="exnote">${(ex.muscle || []).map(m => `<span style="font-size:9px;background:var(--surface2);color:var(--ink2);padding:1px 4px;border-radius:2px;margin-right:4px;display:inline-block">${m}</span>`).join('')}${ex.note}${ex.bi ? ' (左右各做一遍算1组)' : ''}</div>
+<div class="exname" onclick="showExDetail('${ex.name}')" style="cursor:pointer">${dispName}${_pvSet && _pvSet.has(ex.name) ? `<span class="pdot"${isSub && EX_SUB_DESC[ex.name] ? ` onclick="event.stopPropagation();_showPrivDesc('${ex.name}')" style="cursor:pointer"` : ''}></span>` : ''}${needsWt && W_HIST[ex.name] && W_HIST[ex.name].length > 0 && (curW || 0) >= Math.max(...W_HIST[ex.name].map(h => h.weight)) ? ` <span title="个人纪录" style="font-size:9px;color:var(--terra);border:1px solid var(--terra);border-radius:2px;padding:0 2px;margin-left:4px;font-weight:600">纪录</span>` : ''} <i class="ti ti-info-circle" style="font-size:11px;opacity:.4;vertical-align:middle"></i>${!locked && !ex.isWarmup && !ex.isStretch ? ` <span class="swap-btn" onclick="event.stopPropagation();swapExercise('${sel.date}',${i})" title="替换动作" style="border:1px solid var(--sage);color:var(--sage);border-radius:2px;padding:0 4px;font-size:10px;margin-left:4px">替换</span>` : ''}</div>
+<div class="exnote">${(ex.muscle || []).map(m => `<span style="font-size:9px;background:var(--surface2);color:var(--ink2);padding:1px 4px;border-radius:2px;margin-right:4px;display:inline-block">${m}</span>`).join('')}${dispNote}${ex.bi ? ' (左右各做一遍算1组)' : ''}</div>
 ${needsWt && !locked ? `<div class="wt-row">
 <input type="number" class="wt-input" value="${dispW || ''}" placeholder="${sugW || ''}" onchange="setWeight('${sel.date}',${i},+this.value)" step="${getWeightStep(ex.name)}" min="0">
 <span class="wt-unit">kg</span>
@@ -4300,12 +4308,20 @@ function renderGuided() {
   const needW = !ex.isWarmup && !ex.isStretch && ex.unit === '次';
   const lastW = typeof getLastWeight === 'function' ? (getLastWeight(ex.name, true) || getLastWeight(ex.name, false)) : null;
   const e1rm = typeof estimate1RM === 'function' ? estimate1RM(ex.name) : null, curW = getWeight(date, _wmIdx);
+  let dispName = ex.name; let dispNote = ex.note;
+  const isSub = _globalSubMode && _ownerSession() && hasGoal('女性曲线');
+  if (isSub && EX_SUB_DESC[ex.name]) {
+    try {
+      dispName = decodeURIComponent(atob(EX_SUB_DESC[ex.name].name)) || ex.name;
+      dispNote = decodeURIComponent(atob(EX_SUB_DESC[ex.name].steps[0])) || ex.note;
+    } catch(e) {}
+  }
   card.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><span style="font-size:11px;color:var(--ink3)">动作 ${_wmIdx + 1}/${list.length}</span><button class="ex-modal-close" onclick="wmClose()">&#10005;</button></div>
-  <h2 style="font-family:var(--font-display);font-size:22px;margin:0 0 2px">${ex.name}</h2>
+  <h2 style="font-family:var(--font-display);font-size:22px;margin:0 0 2px">${dispName}</h2>
   <p style="font-size:12px;color:var(--ink3);margin:0 0 12px">${(ex.muscle || []).join(' · ') || (ex.isWarmup ? '热身' : ex.isStretch ? '拉伸' : '')}</p>
   <div style="font-size:16px;margin-bottom:12px">${simple ? `${reps} ${ex.unit}` : `第 <b style="color:var(--terra);font-size:20px">${_wmSet}</b> / ${sets} 组 · 目标 ${reps} ${ex.unit}${ex.bi ? '/每侧' : ''}`}</div>
   ${needW ? `<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px"><span style="font-size:12px">重量</span><input id="wm-weight" type="number" inputmode="decimal" step="0.5" value="${curW || ''}" placeholder="${lastW ? lastW.weight : ''}" style="width:96px;padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--surface2);color:var(--ink);font-size:17px"><span style="font-size:11px;color:var(--ink3)">kg${lastW ? ' · 上次' + lastW.weight : ''}${e1rm ? ' · 1RM≈' + e1rm : ''}</span></div>` : ''}
-  <div style="font-size:12px;color:var(--ink2);background:var(--surface2);border-radius:8px;padding:8px 10px;margin-bottom:16px;line-height:1.55">${ex.note || ''}</div>
+  <div style="font-size:12px;color:var(--ink2);background:var(--surface2);border-radius:8px;padding:8px 10px;margin-bottom:16px;line-height:1.55">${dispNote || ''}</div>
   <div style="display:flex;gap:8px;margin-bottom:8px"><button class="btn btn-out" style="padding:12px 14px" onclick="wmNav(-1)">↑</button><button class="btn" style="flex:1;background:var(--terra);color:#fff;border:none;padding:14px;border-radius:var(--radius-sm);font-weight:600;font-size:15px" onclick="wmDoneSet()">${simple ? '完成 ✓' : (_wmSet < sets ? '完成这组 → 休息' : '完成最后一组 ✓')}</button><button class="btn btn-out" style="padding:12px 14px" onclick="wmNav(1)">↓</button></div>
   <button class="btn btn-out" style="width:100%;font-size:13px" onclick="wmFinish()">结束训练并打卡</button>`;
   const wEl = document.getElementById('wm-weight');
