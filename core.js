@@ -1452,8 +1452,53 @@ function genPlan(isRecalibrate = false, preserveFuture = false) {
     }
   }
 
-  let generatedGymCount = 0;
   const _usedPrivate = new Set();
+
+  // ── Resolve each of the 14 slots' type up front so split assignment can look
+  // ahead. Swimming loads the back/lats, so a back-heavy gym day landing right
+  // before a swim day would hit the back two days running. We reorder splits to
+  // avoid that — but only via safe swaps (see below), so it never drops a split,
+  // duplicates a muscle on adjacent gym days, or changes non-back-heavy plans.
+  // slotType: 0=rest, 1=gym, 2=back-loading swim, 3=other active (轻量替代, no back load).
+  const slotType = new Array(14);
+  for (let i = 0; i < 14; i++) {
+    const ds = addDays(startDate, i);
+    if (preserve[ds]) {
+      const d = preserve[ds];
+      slotType[i] = d.isSwimDay ? 2 : (d.isRest ? 0 : (d.workoutType === '轻量替代' ? 3 : 1));
+    } else {
+      const dow = (new Date(ds + 'T12:00:00').getDay() + 6) % 7; // 0=Mon, 6=Sun
+      const t = pattern[dow];                                    // 0=rest, 1=gym, 2=swim
+      slotType[i] = t === 2 ? (S.periodMode ? 3 : 2) : t;        // 经期模式的替代不压背
+    }
+  }
+
+  // Non-preserved gym slots in order — these are the ones we assign splits to.
+  // splitFor[k] starts as the plain rotation (identical to the old behaviour);
+  // preSwim[k] flags a gym day immediately before a back-loading swim day.
+  const gymSlots = [];
+  for (let i = 0; i < 14; i++) {
+    if (!preserve[addDays(startDate, i)] && slotType[i] === 1) gymSlots.push(i);
+  }
+  const isBackHeavy = (sp) => !!(sp && sp.pick && (sp.pick.back || 0) >= 2);
+  const splitFor = gymSlots.map((_, k) => splits[(startSplitIdx + k) % splits.length]);
+  const preSwim = gymSlots.map(i => slotType[i + 1] === 2);
+  // Would putting split `sp` on gym slot index `k` collide with a calendar-adjacent gym day's type?
+  const collides = (sp, k) => gymSlots.some((gi, j) =>
+    j !== k && Math.abs(gymSlots[k] - gi) === 1 && splitFor[j].type === sp.type);
+  for (let k = 0; k < splitFor.length; k++) {
+    if (!preSwim[k] || !isBackHeavy(splitFor[k])) continue;
+    // Swap in a non-back split that currently sits on a non-pre-swim slot, but
+    // only if the swap won't create a same-muscle pair on adjacent gym days.
+    for (let j = 0; j < splitFor.length; j++) {
+      if (j === k || preSwim[j] || isBackHeavy(splitFor[j])) continue;
+      if (collides(splitFor[j], k) || collides(splitFor[k], j)) continue;
+      [splitFor[k], splitFor[j]] = [splitFor[j], splitFor[k]];
+      break;
+    }
+  }
+  const splitBySlot = {};
+  gymSlots.forEach((i, k) => { splitBySlot[i] = splitFor[k]; });
 
   for (let i = 0; i < 14; i++) {
     const ds = addDays(startDate, i);
@@ -1462,20 +1507,15 @@ function genPlan(isRecalibrate = false, preserveFuture = false) {
       continue;
     }
 
-    const dObj = new Date(ds + 'T12:00:00');
-    const dow = (dObj.getDay() + 6) % 7; // 0=Mon, 6=Sun
-    const dayType = pattern[dow]; // 0=rest, 1=gym, 2=swim
-
-    if (dayType === 1) {
+    if (slotType[i] === 1) {
       // Gym day
-      const split = splits[(startSplitIdx + generatedGymCount) % splits.length];
-      generatedGymCount++;
+      const split = splitBySlot[i];
       const exs = pickExercises(split, excluded);
       if (_ownerSession()) {
         pickPrivateForSplit(split, excluded, _usedPrivate).forEach(e => exs.push(e));
       }
       days.push({ date: ds, isRest: false, workoutType: split.type, duration: S.dur, exercises: exs, _splitGroups: split.groups || [] });
-    } else if (dayType === 2) {
+    } else if (slotType[i] === 2 || slotType[i] === 3) {
       // Swim day (or period alternative)
       if (S.periodMode) {
         days.push({ date: ds, isRest: false, isSwimDay: false, workoutType: '轻量替代', duration: 40, exercises: pickPeriodAlternative() });
