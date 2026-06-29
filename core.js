@@ -808,7 +808,7 @@ const GYM_MILESTONES = [
 GYM_LOG = lg('fit_gym_ach') || { count: 0, milestones: [] };
 function _subMilestoneText() {
   if (!_globalSubMode || !_ownerSession()) return null;
-  const db = _getSubDb(), dec = s => { try { return decodeURIComponent(atob(s)); } catch(e) { return ''; } };
+  const db = _getSubDb(), dec = s => { try { return decodeURIComponent(atob(s)); } catch (e) { return ''; } };
   const msgs = _subTierSlice(db?.milestone_texts?.map(dec).filter(Boolean));
   return msgs && msgs.length ? msgs[Math.floor(Math.random() * msgs.length)] : null;
 }
@@ -912,7 +912,7 @@ function pickExercises(split, excluded) {
   const hasCore = split.groups.includes('core');
 
   const wPool = (DB.warmup || []).filter(ex => !used.has(ex.n));
-  const _shufW = a => { const b=[...a]; for(let i=b.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[b[i],b[j]]=[b[j],b[i]]} return b; };
+  const _shufW = a => { const b = [...a]; for (let i = b.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1));[b[i], b[j]] = [b[j], b[i]] } return b; };
   const wSpecific = _shufW(wPool.filter(e => {
     if (hasUpper && e.muscle.includes('上肢')) return true;
     if (hasLower && e.muscle.includes('下肢')) return true;
@@ -1027,11 +1027,11 @@ function pickExercises(split, excluded) {
   }
   // Add smart stretches
   const sPool = (DB.stretch || []).filter(ex => !used.has(ex.n) && !excluded.has(ex.n));
-  const _shufS = a => { const b=[...a]; for(let i=b.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[b[i],b[j]]=[b[j],b[i]]} return b; };
+  const _shufS = a => { const b = [...a]; for (let i = b.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1));[b[i], b[j]] = [b[j], b[i]] } return b; };
   const sSpecific = _shufS(sPool.filter(e => {
-    if (hasUpper && e.muscle.some(m => ['上肢','胸大肌','脊柱'].includes(m))) return true;
-    if (hasLower && e.muscle.some(m => ['下肢','臀','髋屈肌','内收肌'].includes(m))) return true;
-    if (hasCore && e.muscle.some(m => ['核心','脊柱'].includes(m))) return true;
+    if (hasUpper && e.muscle.some(m => ['上肢', '胸大肌', '脊柱'].includes(m))) return true;
+    if (hasLower && e.muscle.some(m => ['下肢', '臀', '髋屈肌', '内收肌'].includes(m))) return true;
+    if (hasCore && e.muscle.some(m => ['核心', '脊柱'].includes(m))) return true;
     return false;
   }));
   const sSpecificNames = new Set(sSpecific.map(e => e.n));
@@ -1271,15 +1271,21 @@ const SWIM_SPLIT = {
   7: { gym: 4, swim: 3 },
 };
 
-// Weekly patterns: G=gym, S=swim, R=rest
-// Principles: alternate gym/swim when possible, avoid swim right after upper body day
+// Weekly patterns: G=gym, S=swim, R=rest. Index 0=Mon … 6=Sun (matches pattern[dow]).
+// Nested-by-construction so two people with different day counts auto-align without
+// any cross-account sync or manual scheduling: the lighter plan is always a weekday
+// subset of the heavier one. Gym only ever lands on Mon/Wed/Fri/Sun (priority
+// Mon→Fri→Wed→Sun); swim only on Tue/Thu/Sat (priority Sat→Tue→Thu). The two anchor
+// sets are disjoint, so growing either count only ADDS weekdays, never moves existing
+// ones. Recovery is governed by split rotation + RPE auto-tuning, not by this grid,
+// so weekday clustering here doesn't double-load a muscle group.
 const COMBO_PATTERNS = {
-  '1+1': ['G', 'R', 'R', 'S', 'R', 'R', 'R'],
-  '2+1': ['G', 'R', 'S', 'R', 'G', 'R', 'R'],
-  '3+1': ['G', 'S', 'R', 'G', 'R', 'G', 'R'],
-  '2+2': ['G', 'S', 'R', 'G', 'S', 'R', 'R'],
+  '1+1': ['G', 'R', 'R', 'R', 'R', 'S', 'R'],
+  '2+1': ['G', 'R', 'R', 'R', 'G', 'S', 'R'],
+  '3+1': ['G', 'R', 'G', 'R', 'G', 'S', 'R'],
+  '2+2': ['G', 'S', 'R', 'R', 'G', 'S', 'R'],
   '3+2': ['G', 'S', 'G', 'R', 'G', 'S', 'R'],
-  '4+2': ['G', 'G', 'S', 'G', 'G', 'S', 'R'],
+  '4+2': ['G', 'S', 'G', 'R', 'G', 'S', 'G'],
   '4+3': ['G', 'S', 'G', 'S', 'G', 'S', 'G'],
 };
 
@@ -1322,12 +1328,12 @@ function pickPrivateDayExercises() {
 
 const _PRIV_MUSCLE_MAP = {
   hamglutes: ['臀', '臀大肌', '盆底肌', '内收肌', '髋外旋', '髋屈肌'],
-  quads:     ['股四头', '下肢', '内收肌', '髋屈肌'],
-  core:      ['核心', '骨盆控制', '脊柱', '腹斜'],
-  chest:     ['胸大肌', '上肢'],
-  back:      ['上肢'],
-  shoulder:  ['上肢'],
-  stretch:   ['下肢', '全身', '核心'],
+  quads: ['股四头', '下肢', '内收肌', '髋屈肌'],
+  core: ['核心', '骨盆控制', '脊柱', '腹斜'],
+  chest: ['胸大肌', '上肢'],
+  back: ['上肢'],
+  shoulder: ['上肢'],
+  stretch: ['下肢', '全身', '核心'],
 };
 function pickPrivateForSplit(split, excluded, usedSet) {
   const relevantMuscles = new Set();
@@ -1337,8 +1343,8 @@ function pickPrivateForSplit(split, excluded, usedSet) {
   Object.entries(DB).forEach(([, exs]) => {
     exs.forEach(ex => {
       if (ps.has(ex.n) && !excluded.has(ex.n) && !usedSet.has(ex.n) &&
-          ex.eq.some(e => e === '无器材' || S.equip.includes(e)) &&
-          (ex.muscle || []).some(m => relevantMuscles.has(m)))
+        ex.eq.some(e => e === '无器材' || S.equip.includes(e)) &&
+        (ex.muscle || []).some(m => relevantMuscles.has(m)))
         pool.push(ex);
     });
   });
@@ -1351,8 +1357,10 @@ function pickPrivateForSplit(split, excluded, usedSet) {
   });
   return pool.slice(0, 2).map(ex => {
     usedSet.add(ex.n);
-    return { name: ex.n, sets: 2, reps: ex.u === '秒' ? 45 : 15, unit: ex.u || '次',
-             note: ex.note, diff: ex.diff, bi: !!ex.bi, muscle: ex.muscle || [] };
+    return {
+      name: ex.n, sets: 2, reps: ex.u === '秒' ? 45 : 15, unit: ex.u || '次',
+      note: ex.note, diff: ex.diff, bi: !!ex.bi, muscle: ex.muscle || []
+    };
   });
 }
 
@@ -1372,9 +1380,9 @@ function genPlan(isRecalibrate = false, preserveFuture = false) {
   // Select the correct split template based on GYM days (not total)
   // 臀腿塑形 uses dedicated lower-body-only splits
   const splits = hasGoal('女性曲线') ? (CURVE_SPLITS[gymPerWeek] || CURVE_SPLITS[3]) :
-hasGoal('翘臀美背') ? (GLUTE_BACK_SPLITS[gymPerWeek] || GLUTE_BACK_SPLITS[3]) :
-        isCombinedGoal() ? (COMBINED_SPLITS[gymPerWeek] || COMBINED_SPLITS[3]) :
-          (hasGoal('臀腿塑形') ? (GLUTE_SPLITS[gymPerWeek] || GLUTE_SPLITS[3]) : (SPLITS[gymPerWeek] || SPLITS[3]));
+    hasGoal('翘臀美背') ? (GLUTE_BACK_SPLITS[gymPerWeek] || GLUTE_BACK_SPLITS[3]) :
+      isCombinedGoal() ? (COMBINED_SPLITS[gymPerWeek] || COMBINED_SPLITS[3]) :
+        (hasGoal('臀腿塑形') ? (GLUTE_SPLITS[gymPerWeek] || GLUTE_SPLITS[3]) : (SPLITS[gymPerWeek] || SPLITS[3]));
 
   // Build weekly pattern
   let pattern;
@@ -1584,9 +1592,9 @@ function autoAlignPlan() {
     gymPerWeek = sp.gym;
   }
   const splits = hasGoal('女性曲线') ? (CURVE_SPLITS[gymPerWeek] || CURVE_SPLITS[3]) :
-hasGoal('翘臀美背') ? (GLUTE_BACK_SPLITS[gymPerWeek] || GLUTE_BACK_SPLITS[3]) :
-        isCombinedGoal() ? (COMBINED_SPLITS[gymPerWeek] || COMBINED_SPLITS[3]) :
-          (hasGoal('臀腿塑形') ? (GLUTE_SPLITS[gymPerWeek] || GLUTE_SPLITS[3]) : (SPLITS[gymPerWeek] || SPLITS[3]));
+    hasGoal('翘臀美背') ? (GLUTE_BACK_SPLITS[gymPerWeek] || GLUTE_BACK_SPLITS[3]) :
+      isCombinedGoal() ? (COMBINED_SPLITS[gymPerWeek] || COMBINED_SPLITS[3]) :
+        (hasGoal('臀腿塑形') ? (GLUTE_SPLITS[gymPerWeek] || GLUTE_SPLITS[3]) : (SPLITS[gymPerWeek] || SPLITS[3]));
 
   // 1. Find last completed gym workout type
   let lastCompletedType = null;
@@ -1857,7 +1865,7 @@ function render() {
 </div>`;
 
   if (_globalSubMode && _ownerSession()) {
-    const _db = _getSubDb(), _dec = s => { try { return decodeURIComponent(atob(s)); } catch(e) { return ''; } };
+    const _db = _getSubDb(), _dec = s => { try { return decodeURIComponent(atob(s)); } catch (e) { return ''; } };
     const _dts = _subPool('daily_texts');
     if (_dts && _dts.length) {
       const _di = Math.floor(new Date(today).getTime() / 86400000) % _dts.length;
@@ -1868,7 +1876,7 @@ function render() {
     const _recentM = (SUB_DEPTH.metrics || []).slice(-8);
     if (_recentM.length >= 2) {
       const _mrow = (k, lbl) => `<div class="smc-row"><span class="smc-lbl">${lbl}</span><div>${_recentM.map(m => { const v = ((m?.[k] || 1) - 1) / 3; return `<span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:rgba(232,121,249,${(0.15 + v * 0.8).toFixed(2)});margin:0 2px;vertical-align:middle"></span>`; }).join('')}</div></div>`;
-      h += `<div class="sub-metrics-chart">${_mrow('sec','sec')}${_mrow('lock','lock')}${_mrow('mental','◇')}</div>`;
+      h += `<div class="sub-metrics-chart">${_mrow('sec', 'sec')}${_mrow('lock', 'lock')}${_mrow('mental', '◇')}</div>`;
     }
   }
 
@@ -2054,7 +2062,7 @@ ${locked ? `<span class="warn-tag" style="background:var(--surface3);color:var(-
               try {
                 dispName = decodeURIComponent(atob(EX_SUB_DESC[ex.name].name)) || ex.name;
                 dispNote = decodeURIComponent(atob(EX_SUB_DESC[ex.name].steps[0])) || ex.note;
-              } catch(e) {}
+              } catch (e) { }
             }
             return `<div class="exrow${done ? ' done-ex' : ''}"><div style="flex:1;min-width:0">
 <div class="exname" onclick="showExDetail('${ex.name}')" style="cursor:pointer">${dispName}${_pvSet && _pvSet.has(ex.name) ? `<span class="pdot"${isSub && EX_SUB_DESC[ex.name] ? ` onclick="event.stopPropagation();_showPrivDesc('${ex.name}')" style="cursor:pointer"` : ''}></span>` : ''}${needsWt && W_HIST[ex.name] && W_HIST[ex.name].length > 0 && (curW || 0) >= Math.max(...W_HIST[ex.name].map(h => h.weight)) ? ` <span title="个人纪录" style="font-size:9px;color:var(--terra);border:1px solid var(--terra);border-radius:2px;padding:0 2px;margin-left:4px;font-weight:600">纪录</span>` : ''} <i class="ti ti-info-circle" style="font-size:11px;opacity:.4;vertical-align:middle"></i>${!locked && !ex.isWarmup && !ex.isStretch ? ` <span class="swap-btn" onclick="event.stopPropagation();swapExercise('${sel.date}',${i})" title="替换动作" style="border:1px solid var(--sage);color:var(--sage);border-radius:2px;padding:0 4px;font-size:10px;margin-left:4px">替换</span>` : ''}</div>
@@ -2079,7 +2087,7 @@ ${!locked ? `
           }).join('')}</div>`;
 
           if (_globalSubMode && _ownerSession()) {
-            const _sdb = _getSubDb(), _sdec = s => { try { return decodeURIComponent(atob(s)); } catch(e) { return ''; } };
+            const _sdb = _getSubDb(), _sdec = s => { try { return decodeURIComponent(atob(s)); } catch (e) { return ''; } };
             const _pool = _subTierSlice(_sdb?.task_pool?.map(_sdec).filter(Boolean));
             if (_pool && _pool.length >= 1) {
               const _dn = parseInt(sel.date.replace(/-/g, ''));
@@ -2420,7 +2428,7 @@ function _timeSlot() {
 }
 
 function _subPool(dbKey, fallbackKey) {
-  const db = _getSubDb(), dec = s => { try { return decodeURIComponent(atob(s)); } catch(e) { return ''; } };
+  const db = _getSubDb(), dec = s => { try { return decodeURIComponent(atob(s)); } catch (e) { return ''; } };
   const slot = _timeSlot();
   const slotKey = slot === 'morning' ? 'morning_' + dbKey : slot === 'evening' ? 'evening_' + dbKey : null;
   const pool = (slotKey && db?.[slotKey]?.map(dec).filter(Boolean)) || db?.[dbKey]?.map(dec).filter(Boolean) || (fallbackKey ? db?.[fallbackKey]?.map(dec).filter(Boolean) : null);
@@ -2473,7 +2481,7 @@ window._subTaskToggle = _subTaskToggle;
 function _checkStreakMilestone(streak) {
   if (!_STREAK_MILESTONES.includes(streak)) return;
   const db = _getSubDb();
-  const dec = s => { try { return decodeURIComponent(atob(s)); } catch(e) { return ''; } };
+  const dec = s => { try { return decodeURIComponent(atob(s)); } catch (e) { return ''; } };
   const texts = db?.streak_texts?.map(dec).filter(Boolean);
   if (!texts || !texts.length) return;
   const idx = Math.min(_STREAK_MILESTONES.indexOf(streak), texts.length - 1);
@@ -2510,7 +2518,7 @@ function _applySubTheme() {
 
   let panicBtn = document.getElementById('sub-panic-btn');
   let fluidOverlay = document.getElementById('sub-fluid-overlay');
-  
+
   if (isSub) {
     if (!panicBtn) {
       panicBtn = document.createElement('div');
@@ -2526,7 +2534,7 @@ function _applySubTheme() {
       fluidOverlay.id = 'sub-fluid-overlay';
       fluidOverlay.style = 'position:fixed;inset:0;pointer-events:none;z-index:9998;background:radial-gradient(circle at 50% 0%, rgba(244,114,182,0.15) 0%, transparent 60%), radial-gradient(circle at 100% 100%, rgba(192,132,252,0.1) 0%, transparent 50%);box-shadow:inset 0 0 40px rgba(232,121,249,0.1);animation:fluidPulse 6s infinite alternate ease-in-out;';
       document.body.appendChild(fluidOverlay);
-      
+
       const style = document.createElement('style');
       style.id = 'sub-fluid-style';
       style.textContent = `@keyframes fluidPulse { 0% { opacity: 0.7; transform: scale(1); } 100% { opacity: 1; transform: scale(1.02); } }`;
@@ -2543,8 +2551,8 @@ function _applySubTheme() {
 function _subTier() {
   const n = SUB_DEPTH.count || 0;
   if (n >= 15) return 4;
-  if (n >= 7)  return 3;
-  if (n >= 3)  return 2;
+  if (n >= 7) return 3;
+  if (n >= 3) return 2;
   return 1;
 }
 
@@ -2564,7 +2572,7 @@ function _subDepthScore() {
 }
 
 function _getSubDb() {
-  try { const c = localStorage.getItem('__obfuscated_v2_cache__'); return c ? JSON.parse(c) : null; } catch(e) { return null; }
+  try { const c = localStorage.getItem('__obfuscated_v2_cache__'); return c ? JSON.parse(c) : null; } catch (e) { return null; }
 }
 
 function _showPrivDesc(name) {
@@ -2582,7 +2590,7 @@ function _showPrivDesc(name) {
 
 function _showRitual(cb) {
   const db = _getSubDb();
-  const dec = s => { try { return decodeURIComponent(atob(s)); } catch(e) { return ''; } };
+  const dec = s => { try { return decodeURIComponent(atob(s)); } catch (e) { return ''; } };
   const texts = _subPool('ritual_texts');
   if (!texts || !texts.length) { cb(); return; }
   const text = texts[Math.floor(Math.random() * texts.length)];
@@ -2608,7 +2616,7 @@ function startTimer(seconds, label = "休息中") {
 
   if (_globalSubMode && _ownerSession() && label === '组间休息') {
     const db = _getSubDb();
-    const dec = s => { try { return decodeURIComponent(atob(s)); } catch(e) { return ''; } };
+    const dec = s => { try { return decodeURIComponent(atob(s)); } catch (e) { return ''; } };
     const cues = _subTierSlice(db?.rest_cues?.map(dec).filter(Boolean)) || [
       '保持低姿态，闭眼调整放松适应呼吸控制',
       '放松盆底与内收肌群，放弃全部躯体防御',
@@ -2649,7 +2657,7 @@ function startTimer(seconds, label = "休息中") {
           setTimeout(() => { bar.classList.remove('show'); }, 3000);
         }
       }
-      
+
       if (_globalSubMode && _ownerSession() && hasGoal('女性曲线')) {
         const overtime = -Math.floor((endTime - Date.now()) / 1000);
         if (overtime >= 3) {
@@ -2658,11 +2666,11 @@ function startTimer(seconds, label = "休息中") {
             bar.style.background = 'rgba(150, 0, 0, 0.9)';
             lblEl.style.color = '#fff';
             timeEl.style.color = '#ff6b6b';
-            
+
             const db = _getSubDb();
-            const dec = s => { try { return decodeURIComponent(atob(s)); } catch(e) { return ''; } };
+            const dec = s => { try { return decodeURIComponent(atob(s)); } catch (e) { return ''; } };
             const insults = db?.timeout_insults?.map(dec).filter(Boolean) || [
-              '休息太久了，是不是已经无力爬起来了？继续做！',
+              '休息太久了，是不是已经发情得爬不起来了？继续做！',
               '时间到了！赶紧撅起屁股开始下一组！',
               '别磨蹭了，马上开始下一组！'
             ];
@@ -2681,8 +2689,8 @@ function startTimer(seconds, label = "休息中") {
           }
         }
       } else if (remain <= -3) {
-         clearInterval(_timerInterval);
-         _releaseWakeLock();
+        clearInterval(_timerInterval);
+        _releaseWakeLock();
       }
     }
   }
@@ -2734,8 +2742,8 @@ function updateRpeModalLabels() {
     try {
       const cached = localStorage.getItem('__obfuscated_v2_cache__');
       if (cached) subDatabase = JSON.parse(cached);
-    } catch(e) {}
-    const dec = (s) => { try { return decodeURIComponent(atob(s)); } catch(e) { return s; } };
+    } catch (e) { }
+    const dec = (s) => { try { return decodeURIComponent(atob(s)); } catch (e) { return s; } };
     titleEl.innerText = subDatabase?.textOverrides?.title ? dec(subDatabase.textOverrides.title) : "去雄度与服从性综合评估";
     descEl.innerText = subDatabase?.textOverrides?.desc ? dec(subDatabase.textOverrides.desc) : "今天身体被彻底驯化与重塑的深度评估：";
     noteEl.placeholder = subDatabase?.textOverrides?.notePlaceholder ? dec(subDatabase.textOverrides.notePlaceholder) : "在这里献上你最下贱的受动记录与去雄反馈……";
@@ -2748,7 +2756,7 @@ function updateRpeModalLabels() {
       const mentalState = subDatabase?.checkinOptions?.mentalState || [];
 
       let html = '';
-      
+
       // Secretion list
       html += `<div class="sub-diary-group">
         <div class="sub-diary-title">体液渗漏反馈 (Secretions)</div>`;
@@ -2773,7 +2781,7 @@ function updateRpeModalLabels() {
 
       // Mental State list
       html += `<div class="sub-diary-group">
-        <div class="sub-diary-title">精神服从纯度 (Submission)</div>`;
+        <div class="sub-diary-title">精神雌堕纯度 (Feminization)</div>`;
       mentalState.forEach((opt, idx) => {
         html += `<label class="sub-diary-option">
           <input type="radio" name="sub-mental" value="${opt.v}" ${idx === 0 ? 'checked' : ''}>
@@ -2895,7 +2903,7 @@ function submitRPE(rpe, isSkip = false) {
       _refreshNextDayPrivate();
       _checkStreakMilestone(SUB_DEPTH.streak);
       const db = _getSubDb();
-      const dec = s => { try { return decodeURIComponent(atob(s)); } catch(e) { return ''; } };
+      const dec = s => { try { return decodeURIComponent(atob(s)); } catch (e) { return ''; } };
       const msgs = _subTierSlice(db?.finish_toast?.map(dec).filter(Boolean));
       if (msgs && msgs.length) setTimeout(() => showToast(msgs[Math.floor(Math.random() * msgs.length)], 4000), 1800);
     }
@@ -2993,7 +3001,7 @@ function tog(date, ei) {
     playExerciseDoneSound();
     if (_globalSubMode && _ownerSession()) {
       const db = _getSubDb();
-      const dec = s => { try { return decodeURIComponent(atob(s)); } catch(e) { return ''; } };
+      const dec = s => { try { return decodeURIComponent(atob(s)); } catch (e) { return ''; } };
       const msgs = _subTierSlice(db?.tog_toast?.map(dec).filter(Boolean));
       if (msgs && msgs.length) showToast(msgs[Math.floor(Math.random() * msgs.length)], 2500);
     }
@@ -3019,7 +3027,7 @@ function tog(date, ei) {
       }
       const _openRpe = () => { updateRpeModalLabels(); document.getElementById('rpe-modal').classList.add('open'); };
       if (_globalSubMode && _ownerSession()) {
-        const db = _getSubDb(), dec = s => { try { return decodeURIComponent(atob(s)); } catch(e) { return ''; } };
+        const db = _getSubDb(), dec = s => { try { return decodeURIComponent(atob(s)); } catch (e) { return ''; } };
         const msgs = _subTierSlice(db?.complete_texts?.map(dec).filter(Boolean));
         if (msgs && msgs.length) {
           const text = msgs[Math.floor(Math.random() * msgs.length)];
@@ -4223,9 +4231,9 @@ let _danmakuTimer = null;
 function _startDanmaku() {
   _stopDanmaku();
   let db = null;
-  try { db = JSON.parse(localStorage.getItem('__obfuscated_v2_cache__')); } catch(e) {}
+  try { db = JSON.parse(localStorage.getItem('__obfuscated_v2_cache__')); } catch (e) { }
   if (!db || !db.danmaku) return;
-  const dec = s => { try { return decodeURIComponent(atob(s)); } catch(e) { return ''; } };
+  const dec = s => { try { return decodeURIComponent(atob(s)); } catch (e) { return ''; } };
   const generic = (db.danmaku.generic || []).map(dec).filter(Boolean);
   function showOne() {
     document.querySelectorAll('.sub-dmk').forEach(el => el.remove());
@@ -4276,7 +4284,7 @@ function startGuided(date) {
   const s = day.exercises.findIndex((ex, i) => !(S.prog[date] && S.prog[date][i]));
   _wmIdx = s < 0 ? 0 : s; _wmSet = 1;
   const m = document.getElementById('workout-modal'); if (m) m.classList.add('open');
-  
+
   if (_globalSubMode && _ownerSession()) {
     if (!document.getElementById('sub-strobing-overlay-guided')) {
       const overlay = document.createElement('div');
@@ -4291,12 +4299,12 @@ function startGuided(date) {
   }
 }
 function wmClose() {
-    const m = document.getElementById('workout-modal');
-    if (m) m.classList.remove('open');
-    if (typeof stopTimer === 'function') stopTimer();
-    const overlay = document.getElementById('sub-strobing-overlay-guided');
-    if (overlay) overlay.remove();
-    _stopDanmaku();
+  const m = document.getElementById('workout-modal');
+  if (m) m.classList.remove('open');
+  if (typeof stopTimer === 'function') stopTimer();
+  const overlay = document.getElementById('sub-strobing-overlay-guided');
+  if (overlay) overlay.remove();
+  _stopDanmaku();
 }
 function renderGuided() {
   const date = _wmDate, day = S.plan && S.plan.days.find(d => d.date === date), card = document.getElementById('wm-card');
@@ -4314,7 +4322,7 @@ function renderGuided() {
     try {
       dispName = decodeURIComponent(atob(EX_SUB_DESC[ex.name].name)) || ex.name;
       dispNote = decodeURIComponent(atob(EX_SUB_DESC[ex.name].steps[0])) || ex.note;
-    } catch(e) {}
+    } catch (e) { }
   }
   card.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><span style="font-size:11px;color:var(--ink3)">动作 ${_wmIdx + 1}/${list.length}</span><button class="ex-modal-close" onclick="wmClose()">&#10005;</button></div>
   <h2 style="font-family:var(--font-display);font-size:22px;margin:0 0 2px">${dispName}</h2>
@@ -5315,10 +5323,10 @@ function renderExDetailContent() {
   const steps = subActive ? EX_SUB_DESC[name].steps.map(_decodeSub) : (info?.steps || [dbEx?.note || '暂无详细步骤']);
   const tips = subActive ? EX_SUB_DESC[name].tips.map(_decodeSub) : (info?.tips || []);
   const mistakes = subActive ? [] : (info?.mistakes || []);
-  
+
   document.getElementById('ex-modal-title').textContent = dispName;
   document.getElementById('ex-modal-muscles').innerHTML = muscles.map(m => `<span class="jchip">${m}</span>`).join('');
-  
+
   const _e1rm = typeof estimate1RM === 'function' ? estimate1RM(name) : null;
   const _strEl = document.getElementById('ex-modal-strength');
   if (_strEl) {
@@ -5330,7 +5338,7 @@ function renderExDetailContent() {
       _strEl.innerHTML = _demo + _str;
     }
   }
-  
+
   document.getElementById('ex-modal-steps').innerHTML = steps.map((s, i) => `<div class="ex-step"><span class="ex-step-n">${i + 1}</span><span>${s}</span></div>`).join('');
   document.getElementById('ex-modal-tips').innerHTML = tips.length ? tips.map(t => `<div class="ex-tip">${t}</div>`).join('') : '';
   document.getElementById('ex-modal-mistakes').innerHTML = mistakes.length ? `<p style="font-size:11px;font-weight:600;color:var(--terra);margin:8px 0 4px">常见错误</p>` + mistakes.map(m => `<div class="ex-tip" style="border-color:var(--terra-br);color:var(--terra)">${m}</div>`).join('') : '';
@@ -5413,14 +5421,14 @@ function showHistoryDetail(dateStr) {
     if (entry.note) html += `<div class="hist-note">"${entry.note}"</div>`;
     if (_globalSubMode && _ownerSession() && entry.subMetrics) {
       const sm = entry.subMetrics;
-      const dots = (val, max = 4) => Array.from({length: max}, (_, i) =>
+      const dots = (val, max = 4) => Array.from({ length: max }, (_, i) =>
         `<span style="display:inline-block;width:6px;height:6px;border-radius:50%;margin:0 2px;background:${i < val ? '#e879f9' : 'rgba(232,121,249,0.15)'}"></span>`
       ).join('');
       html += `<div style="padding:6px 12px 2px;display:flex;gap:12px;align-items:center"><span style="font-size:10px;color:rgba(192,132,252,0.5)">sec</span>${dots(sm.sec)}<span style="font-size:10px;color:rgba(192,132,252,0.5)">lock</span>${dots(sm.lock)}<span style="font-size:10px;color:rgba(192,132,252,0.5)">◇</span>${dots(sm.mental)}</div>`;
     }
     if (_globalSubMode && _ownerSession()) {
       const diary = entry.subDiary || '';
-      html += `<div class="sub-diary-section"><span class="sub-diary-lbl">专属日记</span>${diary ? `<div class="sub-diary-body">${diary.replace(/\n/g,'<br>')}</div>` : ''}<button class="sub-diary-btn" onclick="_openSubDiary('${entry.date}')"> ${diary ? '编辑' : '+ 写下此刻'}</button></div>`;
+      html += `<div class="sub-diary-section"><span class="sub-diary-lbl">私密日记</span>${diary ? `<div class="sub-diary-body">${diary.replace(/\n/g, '<br>')}</div>` : ''}<button class="sub-diary-btn" onclick="_openSubDiary('${entry.date}')"> ${diary ? '编辑' : '+ 写下此刻'}</button></div>`;
     }
   });
   content.innerHTML = html; modal.classList.add('open');
@@ -5429,7 +5437,7 @@ function closeHistModal() { document.getElementById('hist-modal').classList.remo
 
 // ══ Emergency Safety Bypass Panic triggers ═════════════════
 // Hitting Escape or double-clicking on non-interactive regions instantly disables sissification view
-(function() {
+(function () {
   function forceSafetyReset() {
     if (_globalSubMode) {
       _globalSubMode = false;
@@ -5440,7 +5448,7 @@ function closeHistModal() { document.getElementById('hist-modal').classList.remo
       if (mWorkout) mWorkout.classList.remove('open');
       const mRpe = document.getElementById('rpe-modal');
       if (mRpe) mRpe.classList.remove('open');
-      
+
       if (typeof render === 'function') render();
     }
   }
