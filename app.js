@@ -60,7 +60,7 @@ function updateThemeBtn(theme){
 
 // ══ State Persistence ════════════════════════════════════
 function saveState(){
-ls(K.settings,{goal:S.goal,level:S.level,days:S.days,dur:S.dur,equip:S.equip,focus:S.focus,limits:S.limits,volumeMultiplier:S.volumeMultiplier,restDur:S.restDur,swimLevel:S.swimLevel,periodMode:S.periodMode,displayName:S.displayName,sealChar:S.sealChar,cycleEnabled:S.cycleEnabled,cycleDay:S.cycleDay,cycleLength:S.cycleLength,vacuumDays:S.vacuumDays});
+ls(K.settings,{goal:S.goal,level:S.level,days:S.days,dur:S.dur,equip:S.equip,focus:S.focus,limits:S.limits,volumeMultiplier:S.volumeMultiplier,restDur:S.restDur,swimLevel:S.swimLevel,periodMode:S.periodMode,displayName:S.displayName,sealChar:S.sealChar,cycleEnabled:S.cycleEnabled,cycleDay:S.cycleDay,cycleLength:S.cycleLength,vacuumDays:S.vacuumDays,partnerDays:S.partnerDays});
 if(S.plan)ls(K.plan,{plan:S.plan,prog:S.prog,adj:S.adj,weights:S.weights,unlockedDates:S.unlockedDates});
 localStorage.setItem(nsKey('fit_selDate'), S.selDate || '');
 }
@@ -124,6 +124,8 @@ if (goalInfo) {
 document.getElementById('limits').value=S.limits||'';
 document.querySelectorAll('#g-rest .chip').forEach(b=>b.classList.toggle('on',+b.dataset.v===(S.restDur??45)));
 document.querySelectorAll('#g-swim-level .chip').forEach(b=>b.classList.toggle('on',b.dataset.v===(S.swimLevel||'入门')));
+document.querySelectorAll('#g-partner-days .chip').forEach(b=>b.classList.toggle('on',+b.dataset.v===(+S.partnerDays||0)));
+if(typeof updatePartnerOverlap==='function')updatePartnerOverlap();
 const swimPanel=document.getElementById('swim-settings');
 if(swimPanel) swimPanel.style.display=S.equip.includes('泳池')?'block':'none';
 const periodSwitch=document.getElementById('period-switch');
@@ -166,6 +168,17 @@ el.innerHTML=`${sp.gym}天力量（降负重） + ${sp.swim}天陆地替代${res
 }else{
 el.innerHTML=`${sp.gym}天力量 + ${sp.swim}天游泳${rest>0?` + ${rest}天休息`:''}`;
 }
+}
+
+function updatePartnerOverlap(){
+const el=document.getElementById('partner-overlap');
+if(!el)return;
+const ov=(typeof partnerOverlap==='function')?partnerOverlap():null;
+if(!ov){el.style.display='none';return;}
+el.style.display='block';
+const g=ov.gym.map(d=>DN[d]).join('、'),s=ov.swim.map(d=>DN[d]).join('、');
+if(!g&&!s){el.innerHTML='你俩这周没有重合的训练日，换个天数试试';return;}
+el.innerHTML=`重合：${g?'健身房 '+g:''}${g&&s?' · ':''}${s?'游泳 '+s:''} 📦 这些天一起收拾`;
 }
 
 // ══ Tabs ═════════════════════════════════════════════════
@@ -890,6 +903,18 @@ const b=e.target.closest('.chip');if(!b)return;
 document.querySelectorAll('#g-swim-level .chip').forEach(c=>c.classList.remove('on'));
 b.classList.add('on');S.swimLevel=b.dataset.v;saveState();
 flashSaved();
+})})();
+
+// 搭子 weekly day-count selector (drives the calendar overlap markers)
+(function(){
+const el=document.getElementById('g-partner-days');if(!el)return;
+el.addEventListener('click',e=>{
+const b=e.target.closest('.chip');if(!b)return;
+document.querySelectorAll('#g-partner-days .chip').forEach(c=>c.classList.remove('on'));
+b.classList.add('on');S.partnerDays=+b.dataset.v||0;saveState();
+flashSaved();
+updatePartnerOverlap();
+if(S.plan&&typeof render==='function')render();
 })})();
 
 // Period mode toggle

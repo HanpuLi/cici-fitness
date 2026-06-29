@@ -1289,6 +1289,44 @@ const COMBO_PATTERNS = {
   '4+3': ['G', 'S', 'G', 'S', 'G', 'S', 'G'],
 };
 
+// No-pool weekly gym patterns, indexed by total days. Single source of truth for
+// both genPlan and the 搭子-overlap helper below. Index 0=Mon … 6=Sun.
+const GYM_PATTERNS = {
+  2: [1, 0, 0, 1, 0, 0, 0],
+  3: [1, 0, 1, 0, 1, 0, 0],
+  4: [1, 1, 0, 1, 1, 0, 0],
+  5: [1, 1, 1, 0, 1, 1, 0],
+  6: [1, 1, 1, 1, 1, 1, 0],
+  7: [1, 1, 1, 1, 1, 1, 1],
+};
+
+// Resolve a weekly grid (0=rest,1=gym,2=swim by weekday, 0=Mon) for a given total
+// day count, using the same anchored templates real plans are built from.
+function weekdayPlanTypes(days) {
+  days = +days;
+  if (S.equip.includes('泳池')) {
+    const sp = SWIM_SPLIT[days] || { gym: Math.max(2, days - 1), swim: 1 };
+    return (COMBO_PATTERNS[sp.gym + '+' + sp.swim] || COMBO_PATTERNS['3+2']).map(c => c === 'G' ? 1 : c === 'S' ? 2 : 0);
+  }
+  return GYM_PATTERNS[days] || GYM_PATTERNS[3];
+}
+
+// Shared gym/swim weekdays between the user (S.days) and a 搭子 (S.partnerDays).
+// Because both people's plans are built from the SAME anchored grid, the overlap
+// is computed locally — no cross-account read of the partner's data is needed.
+// Returns null when no 搭子 is configured. gym/swim are arrays of weekday indices.
+function partnerOverlap() {
+  const pd = +S.partnerDays;
+  if (!pd || pd < 2 || pd > 7) return null;
+  const mine = weekdayPlanTypes(S.days), theirs = weekdayPlanTypes(pd);
+  const gym = [], swim = [];
+  for (let d = 0; d < 7; d++) {
+    if (mine[d] === 1 && theirs[d] === 1) gym.push(d);
+    if (mine[d] === 2 && theirs[d] === 2) swim.push(d);
+  }
+  return { gym, swim };
+}
+
 // ── Period mode: gentle land-based alternative to swim ──
 function pickPeriodAlternative() {
   const excluded = getExcluded();
@@ -1390,15 +1428,7 @@ function genPlan(isRecalibrate = false, preserveFuture = false) {
     const key = gymPerWeek + '+' + swimPerWeek;
     pattern = (COMBO_PATTERNS[key] || COMBO_PATTERNS['3+2']).map(c => c === 'G' ? 1 : c === 'S' ? 2 : 0);
   } else {
-    const gymPatterns = {
-      2: [1, 0, 0, 1, 0, 0, 0],
-      3: [1, 0, 1, 0, 1, 0, 0],
-      4: [1, 1, 0, 1, 1, 0, 0],
-      5: [1, 1, 1, 0, 1, 1, 0],
-      6: [1, 1, 1, 1, 1, 1, 0],
-      7: [1, 1, 1, 1, 1, 1, 1]
-    };
-    pattern = gymPatterns[S.days] || gymPatterns[3];
+    pattern = GYM_PATTERNS[S.days] || GYM_PATTERNS[3];
   }
 
   // If recalibrating, keep the original start date to preserve the calendar view.
@@ -1937,6 +1967,8 @@ ${!isCurrentView ? `<button class="cal-nav-btn today-btn" onclick="calGoToday()"
 
   h += `<div class="cal-scroll"><div class="daygrid" id="cal-grid">`;
   const _subCal = _globalSubMode && _ownerSession();
+  const _ov = partnerOverlap();
+  const _coDows = _ov ? new Set([..._ov.gym, ..._ov.swim]) : null;
   visibleDays.forEach(d => {
     const isPlan = d._src === 'plan', isLog = d._src === 'log', isNone = d._src === 'empty';
     const locked = isPlan && isLocked(d);
@@ -1954,6 +1986,8 @@ ${!isCurrentView ? `<button class="cal-nav-btn today-btn" onclick="calGoToday()"
     if (locked && !d.isRest) cls += ' locked';
     if (d.isSwimDay) cls += ' swim-day';
     if (d.isPrivateDay) cls += ' prv-day';
+    const isCo = _coDows && isPlan && !d.isRest && _coDows.has((new Date(d.date + 'T12:00:00').getDay() + 6) % 7);
+    if (isCo) cls += ' co-day';
     if (isSel && !isNone && !(d.isRest && isPlan)) cls += ' sel';
     const drag = (isPlan && !d.isRest && !locked) ? `draggable="true" ondragstart="dragStart(event,'${d.date}')" ondragover="dragOver(event)" ondrop="dragDrop(event,'${d.date}')" ondragend="dragEnd()"` :
       (isPlan && !d.isRest && locked ? `ondragover="dragOver(event)" ondrop="dragDrop(event,'${d.date}')"` : '');
@@ -1961,6 +1995,7 @@ ${!isCurrentView ? `<button class="cal-nav-btn today-btn" onclick="calGoToday()"
     h += `<div class="${cls}" ${drag} ${click}>
 <div class="dn">${fmtDate(d.date)}</div>
 <div class="dt">${d.isRest ? (isPlan ? '\u4f11\u606f' : '\u2014') : d.workoutType}</div>
+${isCo ? '<span class="co-badge" title="\u548c\u642d\u5b50\u540c\u6b65\uff0c\u4e00\u8d77\u6536\u62fe">\ud83d\udce6</span>' : ''}
 ${done && isPlan ? (_subCal ? '<span style="font-size:9px;color:#c084fc;text-shadow:0 0 6px rgba(192,132,252,0.8)">●</span>' : '<i class="ti ti-check" style="font-size:10px;color:#3e7d52"></i>') : ''}
 ${_subCal && _lockVal ? `<span style="font-size:8px;color:rgba(232,121,249,0.6);letter-spacing:-0.5px">${'|'.repeat(Math.min(_lockVal, 4))}</span>` : ''}
 ${isLog && !isPlan ? '<i class="ti ti-check" style="font-size:10px;color:var(--blue)"></i>' : ''}
@@ -1968,6 +2003,12 @@ ${locked && !d.isRest ? '<i class="ti ti-lock" style="font-size:9px;color:var(--
 </div>`;
   });
   h += `</div></div>`;
+  if (_ov) {
+    const _g = _ov.gym.map(d => DN[d]).join('、'), _s = _ov.swim.map(d => DN[d]).join('、');
+    const _body = (!_g && !_s) ? '本周和搭子没有重合的训练日'
+      : `${_g ? '健身房 ' + _g : ''}${_g && _s ? ' · ' : ''}${_s ? '游泳 ' + _s : ''} — 一起收拾`;
+    h += `<div class="co-legend">📦 和搭子同步：${_body}</div>`;
+  }
 
   if (sel && !sel.isRest) {
     const lg = LOG.find(l => l.date === sel.date);
