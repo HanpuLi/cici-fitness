@@ -1,0 +1,28 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Per-user private document: settings, plan, logs, body data, swim/gym
+    // achievements, and any owner-only / 定制 content. Readable & writable ONLY
+    // by its owner. Nothing else in the database is matched below, so every
+    // other path is denied by default.
+    match /users/{uid} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+
+      // Friend-facing profile — INERT until the 好友 feature is built. The owner
+      // writes a deliberately-curated subset here (display name, day count,
+      // today's 力量/游泳/休息, streak, swim count). Approved friends listed in
+      // allowedReaders may read it. The private parent doc above is NEVER exposed
+      // to friends; this subdoc is the only shareable surface, so owner-only
+      // content cannot leak even with a friend link active.
+      match /shared/{docId} {
+        allow write: if request.auth != null && request.auth.uid == uid;
+        allow read: if request.auth != null && (
+          request.auth.uid == uid ||
+          ('allowedReaders' in resource.data &&
+           request.auth.uid in resource.data.allowedReaders)
+        );
+      }
+    }
+  }
+}
