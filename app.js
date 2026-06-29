@@ -835,6 +835,7 @@ _pushing=false;
 // to your OWN profile and read by your partner.
 let _partnerProfile=null;   // latest snapshot of partner's shared/profile (or null)
 let _partnerUnsub=null;
+let _partnerRetry=null;
 let _profilePushTimer=null;
 
 function partnerUid(){ return (S.partnerUid && String(S.partnerUid).trim()) || null; }
@@ -872,6 +873,7 @@ function scheduleProfilePush(){
 }
 function subscribePartner(){
   if(_partnerUnsub){ _partnerUnsub(); _partnerUnsub=null; }
+  clearTimeout(_partnerRetry);
   _partnerProfile=null;
   const pu=partnerUid();
   if(!_db||!_user||!pu){ if(typeof updatePairUI==='function')updatePairUI(); if(typeof render==='function')render(); return; }
@@ -881,10 +883,15 @@ function subscribePartner(){
     if(typeof updatePairUI==='function')updatePairUI();
     if(typeof render==='function')render();
   },e=>{
-    // permission-denied = partner hasn't added me to their allowedReaders yet
+    // permission-denied = partner hasn't added me to their allowedReaders yet.
+    // Firestore terminates a denied listener and won't auto-resume once access is
+    // granted, so retry periodically until both sides have paired.
     _partnerProfile=null;
     if(typeof updatePairUI==='function')updatePairUI();
     console.warn('partner read:',e.code||e.message);
+    if(_partnerUnsub){ _partnerUnsub(); _partnerUnsub=null; }
+    clearTimeout(_partnerRetry);
+    _partnerRetry=setTimeout(()=>{ if(partnerUid()&&!_partnerProfile) subscribePartner(); },15000);
   });
 }
 window.copyMyPairCode=function(){
