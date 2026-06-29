@@ -181,15 +181,31 @@
                 </div>
                 <div id="partner-settings" style="margin-top:6px">
                     <p class="sec">搭子同步 📦</p>
-                    <p style="font-size:11px;color:var(--ink3);margin:-2px 0 6px">填搭子每周练几天，日历会标出你俩重合的健身房 / 游泳日，方便一起收拾东西</p>
-                    <div class="chips" id="g-partner-days">
-                        <button class="chip on" data-v="0">关闭</button>
-                        <button class="chip" data-v="2">2天</button>
-                        <button class="chip" data-v="3">3天</button>
-                        <button class="chip" data-v="4">4天</button>
-                        <button class="chip" data-v="5">5天</button>
-                        <button class="chip" data-v="6">6天</button>
-                        <button class="chip" data-v="7">7天</button>
+                    <p style="font-size:11px;color:var(--ink3);margin:-2px 0 6px">和搭子配对后，日历会自动标出你俩重合的健身房 / 游泳日（方便一起收拾），还能看对方今日状态、互相加油。只分享天数和当日类型，私密内容永不外传。</p>
+                    <div class="pair-box">
+                        <div class="pair-row">
+                            <span class="pair-lbl">我的配对码</span>
+                            <code id="my-pair-code" class="pair-code">（请先登录）</code>
+                            <button type="button" class="exp-btn pair-btn" onclick="copyMyPairCode()">复制</button>
+                        </div>
+                        <div class="pair-row">
+                            <span class="pair-lbl">搭子配对码</span>
+                            <input id="partner-code-input" class="pair-input" type="text" placeholder="粘贴对方的配对码" autocomplete="off" spellcheck="false">
+                            <button type="button" class="exp-btn pair-btn" onclick="savePartnerCode()">连接</button>
+                        </div>
+                        <div id="pair-status" class="pair-status" style="display:none"></div>
+                    </div>
+                    <div id="partner-days-row" style="margin-top:8px">
+                        <p style="font-size:11px;color:var(--ink3);margin:0 0 4px">还没配对？也可手动填搭子每周练几天，先看重合日：</p>
+                        <div class="chips" id="g-partner-days">
+                            <button class="chip on" data-v="0">关闭</button>
+                            <button class="chip" data-v="2">2天</button>
+                            <button class="chip" data-v="3">3天</button>
+                            <button class="chip" data-v="4">4天</button>
+                            <button class="chip" data-v="5">5天</button>
+                            <button class="chip" data-v="6">6天</button>
+                            <button class="chip" data-v="7">7天</button>
+                        </div>
                     </div>
                     <div id="partner-overlap"
                         style="display:none;font-size:11px;color:var(--ink3);margin:6px 0 0;padding:4px 8px;background:var(--surface2);border-radius:6px">

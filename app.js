@@ -60,7 +60,7 @@ function updateThemeBtn(theme){
 
 // ══ State Persistence ════════════════════════════════════
 function saveState(){
-ls(K.settings,{goal:S.goal,level:S.level,days:S.days,dur:S.dur,equip:S.equip,focus:S.focus,limits:S.limits,volumeMultiplier:S.volumeMultiplier,restDur:S.restDur,swimLevel:S.swimLevel,periodMode:S.periodMode,displayName:S.displayName,sealChar:S.sealChar,cycleEnabled:S.cycleEnabled,cycleDay:S.cycleDay,cycleLength:S.cycleLength,vacuumDays:S.vacuumDays,partnerDays:S.partnerDays});
+ls(K.settings,{goal:S.goal,level:S.level,days:S.days,dur:S.dur,equip:S.equip,focus:S.focus,limits:S.limits,volumeMultiplier:S.volumeMultiplier,restDur:S.restDur,swimLevel:S.swimLevel,periodMode:S.periodMode,displayName:S.displayName,sealChar:S.sealChar,cycleEnabled:S.cycleEnabled,cycleDay:S.cycleDay,cycleLength:S.cycleLength,vacuumDays:S.vacuumDays,partnerDays:S.partnerDays,partnerUid:S.partnerUid,cheer:S.cheer});
 if(S.plan)ls(K.plan,{plan:S.plan,prog:S.prog,adj:S.adj,weights:S.weights,unlockedDates:S.unlockedDates});
 localStorage.setItem(nsKey('fit_selDate'), S.selDate || '');
 }
@@ -126,6 +126,7 @@ document.querySelectorAll('#g-rest .chip').forEach(b=>b.classList.toggle('on',+b
 document.querySelectorAll('#g-swim-level .chip').forEach(b=>b.classList.toggle('on',b.dataset.v===(S.swimLevel||'入门')));
 document.querySelectorAll('#g-partner-days .chip').forEach(b=>b.classList.toggle('on',+b.dataset.v===(+S.partnerDays||0)));
 if(typeof updatePartnerOverlap==='function')updatePartnerOverlap();
+if(typeof updatePairUI==='function')updatePairUI();
 const swimPanel=document.getElementById('swim-settings');
 if(swimPanel) swimPanel.style.display=S.equip.includes('泳池')?'block':'none';
 const periodSwitch=document.getElementById('period-switch');
@@ -710,8 +711,9 @@ if(typeof renderLog === 'function') renderLog();
 if(typeof renderStats === 'function') renderStats();
 applySettingsToUI();
 renderAuthBtn();
-if(user){setupRealtimeSync();showToast('已连接')}
-else{if(_unsub){_unsub();_unsub=null}}
+if(user){setupRealtimeSync();showToast('已连接');pushProfile();subscribePartner();}
+else{if(_unsub){_unsub();_unsub=null}if(_partnerUnsub){_partnerUnsub();_partnerUnsub=null}_partnerProfile=null;}
+if(typeof updatePairUI==='function')updatePairUI();
 }
 
 window.updateProfileUI = function() {
@@ -785,6 +787,7 @@ if(!_db||!_user)return;
 _localDirty=true; _dirtyId++; // Block cloud→local until pushed
 clearTimeout(_pushTimer);
 _pushTimer=setTimeout(pushToCloud,2000);
+scheduleProfilePush(); // keep the shared partner profile fresh as state changes
 }
 // Flush a pending push immediately when the page is hidden/closed, so a change made within the
 // 2s debounce isn't lost (otherwise the next launch's snapshot overwrites it with stale cloud).
@@ -821,6 +824,115 @@ if(pill){pill.textContent='X';pill.className='auth-pill-sync err'}
 clearTimeout(_pushTimer); _pushTimer=setTimeout(pushToCloud,5000);
 }
 _pushing=false;
+}
+
+// ══ 好友机制 / Partner Sync ══════════════════════════════
+// Each account publishes a deliberately-curated profile to
+// users/{uid}/shared/profile (owner-write, friend-read gated by allowedReaders —
+// see firestore.rules). Private/定制 data is NEVER written here. Pairing is a
+// mutual uid exchange: each person adds the other's uid to their own
+// allowedReaders. No cross-account write ever happens — even a "cheer" is written
+// to your OWN profile and read by your partner.
+let _partnerProfile=null;   // latest snapshot of partner's shared/profile (or null)
+let _partnerUnsub=null;
+let _profilePushTimer=null;
+
+function partnerUid(){ return (S.partnerUid && String(S.partnerUid).trim()) || null; }
+
+// Whitelist-only shareable profile. Anything not listed simply never leaves the
+// private doc — that's what keeps owner-only content from ever reaching a partner.
+function buildSharedProfile(){
+  const today=todayStr();
+  const td=(S.plan&&S.plan.days)?S.plan.days.find(d=>d.date===today):null;
+  const myName=(S.displayName&&S.displayName.trim())||(_user&&_user.displayName?_user.displayName.split(' ')[0]:'搭子');
+  const pu=partnerUid();
+  return {
+    name: myName,
+    days: +S.days||null,
+    hasPool: S.equip.includes('泳池'),
+    todayType: td?(td.isRest?'休息':td.workoutType):'—',
+    todayDone: td?!!isDone(td):false,
+    swimCount: (typeof SWIM_LOG!=='undefined'&&SWIM_LOG.count)||0,
+    cheer: (S.cheer&&S.cheer.date)?S.cheer:null,   // my latest cheer TO my partner
+    allowedReaders: pu?[pu]:[],                     // who may read this doc (the rule checks this)
+    lastActive: today
+  };
+}
+function pushProfile(){
+  if(!_db||!_user) return;
+  try{
+    _db.collection('users').doc(_user.uid).collection('shared').doc('profile')
+       .set(buildSharedProfile(),{merge:true}).catch(e=>console.warn('profile push failed:',e));
+  }catch(e){ console.warn('profile push error:',e); }
+}
+function scheduleProfilePush(){
+  if(!_db||!_user) return;
+  clearTimeout(_profilePushTimer);
+  _profilePushTimer=setTimeout(pushProfile,1500);
+}
+function subscribePartner(){
+  if(_partnerUnsub){ _partnerUnsub(); _partnerUnsub=null; }
+  _partnerProfile=null;
+  const pu=partnerUid();
+  if(!_db||!_user||!pu){ if(typeof updatePairUI==='function')updatePairUI(); if(typeof render==='function')render(); return; }
+  _partnerUnsub=_db.collection('users').doc(pu).collection('shared').doc('profile').onSnapshot(doc=>{
+    _partnerProfile=doc.exists?doc.data():null;
+    if(typeof updatePartnerOverlap==='function')updatePartnerOverlap();
+    if(typeof updatePairUI==='function')updatePairUI();
+    if(typeof render==='function')render();
+  },e=>{
+    // permission-denied = partner hasn't added me to their allowedReaders yet
+    _partnerProfile=null;
+    if(typeof updatePairUI==='function')updatePairUI();
+    console.warn('partner read:',e.code||e.message);
+  });
+}
+window.copyMyPairCode=function(){
+  if(!_user){ showToast('请先登录'); return; }
+  if(navigator.clipboard) navigator.clipboard.writeText(_user.uid).then(()=>showToast('配对码已复制')).catch(()=>showToast('配对码：'+_user.uid));
+  else showToast('配对码：'+_user.uid);
+};
+window.savePartnerCode=function(){
+  const inp=document.getElementById('partner-code-input');
+  const code=inp?inp.value.trim():'';
+  if(!_user){ showToast('请先登录再配对'); return; }
+  if(code&&code===_user.uid){ showToast('不能填自己的配对码'); return; }
+  S.partnerUid=code||null;
+  if(code) S.partnerDays=null;   // paired: overlap follows partner's real day count
+  saveState(); pushProfile(); subscribePartner(); updatePairUI(); flashSaved();
+  showToast(code?'已保存搭子配对码':'已取消配对');
+};
+window.unpairPartner=function(){
+  S.partnerUid=null; saveState(); pushProfile(); subscribePartner(); updatePairUI(); showToast('已解除配对');
+};
+window.sendCheer=function(emoji){
+  if(!partnerUid()){ showToast('先和搭子配对'); return; }
+  S.cheer={ date:todayStr(), emoji:emoji||'💪' };
+  saveState(); pushProfile(); updatePairUI(); if(typeof render==='function')render();
+  showToast('已给搭子加油 '+(emoji||'💪'));
+};
+function updatePairUI(){
+  const me=document.getElementById('my-pair-code');
+  if(me) me.textContent=_user?_user.uid:'（请先登录）';
+  const inp=document.getElementById('partner-code-input');
+  if(inp&&document.activeElement!==inp) inp.value=partnerUid()||'';
+  const pdRow=document.getElementById('partner-days-row');
+  if(pdRow) pdRow.style.display=partnerUid()?'none':'block'; // paired → manual day-count hidden
+  const status=document.getElementById('pair-status');
+  if(status){
+    const pu=partnerUid();
+    if(!pu){ status.style.display='none'; }
+    else{
+      status.style.display='block';
+      if(_partnerProfile){
+        const c=_partnerProfile.cheer;
+        const cheerLine=(c&&c.date===todayStr())?` · TA今天给你 ${c.emoji}`:'';
+        status.innerHTML=`已连接 <b>${_partnerProfile.name||'搭子'}</b> · 今日：${_partnerProfile.todayType}${_partnerProfile.todayDone?' ✓':''}${cheerLine} · <a href="#" onclick="unpairPartner();return false">解除</a>`;
+      }else{
+        status.innerHTML=`已保存配对码，等对方也填上你的配对码即可连接 · <a href="#" onclick="unpairPartner();return false">取消</a>`;
+      }
+    }
+  }
 }
 
 // ══ UI Bindings ══════════════════════════════════════════

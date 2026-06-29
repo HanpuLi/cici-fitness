@@ -1302,9 +1302,10 @@ const GYM_PATTERNS = {
 
 // Resolve a weekly grid (0=rest,1=gym,2=swim by weekday, 0=Mon) for a given total
 // day count, using the same anchored templates real plans are built from.
-function weekdayPlanTypes(days) {
+function weekdayPlanTypes(days, hasPool) {
   days = +days;
-  if (S.equip.includes('泳池')) {
+  if (hasPool === undefined) hasPool = S.equip.includes('泳池');
+  if (hasPool) {
     const sp = SWIM_SPLIT[days] || { gym: Math.max(2, days - 1), swim: 1 };
     return (COMBO_PATTERNS[sp.gym + '+' + sp.swim] || COMBO_PATTERNS['3+2']).map(c => c === 'G' ? 1 : c === 'S' ? 2 : 0);
   }
@@ -1316,9 +1317,12 @@ function weekdayPlanTypes(days) {
 // is computed locally — no cross-account read of the partner's data is needed.
 // Returns null when no 搭子 is configured. gym/swim are arrays of weekday indices.
 function partnerOverlap() {
-  const pd = +S.partnerDays;
+  const pp = (typeof _partnerProfile !== 'undefined') ? _partnerProfile : null;
+  const pd = (pp && pp.days) ? +pp.days : +S.partnerDays;
   if (!pd || pd < 2 || pd > 7) return null;
-  const mine = weekdayPlanTypes(S.days), theirs = weekdayPlanTypes(pd);
+  const myPool = S.equip.includes('泳池');
+  const theirPool = pp ? !!pp.hasPool : myPool;
+  const mine = weekdayPlanTypes(S.days, myPool), theirs = weekdayPlanTypes(pd, theirPool);
   const gym = [], swim = [];
   for (let d = 0; d < 7; d++) {
     if (mine[d] === 1 && theirs[d] === 1) gym.push(d);
@@ -1955,6 +1959,21 @@ function render() {
   <span class="intensity-title">${intensityInfo.icon} ${intensityInfo.status}</span>
   <span class="intensity-desc">${intensityInfo.desc}</span>
 </div>`;
+
+  if (typeof partnerUid === 'function' && partnerUid()) {
+    const pp = (typeof _partnerProfile !== 'undefined') ? _partnerProfile : null;
+    if (pp) {
+      const inCheer = (pp.cheer && pp.cheer.date === today) ? pp.cheer.emoji : '';
+      const myCheer = (S.cheer && S.cheer.date === today) ? S.cheer.emoji : '';
+      h += `<div class="partner-card">
+<div class="partner-row"><span class="partner-name">${pp.name || '搭子'}</span><span class="partner-today">今日 ${pp.todayType}${pp.todayDone ? ' ✓' : ''}</span></div>
+${inCheer ? `<div class="partner-cheer-in">TA给你加油 ${inCheer}</div>` : ''}
+<div class="partner-cheer-btns">${['💪', '🔥', '❤️'].map(e => `<button type="button" onclick="sendCheer('${e}')">${e}</button>`).join('')}${myCheer ? `<span class="partner-mine">已送 ${myCheer}</span>` : ''}</div>
+</div>`;
+    } else {
+      h += `<div class="partner-card pending">已保存搭子配对码，等对方也填上你的配对码就连上了</div>`;
+    }
+  }
 
   const vsFmt = viewStart.slice(5).replace('-', '/');
   const veFmt = viewEnd.slice(5).replace('-', '/');
