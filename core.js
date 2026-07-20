@@ -116,9 +116,36 @@ const _PRIVATE_POOL = [
 , '仰卧大字形核心抗阻'
 , '俯卧支撑贴地式爬行'
 ];
+// 私人池伤病过滤:LIMIT_RULES 的 exclude 只列了健身房动作名,私人池动作按名称模式补上
+const PRIVATE_LIMIT_RULES = [
+  { kw: ['膝', '膝盖', '膝关节'], pat: /跪姿|高跪|跪地|花环式|深蹲|弓步/ },
+  { kw: ['颈', '颈椎', '脖子', '肩颈', '颈肩'], pat: /犁式|头颈|颈部|轮式|倒挂/ },
+  { kw: ['腰', '腰椎', '腰背'], pat: /轮式|弓式|龙旗|后仰|后伸|后倾|挺髋|penché/ },
+  { kw: ['手腕', '腕'], pat: /支撑|爬行|L撑|龙旗|轮式|手臂/ },
+  { kw: ['踝', '脚踝'], pat: /足尖|relevé|踮立|弹震|弓步跳/ },
+  { kw: ['肩', '肩膀', '肩关节'], pat: /悬挂|龙旗|轮式|倒挂/ },
+];
+// 柔韧锚定体位:每次流动/私人日必出,保持秒数随生成次数渐进(+5s/次,45→120s 封顶)
+const FLEX_ANCHORS = ['青蛙趴', '靠墙倒挂大V字', '极宽跪姿胸贴地', '鸽式（eka pada kapotasana）'];
+// 臀肌激活优先(优先练出臀):流动/私人日首位固定一个臀激活动作
+const GLUTE_ACTIVATION = ['蛙式臀桥', '蛙式臀冲', '肩垫高极限臀推'];
+function _privMaxDiff() { return S.level === '高级' ? 3 : 2; }
+function _flexHold(name) { const n = (S.flexProg || {})[name] || 0; return Math.min(120, 45 + 5 * n); }
+function _bumpFlexProg(names) {
+  S.flexProg = S.flexProg || {};
+  const d = new Date().toISOString().slice(0, 10);
+  if (S._flexProgDay === d) return;   // 每天最多进阶一次,反复重生成计划不刷秒数
+  S._flexProgDay = d;
+  names.forEach(n => { S.flexProg[n] = (S.flexProg[n] || 0) + 1; });
+  saveState();
+}
 function getExcluded() {
   const s = new Set();
   LIMIT_RULES.forEach(r => { if (r.kw.some(k => S.limits.includes(k))) r.exclude.forEach(e => s.add(e)) });
+  PRIVATE_LIMIT_RULES.forEach(r => {
+    if (r.kw.some(k => S.limits.includes(k)))
+      _PRIVATE_POOL.forEach(n => { if (r.pat.test(n)) s.add(n); });
+  });
 
   if (!hasGoal('女性曲线')) {
     CURVE_EXCLUSIVE_EXERCISES.forEach(e => s.add(e));
@@ -980,10 +1007,21 @@ function pickExercises(split, excluded) {
     else { for (let i = pool.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1));[pool[i], pool[j]] = [pool[j], pool[i]] } }
     // For focused groups, put compound moves first
     if (favGroups.includes(grp)) pool.sort((a, b) => (a.diff === b.diff ? 0 : b.diff - a.diff));
-    // Owner session: private pool exercises float to the top
+    // Owner session: private pool exercises float to the top —— 但臀腿主力肌群例外:
+    // 「优先练出臀」时负重复合动作(臀推/硬拉/外展器械)不能被徒手地板动作挤掉名额,
+    // 私有动作由后面的「私享收尾」块保底,不占主力名额。
     if (_ownerSession()) {
       const _ps = new Set(_PRIVATE_POOL);
-      pool.sort((a, b) => (_ps.has(a.n) ? 0 : 1) - (_ps.has(b.n) ? 0 : 1));
+      const _lowerMain = hasGoal('女性曲线') && ['hamglutes', 'glutemed', 'quads'].includes(grp);
+      if (_lowerMain) {
+        pool.sort((a, b) => (_ps.has(a.n) ? 1 : 0) - (_ps.has(b.n) ? 1 : 0));
+        if (grp === 'hamglutes') {
+          const _key = /臀推|硬拉/;
+          pool.sort((a, b) => ((_key.test(a.n) && !_ps.has(a.n)) ? 0 : 1) - ((_key.test(b.n) && !_ps.has(b.n)) ? 0 : 1));
+        }
+      } else {
+        pool.sort((a, b) => (_ps.has(a.n) ? 0 : 1) - (_ps.has(b.n) ? 0 : 1));
+      }
     }
     pool.slice(0, count).forEach(ex => {
       used.add(ex.n);
@@ -994,7 +1032,10 @@ function pickExercises(split, excluded) {
       // Show the real last recorded weight (W_HIST) instead of a fabricated %max —
       // app has no 1RM input, so the percentage was meaningless. No history → omit.
       const lastW = getLastWeight(ex.n, true) || getLastWeight(ex.n, false);
-      const wHint = lastW ? `（上次 ${lastW.weight}kg）` : '';
+      const _gluteProg = hasGoal('女性曲线') && ['hamglutes', 'glutemed', 'quads'].includes(grp);
+      const wHint = lastW
+        ? (_gluteProg ? `（上次 ${lastW.weight}kg → 今天目标:同重多1次,或 +2.5kg）` : `（上次 ${lastW.weight}kg）`)
+        : (_gluteProg ? '（记录今天的重量,下次给你渐进目标——臀围度=渐进负重×吃够）' : '');
       const coaching = (S.periodMode ? '经期温和模式 | ' : '') + `${ex.note} — ${sch.intensityNote[S.level]}${wHint}`;
       result.push({ name: ex.n, sets: exSets, reps: exReps, unit: isCardio ? '分钟' : (isTime ? '秒' : '次'), note: coaching, group: grp, diff: ex.diff, bi: !!ex.bi, muscle: ex.muscle });
     });
@@ -1023,7 +1064,8 @@ function pickExercises(split, excluded) {
     const already = result.filter(e => _ps.has(e.name)).length;
     if (already < 2) {
       const pPool = Object.entries(DB).flatMap(([g, exs]) =>
-        exs.filter(ex => _ps.has(ex.n) && ex.eq.some(e => e === '无器材' || S.equip.includes(e)) && !used.has(ex.n))
+        exs.filter(ex => _ps.has(ex.n) && ex.eq.some(e => e === '无器材' || S.equip.includes(e)) &&
+                   !used.has(ex.n) && !excluded.has(ex.n) && (ex.diff || 2) <= _privMaxDiff())
           .map(ex => ({ ...ex, _g: g }))
       );
       for (let i = pPool.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1));[pPool[i], pPool[j]] = [pPool[j], pPool[i]]; }
@@ -1329,17 +1371,31 @@ function pickPrivateDayExercises() {
   if (!_ownerSession()) return [];
   const excluded = getExcluded();
   const ps = new Set(_PRIVATE_POOL);
-  const pool = [];
+  let pool = [];
   Object.entries(DB).forEach(([grp, exs]) => {
     exs.forEach(ex => {
       if (ps.has(ex.n) && !excluded.has(ex.n) && ex.eq.some(e => e === '无器材' || S.equip.includes(e)))
         pool.push({ ...ex, _g: grp });
     });
   });
-  for (let i = pool.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1));[pool[i], pool[j]] = [pool[j], pool[i]]; }
-  return pool.slice(0, 8).map(ex => ({
-    name: ex.n, sets: 2, reps: ex.u === '秒' ? 45 : 15, unit: ex.u || '次',
-    note: ex.note, group: ex._g, diff: ex.diff, bi: !!ex.bi, muscle: ex.muscle || []
+  // 难度闸:跟训练等级走(初/中级 ≤2,高级 ≤3),池子被滤空则放宽
+  const capped = pool.filter(ex => (ex.diff || 2) <= _privMaxDiff());
+  if (capped.length >= 8) pool = capped;
+  // 锚定块:1 个臀激活(优先练出臀)+ 柔韧锚定体位(每次必出,保持秒数渐进)
+  const byName = n => pool.find(ex => ex.n === n);
+  const glute = GLUTE_ACTIVATION.map(byName).filter(Boolean).slice(0, 1);
+  const anchors = FLEX_ANCHORS.map(byName).filter(Boolean);
+  const fixedNames = new Set([...glute, ...anchors].map(ex => ex.n));
+  let rest = pool.filter(ex => !fixedNames.has(ex.n));
+  for (let i = rest.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1));[rest[i], rest[j]] = [rest[j], rest[i]]; }
+  const picked = [...glute, ...anchors, ...rest].slice(0, 8);
+  _bumpFlexProg(picked.filter(ex => FLEX_ANCHORS.includes(ex.n)).map(ex => ex.n));
+  return picked.map(ex => ({
+    name: ex.n, sets: 2,
+    reps: ex.u === '秒' ? (FLEX_ANCHORS.includes(ex.n) ? _flexHold(ex.n) : 45) : 15,
+    unit: ex.u || '次',
+    note: FLEX_ANCHORS.includes(ex.n) ? `${ex.note}｜锚定体位:本次保持 ${_flexHold(ex.n)} 秒,逐次 +5s 加深` : ex.note,
+    group: ex._g, diff: ex.diff, bi: !!ex.bi, muscle: ex.muscle || []
   }));
 }
 
@@ -1365,6 +1421,10 @@ function pickPrivateForSplit(split, excluded, usedSet) {
         pool.push(ex);
     });
   });
+  // 难度上限跟训练等级走,不跟深度分走——深度分只在身体准备度允许的范围内排偏好
+  const _cap = _privMaxDiff();
+  const _fit = pool.filter(ex => (ex.diff || 2) <= _cap);
+  if (_fit.length >= 2) { pool.length = 0; pool.push(..._fit); }
   const depthScore = _subDepthScore();
   pool.sort((a, b) => {
     const da = a.diff || 2, db2 = b.diff || 2;
@@ -1524,15 +1584,29 @@ function genPrivatePlan(silent) {
   if (!_ownerSession()) return;
   const excluded = getExcluded();
   const ps = new Set(_PRIVATE_POOL);
-  const pool = [];
+  let pool = [];
   Object.entries(DB).forEach(([grp, exs]) => {
     exs.forEach(ex => {
       if (ps.has(ex.n) && !excluded.has(ex.n) && ex.eq.some(e => e === '无器材' || S.equip.includes(e)))
         pool.push({ ...ex, _g: grp });
     });
   });
-  for (let i = pool.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1));[pool[i], pool[j]] = [pool[j], pool[i]]; }
-  S.privatePlan = pool.slice(0, 8).map(ex => ({ name: ex.n, dur: ex.u === '秒' ? 45 : 30, note: ex.note, muscle: ex.muscle || [], bi: !!ex.bi }));
+  const capped = pool.filter(ex => (ex.diff || 2) <= _privMaxDiff());
+  if (capped.length >= 8) pool = capped;
+  const byName = n => pool.find(ex => ex.n === n);
+  const glute = GLUTE_ACTIVATION.map(byName).filter(Boolean).slice(0, 1);
+  const anchors = FLEX_ANCHORS.map(byName).filter(Boolean);
+  const fixedNames = new Set([...glute, ...anchors].map(ex => ex.n));
+  let rest = pool.filter(ex => !fixedNames.has(ex.n));
+  for (let i = rest.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1));[rest[i], rest[j]] = [rest[j], rest[i]]; }
+  const picked = [...glute, ...anchors, ...rest].slice(0, 8);
+  _bumpFlexProg(picked.filter(ex => FLEX_ANCHORS.includes(ex.n)).map(ex => ex.n));
+  S.privatePlan = picked.map(ex => ({
+    name: ex.n,
+    dur: ex.u === '秒' ? (FLEX_ANCHORS.includes(ex.n) ? _flexHold(ex.n) : 45) : 30,
+    note: FLEX_ANCHORS.includes(ex.n) ? `${ex.note}｜锚定体位:保持 ${_flexHold(ex.n)} 秒,逐次 +5s` : ex.note,
+    muscle: ex.muscle || [], bi: !!ex.bi
+  }));
   saveState();
   if (!silent) { render(); if (typeof showToast === 'function') showToast('柔韧流动已生成'); }
 }
