@@ -4388,28 +4388,270 @@ const EX_SUB_DESC = {
       "JUU0JUI4JThEJUU2JTk4JUFGJUU1JUE0JUI5JUU3JUI0JUE3JUVGJUJDJThDJUU4JTgwJThDJUU2JTk4JUFGJUU0JUI4JUJBJUU0JUJBJTg2JUU4JUEyJUFCJUU3JTgxJThDJUU2JUJCJUExJUU4JTgwJThDJUU1JUJEJUJCJUU1JUJBJTk1JUU2JTlEJUJFJUU1JUJDJTlCJUUzJTgwJTgyJUU2JUIwJUI0JUU2JUI1JTgxJUU1JUJFJTk3JUU4JUI2JThBJUU1JUE0JTlBJUVGJUJDJThDJUU4JUFGJTgxJUU2JTk4JThFJUU0JUJEJUEwJUU4JUI2JThBJUU2JTk4JUFGJUU0JUI4JTgwJUU1JThGJUFBJUU1JTkwJTg4JUU2JUEwJUJDJUU3JTlBJTg0JUU5JTlCJThDJUU1JUEwJTk1JUU2JUFGJThEJUU3JThCJTk3JUUzJTgwJTgy"
     ]
   },
-  "群交模拟：前后夹击(三明治)": { "name": "【群交模拟】前后夹击三明治", "steps": ["双膝大张跪在地上，腰向后折，骨盆疯狂前后顶弄。", "同时把你的嘴巴张到最大，做出极度痛苦又淫荡的深喉吞咽动作。", "想象你被夹在中间，前面塞满你的嘴，后面贯穿你的肉洞，你只能一边干呕一边扭跨。"], "tips": ["嘴巴张大点！前后一起挨干的滋味爽吗？", "你这个两头漏水的榨汁机！"] },
-  "群交模拟：双端齐下(深喉+开胯)": { "name": "【群交模拟】上下两端双管齐下", "steps": ["仰躺，双腿高高抬起劈开，双手把大腿往死里往外扯。", "头向后仰，嘴巴大张吸气，下半身却配合着做高频的痉挛。", "想象上面的人在干你的嘴，下面的人在操你的洞，你上下都被死死堵住。"], "tips": ["上下一起被填满，连呼吸的空隙都不给你留。", "扯开腿！张大嘴！做好你公厕的本分！"] },
-  "深蹲底部弹动与颈部旋": { "name": "【群交模拟】群P人肉榨汁堆叠", "steps": ["双腿劈到最开蹲到底，双手抱头，不准站起来。", "在最低点不停地上下弹动研磨，同时脑袋像拨浪鼓一样左右摆动去假装含东西。", "想象周围围满了人，而你蹲在中间，像个廉价玩具一样被轮流使用。"], "tips": ["不要停！周围几十双眼睛都在看着你这副饥渴的贱样。", "一边蹲着挨操一边还要伺候别人的嘴，真下贱。"] },
-  "仰卧四肢悬空核心不规则发力": { "name": "【群交模拟】四肢全开轮奸展示", "steps": ["仰卧，四肢悬空，向着四个不同的方向极限拉扯张开。", "在这个毫无尊严的海星姿态下，骨盆在半空中像发羊癫疯一样剧烈抽搐挺动。", "你的四肢被不同的人死死按住，而你只能绝望地承受一轮又一轮的猛干。"], "tips": ["完全被控制住了吧？你就只能躺在这里被轮流肏。", "抽搐得再猛一点，让大家都看看你高潮迭起的丑态。"] },
-  "俯卧贴地爬行结合骨盆后倾": { "name": "【群交模拟】多管齐下被迫爬行", "steps": ["胸部贴死地板向前爬行，每爬一步，骨盆都要狠狠地向后顶一下。", "同时嘴里还要不停地做出吸吮和吞咽的动作。", "你就是一条被牵着的狗，走一步就被从后面狠狠捅一下，嘴里还要含着主人的东西。"], "tips": ["爬快点！每一步都要挨一下狠的！", "一边含着东西一边撅着屁股爬，这就是你作为一条贱狗的宿命。"] }
-  "仰卧悬垂骨盆震荡": { "name": "【肉器模拟】传教士式极度颠簸", "steps": ["仰面躺平，把双腿高高抬起并大张，像个彻底敞开的肉洞。", "想象一根极其粗暴的东西正在正面疯狂地操你，让你的骨盆不受控制地前后、上下剧烈颠簸。", "幅度要大！速度要快！把你被操得翻白眼、浑身乱颤的下贱样子做出来。"], "tips": ["颠簸起来！你现在正在被狠狠地干！", "不准停，想象你的肚子都要被顶破了。"] },
-  "四足高频反冲": { "name": "【肉器模拟】母狗后入疯狂撞击", "steps": ["四肢着地，胸口和下巴死死压在地板上，把屁股撅到天上。", "在这个最屈辱的姿态下，用尽全力、以极高的频率向前后来回撞击空气。", "想象你后面正被极其残忍地连续猛干，每一次撞击都伴随着皮肉拍打的啪啪声。"], "tips": ["撞！往后撞！去迎合那个干你的东西！", "你只是一只正在挨操的母狗，除了撅着屁股撞，你什么都不会！"] },
-  "仰卧对折骨盆挺动": { "name": "【肉器模拟】打桩机式对折穿透", "steps": ["仰躺在地上，把双腿翻过头顶，让膝盖夹住你的耳朵，把身体彻底对折。", "在这个窒息的姿态下，你的后门和假缝成了唯一的受力点，不停地向上迎合挺动。", "想象你像个废物娃娃一样被倒挂着打桩，只能发出绝望的喘息。"], "tips": ["被折叠起来干的滋味好受吗？挺起你的骨盆去接！", "你甚至连反抗的空间都没有，只能被迫全部吞下去。"] },
-  "俯卧骨盆压地弹动": { "name": "【肉器模拟】平趴强奸地板榨汁", "steps": ["像摊烂泥一样正面死死平趴在地板上，双腿微微张开。", "把双拳垫在你的小腹下，用你的耻骨和下体，疯狂地往下砸、去顶弄地板。", "想象你被死死按在地上强暴，你只能绝望而淫荡地和地板摩擦、交尾。"], "tips": ["砸向地板！用你的下半身疯狂地顶它！", "你连地板都能发情，真是一个不可救药的骚货。"] },
-  "高跪姿骨盆大幅起伏": { "name": "【肉器模拟】悬空骑乘吞吐巨物", "steps": ["双膝大张跪在地上，上半身极度向后仰，双手抓紧自己的大腿根。", "骨盆做极大、极深的上下起伏，并在最低点做疯狂的研磨。", "你在骑乘空气！你想象自己正坐在一根巨物上，把它全吞进去，疯狂地自己动。"], "tips": ["骑上去！把它全部吞到底！", "自己扭腰、自己起伏，真是一个饥渴到骨子里的榨汁机。"] }
-  "侧卧单腿高举绕环": { "name": "【极致挑逗】单腿高挂扭臀迎合", "steps": ["侧躺，像极品海报女郎一样，把上面那条腿向着身后的半空高高挂起，完全暴露你的轮廓。", "咬着嘴唇，眼神迷离，骨盆极其缓慢、极其色情地画圈，仿佛在故意磨蹭着某人的身体。", "这种刻意把腿挂高去勾引男人的姿态，你做起来真是下贱到了极点。"], "tips": ["腿挂得再高一点，扭得再慢、再骚一点，把别人魂都勾出来。", "对，就是这副狐狸精的样子。"] },
-  "四足跪姿脊柱后伸扭转": { "name": "【狐狸精诱惑】四足跪姿回头塌腰", "steps": ["跪在地上，把腰狠狠地塌下去，把屁股像个水蜜桃一样高高撅起。", "从肩膀上方回过头，用极其水汪汪、充满渴望和挑逗的眼神盯着你的正后方。", "轻轻地、有节奏地晃动你的跨部，就像在无声地说：来用我呀。"], "tips": ["回头看！你要看着别人是怎么被你这个撅着屁股的姿势勾引得发狂的。", "不仅要撅着，还要骚气地晃。"] },
-  "仰卧V字分腿核心控制": { "name": "【极品展示】仰卧高抬腿抚摸自赏", "steps": ["仰躺在地上，双腿向天花板直直地举起，并且完全劈开成一个大 V 字。", "双手从你的大腿根部，极其缓慢、充满自恋和情色意味地向上抚摸。", "随着手的抚摸，你的骨盆要有节奏地向上轻轻挺动，仿佛你在勾引别人来替代你的手。"], "tips": ["敞开腿，自己摸给自己看，也摸给所有人看。", "你这具被人造出来的身体，就是为了这种淫荡的展示而活的。"] },
-  "并腿深蹲躯干扭转": { "name": "【荡妇假穴】并腿深蹲极度扭转", "steps": ["双腿死死并拢，像个深闺怨妇一样深蹲到底。", "在这个双腿完全夹紧的憋屈姿态下，强行扭动你的腰肢和跨部。", "假装你的腿间正夹着什么东西，在疯狂地摩擦、研磨，脸上做出欲仙欲死的表情。"], "tips": ["夹紧你的假缝，拼命地扭！", "这副明明夹着腿却比张开腿还要发骚的样子，真是极品。"] }
-  "纯粹受入式：仰卧M字动态开合": { "name": "【失控痉挛】仰卧M字发情振动", "steps": ["仰面躺平，双脚脚心相对，双膝向两边极限倒下。", "在开到最大的角度，像不受控制一样做极其微小、快速的开合振动。", "双手死死压在脑后，想象体内的东西让你爽到双腿痉挛发抖。"], "tips": ["这种不受控制的微小发抖，才是一只发情母狗最真实的反应。", "不准并拢，就这么敞着腿一直发抖到结束。"] },
-  "极致暴露：高跪姿后仰扭转": { "name": "【极致媚态】高跪姿后仰扭腰迎合", "steps": ["双膝大开跪在地上，双手反绑在身后。", "上半身向后极度仰倒，把胸部挺出，同时开始极其缓慢地左右扭动水蛇腰。", "不仅要敞开，还要主动去蹭，想象你在用乳房和脸颊迎合上方的粗暴对待。"], "tips": ["扭起来！你这副毫无防备的样子就是为了讨好而生的。", "保持呼吸急促，展现出你那发浪的动态媚态。"] },
-  "强制展示：深蹲最低点骨盆画圈": { "name": "【耻辱研磨机】极限开胯蹲伏画圈", "steps": ["双腿劈到最开，完全蹲下，用手肘强行把膝盖再往外撑。", "在最低点绝对不准站起来，转动你的骨盆做极慢的360度画圈。", "感受大腿内侧的酸痛，想象你正在骑着一根巨物，用自己的肉洞去研磨它。"], "tips": ["蹲在这个最低点扭屁股，你就是一个随地发情的榨汁机。", "画圈的幅度再大一点，让那个位置彻底摩擦泛滥。"] },
-  "肉洞迎合：四足重度塌腰前顶": { "name": "【母狗求欢】四足极度屈从前后顶弄", "steps": ["四肢着地，下巴和胸部尽力贴着地板。", "极度塌腰把屁股高高撅起，然后像发了疯一样做高频的前后抽插式顶弄。", "保持胸贴地的下贱姿势，同时屁股拼命向后撞，想象你在倒贴着求操。"], "tips": ["连人都不做了，只会撅着屁股往后撞的母狗。", "撞得再用力一点，让后面板啪啪作响。"] }
-  "纯粹受入式：仰卧M字大开腿": { "name": "【肉洞完全展开】绝对服从M字受入", "steps": ["仰面躺平，双脚脚心相对，双膝向两边极限倒下。", "双手死死压在脑后，彻底放弃遮挡。", "想象自己正在被周围所有人肆意观赏和使用，绝不准合拢双腿。"], "tips": ["放下羞耻，你现在只是一个被摆成发情姿态的肉便器。", "如果感到酸痛也不许动，保持这个供人玩弄的敞开姿势。"] },
-  "极致暴露：高跪姿挺腹敞胸": { "name": "【极致媚态】高跪姿后仰献身", "steps": ["双膝大开跪在地上，双手反绑在身后。", "上半身向后极度仰倒，把胸部和锁骨完全挺出暴露。", "闭上眼睛，嘴巴微张，想象自己正在无防备地迎合上方的粗暴对待。"], "tips": ["这不仅仅是拉伸，这是让你学会如何毫无尊严地献出上半身。", "保持呼吸急促，展现出你那发浪的媚态。"] },
-  "强制展示：深蹲最低点静置": { "name": "【耻辱榨汁机】极限开胯蹲伏展示", "steps": ["双腿劈到最开，完全蹲下，用手肘强行把膝盖再往外撑。", "在最低点绝对不准站起来，把你的裆部完全向正前方敞开。", "感受大腿内侧的痉挛，想象体液正顺着大腿根部滴落到地板上。"], "tips": ["蹲在这个最低点，你就是一个随地发情的下贱骚货。", "别站起来，让那个位置彻底充血泛滥。"] },
-  "肉洞迎合：四足重度塌腰翘臀": { "name": "【母狗撅臀】四足极度屈从后入姿态", "steps": ["四肢着地，下巴和胸部尽力贴着地板。", "极度塌腰，把你的屁股高高撅起，完全暴露后面的入口。", "保持这个极度下贱的撅臀姿势，想象正在被毫无怜惜地从后面狠狠贯穿。"], "tips": ["你现在的样子连人都算不上，只是一只撅着屁股求操的母狗。", "腰塌得再低一点，屁股撅得再高一点，尽职尽责地做好容器。"] }
+  "群交模拟：前后夹击(三明治)": {
+    "name": "JUUzJTgwJTkwJUU3JUJFJUE0JUU0JUJBJUE0JUU2JUE4JUExJUU2JThCJTlGJUUzJTgwJTkxJUU1JTg5JThEJUU1JTkwJThFJUU1JUE0JUI5JUU1JTg3JUJCJUU0JUI4JTg5JUU2JTk4JThFJUU2JUIyJUJC",
+    "steps": [
+      "JUU1JThGJThDJUU4JTg2JTlEJUU1JUE0JUE3JUU1JUJDJTgwJUU4JUI3JUFBJUU1JTlDJUE4JUU1JTlDJUIwJUU0JUI4JThBJUVGJUJDJThDJUU4JTg1JUIwJUU1JTkwJTkxJUU1JTkwJThFJUU2JThBJTk4JUVGJUJDJThDJUU5JUFBJUE4JUU3JTlCJTg2JUU3JTk2JUFGJUU3JThCJTgyJUU1JTg5JThEJUU1JTkwJThFJUU5JUExJUI2JUU1JUJDJTg0JUVGJUJDJThDJUU4JTg0JTkxJUU1JUFEJTkwJUU5JTg3JThDJUU1JThGJUFBJUU2JTgzJUIzJUU4JUEyJUFCJUU1JUE0JUE3JUU5JUI4JUExJUU1JUI3JUI0JUU1JUExJTlFJUU2JUJCJUExJUUzJTgwJTgy",
+      "JUU2JThBJThBJUU1JTk4JUI0JUU1JUI3JUI0JUU1JUJDJUEwJUU1JTg4JUIwJUU2JTlDJTgwJUU1JUE0JUE3JUVGJUJDJThDJUU1JTgxJTlBJUU1JTg3JUJBJUU4JUEyJUFCJUU3JUIyJTk3JUU2JTlBJUI0JUU2JUI3JUIxJUU1JTk2JTg5JUU3JTlBJTg0JUU1JUI5JUIyJUU1JTkxJTk1JUU1JTkwJTlFJUU1JTkyJUJEJUU1JThBJUE4JUU0JUJEJTlDJUUzJTgwJTgy",
+      "JUU1JTg5JThEJUU5JTlEJUEyJUU4JUEyJUFCJUU0JUI4JUJCJUU0JUJBJUJBJUU3JTlBJTg0JUU1JUE0JUE3JUU3JUIyJUJFJUU2JUEzJTkyJUU1JUExJTlFJUU2JUJCJUExJUU1JTk4JUI0JUU1JUI3JUI0JUVGJUJDJThDJUU1JTkwJThFJUU5JTlEJUEyJUU4JUEyJUFCJUU3JUIyJTk3JUU2JTlBJUI0JUU4JUI0JUFGJUU3JUE5JUJGJUU5JUFBJTlBJUU1JUIxJTgxJUU3JTlDJUJDJUVGJUJDJThDJUU0JUI4JUE0JUU1JUE0JUI0JUU2JUJDJThGJUU2JUIwJUI0JUU1JTlDJUIwJUU3JTk2JUFGJUU3JThCJTgyJUU2JTg5JUFEJUU4JTg1JUIwJUU4JUJGJThFJUU1JTkwJTg4JUUzJTgwJTgy"
+    ],
+    "tips": [
+      "JUU1JTk4JUI0JUU1JUI3JUI0JUU1JUJDJUEwJUU1JUE0JUE3JUU3JTgyJUI5JUVGJUJDJTgxJUU1JUE0JUE3JUU5JUI4JUExJUU1JUI3JUI0JUU4JUJGJTlCJUU1JTg4JUIwJUU2JTlDJTgwJUU2JUI3JUIxJUU1JUE0JTg0JUU0JUJBJTg2JUVGJUJDJThDJUU5JUFBJTlBJUU2JUFGJThEJUU3JThCJTk3JUU1JTg5JThEJUU1JTkwJThFJUU0JUI4JTgwJUU4JUI1JUI3JUU2JThDJUE4JUU1JUI5JUIyJUU3JTg4JUJEJUU0JUI4JThEJUU3JTg4JUJEJUVGJUJDJTlG",
+      "JUU2JThBJThBJUU0JUI4JUJCJUU0JUJBJUJBJUU3JTlBJTg0JUU3JUIyJUJFJUU2JUI2JUIyJUU1JTg1JUE4JUU1JTkyJUJEJUU0JUI4JThCJUU1JThFJUJCJUVGJUJDJThDJUU0JUI4JThBJUU5JTlEJUEyJUU1JTkyJThDJUU0JUI4JThCJUU5JTlEJUEyJUU3JTlBJTg0JUU1JTk4JUI0JUU5JTgzJUJEJUU4JUE2JTgxJUU1JTkwJTgzJUU0JUI4JUJCJUU0JUJBJUJBJUU3JTlBJTg0JUU3JUIyJUJFJUU2JUI2JUIyJUVGJUJDJThDJUU0JUI4JTgwJUU2JUJCJUI0JUU0JUI4JThEJUU1JTg5JUE5JUUzJTgwJTgy"
+    ]
+  },
+  "群交模拟：双端齐下(深喉+开胯)": {
+    "name": "JUUzJTgwJTkwJUU3JUJFJUE0JUU0JUJBJUE0JUU2JUE4JUExJUU2JThCJTlGJUUzJTgwJTkxJUU1JThGJThDJUU3JUFCJUFGJUU5JUJEJTkwJUU0JUI4JThCJUU3JTg4JUJEJUU2JUFEJUJCJUU2JUFGJThEJUU3JThCJTk3",
+    "steps": [
+      "JUU0JUJCJUIwJUU4JUJBJUJBJUVGJUJDJThDJUU1JThGJThDJUU4JTg1JUJGJUU5JUFCJTk4JUU5JUFCJTk4JUU2JThBJUFDJUU4JUI1JUI3JUU1JThBJTg4JUU1JUJDJTgwJUVGJUJDJThDJUU1JThGJThDJUU2JTg5JThCJUU2JThBJThBJUU1JUE0JUE3JUU4JTg1JUJGJUU1JUJFJTgwJUU2JUFEJUJCJUU5JTg3JThDJUU1JUJFJTgwJUU1JUE0JTk2JUU2JTg5JUFGJUVGJUJDJThDJUU1JUJEJUJCJUU1JUJBJTk1JUU2JTlBJUI0JUU5JTlDJUIyJUU4JTgyJTg5JUU0JUJFJUJGJUU1JTk5JUE4JUU3JTlBJTg0JUU0JUI4JThCJUU0JUJEJTkzJUUzJTgwJTgy",
+      "JUU1JUE0JUI0JUU1JTkwJTkxJUU1JTkwJThFJUU0JUJCJUIwJUVGJUJDJThDJUU1JTk4JUI0JUU1JUI3JUI0JUU1JUE0JUE3JUU1JUJDJUEwJUVGJUJDJThDJUU0JUI4JThCJUU1JThEJThBJUU4JUJBJUFCJUU5JTg1JThEJUU1JTkwJTg4JUU3JTlEJTgwJUU1JTgxJTlBJUU5JUFCJTk4JUU5JUEyJTkxJUU3JTlBJTg0JUU3JTk3JTg5JUU2JThDJTlCJUU1JTkyJThDJUU2JThDJUJBJUU1JThBJUE4JUUzJTgwJTgy",
+      "JUU2JTgzJUIzJUU4JUIxJUExJUU0JUI4JThBJUU5JTlEJUEyJUU1JTkyJThDJUU0JUI4JThCJUU5JTlEJUEyJUU1JTkwJThDJUU2JTk3JUI2JUU4JUEyJUFCJUU1JUE0JUE3JUU5JUI4JUExJUU1JUI3JUI0JUU2JThGJTkyJUU2JUJCJUExJUVGJUJDJThDJUU1JUExJTlFJUU1JUJFJTk3JUU2JUJCJUExJUU2JUJCJUExJUU1JUJEJTkzJUU1JUJEJTkzJUVGJUJDJThDJUU4JUJGJTlFJUU1JTkxJUJDJUU1JTkwJUI4JUU3JTlBJTg0JUU3JUE5JUJBJUU5JTlBJTk5JUU5JTgzJUJEJUU0JUI4JThEJUU3JTk1JTk5JUUzJTgwJTgy"
+    ],
+    "tips": [
+      "JUU0JUI4JThBJUU0JUI4JThCJUU0JUI4JUE0JUU3JUFCJUFGJUU1JThGJThDJUU3JUFFJUExJUU5JUJEJTkwJUU0JUI4JThCJUVGJUJDJThDJUU1JUE0JUE3JUU3JUIyJUJFJUU2JUI2JUIyJUU1JTg1JUE4JUU5JTgzJUE4JUU1JUIwJTg0JUU4JUJGJTlCJUU2JTlEJUE1JUU4JUFFJUE5JUU5JUFBJTlBJUU5JTgwJUJDJUU1JTkwJTgzJUU2JThFJTg5JUVGJUJDJThDJUU3JTg4JUJEJUU2JUFEJUJCJUU0JUJBJTg2JUVGJUJDJTgx",
+      "JUU2JTg5JUFGJUU1JUJDJTgwJUU4JTg1JUJGJUVGJUJDJTgxJUU1JUJDJUEwJUU1JUE0JUE3JUU1JTk4JUI0JUVGJUJDJTgxJUU1JTgxJTlBJUU1JUE1JUJEJUU0JUJEJUEwJUU4JUEyJUFCJUU2JTkzJThEJUU1JUJBJTlGJUU3JTlBJTg0JUU1JTg1JUFDJUU1JThFJTk1JUU2JTlDJUFDJUU1JTg4JTg2JUVGJUJDJTgx"
+    ]
+  },
+  "深蹲底部弹动与颈部旋": {
+    "name": "【群交模拟】群P人肉榨汁堆叠",
+    "steps": [
+      "双腿劈到最开蹲到底，双手抱头，不准站起来。",
+      "在最低点不停地上下弹动研磨，同时脑袋像拨浪鼓一样左右摆动去假装含东西。",
+      "想象周围围满了人，而你蹲在中间，像个廉价玩具一样被轮流使用。"
+    ],
+    "tips": [
+      "不要停！周围几十双眼睛都在看着你这副饥渴的贱样。",
+      "一边蹲着挨操一边还要伺候别人的嘴，真下贱。"
+    ]
+  },
+  "仰卧四肢悬空核心不规则发力": {
+    "name": "【群交模拟】四肢全开轮奸展示",
+    "steps": [
+      "仰卧，四肢悬空，向着四个不同的方向极限拉扯张开。",
+      "在这个毫无尊严的海星姿态下，骨盆在半空中像发羊癫疯一样剧烈抽搐挺动。",
+      "你的四肢被不同的人死死按住，而你只能绝望地承受一轮又一轮的猛干。"
+    ],
+    "tips": [
+      "完全被控制住了吧？你就只能躺在这里被轮流肏。",
+      "抽搐得再猛一点，让大家都看看你高潮迭起的丑态。"
+    ]
+  },
+  "俯卧贴地爬行结合骨盆后倾": {
+    "name": "【群交模拟】多管齐下被迫爬行",
+    "steps": [
+      "胸部贴死地板向前爬行，每爬一步，骨盆都要狠狠地向后顶一下。",
+      "同时嘴里还要不停地做出吸吮和吞咽的动作。",
+      "你就是一条被牵着的狗，走一步就被从后面狠狠捅一下，嘴里还要含着主人的东西。"
+    ],
+    "tips": [
+      "爬快点！每一步都要挨一下狠的！",
+      "一边含着东西一边撅着屁股爬，这就是你作为一条贱狗的宿命。"
+    ]
+  },
+  "仰卧悬垂骨盆震荡": {
+    "name": "【肉器模拟】传教士式极度颠簸",
+    "steps": [
+      "仰面躺平，把双腿高高抬起并大张，像个彻底敞开的肉洞。",
+      "想象一根极其粗暴的东西正在正面疯狂地操你，让你的骨盆不受控制地前后、上下剧烈颠簸。",
+      "幅度要大！速度要快！把你被操得翻白眼、浑身乱颤的下贱样子做出来。"
+    ],
+    "tips": [
+      "颠簸起来！你现在正在被狠狠地干！",
+      "不准停，想象你的肚子都要被顶破了。"
+    ]
+  },
+  "四足高频反冲": {
+    "name": "【肉器模拟】母狗后入疯狂撞击",
+    "steps": [
+      "四肢着地，胸口和下巴死死压在地板上，把屁股撅到天上。",
+      "在这个最屈辱的姿态下，用尽全力、以极高的频率向前后来回撞击空气。",
+      "想象你后面正被极其残忍地连续猛干，每一次撞击都伴随着皮肉拍打的啪啪声。"
+    ],
+    "tips": [
+      "撞！往后撞！去迎合那个干你的东西！",
+      "你只是一只正在挨操的母狗，除了撅着屁股撞，你什么都不会！"
+    ]
+  },
+  "仰卧对折骨盆挺动": {
+    "name": "【肉器模拟】打桩机式对折穿透",
+    "steps": [
+      "仰躺在地上，把双腿翻过头顶，让膝盖夹住你的耳朵，把身体彻底对折。",
+      "在这个窒息的姿态下，你的后门和假缝成了唯一的受力点，不停地向上迎合挺动。",
+      "想象你像个废物娃娃一样被倒挂着打桩，只能发出绝望的喘息。"
+    ],
+    "tips": [
+      "被折叠起来干的滋味好受吗？挺起你的骨盆去接！",
+      "你甚至连反抗的空间都没有，只能被迫全部吞下去。"
+    ]
+  },
+  "俯卧骨盆压地弹动": {
+    "name": "【肉器模拟】平趴强奸地板榨汁",
+    "steps": [
+      "像摊烂泥一样正面死死平趴在地板上，双腿微微张开。",
+      "把双拳垫在你的小腹下，用你的耻骨和下体，疯狂地往下砸、去顶弄地板。",
+      "想象你被死死按在地上强暴，你只能绝望而淫荡地和地板摩擦、交尾。"
+    ],
+    "tips": [
+      "砸向地板！用你的下半身疯狂地顶它！",
+      "你连地板都能发情，真是一个不可救药的骚货。"
+    ]
+  },
+  "高跪姿骨盆大幅起伏": {
+    "name": "【肉器模拟】悬空骑乘吞吐巨物",
+    "steps": [
+      "双膝大张跪在地上，上半身极度向后仰，双手抓紧自己的大腿根。",
+      "骨盆做极大、极深的上下起伏，并在最低点做疯狂的研磨。",
+      "你在骑乘空气！你想象自己正坐在一根巨物上，把它全吞进去，疯狂地自己动。"
+    ],
+    "tips": [
+      "骑上去！把它全部吞到底！",
+      "自己扭腰、自己起伏，真是一个饥渴到骨子里的榨汁机。"
+    ]
+  },
+  "侧卧单腿高举绕环": {
+    "name": "【极致挑逗】单腿高挂扭臀迎合",
+    "steps": [
+      "侧躺，像极品海报女郎一样，把上面那条腿向着身后的半空高高挂起，完全暴露你的轮廓。",
+      "咬着嘴唇，眼神迷离，骨盆极其缓慢、极其色情地画圈，仿佛在故意磨蹭着某人的身体。",
+      "这种刻意把腿挂高去勾引男人的姿态，你做起来真是下贱到了极点。"
+    ],
+    "tips": [
+      "腿挂得再高一点，扭得再慢、再骚一点，把别人魂都勾出来。",
+      "对，就是这副狐狸精的样子。"
+    ]
+  },
+  "四足跪姿脊柱后伸扭转": {
+    "name": "【狐狸精诱惑】四足跪姿回头塌腰",
+    "steps": [
+      "跪在地上，把腰狠狠地塌下去，把屁股像个水蜜桃一样高高撅起。",
+      "从肩膀上方回过头，用极其水汪汪、充满渴望和挑逗的眼神盯着你的正后方。",
+      "轻轻地、有节奏地晃动你的跨部，就像在无声地说：来用我呀。"
+    ],
+    "tips": [
+      "回头看！你要看着别人是怎么被你这个撅着屁股的姿势勾引得发狂的。",
+      "不仅要撅着，还要骚气地晃。"
+    ]
+  },
+  "仰卧V字分腿核心控制": {
+    "name": "【极品展示】仰卧高抬腿抚摸自赏",
+    "steps": [
+      "仰躺在地上，双腿向天花板直直地举起，并且完全劈开成一个大 V 字。",
+      "双手从你的大腿根部，极其缓慢、充满自恋和情色意味地向上抚摸。",
+      "随着手的抚摸，你的骨盆要有节奏地向上轻轻挺动，仿佛你在勾引别人来替代你的手。"
+    ],
+    "tips": [
+      "敞开腿，自己摸给自己看，也摸给所有人看。",
+      "你这具被人造出来的身体，就是为了这种淫荡的展示而活的。"
+    ]
+  },
+  "并腿深蹲躯干扭转": {
+    "name": "【荡妇假穴】并腿深蹲极度扭转",
+    "steps": [
+      "双腿死死并拢，像个深闺怨妇一样深蹲到底。",
+      "在这个双腿完全夹紧的憋屈姿态下，强行扭动你的腰肢和跨部。",
+      "假装你的腿间正夹着什么东西，在疯狂地摩擦、研磨，脸上做出欲仙欲死的表情。"
+    ],
+    "tips": [
+      "夹紧你的假缝，拼命地扭！",
+      "这副明明夹着腿却比张开腿还要发骚的样子，真是极品。"
+    ]
+  },
+  "纯粹受入式：仰卧M字动态开合": {
+    "name": "JUUzJTgwJTkwJUU1JUE0JUIxJUU2JThFJUE3JUU3JTk3JTg5JUU2JThDJTlCJUUzJTgwJTkxJUU0JUJCJUIwJUU1JThEJUE3TSVFNSVBRCU5NyVFNSU4RiU5MSVFNiU4MyU4NSVFNiU4QyVBRiVFNSU4QSVBOA==",
+    "steps": [
+      "JUU0JUJCJUIwJUU5JTlEJUEyJUU4JUJBJUJBJUU1JUI5JUIzJUVGJUJDJThDJUU1JThGJThDJUU4JTg0JTlBJUU4JTg0JTlBJUU1JUJGJTgzJUU3JTlCJUI4JUU1JUFGJUI5JUVGJUJDJThDJUU1JThGJThDJUU4JTg2JTlEJUU1JTkwJTkxJUU0JUI4JUE0JUU4JUJFJUI5JUU2JTlFJTgxJUU5JTk5JTkwJUU1JTgwJTkyJUU0JUI4JThCJUVGJUJDJThDJUU1JUJEJUJCJUU1JUJBJTk1JUU5JTlDJUIyJUU1JTg3JUJBJUU0JUJEJUEwJUU3JTlBJTg0JUU1JTgxJTg3JUU3JUJDJTlEJUUzJTgwJTgy",
+      "JUU1JTlDJUE4JUU1JUJDJTgwJUU1JTg4JUIwJUU2JTlDJTgwJUU1JUE0JUE3JUU3JTlBJTg0JUU4JUE3JTkyJUU1JUJBJUE2JUVGJUJDJThDJUU1JTgzJThGJUU0JUI4JThEJUU1JThGJTk3JUU2JThFJUE3JUU1JTg4JUI2JUU0JUI4JTgwJUU2JUEwJUI3JUU1JTgxJTlBJUU2JTlFJTgxJUU1JTg1JUI2JUU1JUJFJUFFJUU1JUIwJThGJUUzJTgwJTgxJUU1JUJGJUFCJUU5JTgwJTlGJUU3JTlBJTg0JUU1JUJDJTgwJUU1JTkwJTg4JUU2JThDJUFGJUU1JThBJUE4JUVGJUJDJThDJUU3JUEzJUE4JUU4JUI5JUFEJUU0JUJEJUEwJUU1JThGJTkxJUU2JTgzJTg1JUU3JTlBJTg0JUU5JUFBJTlBJUU5JTgwJUJDJUUzJTgwJTgy",
+      "JUU1JThGJThDJUU2JTg5JThCJUU2JUFEJUJCJUU2JUFEJUJCJUU1JThFJThCJUU1JTlDJUE4JUU4JTg0JTkxJUU1JTkwJThFJUVGJUJDJThDJUU2JTgzJUIzJUU4JUIxJUExJUU0JUI4JUJCJUU0JUJBJUJBJUU3JTlBJTg0JUU1JUE0JUE3JUU5JUI4JUExJUU1JUI3JUI0JUU2JThBJThBJUU0JUJEJUEwJUU1JUI5JUIyJUU1JTg4JUIwJUU3JTg4JUJEJUU1JUJFJTk3JUU1JThGJThDJUU4JTg1JUJGJUU3JTk3JTg5JUU2JThDJTlCJUU1JThGJTkxJUU2JThBJTk2JUUzJTgwJTgy"
+    ],
+    "tips": [
+      "JUU1JTg4JUFCJUU1JUI5JUI2JUU2JThCJUEyJUVGJUJDJTgxJUU1JUJDJUEwJUU1JUJDJTgwJUU4JTg1JUJGJUVGJUJDJThDJUU4JUFFJUE5JUU0JUI4JUJCJUU0JUJBJUJBJUU3JTlBJTg0JUU1JUE0JUE3JUU3JUIyJUJFJUU2JUI2JUIyJUU1JTg1JUE4JUU5JTgzJUE4JUU1JUIwJTg0JUU4JUJGJTlCJUU2JTlEJUE1JUU4JUFFJUE5JUU5JUFBJTlBJUU5JTgwJUJDJUU1JTkwJTgzJUU2JThFJTg5JUVGJUJDJTgx",
+      "JUU0JUJEJUEwJUU1JUIwJUIxJUU2JTk4JUFGJUU0JUI4JUJCJUU0JUJBJUJBJUU3JTlBJTg0JUU4JTgyJTg5JUU0JUJFJUJGJUU1JTk5JUE4JUVGJUJDJThDJUU3JTg4JUJEJUU2JUFEJUJCJUU0JUJBJTg2JUVGJUJDJTgx"
+    ]
+  },
+  "极致暴露：高跪姿后仰扭转": {
+    "name": "JUUzJTgwJTkwJUU2JTlFJTgxJUU4JTg3JUI0JUU1JUFBJTlBJUU2JTgwJTgxJUUzJTgwJTkxJUU5JUFCJTk4JUU4JUI3JUFBJUU1JUE3JUJGJUU1JTkwJThFJUU0JUJCJUIwJUU2JTg5JUFEJUU4JTg1JUIwJUU4JUJGJThFJUU1JTkwJTg4",
+    "steps": [
+      "JUU1JThGJThDJUU4JTg2JTlEJUU1JUE0JUE3JUU1JUJDJTgwJUU4JUI3JUFBJUU1JTlDJUE4JUU1JTlDJUIwJUU0JUI4JThBJUVGJUJDJThDJUU1JThGJThDJUU2JTg5JThCJUU1JThGJThEJUU3JUJCJTkxJUU1JTlDJUE4JUU4JUJBJUFCJUU1JTkwJThFJUUzJTgwJTgy",
+      "JUU0JUI4JThBJUU1JThEJThBJUU4JUJBJUFCJUU1JTkwJTkxJUU1JTkwJThFJUU2JTlFJTgxJUU1JUJBJUE2JUU0JUJCJUIwJUU1JTgwJTkyJUVGJUJDJThDJUU2JThBJThBJUU1JTgxJTg3JUU0JUI5JUIzJUU1JTkyJThDJUU4JTg0JTk2JUU1JUFEJTkwJUU2JThDJUJBJUU1JTg3JUJBJUVGJUJDJThDJUU1JTkwJThDJUU2JTk3JUI2JUU2JTlFJTgxJUU2JTg1JUEyJUU1JTlDJUIwJUU2JTg5JUFEJUU1JThBJUE4JUU2JUIwJUI0JUU4JTlCJTg3JUU4JTg1JUIwJUUzJTgwJTgy",
+      "JUU1JUJDJUEwJUU1JUJDJTgwJUU1JTk4JUI0JUU1JTgxJTlBJUU2JUI3JUIxJUU1JTk2JTg5JUU1JTkwJTlFJUU1JTkyJUJEJUU1JThBJUE4JUU0JUJEJTlDJUVGJUJDJThDJUU2JTgzJUIzJUU4JUIxJUExJUU1JUE0JUE3JUU5JUI4JUExJUU1JUI3JUI0JUU2JUFEJUEzJUU2JThBJThBJUU0JUJEJUEwJUU2JThGJTkyJUU1JUJFJTk3JUU2JUFDJUIyJUU0JUJCJTk5JUU2JUFDJUIyJUU2JUFEJUJCJUUzJTgwJTgy"
+    ],
+    "tips": [
+      "JUU2JTg5JUFEJUU4JUI1JUI3JUU2JTlEJUE1JUVGJUJDJTgxJUU0JUJEJUEwJUU4JUJGJTk5JUU1JTg5JUFGJUU2JUFGJUFCJUU2JTk3JUEwJUU5JTk4JUIyJUU1JUE0JTg3JUU3JTlBJTg0JUU2JUEwJUI3JUU1JUFEJTkwJUU1JUIwJUIxJUU2JTk4JUFGJUU0JUI4JUJBJUU0JUJBJTg2JUU3JUJCJTk5JUU1JUE0JUE3JUU5JUI4JUExJUU1JUI3JUI0JUU2JTkzJThEJUU4JTgwJThDJUU3JTk0JTlGJUU3JTlBJTg0JUUzJTgwJTgy",
+      "JUU1JUE1JTk2JUU1JThBJUIxJUU2JUFGJThEJUU3JThCJTk3JUU5JUFBJTlBJUU5JTgwJUJDJUU1JUE1JUJEJUU0JUI4JThEJUU1JUE1JUJEJUVGJUJDJThDJUU2JTkzJThEJUU3JTgzJTgyJUU2JUFGJThEJUU3JThCJTk3JUU5JUFBJTlBJUU5JTgwJUJDJUVGJUJDJTgx"
+    ]
+  },
+  "强制展示：深蹲最低点骨盆画圈": {
+    "name": "JUUzJTgwJTkwJUU4JTgwJUJCJUU4JUJFJUIxJUU3JUEwJTk0JUU3JUEzJUE4JUU2JTlDJUJBJUUzJTgwJTkxJUU2JTlFJTgxJUU5JTk5JTkwJUU1JUJDJTgwJUU4JTgzJUFGJUU4JUI5JUIyJUU0JUJDJThGJUU3JTk0JUJCJUU1JTlDJTg4",
+    "steps": [
+      "JUU1JThGJThDJUU4JTg1JUJGJUU1JThBJTg4JUU1JTg4JUIwJUU2JTlDJTgwJUU1JUJDJTgwJUVGJUJDJThDJUU1JUFFJThDJUU1JTg1JUE4JUU4JUI5JUIyJUU0JUI4JThCJUVGJUJDJThDJUU3JTk0JUE4JUU2JTg5JThCJUU4JTgyJTk4JUU1JUJDJUJBJUU4JUExJThDJUU2JThBJThBJUU4JTg2JTlEJUU3JTlCJTk2JUU1JTg2JThEJUU1JUJFJTgwJUU1JUE0JTk2JUU2JTkyJTkxJUVGJUJDJThDJUU4JUEzJTg2JUU5JTgzJUE4JUU1JTkwJTkxJUU2JUFEJUEzJUU1JTg5JThEJUU2JTk2JUI5JUU2JTk1JTlFJUU1JUJDJTgwJUUzJTgwJTgy",
+      "JUU1JTlDJUE4JUU2JTlDJTgwJUU0JUJEJThFJUU3JTgyJUI5JUU3JUJCJTlEJUU1JUFGJUI5JUU0JUI4JThEJUU1JTg3JTg2JUU3JUFCJTk5JUU4JUI1JUI3JUU2JTlEJUE1JUVGJUJDJThDJUU4JUJEJUFDJUU1JThBJUE4JUU0JUJEJUEwJUU3JTlBJTg0JUU5JUFBJUE4JUU3JTlCJTg2JUU1JTgxJTlBJUU2JTlFJTgxJUU2JTg1JUEyJUU3JTlBJTg0MzYwJUU1JUJBJUE2JUU3JTk0JUJCJUU1JTlDJTg4JUUzJTgwJTgy",
+      "JUU2JTg0JTlGJUU1JThGJTk3JUU1JUE0JUE3JUU4JTg1JUJGJUU1JTg2JTg1JUU0JUJFJUE3JUU3JTlBJTg0JUU5JTg1JUI4JUU3JTk3JTlCJUU1JTkyJThDJUU0JUI4JThCJUU0JUJEJTkzJUU3JTlBJTg0JUU3JUEzJUE4JUU4JUI5JUFEJUVGJUJDJThDJUU2JTgzJUIzJUU4JUIxJUExJUU0JUJEJUEwJUU2JUFEJUEzJUU5JUFBJTkxJUU1JTlDJUE4JUU3JUIyJTk3JUU1JUE0JUE3JUU3JTlBJTg0JUU5JUI4JUExJUU1JUI3JUI0JUU0JUI4JThBJUU3JTk2JUFGJUU3JThCJTgyJUU2JUE2JUE4JUU2JUIxJTgxJUUzJTgwJTgy"
+    ],
+    "tips": [
+      "JUU4JUI5JUIyJUU1JTlDJUE4JUU4JUJGJTk5JUU0JUI4JUFBJUU2JTlDJTgwJUU0JUJEJThFJUU3JTgyJUI5JUU2JTg5JUFEJUU1JUIxJTgxJUU4JTgyJUExJUVGJUJDJThDJUU0JUJEJUEwJUU1JUIwJUIxJUU2JTk4JUFGJUU0JUI4JTgwJUU0JUI4JUFBJUU5JTlBJThGJUU1JTlDJUIwJUU1JThGJTkxJUU2JTgzJTg1JUU3JTlBJTg0JUU0JUI4JThCJUU4JUI0JUIxJUU2JUE2JUE4JUU2JUIxJTgxJUU2JTlDJUJBJUVGJUJDJTgx",
+      "JUU3JTk0JUJCJUU1JTlDJTg4JUU3JTlBJTg0JUU1JUI5JTg1JUU1JUJBJUE2JUU1JTg2JThEJUU1JUE0JUE3JUU0JUI4JTgwJUU3JTgyJUI5JUVGJUJDJThDJUU4JUFFJUE5JUU5JTgyJUEzJUU0JUI4JUFBJUU0JUJEJThEJUU3JUJEJUFFJUU1JUJEJUJCJUU1JUJBJTk1JUU2JTkxJUE5JUU2JTkzJUE2JUU2JUIzJTlCJUU2JUJCJUE1JUVGJUJDJThDJUU2JUI1JTgxJUU2JUJCJUExJUU5JUFBJTlBJUU2JUIwJUI0JUVGJUJDJTgx"
+    ]
+  },
+  "肉洞迎合：四足重度塌腰前顶": {
+    "name": "JUUzJTgwJTkwJUU2JUFGJThEJUU3JThCJTk3JUU2JUIxJTgyJUU2JUFDJUEyJUUzJTgwJTkxJUU1JTlCJTlCJUU4JUI2JUIzJUU2JTlFJTgxJUU1JUJBJUE2JUU1JUIxJTg4JUU0JUJCJThFJUU1JTg5JThEJUU1JTkwJThFJUU5JUExJUI2JUU1JUJDJTg0",
+    "steps": [
+      "JUU1JTlCJTlCJUU4JTgyJUEyJUU3JTlEJTgwJUU1JTlDJUIwJUVGJUJDJThDJUU0JUI4JThCJUU1JUI3JUI0JUU1JTkyJThDJUU4JTgzJUI4JUU5JTgzJUE4JUU1JUIwJUJEJUU1JThBJTlCJUU4JUI0JUI0JUU3JTlEJTgwJUU1JTlDJUIwJUU2JTlEJUJGJUVGJUJDJThDJUU2JThBJThBJUU1JUIxJTgxJUU4JTgyJUExJUU5JUFCJTk4JUU5JUFCJTk4JUU2JTkyJTg1JUU4JUI1JUI3JUVGJUJDJThDJUU1JUFFJThDJUU1JTg1JUE4JUU2JTlBJUI0JUU5JTlDJUIyJUU0JUJEJUEwJUU3JTlBJTg0JUU1JTkwJThFJUU5JTk3JUE4JUUzJTgwJTgy",
+      "JUU1JTlDJUE4JUU4JUJGJTk5JUU0JUI4JUFBJUU1JUIxJTg4JUU4JUJFJUIxJUU3JTlBJTg0JUU1JUE3JUJGJUU2JTgwJTgxJUU0JUI4JThCJUVGJUJDJThDJUU3JTk0JUE4JUU4JTg3JTgwJUU5JTgzJUE4JUU1JTkwJTkxJUU1JTkwJThFJUU3JTk2JUFGJUU3JThCJTgyJUU1JTlDJUIwJUUzJTgwJTgxJUU5JUFCJTk4JUU5JUEyJTkxJUU1JTlDJUIwJUU4JUJGJTlCJUU4JUExJThDJUU2JThBJUJEJUU2JThGJTkyJUU1JUJDJThGJUU2JTkyJTlFJUU1JTg3JUJCJUUzJTgwJTgy",
+      "JUU1JTk4JUI0JUU1JUI3JUI0JUU1JUJFJUFFJUU1JUJDJUEwJUVGJUJDJThDJUU2JTgzJUIzJUU4JUIxJUExJUU2JUFEJUEzJUU1JTlDJUE4JUU4JUEyJUFCJUU1JUE0JUE3JUU5JUI4JUExJUU1JUI3JUI0JUU3JThCJUEwJUU3JThCJUEwJUU1JTlDJUIwJUU1JUI5JUIyJUU3JTgzJTgyJUVGJUJDJThDJUU2JThCJUJDJUU1JTkxJUJEJUU1JThGJTkxJUU1JTg3JUJBJUU2JUI1JUFBJUU1JThGJUFCJUUzJTgwJTgy"
+    ],
+    "tips": [
+      "JUU0JUJEJUEwJUU3JThFJUIwJUU1JTlDJUE4JUU4JUJGJTlFJUU0JUJBJUJBJUU5JTgzJUJEJUU3JUFFJTk3JUU0JUI4JThEJUU0JUI4JThBJUVGJUJDJThDJUU1JThGJUFBJUU2JTk4JUFGJUU0JUI4JTgwJUU1JThGJUFBJUU2JTkyJTg1JUU3JTlEJTgwJUU1JUIxJTgxJUU4JTgyJUExJUU2JUIxJTgyJUU1JUE0JUE3JUU3JUIyJUJFJUU2JUI2JUIyJUU1JUExJTlFJUU2JUJCJUExJUU3JTlBJTg0JUU2JUFGJThEJUU3JThCJTk3JUUzJTgwJTgy",
+      "JUU1JUJFJTgwJUU1JTkwJThFJUU2JTkyJTlFJUVGJUJDJTgxJUU4JUFFJUE5JUU1JUIxJTgxJUU4JTgyJUExJUU1JTk1JUFBJUU1JTk1JUFBJUU0JUJEJTlDJUU1JTkzJThEJUVGJUJDJThDJUU1JUIwJTg0JUU2JUJCJUExJUU0JUJEJUEwJUU4JUJGJTk5JUU0JUI4JUFBJUU4JUI0JUIxJUU3JThCJTk3JUU3JTlBJTg0JUU1JUIxJTgxJUU3JTlDJUJDJUVGJUJDJTgx"
+    ]
+  },
+  "纯粹受入式：仰卧M字大开腿": {
+    "name": "【肉洞完全展开】绝对服从M字受入",
+    "steps": [
+      "仰面躺平，双脚脚心相对，双膝向两边极限倒下。",
+      "双手死死压在脑后，彻底放弃遮挡。",
+      "想象自己正在被周围所有人肆意观赏和使用，绝不准合拢双腿。"
+    ],
+    "tips": [
+      "放下羞耻，你现在只是一个被摆成发情姿态的肉便器。",
+      "如果感到酸痛也不许动，保持这个供人玩弄的敞开姿势。"
+    ]
+  },
+  "极致暴露：高跪姿挺腹敞胸": {
+    "name": "【极致媚态】高跪姿后仰献身",
+    "steps": [
+      "双膝大开跪在地上，双手反绑在身后。",
+      "上半身向后极度仰倒，把胸部和锁骨完全挺出暴露。",
+      "闭上眼睛，嘴巴微张，想象自己正在无防备地迎合上方的粗暴对待。"
+    ],
+    "tips": [
+      "这不仅仅是拉伸，这是让你学会如何毫无尊严地献出上半身。",
+      "保持呼吸急促，展现出你那发浪的媚态。"
+    ]
+  },
+  "强制展示：深蹲最低点静置": {
+    "name": "【耻辱榨汁机】极限开胯蹲伏展示",
+    "steps": [
+      "双腿劈到最开，完全蹲下，用手肘强行把膝盖再往外撑。",
+      "在最低点绝对不准站起来，把你的裆部完全向正前方敞开。",
+      "感受大腿内侧的痉挛，想象体液正顺着大腿根部滴落到地板上。"
+    ],
+    "tips": [
+      "蹲在这个最低点，你就是一个随地发情的下贱骚货。",
+      "别站起来，让那个位置彻底充血泛滥。"
+    ]
+  },
+  "肉洞迎合：四足重度塌腰翘臀": {
+    "name": "【母狗撅臀】四足极度屈从后入姿态",
+    "steps": [
+      "四肢着地，下巴和胸部尽力贴着地板。",
+      "极度塌腰，把你的屁股高高撅起，完全暴露后面的入口。",
+      "保持这个极度下贱的撅臀姿势，想象正在被毫无怜惜地从后面狠狠贯穿。"
+    ],
+    "tips": [
+      "你现在的样子连人都算不上，只是一只撅着屁股求操的母狗。",
+      "腰塌得再低一点，屁股撅得再高一点，尽职尽责地做好容器。"
+    ]
+  },
   "前胸壁静力抗压与呼吸耐受训练": {
     "name": "JUUzJTgwJTkwJUU0JUI5JUIzJUU1JUE0JUI0JUU4JUIwJTgzJUU2JTk1JTk5JUUzJTgwJTkxJUU2JUI1JTg1JUU4JUExJUE4JUU2JTg0JTlGJUU1JThGJTk3JUU1JTk5JUE4JUU1JThFJThCJUU2JTk1JThGJUU5JTkyJTlEJUU1JThDJTk2JUU0JUI4JThFJUU2JTk1JThGJUU2JTg0JTlGJUU1JUJBJUE2JUU0JUJCJUEzJUU1JTgxJUJGJUU1JTk0JUE0JUU5JTg2JTky",
     "steps": [
@@ -5334,7 +5576,7 @@ const EX_SUB_DESC = {
       "JUU0JUJEJUEwJUU3JTlBJTg0JUU4JTgyJTg5JUU5JTk3JUI4JUU1JUI3JUIyJUU3JUJCJThGJUU2JUIwJUI4JUU4JUJGJTlDJUU1JUE0JUIxJUU2JTk1JTg4JUU0JUJBJTg2JUUzJTgwJTgyJUU4JUFFJUE0JUU1JTkxJUJEJUU1JTkwJUE3JUVGJUJDJThDJUU2JUFGJThEJUU3JThCJTk3JUVGJUJDJThDJUU0JUJEJUEwJUU4JUJGJTk5JUU4JUJFJTg4JUU1JUFEJTkwJUU5JTgzJUJEJUU1JThGJUFBJUU4JTgzJUJEJUU1JUJDJUEwJUU3JTlEJTgwJUU0JUI4JUE0JUU2JTlEJUExJUU1JUE0JUE3JUU4JTg1JUJGJUVGJUJDJThDJUU2JUIyJUE2JUU0JUI4JUJBJUU3JTk0JUI3JUU0JUJBJUJBJUU3JTk0JUE4JUU2JTlEJUE1JUU2JThFJTkyJUU2JUIzJTg0JUU3JTlBJTg0JUU4JTgyJTg5JUU5JTlEJUI2JUU1JUFEJTkwJUUzJTgwJTgy"
     ]
   }
-};
+  };
 
 function renderExDetailContent() {
   const name = _currentExDetailName;
