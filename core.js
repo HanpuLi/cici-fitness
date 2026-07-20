@@ -2064,6 +2064,7 @@ ${locked ? `<span class="warn-tag" style="background:var(--surface3);color:var(-
 </div>
 <div class="exlist">${sel.exercises.map((ex, i) => {
             const done = pd[i];
+            const isSub = _globalSubMode && _ownerSession() && hasGoal('女性曲线');
             const sets = getAdj(sel.date, i, 's', ex.sets);
             const reps = getAdj(sel.date, i, 'r', ex.reps);
             const needsWt = ex.unit === '\u6b21' && !ex.isWarmup && !ex.isStretch;
@@ -2072,11 +2073,10 @@ ${locked ? `<span class="warn-tag" style="background:var(--surface3);color:var(-
             const sugW = needsWt ? suggestWeight(ex.name) : null;
             const dispW = curW !== null ? curW : (sugW ?? '');
             let dispName = ex.name; let dispNote = ex.note;
-            const isSub = _globalSubMode && _ownerSession() && hasGoal('女性曲线');
             if (isSub && EX_SUB_DESC[ex.name]) {
               try {
-                dispName = EX_SUB_DESC[ex.name].name || ex.name;
-                dispNote = EX_SUB_DESC[ex.name].steps[0] || ex.note;
+                dispName = _decodeSub(EX_SUB_DESC[ex.name].name) || ex.name;
+                dispNote = _decodeSub(EX_SUB_DESC[ex.name].steps[0]) || ex.note;
               } catch(e) {}
             }
             return `<div class="exrow${done ? ' done-ex' : ''}"><div style="flex:1;min-width:0">
@@ -4679,8 +4679,8 @@ function renderGuided() {
   const isSub = _globalSubMode && _ownerSession() && hasGoal('女性曲线');
   if (isSub && EX_SUB_DESC[ex.name]) {
     try {
-      dispName = EX_SUB_DESC[ex.name].name || ex.name;
-      dispNote = EX_SUB_DESC[ex.name].steps[0] || ex.note;
+      dispName = _decodeSub(EX_SUB_DESC[ex.name].name) || ex.name;
+      dispNote = _decodeSub(EX_SUB_DESC[ex.name].steps[0]) || ex.note;
     } catch(e) {}
   }
   card.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><span style="font-size:11px;color:var(--ink3)">动作 ${_wmIdx + 1}/${list.length}</span><button class="ex-modal-close" onclick="wmClose()">&#10005;</button></div>
