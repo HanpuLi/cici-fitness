@@ -1,4 +1,4 @@
-const CACHE = 'cici-fitness-v119';
+const CACHE = 'cici-fitness-v120';
 
 // ── Local assets: always pre-cached on install ──
 const LOCAL_ASSETS = [
