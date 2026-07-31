@@ -1063,6 +1063,9 @@ document.getElementById('limits').addEventListener('input',e=>{S.limits=e.target
 // Cycle controls (manual slider; whole block hidden when 「生理期/周期功能」 is off)
 const cyEnSw=document.getElementById('cycle-enable-switch');
 if(cyEnSw) cyEnSw.addEventListener('change',function(){S.cycleEnabled=this.checked;let ch=false;if(!this.checked&&S.periodMode){S.periodMode=false;ch=true;}saveState();applySettingsToUI();flashSaved();if(ch&&S.plan){genPlan(true);render();}});
+// 提示音开关(勾=开;localStorage 持久;打开时试放一声)
+const sndSw=document.getElementById('sound-enable-switch');
+if(sndSw){ sndSw.checked = (typeof _soundMuted==='function') ? !_soundMuted() : true; sndSw.addEventListener('change',function(){ try{localStorage.setItem('soundMuted', this.checked?'0':'1');}catch(e){} if(this.checked){try{playExerciseDoneSound();}catch(e){}} if(typeof flashSaved==='function')flashSaved(); }); }
 const slCycle=document.getElementById('sl-cycle');
 if(slCycle) slCycle.addEventListener('input',e=>{S.cycleDay=+e.target.value;updateCycleUI();saveState();});
 const cyLenEl=document.getElementById('cycle-len');

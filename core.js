@@ -2342,175 +2342,103 @@ function _noiseExcite(ctx, duration) {
   return src;
 }
 
-// Sound 1: Rest timer ended — gentle singing bowl
-// Uses noise excitation → bandpass resonance to model a struck metal bowl
+// ── 提示音静音开关(localStorage 持久) ──
+function _soundMuted() { try { return localStorage.getItem('soundMuted') === '1'; } catch (e) { return false; } }
+function toggleSound() { const m = !_soundMuted(); try { localStorage.setItem('soundMuted', m ? '1' : '0'); } catch (e) {} if (!m) { try { playExerciseDoneSound(); } catch(e){} } return m; }
+
+// Sound 1: Rest timer ended — singing bowl (振荡器合成,D4+泛音,长衰减)
 function playDing() {
   try {
+    if (_soundMuted()) return;
     const ctx = _getAudioCtx();
     const now = ctx.currentTime;
-    const masterGain = ctx.createGain();
-    masterGain.gain.setValueAtTime(0.3, now);
-
+    const master = ctx.createGain(); master.gain.value = 0.5;
     const reverb = _makeReverb(ctx, 2.5, 2.5);
-    const dryGain = ctx.createGain();
-    dryGain.gain.value = 0.6;
-    const wetGain = ctx.createGain();
-    wetGain.gain.value = 0.4;
-
-    masterGain.connect(dryGain);
-    dryGain.connect(ctx.destination);
-    masterGain.connect(reverb);
-    reverb.connect(wetGain);
-    wetGain.connect(ctx.destination);
-
-    // Bowl resonant frequencies (D4 and inharmonic partials)
+    const dry = ctx.createGain(); dry.gain.value = 0.7;
+    const wet = ctx.createGain(); wet.gain.value = 0.35;
+    master.connect(dry); dry.connect(ctx.destination);
+    master.connect(reverb); reverb.connect(wet); wet.connect(ctx.destination);
     const freqs = [293.66, 440, 587.33, 880];
-    const qVals = [200, 150, 120, 80];
-    const levels = [1.0, 0.5, 0.3, 0.15];
-
+    const levels = [0.9, 0.4, 0.25, 0.12];
     freqs.forEach((f, i) => {
-      const exciter = _noiseExcite(ctx, 0.02);
-      const bp = ctx.createBiquadFilter();
-      bp.type = 'bandpass';
-      bp.frequency.value = f;
-      bp.Q.value = qVals[i];
-
+      const o = ctx.createOscillator(); o.type = 'sine'; o.frequency.value = f;
       const env = ctx.createGain();
-      env.gain.setValueAtTime(levels[i], now);
-      env.gain.exponentialRampToValueAtTime(0.001, now + 2.8);
-
-      exciter.connect(bp);
-      bp.connect(env);
-      env.connect(masterGain);
-      exciter.start(now);
+      env.gain.setValueAtTime(0.0001, now);
+      env.gain.linearRampToValueAtTime(levels[i], now + 0.012);
+      env.gain.exponentialRampToValueAtTime(0.0008, now + 2.8);
+      o.connect(env); env.connect(master); o.start(now); o.stop(now + 2.9);
     });
   } catch (e) { console.warn('Audio:', e); }
 }
 
-// Sound 2: Rest timer starts — soft wind chime tinkle
+// Sound 2: Rest timer starts — soft wind chime (两声高音)
 function playRestStartSound() {
   try {
+    if (_soundMuted()) return;
     const ctx = _getAudioCtx();
     const now = ctx.currentTime;
-    const masterGain = ctx.createGain();
-    masterGain.gain.setValueAtTime(0.2, now);
-
+    const master = ctx.createGain(); master.gain.value = 0.4;
     const reverb = _makeReverb(ctx, 3, 1.5);
-    const dryGain = ctx.createGain();
-    dryGain.gain.value = 0.5;
-    const wetGain = ctx.createGain();
-    wetGain.gain.value = 0.5;
-
-    masterGain.connect(dryGain);
-    dryGain.connect(ctx.destination);
-    masterGain.connect(reverb);
-    reverb.connect(wetGain);
-    wetGain.connect(ctx.destination);
-
-    // Two gentle chime notes staggered
-    const chimes = [
-      { freq: 1318.5, delay: 0, q: 300, vol: 0.6, decay: 0.9 },
-      { freq: 1760, delay: 0.08, q: 250, vol: 0.35, decay: 0.7 },
-    ];
-
+    const dry = ctx.createGain(); dry.gain.value = 0.6;
+    const wet = ctx.createGain(); wet.gain.value = 0.45;
+    master.connect(dry); dry.connect(ctx.destination);
+    master.connect(reverb); reverb.connect(wet); wet.connect(ctx.destination);
+    const chimes = [ { freq: 1318.5, delay: 0, vol: 0.5, decay: 0.9 }, { freq: 1760, delay: 0.08, vol: 0.3, decay: 0.7 } ];
     chimes.forEach(c => {
-      const exciter = _noiseExcite(ctx, 0.008);
-      const bp = ctx.createBiquadFilter();
-      bp.type = 'bandpass';
-      bp.frequency.value = c.freq;
-      bp.Q.value = c.q;
-
+      const o = ctx.createOscillator(); o.type = 'sine'; o.frequency.value = c.freq;
       const env = ctx.createGain();
-      env.gain.setValueAtTime(0, now);
-      env.gain.setValueAtTime(c.vol, now + c.delay);
-      env.gain.exponentialRampToValueAtTime(0.001, now + c.delay + c.decay);
-
-      exciter.connect(bp);
-      bp.connect(env);
-      env.connect(masterGain);
-      exciter.start(now + c.delay);
+      env.gain.setValueAtTime(0.0001, now + c.delay);
+      env.gain.linearRampToValueAtTime(c.vol, now + c.delay + 0.008);
+      env.gain.exponentialRampToValueAtTime(0.0008, now + c.delay + c.decay);
+      o.connect(env); env.connect(master); o.start(now + c.delay); o.stop(now + c.delay + c.decay + 0.05);
     });
   } catch (e) { console.warn('Audio:', e); }
 }
 
-// Sound 3: Exercise checked off — soft marimba tap
+// Sound 3: Exercise checked off — marimba tap (基频+柔和八度)
 function playExerciseDoneSound() {
   try {
+    if (_soundMuted()) return;
     const ctx = _getAudioCtx();
     const now = ctx.currentTime;
-    const masterGain = ctx.createGain();
-    masterGain.gain.setValueAtTime(0.25, now);
-
+    const master = ctx.createGain(); master.gain.value = 0.5;
     const reverb = _makeReverb(ctx, 4, 0.6);
-    const dryGain = ctx.createGain();
-    dryGain.gain.value = 0.65;
-    const wetGain = ctx.createGain();
-    wetGain.gain.value = 0.35;
-
-    masterGain.connect(dryGain);
-    dryGain.connect(ctx.destination);
-    masterGain.connect(reverb);
-    reverb.connect(wetGain);
-    wetGain.connect(ctx.destination);
-
-    // Marimba: noise excitation → narrow resonance at G5
-    const exciter = _noiseExcite(ctx, 0.012);
-    const bp = ctx.createBiquadFilter();
-    bp.type = 'bandpass';
-    bp.frequency.value = 784;
-    bp.Q.value = 250;
-
-    const env = ctx.createGain();
-    env.gain.setValueAtTime(0.8, now);
-    env.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
-
-    exciter.connect(bp);
-    bp.connect(env);
-    env.connect(masterGain);
-    exciter.start(now);
+    const dry = ctx.createGain(); dry.gain.value = 0.75;
+    const wet = ctx.createGain(); wet.gain.value = 0.3;
+    master.connect(dry); dry.connect(ctx.destination);
+    master.connect(reverb); reverb.connect(wet); wet.connect(ctx.destination);
+    [{ f: 784, v: 0.8, d: 0.45 }, { f: 1568, v: 0.15, d: 0.25 }].forEach(n => {
+      const o = ctx.createOscillator(); o.type = 'sine'; o.frequency.value = n.f;
+      const env = ctx.createGain();
+      env.gain.setValueAtTime(0.0001, now);
+      env.gain.linearRampToValueAtTime(n.v, now + 0.006);
+      env.gain.exponentialRampToValueAtTime(0.0008, now + n.d);
+      o.connect(env); env.connect(master); o.start(now); o.stop(now + n.d + 0.05);
+    });
   } catch (e) { console.warn('Audio:', e); }
 }
 
-// Sound 4: Workout complete — ascending kalimba arpeggio with shimmer
+// Sound 4: Workout complete — ascending kalimba arpeggio (五声音阶)
 function playWorkoutCompleteSound() {
   try {
+    if (_soundMuted()) return;
     const ctx = _getAudioCtx();
     const now = ctx.currentTime;
-    const masterGain = ctx.createGain();
-    masterGain.gain.setValueAtTime(0.22, now);
-
+    const master = ctx.createGain(); master.gain.value = 0.42;
     const reverb = _makeReverb(ctx, 2, 2.5);
-    const dryGain = ctx.createGain();
-    dryGain.gain.value = 0.45;
-    const wetGain = ctx.createGain();
-    wetGain.gain.value = 0.55;
-
-    masterGain.connect(dryGain);
-    dryGain.connect(ctx.destination);
-    masterGain.connect(reverb);
-    reverb.connect(wetGain);
-    wetGain.connect(ctx.destination);
-
-    // Pentatonic scale: C5, D5, E5, G5, A5, C6
+    const dry = ctx.createGain(); dry.gain.value = 0.6;
+    const wet = ctx.createGain(); wet.gain.value = 0.5;
+    master.connect(dry); dry.connect(ctx.destination);
+    master.connect(reverb); reverb.connect(wet); wet.connect(ctx.destination);
     const notes = [523.25, 587.33, 659.25, 783.99, 880, 1046.5];
-
     notes.forEach((freq, i) => {
       const t = now + i * 0.14;
-      const exciter = _noiseExcite(ctx, 0.01);
-      const bp = ctx.createBiquadFilter();
-      bp.type = 'bandpass';
-      bp.frequency.value = freq;
-      bp.Q.value = 280;
-
+      const o = ctx.createOscillator(); o.type = 'triangle'; o.frequency.value = freq;
       const env = ctx.createGain();
-      env.gain.setValueAtTime(0, now);
-      env.gain.setValueAtTime(0.7, t);
-      env.gain.exponentialRampToValueAtTime(0.001, t + 0.8);
-
-      exciter.connect(bp);
-      bp.connect(env);
-      env.connect(masterGain);
-      exciter.start(t);
+      env.gain.setValueAtTime(0.0001, t);
+      env.gain.linearRampToValueAtTime(0.6, t + 0.008);
+      env.gain.exponentialRampToValueAtTime(0.0008, t + 0.8);
+      o.connect(env); env.connect(master); o.start(t); o.stop(t + 0.85);
     });
   } catch (e) { console.warn('Audio:', e); }
 }
