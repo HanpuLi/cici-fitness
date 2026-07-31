@@ -2193,7 +2193,7 @@ ${locked ? `<span class="warn-tag" style="background:var(--surface3);color:var(-
               } catch(e) {}
             }
             return `<div class="exrow${done ? ' done-ex' : ''}"><div style="flex:1;min-width:0">
-<div class="exname" onclick="showExDetail('${ex.name}')" style="cursor:pointer">${dispName}${_pvSet && _pvSet.has(ex.name) ? `<span class="pdot"${isSub && EX_SUB_DESC[ex.name] ? ` onclick="event.stopPropagation();_showPrivDesc('${ex.name}')" style="cursor:pointer"` : ''}></span>` : ''}${needsWt && W_HIST[ex.name] && W_HIST[ex.name].length > 0 && (curW || 0) >= Math.max(...W_HIST[ex.name].map(h => h.weight)) ? ` <span title="个人纪录" style="font-size:9px;color:var(--terra);border:1px solid var(--terra);border-radius:2px;padding:0 2px;margin-left:4px;font-weight:600">纪录</span>` : ''} <i class="ti ti-info-circle" style="font-size:11px;opacity:.4;vertical-align:middle"></i>${!locked && !ex.isWarmup && !ex.isStretch ? ` <span class="swap-btn" onclick="event.stopPropagation();swapExercise('${sel.date}',${i})" title="替换动作" style="border:1px solid var(--sage);color:var(--sage);border-radius:2px;padding:0 4px;font-size:10px;margin-left:4px">替换</span>` : ''}</div>
+<div class="exname" onclick="showExDetail('${ex.name}')" style="cursor:pointer">${dispName}${_pvSet && _pvSet.has(ex.name) ? `<span class="pdot"${isSub && EX_SUB_DESC[ex.name] ? ` onclick="event.stopPropagation();_showPrivDesc('${ex.name}')" style="cursor:pointer"` : ''}></span>` : ''}${needsWt && W_HIST[ex.name] && W_HIST[ex.name].length > 0 && (curW || 0) >= Math.max(...W_HIST[ex.name].map(h => h.weight)) ? ` <span title="个人纪录" style="font-size:9px;color:var(--terra);border:1px solid var(--terra);border-radius:2px;padding:0 2px;margin-left:4px;font-weight:600">纪录</span>` : ''} <i class="ti ti-info-circle" style="font-size:11px;opacity:.4;vertical-align:middle"></i> <span class="demo-btn" onclick="event.stopPropagation();openDemo('${ex.name}')" title="看B站示范" style="border:1px solid var(--terra);color:var(--terra);border-radius:2px;padding:0 4px;font-size:10px;margin-left:4px">▶示范</span>${!locked && !ex.isWarmup && !ex.isStretch ? ` <span class="swap-btn" onclick="event.stopPropagation();swapExercise('${sel.date}',${i})" title="替换动作" style="border:1px solid var(--sage);color:var(--sage);border-radius:2px;padding:0 4px;font-size:10px;margin-left:4px">替换</span>` : ''}</div>
 <div class="exnote">${(ex.muscle || []).map(m => `<span style="font-size:9px;background:var(--surface2);color:var(--ink2);padding:1px 4px;border-radius:2px;margin-right:4px;display:inline-block">${m}</span>`).join('')}${dispNote}${ex.bi ? ' (左右各做一遍算1组)' : ''}</div>
 ${needsWt && !locked ? `<div class="wt-row">
 <input type="number" class="wt-input" value="${dispW || ''}" placeholder="${sugW || ''}" onchange="setWeight('${sel.date}',${i},+this.value)" step="${getWeightStep(ex.name)}" min="0">
@@ -5927,6 +5927,12 @@ function handleTitleClick() {
     _titleClickCount = 0;
   }, 400);
 }
+
+// 一键看示范:直接开 B 站搜该动作教学(练到不会的当场看,不用退出app满世界找)
+function openDemo(name) {
+  try { window.open('https://search.bilibili.com/all?keyword=' + encodeURIComponent(name + ' 动作教学'), '_blank', 'noopener'); } catch (e) {}
+}
+window.openDemo = openDemo;
 
 function showExDetail(name) {
   _currentExDetailName = name;
