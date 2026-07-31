@@ -2665,6 +2665,20 @@ function _showRitual(cb) {
   setTimeout(dismiss, 4000);
 }
 
+// 倒计时结束系统通知提醒(锁屏/切后台也能收到;比纯声音可靠,尤其手机静音时)
+// iOS 需把 app「添加到主屏幕」后通知才生效(iOS 16.4+)
+function _ensureNotifyPermission() {
+  try { if ('Notification' in window && Notification.permission === 'default') Notification.requestPermission(); } catch (e) {}
+}
+function _notifyRestDone() {
+  try {
+    if ('Notification' in window && Notification.permission === 'granted') {
+      const n = new Notification('⏰ 休息结束', { body: '休息结束，开始下一组 💪', tag: 'rest-done', renotify: true });
+      setTimeout(() => { try { n.close(); } catch (e) {} }, 8000);
+    }
+  } catch (e) {}
+}
+
 function startTimer(seconds, label = "休息中") {
   clearInterval(_timerInterval);
   _releaseWakeLock();
@@ -2699,6 +2713,7 @@ function startTimer(seconds, label = "休息中") {
   delete bar.dataset.dinged;
   bar.classList.add('show');
   unlockAudio();
+  _ensureNotifyPermission();
   playRestStartSound();
 
   const total = seconds;
@@ -2714,6 +2729,7 @@ function startTimer(seconds, label = "休息中") {
     if (remain <= 0) {
       if (remain === 0 && !bar.dataset.dinged) {
         playDing();
+        _notifyRestDone();
         bar.dataset.dinged = '1';
         if (!(_globalSubMode && _ownerSession() && hasGoal('女性曲线'))) {
           setTimeout(() => { bar.classList.remove('show'); }, 3000);
