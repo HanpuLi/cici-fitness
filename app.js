@@ -615,15 +615,15 @@ dist['swim_core']=(dist['swim_core']||0)+1;
 dist['swim_cardio']=(dist['swim_cardio']||0)+1;
 }
 });
-} else {
-dist[g]=(dist[g]||0)+1;
+} else if(g!=='warmup'&&g!=='stretch'){
+dist[g]=(dist[g]||0)+(ex.sets||1);
 }
 break;
 }
 }
 });
 });
-const grpNames={chest:'胸',shoulder:'肩',back:'背',biceps:'二头',triceps:'三头',quads:'股四头',hamglutes:'臀腿',calves:'小腿',core:'核心',cardio:'有氧',swim_upper:'游泳(上肢)',swim_lower:'游泳(下肢)',swim_core:'游泳(核心)',swim_cardio:'游泳(心肺)'};
+const grpNames={chest:'胸',shoulder:'肩',back:'背',biceps:'二头',triceps:'三头',quads:'股四头',hamglutes:'臀腿',glutemed:'臀中肌',calves:'小腿',core:'核心',cardio:'有氧',warmup:'热身',stretch:'拉伸',swim_upper:'游泳(上肢)',swim_lower:'游泳(下肢)',swim_core:'游泳(核心)',swim_cardio:'游泳(心肺)'};
 const distStr=Object.entries(dist).sort((a,b)=>b[1]-a[1]).map(([g,c])=>`${grpNames[g]||g}${c}组`).join('·');
 
 let logStr=recent.map(l=>{
@@ -631,7 +631,7 @@ const exStr=l.exercises?l.exercises.map(e=>`${e.name}${e.weight?' '+e.weight+'kg
 return `- ${l.date} | ${l.workout} | ${l.duration||'?'}分钟${l.rpe?' | RPE '+l.rpe+'/10':''}\n  动作：${exStr}${l.note?'\n  备注：'+l.note:''}`;
 }).join('\n');
 
-const text=`【Cici 健身日志 - AI 分析请求】\n训练目标：${S.goal} | 水平：${S.level} | 器材：${S.equip.join('+')}\n近${recent.length}次训练：\n\n${logStr}\n\n肌群分布（近30天）：${distStr||'无数据'}\n\n请帮我分析：\n1. 训练计划是否均衡？哪个肌群训练不足？\n2. 根据我的目标（${S.goal}），有什么需要改进？\n3. 下阶段如何调整计划？`;
+const text=`【${S.displayName||'Cici'} 健身日志 - AI 分析请求】\n训练目标：${S.goal} | 水平：${S.level} | 器材：${S.equip.join('+')}\n近${recent.length}次训练：\n\n${logStr}\n\n肌群分布（近30天）：${distStr||'无数据'}\n\n请帮我分析：\n1. 训练计划是否均衡？哪个肌群训练不足？\n2. 根据我的目标（${S.goal}），有什么需要改进？\n3. 下阶段如何调整计划？`;
 const blob=new Blob([text],{type:'text/plain;charset=utf-8'});
 const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='fitness_ai_analysis_'+new Date().toISOString().split('T')[0]+'.txt';a.click();
 showToast('已导出 AI 分析文件');
@@ -645,9 +645,11 @@ const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=
 function exportCSV(){
 if(!LOG.length){alert('暂无日志记录');return}
 const rows=['日期,训练类型,时长(分钟),动作数,RPE,感受,动作详情,备注'];
+const q=v=>'"'+String(v==null?'':v).replace(/"/g,'""')+'"';
 LOG.forEach(x=>{
 const exDetail=x.exercises?x.exercises.map(e=>`${e.name}${e.weight?' '+e.weight+'kg':''} ${e.sets}x${e.reps}${e.unit}`).join('; '):'';
-rows.push(`${x.date},"${x.workout}",${x.duration},${x.exerciseCount},${x.rpe||''},"${x.mood||''}","${exDetail}","${(x.note||'').replace(/"/g,'""')}"`);
+const exCount=(x.exercises&&x.exercises.length)||x.exerciseCount||0;
+rows.push(`${x.date},${q(x.workout)},${x.duration},${exCount},${x.rpe||''},${q(x.mood||'')},${q(exDetail)},${q(x.note||'')}`);
 });
 const blob=new Blob(['\uFEFF'+rows.join('\n')],{type:'text/csv;charset=utf-8'});
 const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='fitness_'+new Date().toISOString().split('T')[0]+'.csv';a.click();
