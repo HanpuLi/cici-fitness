@@ -339,6 +339,20 @@
 
     <div class="sync-toast" id="sync-toast"></div>
 
+    <div id="login-modal" class="ex-modal-overlay" onclick="if(event.target===this)closeLoginModal()">
+        <div class="ex-modal-card" onclick="event.stopPropagation()">
+            <h3 style="margin-bottom:6px;font-family:var(--font-display);font-size:20px;color:var(--ink)">登录同步</h3>
+            <p style="margin-bottom:16px;font-size:12px;color:var(--ink3)">主屏幕版用邮箱登录即可；Safari 里也能用 Google</p>
+            <input id="login-email" type="email" autocomplete="username" placeholder="邮箱" style="width:100%;box-sizing:border-box;padding:12px;margin-bottom:10px;border:1px solid rgba(128,128,128,.3);border-radius:10px;font-size:15px;background:var(--surface2);color:var(--ink)">
+            <input id="login-pass" type="password" autocomplete="current-password" placeholder="密码（至少6位）" style="width:100%;box-sizing:border-box;padding:12px;margin-bottom:14px;border:1px solid rgba(128,128,128,.3);border-radius:10px;font-size:15px;background:var(--surface2);color:var(--ink)">
+            <div style="display:flex;gap:10px;margin-bottom:8px">
+                <button onclick="signInEmail()" style="flex:1;padding:13px;border:none;border-radius:12px;background:var(--terra);color:#fff;font-weight:600;font-size:15px">登录</button>
+                <button onclick="signUpEmail()" style="flex:1;padding:13px;border:1px solid var(--terra);border-radius:12px;background:transparent;color:var(--terra);font-weight:600;font-size:15px">注册</button>
+            </div>
+            <div id="login-msg" style="font-size:12px;color:var(--terra);min-height:16px;text-align:center;margin-bottom:8px"></div>
+            <button onclick="signInGoogle()" style="width:100%;padding:11px;border:1px solid rgba(128,128,128,.3);border-radius:12px;background:transparent;color:var(--ink3);font-size:13px">用 Google 登录（限 Safari）</button>
+        </div>
+    </div>
     <div id="rpe-modal" class="ex-modal-overlay" onclick="if(event.target===this)closeRpeModal()">
         <div class="ex-modal-card" style="text-align:center" onclick="event.stopPropagation()">
             <h3 id="rpe-modal-title"

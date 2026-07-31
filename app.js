@@ -751,6 +751,32 @@ firebase.auth().signInWithPopup(new firebase.auth.GoogleAuthProvider()).catch(e=
 function signOutUser(){
 if(confirm('确定退出登录？'))firebase.auth().signOut();
 }
+// ── 邮箱/密码登录:纯API无跳转,主屏幕PWA里也能登(绕开Google OAuth在iOS PWA的sessionStorage死结)──
+function openLoginModal(){const m=document.getElementById('login-modal');if(m){const g=document.getElementById('login-msg');if(g)g.textContent='';m.classList.add('open');}}
+function closeLoginModal(){const m=document.getElementById('login-modal');if(m)m.classList.remove('open');}
+function _loginMsg(t){const e=document.getElementById('login-msg');if(e)e.textContent=t;}
+function _authErr(e){const c=(e&&e.code)||'';
+if(c==='auth/wrong-password'||c==='auth/invalid-credential')return '邮箱或密码错误';
+if(c==='auth/user-not-found')return '账号不存在，请先点「注册」';
+if(c==='auth/email-already-in-use')return '该邮箱已注册，请直接「登录」';
+if(c==='auth/invalid-email')return '邮箱格式不对';
+if(c==='auth/weak-password')return '密码太弱（至少6位）';
+if(c==='auth/operation-not-allowed')return '还没在 Firebase 控制台启用「邮箱/密码」登录';
+if(c==='auth/network-request-failed')return '网络不通，检查连接';
+return (e&&e.message)||'失败';}
+function signInEmail(){
+const em=((document.getElementById('login-email')||{}).value||'').trim(),pw=(document.getElementById('login-pass')||{}).value||'';
+if(!em||!pw){_loginMsg('请填邮箱和密码');return;}
+_loginMsg('登录中…');
+firebase.auth().signInWithEmailAndPassword(em,pw).then(()=>closeLoginModal()).catch(e=>_loginMsg(_authErr(e)));
+}
+function signUpEmail(){
+const em=((document.getElementById('login-email')||{}).value||'').trim(),pw=(document.getElementById('login-pass')||{}).value||'';
+if(!em||!pw){_loginMsg('请填邮箱和密码');return;}
+if(pw.length<6){_loginMsg('密码至少6位');return;}
+_loginMsg('注册中…');
+firebase.auth().createUserWithEmailAndPassword(em,pw).then(()=>closeLoginModal()).catch(e=>_loginMsg(_authErr(e)));
+}
 
 function renderAuthBtn(){
 const el=document.getElementById('auth-btn');if(!el)return;
@@ -759,7 +785,7 @@ const name=_user.displayName?_user.displayName.split(' ')[0]:'已登录';
 const photo=_user.photoURL?`<img src="${_user.photoURL}" class="auth-avatar" alt="">`:`<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:4px"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>`;
 el.innerHTML=`<div class="auth-pill-left">${photo}<span style="font-size:12px">${name}</span></div><div class="auth-pill-sync" id="sync-pill">✓</div><button class="auth-pill-signout" onclick="signOutUser()">退出</button>`;
 }else{
-el.innerHTML=`<button class="auth-sign-in" onclick="signInGoogle()"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:6px"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>登录同步</button>`;
+el.innerHTML=`<button class="auth-sign-in" onclick="openLoginModal()"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:6px"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>登录同步</button>`;
 }
 }
 
