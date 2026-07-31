@@ -61,7 +61,7 @@ function updateThemeBtn(theme){
 // ══ State Persistence ════════════════════════════════════
 function saveState(){
 ls(K.settings,{goal:S.goal,level:S.level,days:S.days,dur:S.dur,equip:S.equip,focus:S.focus,limits:S.limits,volumeMultiplier:S.volumeMultiplier,restDur:S.restDur,swimLevel:S.swimLevel,weightLevel:S.weightLevel,periodMode:S.periodMode,displayName:S.displayName,sealChar:S.sealChar,cycleEnabled:S.cycleEnabled,cycleDay:S.cycleDay,cycleLength:S.cycleLength,vacuumDays:S.vacuumDays,partnerDays:S.partnerDays,partnerUid:S.partnerUid,cheer:S.cheer});
-if(S.plan)ls(K.plan,{plan:S.plan,prog:S.prog,adj:S.adj,weights:S.weights,unlockedDates:S.unlockedDates});
+if(S.plan)ls(K.plan,{plan:S.plan,prog:S.prog,adj:S.adj,weights:S.weights,exRpe:S.exRpe,unlockedDates:S.unlockedDates});
 localStorage.setItem(nsKey('fit_selDate'), S.selDate || '');
 }
 function loadState(){
@@ -80,6 +80,7 @@ if(p&&p.plan&&p.plan.days){
     S.prog=p.prog||{};
     S.adj=p.adj||{};
     S.weights=p.weights||{};
+    S.exRpe=p.exRpe||{};
     S.unlockedDates=p.unlockedDates||[];
 }
 else{S.plan=null;}
@@ -292,7 +293,7 @@ if(confirm('警告：确定要清空所有计划、打卡记录和统计数据�
     BODY_LOG=[];
     GYM_LOG={count:0,milestones:[]};
     SWIM_LOG={count:0,milestones:[]};
-    S.plan=null; S.prog={}; S.adj={}; S.weights={}; S.unlockedDates=[]; S.volumeMultiplier=1.0; S.selDate=null;
+    S.plan=null; S.prog={}; S.adj={}; S.weights={}; S.exRpe={}; S.unlockedDates=[]; S.volumeMultiplier=1.0; S.selDate=null;
     // 4. Force state save so local variables are reset
     saveState();location.reload();
 }

@@ -34,7 +34,7 @@ function migrateLegacyKeys(uid) {
 }
 
 // ══ State ════════════════════════════════════════════════
-const S = { goal: '女性薄肌', level: '初级', days: 3, dur: 60, equip: ['健身房全套'], focus: ['均衡全身'], limits: '', plan: null, selDate: null, prog: {}, adj: {}, weights: {}, volumeMultiplier: 1.0, restDur: 45, swimLevel: '入门', weightLevel: '初级', periodMode: false, cycleEnabled: true, cycleDay: 1, cycleLength: 28, vacuumDays: [] };
+const S = { goal: '女性薄肌', level: '初级', days: 3, dur: 60, equip: ['健身房全套'], focus: ['均衡全身'], limits: '', plan: null, selDate: null, prog: {}, adj: {}, weights: {}, exRpe: {}, volumeMultiplier: 1.0, restDur: 45, swimLevel: '入门', weightLevel: '初级', periodMode: false, cycleEnabled: true, cycleDay: 1, cycleLength: 28, vacuumDays: [] };
 let LOG = lg(K.log) || [];
 let W_HIST = lg(K.wh) || {};
 let PR_LIST = lg(K.pr) || []; // {date,exercise,weight,prev}
@@ -1231,6 +1231,9 @@ function roundWeight(w, exName) {
   if (_isBarbell(exName)) return Math.round(w / 2.5) * 2.5; // 杠铃: 2.5kg倍数
   return Math.round(w); // 哑铃/壶铃/器械/绳索: 整数kg
 }
+// 逐动作 RPE(感受):按 date-ei 存;打卡时优先于"整场RPE"记进 W_HIST,让自动调重更准
+function getExRpe(date, ei) { if (!S.exRpe) S.exRpe = {}; const v = S.exRpe[date + '-' + ei]; return (v === undefined || v === null) ? null : v; }
+function setExRpe(date, ei, val) { if (!S.exRpe) S.exRpe = {}; S.exRpe[date + '-' + ei] = val; if (typeof saveState === 'function') saveState(); if (typeof render === 'function') render(); }
 function getWeightStep(exName) {
   if (_isBarbell(exName)) return 2.5;
   return 1;
@@ -1769,14 +1772,12 @@ hasGoal('翘臀美背') ? (GLUTE_BACK_SPLITS[gymPerWeek] || GLUTE_BACK_SPLITS[3]
     const scheduledType = firstFutureGymDay.workoutType;
     const match = (scheduledType === expectedType || scheduledType.includes(expectedType) || expectedType.includes(scheduledType.slice(0, 4)));
     if (!match) {
-      console.log(`[Auto-Align] Missed workouts detected. Scheduled today: ${scheduledType}, Expected: ${expectedType}. Recalibrating...`);
-      if (!window._isAutoAligning) {
-        window._isAutoAligning = true;
-        try {
-          genPlan(true);
-        } finally {
-          window._isAutoAligning = false;
-        }
+      // #6 不再静默重排:旧行为会重挑未来天(覆盖你手改的动作)且 genPlan 末尾强跳"今日"页。
+      // 改为温和提示 + 亮出「重排剩余」按钮,是否重排由你决定。
+      const _rb = document.getElementById('recal-btn'); if (_rb) _rb.style.display = '';
+      if (typeof showToast === 'function' && !window._autoAlignNotified) {
+        window._autoAlignNotified = true;
+        setTimeout(() => showToast('检测到漏练,后续顺序可能偏移。想对齐就点「重排剩余」(会按当前进度重排;你手改过的未来动作会被覆盖)', 6000), 900);
       }
     }
   }
@@ -2206,7 +2207,7 @@ ${needsWt && !locked ? `<div class="wt-row">
 <span class="wt-unit">kg</span>
 ${lastW ? `<span class="wt-hint">\u4e0a\u6b21 ${lastW.weight}kg</span>` : `<span class="wt-sug">\u5efa\u8bae ${sugW || '?'}kg</span>`}
 ${sugW && lastW && sugW !== lastW.weight ? `<span class="wt-sug">\u2192 ${sugW}kg</span>` : ''}
-</div>`: ''}
+</div><div style="display:flex;gap:5px;align-items:center;margin-top:4px;flex-wrap:wrap"><span style="font-size:10px;color:var(--ink3)">\u611f\u53d7</span>${[['\u8f7b\u677e', 4], ['\u521a\u597d', 6.5], ['\u5403\u529b', 8.5]].map(([lbl, v]) => `<span onclick="setExRpe('${sel.date}',${i},${v})" style="font-size:10px;padding:2px 8px;border-radius:10px;cursor:pointer;border:1px solid ${getExRpe(sel.date, i) === v ? 'var(--terra)' : 'rgba(128,128,128,.3)'};color:${getExRpe(sel.date, i) === v ? 'var(--terra)' : 'var(--ink3)'};background:${getExRpe(sel.date, i) === v ? 'rgba(200,120,90,.1)' : 'transparent'}">${lbl}</span>`).join('')}</div>`: ''}
 ${needsWt && locked && lastW ? `<span class="wt-hint" style="margin-top:2px;display:block">${curW || lastW.weight}kg</span>` : ''}
 ${(ex.unit === '\u79d2' || ex.unit === '\u5206\u949f') && !locked ? `<button class="act-play-btn" onclick="startTimer(${ex.unit === '\u5206\u949f' ? reps * 60 : reps}, '${ex.name}')">\u8ba1\u65f6</button>` : ''}
 </div>
@@ -3022,7 +3023,7 @@ function submitRPE(rpe, isSkip = false) {
       const w = getWeight(date, i);
       if (w && w > 0 && !ex.isWarmup && !ex.isStretch && ex.unit === '次' && S.prog[date] && S.prog[date][i]) { // only record weight for exercises actually completed
         if (!W_HIST[ex.name]) W_HIST[ex.name] = [];
-        W_HIST[ex.name].push({ date, weight: w, rpe: actualRpe, period: S.periodMode, reps: getAdj(date, i, 'r', ex.reps) }); // reps → 估算 1RM
+        W_HIST[ex.name].push({ date, weight: w, rpe: (getExRpe(date, i) ?? actualRpe), period: S.periodMode, reps: getAdj(date, i, 'r', ex.reps) }); // 逐动作RPE优先(无则用整场RPE);reps=实际调整次数 → 估算 1RM
         if (W_HIST[ex.name].length > 50) W_HIST[ex.name] = W_HIST[ex.name].slice(-50);
       }
     });
