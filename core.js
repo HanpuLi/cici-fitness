@@ -1228,10 +1228,11 @@ function getDefaultWeight(exName) {
   const wl = S.weightLevel || '初级';   // 重量档独立于水平(动作难度),默认保守
 
   // ── Equipment detection (name + DB fallback) ──
-  const isBarbell = _isBarbell(n);
   const _dbEx = (() => { for (const exs of Object.values(DB)) { const f = exs.find(e => e.n === n); if (f) return f } return null })();
   const isDumbbell = n.includes('哑铃') || n.includes('壶铃') || n.includes('高脚杯') || (_dbEx && _dbEx.eq.some(e => e === '哑铃' || e === '壶铃'));
   const isCable = n.includes('绳索') || n.includes('缆绳');
+  // 硬拉≠杠铃:哑铃/单腿/徒手的硬拉不按杠铃给重量(修_isBarbell仅凭名字含"硬拉"就判杠铃、塞15kg起始的误判)
+  const isBarbell = n.includes('杠铃') || n.includes('史密斯') || (n.includes('硬拉') && !isDumbbell && !isCable && !n.includes('单腿') && !n.includes('单臂') && !n.includes('徒手') && !(_dbEx && _dbEx.eq.length && _dbEx.eq.every(e => e === '无器材')));
 
   // ── Movement category detection ──
   // 下肢复合 (Squat/Deadlift/Leg Press/Hip Thrust)
