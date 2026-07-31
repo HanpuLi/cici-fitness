@@ -60,7 +60,7 @@ function updateThemeBtn(theme){
 
 // ══ State Persistence ════════════════════════════════════
 function saveState(){
-ls(K.settings,{goal:S.goal,level:S.level,days:S.days,dur:S.dur,equip:S.equip,focus:S.focus,limits:S.limits,volumeMultiplier:S.volumeMultiplier,restDur:S.restDur,swimLevel:S.swimLevel,periodMode:S.periodMode,displayName:S.displayName,sealChar:S.sealChar,cycleEnabled:S.cycleEnabled,cycleDay:S.cycleDay,cycleLength:S.cycleLength,vacuumDays:S.vacuumDays,partnerDays:S.partnerDays,partnerUid:S.partnerUid,cheer:S.cheer});
+ls(K.settings,{goal:S.goal,level:S.level,days:S.days,dur:S.dur,equip:S.equip,focus:S.focus,limits:S.limits,volumeMultiplier:S.volumeMultiplier,restDur:S.restDur,swimLevel:S.swimLevel,weightLevel:S.weightLevel,periodMode:S.periodMode,displayName:S.displayName,sealChar:S.sealChar,cycleEnabled:S.cycleEnabled,cycleDay:S.cycleDay,cycleLength:S.cycleLength,vacuumDays:S.vacuumDays,partnerDays:S.partnerDays,partnerUid:S.partnerUid,cheer:S.cheer});
 if(S.plan)ls(K.plan,{plan:S.plan,prog:S.prog,adj:S.adj,weights:S.weights,unlockedDates:S.unlockedDates});
 localStorage.setItem(nsKey('fit_selDate'), S.selDate || '');
 }
@@ -97,6 +97,7 @@ function applySettingsToUI(){
 document.body.classList.toggle('theme-curve', hasGoal('女性曲线'));
 document.querySelectorAll('#g-goal .chip').forEach(b=>b.classList.toggle('on',hasGoal(b.dataset.v)));
 document.querySelectorAll('#g-level .chip').forEach(b=>b.classList.toggle('on',b.dataset.v===S.level));
+document.querySelectorAll('#g-weight-level .chip').forEach(b=>b.classList.toggle('on',b.dataset.v===(S.weightLevel||'初级')));
 document.getElementById('sl-days').value=S.days;
 document.getElementById('v-days').textContent=S.days+'天';
 document.getElementById('sl-dur').value=S.dur;
@@ -1006,6 +1007,8 @@ window.triggerPanic = function() {
 };
 
 single('g-level','level');
+single('g-weight-level','weightLevel');
+{const _gwl=document.getElementById('g-weight-level');if(_gwl)_gwl.addEventListener('click',()=>{if(typeof render==='function')render();});}
 multi('g-equip','equip');multi('g-focus','focus');
 (function(){
 const el=document.getElementById('g-rest');if(!el)return;

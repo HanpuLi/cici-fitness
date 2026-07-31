@@ -34,7 +34,7 @@ function migrateLegacyKeys(uid) {
 }
 
 // ══ State ════════════════════════════════════════════════
-const S = { goal: '女性薄肌', level: '初级', days: 3, dur: 60, equip: ['健身房全套'], focus: ['均衡全身'], limits: '', plan: null, selDate: null, prog: {}, adj: {}, weights: {}, volumeMultiplier: 1.0, restDur: 45, swimLevel: '入门', periodMode: false, cycleEnabled: true, cycleDay: 1, cycleLength: 28, vacuumDays: [] };
+const S = { goal: '女性薄肌', level: '初级', days: 3, dur: 60, equip: ['健身房全套'], focus: ['均衡全身'], limits: '', plan: null, selDate: null, prog: {}, adj: {}, weights: {}, volumeMultiplier: 1.0, restDur: 45, swimLevel: '入门', weightLevel: '初级', periodMode: false, cycleEnabled: true, cycleDay: 1, cycleLength: 28, vacuumDays: [] };
 let LOG = lg(K.log) || [];
 let W_HIST = lg(K.wh) || {};
 let PR_LIST = lg(K.pr) || []; // {date,exercise,weight,prev}
@@ -1225,6 +1225,7 @@ function getWeightStep(exName) {
 // Default weight recommendation based on exercise type + difficulty level
 function getDefaultWeight(exName) {
   const n = exName;
+  const wl = S.weightLevel || '初级';   // 重量档独立于水平(动作难度),默认保守
 
   // ── Equipment detection (name + DB fallback) ──
   const isBarbell = _isBarbell(n);
@@ -1242,7 +1243,7 @@ function getDefaultWeight(exName) {
   // 上肢拉 (Row/Pulldown)
   const isUpperPull = n.includes('划船') || n.includes('引体') || n.includes('下拉') || n.includes('直立划船');
   // 小肌群孤立 (Curl/Extension/Lateral Raise)
-  const isIsolation = n.includes('弯举') || n.includes('臂屈伸') || n.includes('侧平举') || n.includes('前平举') || n.includes('飞鸟') || n.includes('夹胸');
+  const isIsolation = n.includes('弯举') || n.includes('臂屈伸') || n.includes('侧平举') || n.includes('前平举') || n.includes('飞鸟') || n.includes('夹胸') || n.includes('外展') || n.includes('内收') || n.includes('画腿') || n.includes('侧抬') || n.includes('后踢') || n.includes('踢腿') || n.includes('绕环') || n.includes('平衡') || n.includes('开合');
   // 其他腿部/臀部
   const isLeg = isLegCompound || n.includes('腿') || n.includes('臀') || n.includes('股') || n.includes('弓步');
 
@@ -1263,32 +1264,32 @@ function getDefaultWeight(exName) {
     else if (isOverhead) cat = 'overhead';
     else if (isUpperPull) cat = 'upperPull';
     else if (isIsolation) cat = 'isolation';
-    return roundWeight(bases[cat][S.level] || bases[cat]['初级'], n);
+    return roundWeight(bases[cat][wl] || bases[cat]['初级'], n);
   }
 
   // ── 哑铃/壶铃: 整数kg, 按肌群大小微调 ──
   if (isDumbbell) {
     const dbases = { 初级: 2, 中级: 5, 高级: 8 };
-    let w = dbases[S.level] || 2;
-    if (isLeg) w = Math.round(w * 1.5);
-    else if (isIsolation) w = Math.max(1, Math.round(w * 0.6));
+    let w = dbases[wl] || 2;
+    if (isIsolation) w = Math.max(1, Math.round(w * 0.6));
+    else if (isLegCompound) w = Math.round(w * 1.5);
     return roundWeight(w, n);
   }
 
   // ── 绳索: 整数kg ──
   if (isCable) {
     const cbases = { 初级: 5, 中级: 10, 高级: 15 };
-    let w = cbases[S.level] || 5;
-    if (isLeg) w = Math.round(w * 1.5);
-    else if (isIsolation) w = Math.max(2, Math.round(w * 0.7));
+    let w = cbases[wl] || 5;
+    if (isIsolation) w = Math.max(2, Math.round(w * 0.7));
+    else if (isLegCompound) w = Math.round(w * 1.5);
     return roundWeight(w, n);
   }
 
   // ── 器械 (坐姿推胸机/腿屈伸/etc): 整数kg ──
   const mbases = { 初级: 5, 中级: 10, 高级: 15 };
-  let w = mbases[S.level] || 5;
-  if (isLeg) w = Math.round(w * 1.5);
-  else if (isIsolation) w = Math.max(2, Math.round(w * 0.7));
+  let w = mbases[wl] || 5;
+  if (isIsolation) w = Math.max(2, Math.round(w * 0.7));
+  else if (isLegCompound) w = Math.round(w * 1.5);
   return roundWeight(w, n);
 }
 
