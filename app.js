@@ -411,7 +411,7 @@ dist['swim_core']=(dist['swim_core']||0)+1;
 dist['swim_cardio']=(dist['swim_cardio']||0)+1;
 }
 });
-} else {
+} else if(grp!=='warmup'&&grp!=='stretch'){
 dist[grp]=(dist[grp]||0)+1;
 }
 found = true;
@@ -420,7 +420,7 @@ break;
 }
 });
 });
-const grpNames={chest:'胸',shoulder:'肩',back:'背',biceps:'二头',triceps:'三头',quads:'股四头',hamglutes:'臀腿',calves:'小腿',core:'核心',cardio:'有氧',swim_upper:'游泳(上肢)',swim_lower:'游泳(下肢)',swim_core:'游泳(核心)',swim_cardio:'游泳(心肺)'};
+const grpNames={chest:'胸',shoulder:'肩',back:'背',biceps:'二头',triceps:'三头',quads:'股四头',hamglutes:'臀腿',glutemed:'臀中肌',calves:'小腿',core:'核心',cardio:'有氧',warmup:'热身',stretch:'拉伸',swim_upper:'游泳(上肢)',swim_lower:'游泳(下肢)',swim_core:'游泳(核心)',swim_cardio:'游泳(心肺)'};
 const distEntries=Object.entries(dist).sort((a,b)=>b[1]-a[1]);
 const maxDist=distEntries[0]?.[1]||1;
 
@@ -475,7 +475,7 @@ return `<div class="panel">
     const recent=hist.slice(-12);
     return `<div style="margin-bottom:14px">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
-        <span style="font-size:12px;font-weight:600">${name}</span>
+        <span style="font-size:12px;font-weight:600">${name}${(()=>{const rm=(typeof estimate1RM==='function')?estimate1RM(name):null;return rm?` <span style="font-size:10px;font-weight:400;color:var(--ink3)">1RM≈${rm}kg</span>`:'';})()}</span>
         <span style="font-size:11px;font-weight:600;color:${delta>0?'var(--sage)':delta<0?'var(--terra)':'var(--ink3)'}">${delta>0?'+':''}${delta}kg</span>
       </div>
       <div style="display:flex;gap:2px;height:28px;align-items:flex-end">
