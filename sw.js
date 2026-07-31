@@ -1,4 +1,4 @@
-const CACHE = 'cici-fitness-v130';
+const CACHE = 'cici-fitness-v131';
 
 // ── Local assets: always pre-cached on install ──
 const LOCAL_ASSETS = [
@@ -41,6 +41,10 @@ self.addEventListener('activate', e => e.waitUntil(
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET' || !e.request.url.startsWith('http')) return;
   const url = new URL(e.request.url);
+
+  // 认证/账号/数据库流量:绝不拦截、绝不缓存 —— SW 插手会破坏谷歌 OAuth/令牌流程导致登录失败
+  const AUTH_HOSTS = ['accounts.google.com', 'apis.google.com', 'identitytoolkit.googleapis.com', 'securetoken.googleapis.com', 'oauth2.googleapis.com', 'firebaseinstallations.googleapis.com', 'firestore.googleapis.com', 'www.googleapis.com'];
+  if (AUTH_HOSTS.some(h => url.hostname === h || url.hostname.endsWith('.' + h)) || url.pathname.startsWith('/__/auth') || url.pathname.startsWith('/__/firebase')) return;
 
   // ── Stale-while-revalidate for font files & icon assets ──
   // Serves cached version immediately, updates cache in background
