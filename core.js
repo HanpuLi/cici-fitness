@@ -153,6 +153,8 @@ function getExcluded() {
   if (!_ownerSession()) {
     _PRIVATE_POOL.forEach(e => s.add(e));
   }
+  // Cici 反馈健身房没有这两台具体机器 → 永久排除,计划自动用同肌群备选(坐姿划船/器械上背划船/面拉/弹力带划船等)补位
+  if (hasGoal('翘臀美背')) { s.add('T把划船'); s.add('直臂下压机'); }
   return s;
 }
 
@@ -1130,6 +1132,20 @@ function pickExercises(split, excluded) {
     if (used.has(ex.n)) return; used.add(ex.n);
     result.push({ name: ex.n, sets: 1, reps: 30, unit: '秒', note: ex.note, group: 'stretch', diff: ex.diff, isStretch: true, bi: !!ex.bi, muscle: ex.muscle });
   });
+
+  // ── 肩颈放松附加模块(Cici 反馈:缓解肩颈僵硬疼痛;约5-8分钟,练完追加,不占主计划名额) ──
+  if (hasGoal('翘臀美背')) {
+    [
+      { name: '面拉', sets: 2, reps: 15, unit: '次', note: '肩颈放松·拉向面部两侧并外旋，激活后束、改善圆肩' },
+      { name: '俯卧YTW', sets: 2, reps: 10, unit: '次', note: '肩颈放松·手臂依次摆Y-T-W，激活下斜方让肩胛下沉' },
+      { name: '靠墙天使', sets: 2, reps: 10, unit: '次', note: '肩颈放松·后背贴墙、手臂沿墙上下滑，全程肩胛贴墙下沉' },
+      { name: '上斜方拉伸', sets: 1, reps: 30, unit: '秒', note: '肩颈放松·头侧倒向一侧、同侧手轻扶加深，两侧各30秒放松上斜方' },
+      { name: '颈部环绕', sets: 1, reps: 30, unit: '秒', note: '肩颈放松·缓慢画圈转动颈部放松颈肌，切忌快速甩头' },
+    ].forEach(n => {
+      if (used.has(n.name)) return; used.add(n.name);
+      result.push({ name: n.name, sets: n.sets, reps: n.reps, unit: n.unit, note: n.note, group: 'stretch', diff: 1, isStretch: true, bi: false, muscle: ['肩颈'] });
+    });
+  }
 
   return result;
 }
