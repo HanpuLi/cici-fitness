@@ -202,8 +202,8 @@ const btn=document.getElementById('jrnl-toggle');
 if(btn)btn.textContent=_logShowAll?'只看近14天':`显示全部(${LOG.length})`;
 const el=document.getElementById('log-list');
 if(!el)return;
-const cut=new Date();cut.setDate(cut.getDate()-14);
-const entries=_logShowAll?LOG:LOG.filter(x=>new Date(x.date)>=cut);
+const cut=new Date();cut.setDate(cut.getDate()-14);const cutStr=(typeof dateStr==='function')?dateStr(cut):cut.toISOString().split('T')[0];
+const entries=_logShowAll?LOG:LOG.filter(x=>x.date>=cutStr);
 if(!entries.length){el.innerHTML='<div class="empty"><i class="ti ti-barbell" style="font-size:32px;opacity:.2"></i><p>完成训练后自动记录</p></div>';return}
 // Group by month for git-style headers
 const byMonth={};
@@ -661,15 +661,17 @@ const reader=new FileReader();
 reader.onload=e=>{
 try{
 const data=JSON.parse(e.target.result);
+if(data._meta&&data._meta.app&&data._meta.app!=='Cici健身计划'){if(!confirm('这份备份似乎不是本应用导出的，仍要导入吗？'))return;}
 const allowed = new Set(Object.values(K));
 let imported = false;
 Object.entries(data).forEach(([k,v])=>{
-    if(allowed.has(k)){
+    if(allowed.has(k) && v!==null && v!==undefined){
         ls(k,v);
         imported = true;
     }
 });
 if (imported) {
+    try{sessionStorage.setItem('_justImported','1')}catch(e){}
     location.reload();
 } else {
     alert('未找到有效的备份数据');
@@ -764,6 +766,9 @@ el.innerHTML=`<button class="auth-sign-in" onclick="signInGoogle()"><svg width="
 function setupRealtimeSync(){
 if(!_db||!_user)return;
 if(_unsub)_unsub();
+// 刚导入过备份:强制把本地(导入的数据)先推上云,别让旧云端快照盖回来致导入失效(修#1)
+const _justImported=(()=>{try{return sessionStorage.getItem('_justImported')==='1'}catch(e){return false}})();
+if(_justImported){_localDirty=true;try{sessionStorage.removeItem('_justImported')}catch(e){}}
 _unsub=_db.collection('users').doc(_user.uid).onSnapshot(doc=>{
 if(!doc.exists)return;
 // If local changes are pending push, do NOT let cloud overwrite them
@@ -780,8 +785,8 @@ if(lv!==cv){try{localStorage.setItem(nk,cv);changed=true}catch{}}
 });
 if(changed){loadState();renderLog();showToast('已从云端同步')}
 },e=>console.warn('Sync error:',e));
-// Initial push — send local data up first so cloud has latest
-setTimeout(()=>pushToCloud(),1000);
+// Initial push — send local data up first so cloud has latest(刚导入过则立即推,尽量缩短被旧快照覆盖的窗口)
+setTimeout(()=>pushToCloud(),_justImported?0:1000);
 }
 
 let _dirtyId=0; // bumped on every local change; lets a push detect changes that arrive mid-flight

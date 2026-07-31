@@ -1010,6 +1010,12 @@ function pickExercises(split, excluded) {
     if (favGroups.includes(g)) cnt = cnt + 1;
     groupBudget[g] = cnt;
   });
+  // 全局配额裁剪:各组保底≥1叠加后可能超出时长预算,按 totalTarget 削最大的组(修#8,保底每组≥1)
+  { let _sum = Object.values(groupBudget).reduce((a, b) => a + b, 0), _guard = 0;
+    while (_sum > totalTarget && _guard++ < 60) {
+      let _mg = null, _mv = 1; for (const g in groupBudget) { if (groupBudget[g] > _mv) { _mv = groupBudget[g]; _mg = g; } }
+      if (!_mg) break; groupBudget[_mg]--; _sum--;
+    } }
 
   split.groups.forEach(grp => {
     const count = groupBudget[grp] || 0;
@@ -1206,13 +1212,21 @@ function getLastWeight(exName, excludePeriod = false) {
     for (let i = hist.length - 1; i >= 0; i--) {
       if (!hist[i].period) return hist[i];
     }
+    return null; // 全是经期记录 → 返回null,让上层用默认而非经期减载值(修#10)
   }
   return hist[hist.length - 1];
 }
 
 // ══ Weight Rounding by Equipment Type ═══════════════════
 function _isDumbbell(n) { return n.includes('哑铃') || n.includes('壶铃') }
-function _isBarbell(n) { return n.includes('杠铃') || n.includes('硬拉') || n.includes('史密斯') }
+function _isBarbell(n) {
+  if (n.includes('杠铃') || n.includes('史密斯')) return true;
+  if (!n.includes('硬拉')) return false;
+  if (_isDumbbell(n) || n.includes('单腿') || n.includes('单臂') || n.includes('徒手')) return false;
+  const ex = (() => { for (const exs of Object.values(DB)) { const f = exs.find(e => e.n === n); if (f) return f } return null })();
+  if (ex && ex.eq && ex.eq.length && ex.eq.every(e => e === '无器材' || e === '哑铃' || e === '壶铃')) return false;
+  return true;
+}
 function roundWeight(w, exName) {
   if (_isBarbell(exName)) return Math.round(w / 2.5) * 2.5; // 杠铃: 2.5kg倍数
   return Math.round(w); // 哑铃/壶铃/器械/绳索: 整数kg
@@ -1307,17 +1321,7 @@ function suggestWeight(exName) {
   let target;
   const last = getLastWeight(exName, true); // Get last non-period weight
   if (!last) {
-    const fallbackLast = getLastWeight(exName, false);
-    if (!fallbackLast) {
-      target = getDefaultWeight(exName);
-    } else {
-      const w = fallbackLast.weight, rpe = fallbackLast.rpe || 6;
-      const step = getWeightStep(exName);
-      if (rpe <= 4) target = roundWeight(w + step * 2, exName);
-      else if (rpe <= 6) target = roundWeight(w + step, exName);
-      else if (rpe <= 8) target = w;
-      else target = Math.max(step, roundWeight(w - step, exName));
-    }
+    target = getDefaultWeight(exName); // 无非经期历史(含全经期)→ 用默认起始,不从经期减载值递进(修#10)
   } else {
     const w = last.weight, rpe = last.rpe || 6;
     const step = getWeightStep(exName);
@@ -1673,7 +1677,7 @@ function assessPlanIntensity() {
   gymLogs.forEach(l => {
     totalRpe += (l.rpe || 6);
     totalExLogged += (l.exerciseCount || 0);
-    totalExPlanned += (l.exercises ? l.exercises.length : (l.exerciseCount || 6));
+    totalExPlanned += (l.exercises ? l.exercises.filter(e => !e.isWarmup && !e.isStretch).length : (l.exerciseCount || 6));
     if (l.rpe >= 8) hasHighRpe++;
   });
 
@@ -2971,10 +2975,10 @@ function submitRPE(rpe, isSkip = false) {
       const assessment = assessPlanIntensity();
       let toastMsg = '';
       if (assessment.cls === 'intensity-over') {
-        S.volumeMultiplier = Math.max(0.5, (S.volumeMultiplier || 1.0) * 0.9);
+        S.volumeMultiplier = Math.max(0.5, (S.volumeMultiplier || 1.0) * 0.93);
         toastMsg = `强度超标：后续训练量已自动下调 10%`;
       } else if (assessment.cls === 'intensity-under') {
-        S.volumeMultiplier = Math.min(1.5, (S.volumeMultiplier || 1.0) * 1.05);
+        S.volumeMultiplier = Math.min(1.5, (S.volumeMultiplier || 1.0) * 1.03);
         toastMsg = `强度低于能力：已自动上调后续训练量 5%`;
       } else {
         if ((S.volumeMultiplier || 1.0) > 1.0) S.volumeMultiplier = Math.max(1.0, S.volumeMultiplier - 0.05);
