@@ -2178,6 +2178,7 @@ ${ex.weight ? `<div class="wt-hint" style="margin-top:2px;display:block">${ex.we
           h += `</div>`;
         } else { h += `<div class="hist-empty">\u8be5\u65e5\u8bad\u7ec3\u8be6\u60c5\u4e0d\u53ef\u7528</div>` }
         if (lg.note) h += `<div class="hist-note" style="margin-top:12px;padding:10px 14px;background:var(--surface2);border-radius:8px;font-size:12px;font-style:italic;color:var(--ink2)">"${lg.note}"</div>`;
+        h += typeof renderRecoveryModule === 'function' ? renderRecoveryModule(sel) : '';
       } else {
         const pd = S.prog[sel.date] || {};
         const locked = isLocked(sel);
@@ -2208,7 +2209,7 @@ ${ex.weight ? `<div class="wt-hint" style="margin-top:2px;display:block">${ex.we
             }
             h += `<div class="exrow${done ? ' done-ex' : ''}" onclick="tog('${sel.date}',${i})">
 <div style="flex:1;min-width:0">
-<div class="exname">${ex.name} <i class="ti ti-info-circle" style="font-size:12px;opacity:.4;vertical-align:middle" onclick="event.stopPropagation();showExDetail('${ex.name}')"></i></div>
+<div class="exname">${ex.name} <i class="ti ti-info-circle" style="font-size:12px;opacity:.4;vertical-align:middle" onclick="event.stopPropagation();showExDetail('${ex.name}')"></i> <span class="swap-btn" onclick="event.stopPropagation();swapExercise('${sel.date}',${i})" title="替换动作" style="border:1px solid var(--sage);color:var(--sage);border-radius:2px;padding:0 4px;font-size:10px;margin-left:4px">替换</span><span class="swap-btn" onclick="event.stopPropagation();excludeUserExercise('${sel.date}',${i})" title="划掉/永久排除此动作" style="border:1px solid rgba(220,38,38,.4);color:#ef4444;border-radius:2px;padding:0 4px;font-size:10px;margin-left:4px">✕划掉</span></div>
 <div class="exnote">${ex.note}</div>
 <span class="pool-reps">${reps}\u5206\u949f</span>
 ${!done ? `<button class="act-play-btn" onclick="event.stopPropagation();startTimer(${reps * 60}, '${ex.name}')">\u25b6 \u5f00\u59cb\u8ba1\u65f6 ${reps}\u5206\u949f</button>` : ''}
@@ -2216,7 +2217,8 @@ ${!done ? `<button class="act-play-btn" onclick="event.stopPropagation();startTi
 <button class="cb${done ? ' ck' : ''}" onclick="event.stopPropagation();tog('${sel.date}',${i})"><i class="ti ti-check"></i></button>
 </div>`;
           });
-          h += `</div>`;
+          h += `${!locked && !isDone(sel) ? `<button class="btn btn-out" style="width:100%;margin-top:8px;font-size:12px;border-style:dashed;padding:6px;color:var(--ink2)" onclick="openAddExerciseModal('${sel.date}')">+ 手动添加动作</button>` : ''}</div>`;
+          h += typeof renderRecoveryModule === 'function' ? renderRecoveryModule(sel) : '';
           // Fixed bottom complete button
           const alreadyLogged = LOG.some(l => l.date === sel.date); // key on date only (matches isDone/delLog/stats); date+type let a re-typed day double-log
           if (!alreadyLogged) {
@@ -2229,7 +2231,7 @@ ${!done ? `<button class="act-play-btn" onclick="event.stopPropagation();startTi
 </button>
 </div>`;
           }
-          h += `</div>`; // close pool-mode
+          h += `</div>`; // close pool-mode // close pool-mode
 
           // ── Standard gym / private day render ──
         } else {
@@ -2317,6 +2319,7 @@ ${!locked ? `
     }
   } else if (sel && sel.isRest) {
     h += `<div class="tip" style="text-align:center;padding:2rem">\u4f11\u606f\u65e5 \u2014 \u597d\u597d\u6062\u590d\uff0c\u660e\u5929\u7ee7\u7eed</div>`;
+    h += typeof renderRecoveryModule === 'function' ? renderRecoveryModule(sel) : '';
   }
   h += `<div class="tip">${tip}</div>`;
   if (_globalSubMode && _ownerSession() && hasGoal('女性曲线')) {
