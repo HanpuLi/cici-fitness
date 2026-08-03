@@ -34,7 +34,7 @@ function migrateLegacyKeys(uid) {
 }
 
 // ══ State ════════════════════════════════════════════════
-const S = { goal: '女性薄肌', level: '初级', days: 3, dur: 60, equip: ['健身房全套'], focus: ['均衡全身'], limits: '', plan: null, selDate: null, prog: {}, adj: {}, weights: {}, exRpe: {}, volumeMultiplier: 1.0, restDur: 45, swimLevel: '入门', weightLevel: '初级', periodMode: false, cycleEnabled: true, cycleDay: 1, cycleLength: 28, vacuumDays: [] };
+const S = { goal: '女性薄肌', level: '初级', days: 3, dur: 60, equip: ['健身房全套'], focus: ['均衡全身'], limits: '', plan: null, selDate: null, prog: {}, adj: {}, weights: {}, exRpe: {}, volumeMultiplier: 1.0, restDur: 45, swimLevel: '入门', weightLevel: '初级', periodMode: false, cycleEnabled: true, cycleDay: 1, cycleLength: 28, vacuumDays: [], autoVolumeAdjust: true };
 let LOG = lg(K.log) || [];
 let W_HIST = lg(K.wh) || {};
 let PR_LIST = lg(K.pr) || []; // {date,exercise,weight,prev}
@@ -3075,15 +3075,27 @@ function submitRPE(rpe, isSkip = false) {
     }
 
     if (!_dayIsSwim) {
+      const isManual = (S.autoVolumeAdjust === false);
       const volChk = document.getElementById('chk-reduce-volume');
-      const userWantsReduce = volChk && volChk.checked;
+      const userWantsReduce = isManual && volChk && volChk.checked;
 
-      if (_pendingEarlyEnd && !userWantsReduce) {
-        showToast(`打卡成功！已按您的设置保留当前计划训练量`);
-      } else if (userWantsReduce) {
-        S.volumeMultiplier = Math.max(0.5, (S.volumeMultiplier || 1.0) * 0.93);
-        showToast(`已按您的选择下调后续训练量 10%`);
-        setTimeout(() => { genPlan(true, true); }, 100);
+      if (isManual) {
+        if (_pendingEarlyEnd && !userWantsReduce) {
+          showToast(`打卡成功！已按您的设置保留当前计划训练量`);
+        } else if (userWantsReduce) {
+          S.volumeMultiplier = Math.max(0.5, (S.volumeMultiplier || 1.0) * 0.93);
+          showToast(`已按您的选择下调后续训练量 10%`);
+          setTimeout(() => { genPlan(true, true); }, 100);
+        } else {
+          const assessment = assessPlanIntensity();
+          if (assessment.cls === 'intensity-over') {
+            S.volumeMultiplier = Math.max(0.5, (S.volumeMultiplier || 1.0) * 0.93);
+            showToast(`强度超标：后续训练量已自动下调 10%`);
+            setTimeout(() => { genPlan(true, true); }, 100);
+          } else {
+            showToast(`打卡成功！`);
+          }
+        }
       } else {
         const assessment = assessPlanIntensity();
         let toastMsg = '';
@@ -3155,8 +3167,9 @@ function endWorkoutEarly(date) {
 
   const volRow = document.getElementById('volume-down-row');
   const volChk = document.getElementById('chk-reduce-volume');
+  const manualMode = (S.autoVolumeAdjust === false);
   if (volRow) {
-    volRow.style.display = (checkedCount < totalEx) ? 'block' : 'none';
+    volRow.style.display = (manualMode && checkedCount < totalEx) ? 'block' : 'none';
     if (volChk) volChk.checked = false;
   }
 

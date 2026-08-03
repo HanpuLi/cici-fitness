@@ -129,6 +129,8 @@ document.querySelectorAll('#g-swim-level .chip').forEach(b=>b.classList.toggle('
 document.querySelectorAll('#g-partner-days .chip').forEach(b=>b.classList.toggle('on',+b.dataset.v===(+S.partnerDays||0)));
 if(typeof updatePartnerOverlap==='function')updatePartnerOverlap();
 if(typeof renderExcludedList==='function')renderExcludedList();
+const autoVolSwUI=document.getElementById('auto-vol-switch');
+if(autoVolSwUI) autoVolSwUI.checked = S.autoVolumeAdjust !== false;
 if(typeof updatePairUI==='function')updatePairUI();
 const swimPanel=document.getElementById('swim-settings');
 if(swimPanel) swimPanel.style.display=S.equip.includes('泳池')?'block':'none';
@@ -1110,6 +1112,9 @@ if(sndSw){ sndSw.checked = (typeof _soundMuted==='function') ? !_soundMuted() : 
 // 系统通知开关
 const notifSw=document.getElementById('notif-enable-switch');
 if(notifSw){ notifSw.checked = (typeof _notifMuted==='function') ? !_notifMuted() : true; notifSw.addEventListener('change',function(){ try{localStorage.setItem('notifMuted', this.checked?'0':'1');}catch(e){} if(this.checked&&'Notification'in window&&Notification.permission==='default'){try{Notification.requestPermission();}catch(e){}} if(typeof flashSaved==='function')flashSaved(); }); }
+// 自动调整训练量开关
+const autoVolSw=document.getElementById('auto-vol-switch');
+if(autoVolSw){ autoVolSw.checked = S.autoVolumeAdjust !== false; autoVolSw.addEventListener('change',function(){ S.autoVolumeAdjust = this.checked; saveState(); if(typeof flashSaved==='function')flashSaved(); }); }
 
 window.toggleChangelog=function(){
 const el=document.getElementById('changelog-box');
