@@ -128,6 +128,7 @@ document.querySelectorAll('#g-rest .chip').forEach(b=>b.classList.toggle('on',+b
 document.querySelectorAll('#g-swim-level .chip').forEach(b=>b.classList.toggle('on',b.dataset.v===(S.swimLevel||'入门')));
 document.querySelectorAll('#g-partner-days .chip').forEach(b=>b.classList.toggle('on',+b.dataset.v===(+S.partnerDays||0)));
 if(typeof updatePartnerOverlap==='function')updatePartnerOverlap();
+if(typeof renderExcludedList==='function')renderExcludedList();
 if(typeof updatePairUI==='function')updatePairUI();
 const swimPanel=document.getElementById('swim-settings');
 if(swimPanel) swimPanel.style.display=S.equip.includes('泳池')?'block':'none';
@@ -633,7 +634,10 @@ const exStr=l.exercises?l.exercises.map(e=>`${e.name}${e.weight?' '+e.weight+'kg
 return `- ${l.date} | ${l.workout} | ${l.duration||'?'}分钟${l.rpe?' | RPE '+l.rpe+'/10':''}\n  动作：${exStr}${l.note?'\n  备注：'+l.note:''}`;
 }).join('\n');
 
-const text=`【${S.displayName||'Cici'} 健身日志 - AI 分析请求】\n训练目标：${S.goal} | 水平：${S.level} | 器材：${S.equip.join('+')}\n近${recent.length}次训练：\n\n${logStr}\n\n肌群分布（近30天）：${distStr||'无数据'}\n\n请帮我分析：\n1. 训练计划是否均衡？哪个肌群训练不足？\n2. 根据我的目标（${S.goal}），有什么需要改进？\n3. 下阶段如何调整计划？`;
+const exEx = (S.userExcluded || []).map(n => `${n}${S.userExcludeReasons && S.userExcludeReasons[n] ? '(' + S.userExcludeReasons[n] + ')' : ''}`).join('、');
+const exExStr = exEx ? `\n\n用户已永久排除动作/器械：${exEx}\n（分析与规划新方案时请避免包含上述动作与器械）` : '';
+
+const text=`【${S.displayName||'Cici'} 健身日志 - AI 分析请求】\n训练目标：${S.goal} | 水平：${S.level} | 器材：${S.equip.join('+')}\n近${recent.length}次训练：\n\n${logStr}\n\n肌群分布（近30天）：${distStr||'无数据'}${exExStr}\n\n请帮我分析：\n1. 训练计划是否均衡？哪个肌群训练不足？\n2. 根据我的目标（${S.goal}），有什么需要改进？\n3. 下阶段如何调整计划？`;
 const blob=new Blob([text],{type:'text/plain;charset=utf-8'});
 const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='fitness_ai_analysis_'+new Date().toISOString().split('T')[0]+'.txt';a.click();
 showToast('已导出 AI 分析文件');
@@ -1022,7 +1026,7 @@ window.toggleSubMode = function() {
   if (!_ownerSession()) return;
   _globalSubMode = !_globalSubMode;
   if (typeof _exDetailSubMode !== 'undefined') _exDetailSubMode = _globalSubMode;
-  document.body.classList.toggle('sub-active', _globalSubMode);
+  document.body.classList.remove('sub-active');
   if (typeof render === 'function') render();
   const todayBtn = document.querySelector('.tab[onclick*="today"]');
   if (todayBtn) showTab('today', todayBtn);
@@ -1103,6 +1107,30 @@ if(cyEnSw) cyEnSw.addEventListener('change',function(){S.cycleEnabled=this.check
 // 提示音开关(勾=开;localStorage 持久;打开时试放一声)
 const sndSw=document.getElementById('sound-enable-switch');
 if(sndSw){ sndSw.checked = (typeof _soundMuted==='function') ? !_soundMuted() : true; sndSw.addEventListener('change',function(){ try{localStorage.setItem('soundMuted', this.checked?'0':'1');}catch(e){} if(this.checked){try{playExerciseDoneSound();}catch(e){}} if(typeof flashSaved==='function')flashSaved(); }); }
+// 系统通知开关
+const notifSw=document.getElementById('notif-enable-switch');
+if(notifSw){ notifSw.checked = (typeof _notifMuted==='function') ? !_notifMuted() : true; notifSw.addEventListener('change',function(){ try{localStorage.setItem('notifMuted', this.checked?'0':'1');}catch(e){} if(this.checked&&'Notification'in window&&Notification.permission==='default'){try{Notification.requestPermission();}catch(e){}} if(typeof flashSaved==='function')flashSaved(); }); }
+
+window.toggleChangelog=function(){
+const el=document.getElementById('changelog-box');
+if(el) el.style.display=(el.style.display==='none'?'block':'none');
+};
+
+window.renderExcludedList=function(){
+const panel=document.getElementById('excluded-panel');
+const list=document.getElementById('excluded-list');
+if(!panel||!list) return;
+const arr=S.userExcluded||[];
+if(!arr.length){ panel.style.display='none'; return; }
+panel.style.display='block';
+list.innerHTML=arr.map(name=>{
+const reason=S.userExcludeReasons&&S.userExcludeReasons[name]?S.userExcludeReasons[name]:'用户手动排除';
+return `<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 10px;background:var(--surface2);border-radius:6px;font-size:12px">
+<div><b style="color:var(--ink)">${name}</b> <span style="font-size:10px;color:var(--ink3)">(${reason})</span></div>
+<button class="exp-btn" style="padding:2px 8px;font-size:10px" onclick="restoreUserExercise('${name}')">恢复</button>
+</div>`;
+}).join('');
+};
 const slCycle=document.getElementById('sl-cycle');
 if(slCycle) slCycle.addEventListener('input',e=>{S.cycleDay=+e.target.value;updateCycleUI();saveState();});
 const cyLenEl=document.getElementById('cycle-len');

@@ -229,6 +229,18 @@
                         <span class="switch-slider"></span>
                     </label>
                 </div>
+                <div class="period-toggle-row" id="notif-enable-row" style="margin: 15px 0;">
+                    <div class="period-toggle-info">
+                        <div>
+                            <span class="period-toggle-label">系统通知</span>
+                            <span class="period-toggle-hint">休息结束弹出锁屏/后台通知，关闭后仅声音提醒</span>
+                        </div>
+                    </div>
+                    <label class="switch" for="notif-enable-switch">
+                        <input type="checkbox" id="notif-enable-switch">
+                        <span class="switch-slider"></span>
+                    </label>
+                </div>
                 <div class="period-toggle-row" id="cycle-enable-row" style="margin: 15px 0;">
                     <div class="period-toggle-info">
                         <div>
@@ -299,6 +311,11 @@
                     <button id="recal-btn" onclick="recalibratePlan()" style="display:none">↺ 重排剩余</button>
                 </div>
             </div>
+            <div class="panel" id="excluded-panel" style="display:none">
+                <p class="panel-title">已排除的动作/器械</p>
+                <div id="excluded-list" style="display:flex;flex-direction:column;gap:6px"></div>
+            </div>
+
             <div class="panel">
                 <p class="panel-title">数据管理</p>
                 <div class="export-row">
@@ -311,6 +328,25 @@
                 <div style="margin-top:12px;">
                     <button class="exp-btn" onclick="clearAllData()"
                         style="width:100%;color:var(--terra);border-color:var(--terra-br)">清空所有数据 (恢复出厂)</button>
+                </div>
+            </div>
+
+            <div style="text-align:center;padding:16px 0 24px">
+                <span id="app-version" style="font-size:11px;color:var(--ink3);cursor:pointer;user-select:none" onclick="toggleChangelog()">
+                    Cici健身计划 v2.0.0 (build 134) · 点击查看更新日志 ▾
+                </span>
+                <div id="changelog-box" style="display:none;margin-top:12px;text-align:left;background:var(--surface2);border-radius:10px;padding:12px;font-size:12px;line-height:1.6;color:var(--ink2)">
+                    <div style="font-weight:600;color:var(--ink);margin-bottom:6px">🎉 v2.0.0 (2026-08-04) 更新详情：</div>
+                    <ul style="margin:0;padding-left:18px">
+                        <li>提前结束训练可自主勾选是否下调后续训练量</li>
+                        <li>新增「+ 手动添加动作」，优先推荐当日训练肌群</li>
+                        <li>逐动作 RPE 行增加快捷休息计时按钮 (⏱️ 45s)</li>
+                        <li>动作行支持「✕ 划掉」永久排除器械/做不了的动作，并在 AI 导出中附带说明</li>
+                        <li>新增训练后水疗恢复模块（桑拿 / Hot Tub / 热躺椅 / 冷热交替引导）</li>
+                        <li>新增离线肌群图解（在动作详情中直观显示发力部位）</li>
+                        <li>新增系统通知独立开关（与提示音解耦）</li>
+                        <li>计时器后台恢复（切回前台自动补触发完成提醒）</li>
+                    </ul>
                 </div>
             </div>
 
@@ -403,6 +439,12 @@
             </div>
 
             <div id="sub-diary-container" style="display:none; margin-top:16px;"></div>
+            <div id="volume-down-row" style="display:none;margin:12px 0;padding:8px 12px;background:var(--surface2);border-radius:8px;text-align:left">
+                <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:var(--ink)">
+                    <input type="checkbox" id="chk-reduce-volume" style="accent-color:var(--terra)">
+                    <span>过于疲劳？勾选下调后续训练量 (10%)</span>
+                </label>
+            </div>
             <textarea id="rpe-note" class="rpe-note-input" placeholder="有什么想记录的？（选填，如：今天状态不好、卧推加了5kg）"></textarea>
 
             <button class="btn btn-out" style="width:100%;margin-top:16px;font-size:13px"

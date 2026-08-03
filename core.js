@@ -155,8 +155,60 @@ function getExcluded() {
   }
   // Cici 反馈健身房没有这两台具体机器 → 永久排除,计划自动用同肌群备选(坐姿划船/器械上背划船/面拉/弹力带划船等)补位
   if (hasGoal('翘臀美背')) { s.add('T把划船'); s.add('直臂下压机'); }
+  if (Array.isArray(S.userExcluded)) {
+    S.userExcluded.forEach(e => s.add(e));
+  }
   return s;
 }
+
+function excludeUserExercise(date, ei) {
+  const sel = S.plan && S.plan.days.find(d => d.date === date);
+  if (!sel || !sel.exercises || !sel.exercises[ei]) return;
+  const ex = sel.exercises[ei];
+  const name = ex.name;
+  const reason = prompt(`永久排除动作/器械「${name}」？\n后续所有计划将自动避开此动作。\n如有需要可填入排除原因（如：做不了 / 健身房缺器械）：`, "做不了 / 缺器械");
+  if (reason === null) return;
+  if (!S.userExcluded) S.userExcluded = [];
+  if (!S.userExcluded.includes(name)) S.userExcluded.push(name);
+  if (!S.userExcludeReasons) S.userExcludeReasons = {};
+  S.userExcludeReasons[name] = reason || '用户手动排除';
+  
+  saveState();
+  
+  // Replace in current day if alternative available
+  let group = null;
+  for (const [g, exs] of Object.entries(DB)) { if (exs.find(e => e.n === name)) { group = g; break; } }
+  if (group && DB[group]) {
+    const used = sel.exercises.map(e => e.name);
+    const excluded = getExcluded();
+    const alts = DB[group].filter(e => e.n !== name && !used.includes(e.n) && !excluded.has(e.n) && S.equip.some(eq => !e.eq || e.eq.includes(eq)));
+    if (alts.length > 0) {
+      const alt = alts[0];
+      sel.exercises[ei] = { name: alt.n, note: alt.note || '', sets: ex.sets, reps: ex.reps, unit: ex.unit || alt.u || '次', group: ex.group, muscle: alt.muscle || [], diff: alt.diff, isWarmup: false, isStretch: false, bi: !!alt.bi };
+      showToast(`已排除「${name}」，自动换为「${alt.n}」`);
+    } else {
+      sel.exercises.splice(ei, 1);
+      showToast(`已排除「${name}」`);
+    }
+  } else {
+    sel.exercises.splice(ei, 1);
+    showToast(`已排除「${name}」`);
+  }
+  saveState();
+  render();
+  if (typeof renderExcludedList === 'function') renderExcludedList();
+}
+window.excludeUserExercise = excludeUserExercise;
+
+function restoreUserExercise(name) {
+  if (S.userExcluded) S.userExcluded = S.userExcluded.filter(n => n !== name);
+  if (S.userExcludeReasons) delete S.userExcludeReasons[name];
+  saveState();
+  showToast(`已恢复动作：「${name}」`);
+  render();
+  if (typeof renderExcludedList === 'function') renderExcludedList();
+}
+window.restoreUserExercise = restoreUserExercise;
 
 // ══ Exercise Database (overhauled) ═══════════════════════
 // Each exercise: n=name, eq=equipment, cat=category, muscle=primary muscles, diff=difficulty 1-3, note=cue
@@ -2200,14 +2252,14 @@ ${locked ? `<span class="warn-tag" style="background:var(--surface3);color:var(-
               } catch(e) {}
             }
             return `<div class="exrow${done ? ' done-ex' : ''}"><div style="flex:1;min-width:0">
-<div class="exname" onclick="showExDetail('${ex.name}')" style="cursor:pointer">${dispName}${_pvSet && _pvSet.has(ex.name) ? `<span class="pdot"${isSub && EX_SUB_DESC[ex.name] ? ` onclick="event.stopPropagation();_showPrivDesc('${ex.name}')" style="cursor:pointer"` : ''}></span>` : ''}${needsWt && W_HIST[ex.name] && W_HIST[ex.name].length > 0 && (curW || 0) >= Math.max(...W_HIST[ex.name].map(h => h.weight)) ? ` <span title="个人纪录" style="font-size:9px;color:var(--terra);border:1px solid var(--terra);border-radius:2px;padding:0 2px;margin-left:4px;font-weight:600">纪录</span>` : ''} <i class="ti ti-info-circle" style="font-size:11px;opacity:.4;vertical-align:middle"></i> <span class="demo-btn" onclick="event.stopPropagation();openDemo('${ex.name}')" title="看B站示范" style="border:1px solid var(--terra);color:var(--terra);border-radius:2px;padding:0 4px;font-size:10px;margin-left:4px">▶示范</span>${!locked && !ex.isWarmup && !ex.isStretch ? ` <span class="swap-btn" onclick="event.stopPropagation();swapExercise('${sel.date}',${i})" title="替换动作" style="border:1px solid var(--sage);color:var(--sage);border-radius:2px;padding:0 4px;font-size:10px;margin-left:4px">替换</span>` : ''}</div>
+<div class="exname" onclick="showExDetail('${ex.name}')" style="cursor:pointer">${dispName}${_pvSet && _pvSet.has(ex.name) ? `<span class="pdot"${isSub && EX_SUB_DESC[ex.name] ? ` onclick="event.stopPropagation();_showPrivDesc('${ex.name}')" style="cursor:pointer"` : ''}></span>` : ''}${needsWt && W_HIST[ex.name] && W_HIST[ex.name].length > 0 && (curW || 0) >= Math.max(...W_HIST[ex.name].map(h => h.weight)) ? ` <span title="个人纪录" style="font-size:9px;color:var(--terra);border:1px solid var(--terra);border-radius:2px;padding:0 2px;margin-left:4px;font-weight:600">纪录</span>` : ''} <i class="ti ti-info-circle" style="font-size:11px;opacity:.4;vertical-align:middle"></i> <span class="demo-btn" onclick="event.stopPropagation();openDemo('${ex.name}')" title="看B站示范" style="border:1px solid var(--terra);color:var(--terra);border-radius:2px;padding:0 4px;font-size:10px;margin-left:4px">▶示范</span>${!locked && !ex.isWarmup && !ex.isStretch ? ` <span class="swap-btn" onclick="event.stopPropagation();swapExercise('${sel.date}',${i})" title="替换动作" style="border:1px solid var(--sage);color:var(--sage);border-radius:2px;padding:0 4px;font-size:10px;margin-left:4px">替换</span><span class="swap-btn" onclick="event.stopPropagation();excludeUserExercise('${sel.date}',${i})" title="划掉/永久排除此动作" style="border:1px solid rgba(220,38,38,.4);color:#ef4444;border-radius:2px;padding:0 4px;font-size:10px;margin-left:4px">✕划掉</span>` : ''}</div>
 <div class="exnote">${(ex.muscle || []).map(m => `<span style="font-size:9px;background:var(--surface2);color:var(--ink2);padding:1px 4px;border-radius:2px;margin-right:4px;display:inline-block">${m}</span>`).join('')}${dispNote}${ex.bi ? ' (左右各做一遍算1组)' : ''}</div>
 ${needsWt && !locked ? `<div class="wt-row">
 <input type="number" class="wt-input" value="${dispW || ''}" placeholder="${sugW || ''}" onchange="setWeight('${sel.date}',${i},+this.value)" step="${getWeightStep(ex.name)}" min="0">
 <span class="wt-unit">kg</span>
 ${lastW ? `<span class="wt-hint">\u4e0a\u6b21 ${lastW.weight}kg</span>` : `<span class="wt-sug">\u5efa\u8bae ${sugW || '?'}kg</span>`}
 ${sugW && lastW && sugW !== lastW.weight ? `<span class="wt-sug">\u2192 ${sugW}kg</span>` : ''}
-</div><div style="display:flex;gap:5px;align-items:center;margin-top:4px;flex-wrap:wrap"><span style="font-size:10px;color:var(--ink3)">\u611f\u53d7</span>${[['\u8f7b\u677e', 4], ['\u521a\u597d', 6.5], ['\u5403\u529b', 8.5]].map(([lbl, v]) => `<span onclick="setExRpe('${sel.date}',${i},${v})" style="font-size:10px;padding:2px 8px;border-radius:10px;cursor:pointer;border:1px solid ${getExRpe(sel.date, i) === v ? 'var(--terra)' : 'rgba(128,128,128,.3)'};color:${getExRpe(sel.date, i) === v ? 'var(--terra)' : 'var(--ink3)'};background:${getExRpe(sel.date, i) === v ? 'rgba(200,120,90,.1)' : 'transparent'}">${lbl}</span>`).join('')}</div>`: ''}
+</div><div style="display:flex;gap:5px;align-items:center;margin-top:4px;flex-wrap:wrap"><span style="font-size:10px;color:var(--ink3)">\u611f\u53d7</span>${[['\u8f7b\u677e', 4], ['\u521a\u597d', 6.5], ['\u5403\u529b', 8.5]].map(([lbl, v]) => `<span onclick="setExRpe('${sel.date}',${i},${v})" style="font-size:10px;padding:2px 8px;border-radius:10px;cursor:pointer;border:1px solid ${getExRpe(sel.date, i) === v ? 'var(--terra)' : 'rgba(128,128,128,.3)'};color:${getExRpe(sel.date, i) === v ? 'var(--terra)' : 'var(--ink3)'};background:${getExRpe(sel.date, i) === v ? 'rgba(200,120,90,.1)' : 'transparent'}">${lbl}</span>`).join('')}<span style="margin-left:auto;display:inline-flex"><span onclick="event.stopPropagation();startTimer(${S.restDur||45},'组间休息')" style="font-size:10px;padding:2px 8px;border-radius:10px;cursor:pointer;border:1px solid rgba(128,128,128,.3);color:var(--ink3);background:var(--surface2)">⏱️ ${S.restDur||45}s 休息</span></span></div>`: ''}
 ${needsWt && locked && lastW ? `<span class="wt-hint" style="margin-top:2px;display:block">${curW || lastW.weight}kg</span>` : ''}
 ${(ex.unit === '\u79d2' || ex.unit === '\u5206\u949f') && !locked ? `<button class="act-play-btn" onclick="startTimer(${ex.unit === '\u5206\u949f' ? reps * 60 : reps}, '${ex.name}')">\u8ba1\u65f6</button>` : ''}
 </div>
@@ -2219,7 +2271,7 @@ ${!locked ? `
 <button class="cb${done ? ' ck' : ''}" style="cursor:default;pointer-events:none;opacity:${done ? 1 : 0.15}"><i class="ti ti-check"></i></button>
 `}
 </div>`;
-          }).join('')}</div>`;
+          }).join('')}${!locked && !isDone(sel) && !sel.isSwimDay ? `<button class="btn btn-out" style="width:100%;margin-top:8px;font-size:12px;border-style:dashed;padding:6px;color:var(--ink2)" onclick="openAddExerciseModal('${sel.date}')">+ 手动添加动作</button>` : ''}${typeof renderRecoveryModule === 'function' ? renderRecoveryModule(sel) : ''}</div>`;
 
           if (_globalSubMode && _ownerSession()) {
             const _sdb = _getSubDb(), _sdec = s => { try { return decodeURIComponent(atob(s)); } catch(e) { return ''; } };
@@ -2577,7 +2629,7 @@ function _refreshNextDayPrivate() {
 
 function _applySubTheme() {
   const isSub = !!(_globalSubMode && _ownerSession());
-  document.body.classList.toggle('sub-active', isSub);
+  document.body.classList.remove('sub-active');
 
   let panicBtn = document.getElementById('sub-panic-btn');
   let fluidOverlay = document.getElementById('sub-fluid-overlay');
@@ -2592,19 +2644,8 @@ function _applySubTheme() {
       panicBtn.onclick = () => { _globalSubMode = false; render(); };
       document.body.appendChild(panicBtn);
     }
-    if (!fluidOverlay) {
-      fluidOverlay = document.createElement('div');
-      fluidOverlay.id = 'sub-fluid-overlay';
-      fluidOverlay.style = 'position:fixed;inset:0;pointer-events:none;z-index:9998;background:radial-gradient(circle at 50% 0%, rgba(244,114,182,0.15) 0%, transparent 60%), radial-gradient(circle at 100% 100%, rgba(192,132,252,0.1) 0%, transparent 50%);box-shadow:inset 0 0 40px rgba(232,121,249,0.1);animation:fluidPulse 6s infinite alternate ease-in-out;';
-      document.body.appendChild(fluidOverlay);
-      
-      const style = document.createElement('style');
-      style.id = 'sub-fluid-style';
-      style.textContent = `@keyframes fluidPulse { 0% { opacity: 0.7; transform: scale(1); } 100% { opacity: 1; transform: scale(1.02); } }`;
-      document.head.appendChild(style);
-    }
     panicBtn.style.display = 'block';
-    fluidOverlay.style.display = 'block';
+    if (fluidOverlay) fluidOverlay.style.display = 'none';
   } else {
     if (panicBtn) panicBtn.style.display = 'none';
     if (fluidOverlay) fluidOverlay.style.display = 'none';
@@ -2666,19 +2707,59 @@ function _showRitual(cb) {
   setTimeout(dismiss, 4000);
 }
 
-// 倒计时结束系统通知提醒(锁屏/切后台也能收到;比纯声音可靠,尤其手机静音时)
-// iOS 需把 app「添加到主屏幕」后通知才生效(iOS 16.4+)
+function _notifMuted() { try { return localStorage.getItem('notifMuted') === '1'; } catch (e) { return false; } }
+function toggleNotif() { const m = !_notifMuted(); try { localStorage.setItem('notifMuted', m ? '1' : '0'); } catch (e) {} return m; }
+
 function _ensureNotifyPermission() {
-  try { if ('Notification' in window && Notification.permission === 'default') Notification.requestPermission(); } catch (e) {}
+  try { if (!_notifMuted() && 'Notification' in window && Notification.permission === 'default') Notification.requestPermission(); } catch (e) {}
 }
 function _notifyRestDone() {
   try {
+    if (_notifMuted()) return;
     if ('Notification' in window && Notification.permission === 'granted') {
       const n = new Notification('⏰ 休息结束', { body: '休息结束，开始下一组 💪', tag: 'rest-done', renotify: true });
       setTimeout(() => { try { n.close(); } catch (e) {} }, 8000);
     }
   } catch (e) {}
 }
+
+let _timerEndTime = 0;
+let _timerFired = false;
+let _multiTimerQueue = [];
+let _multiTimerIdx = 0;
+
+function startMultiTimer(segments) {
+  if (!segments || !segments.length) return;
+  _multiTimerQueue = segments;
+  _multiTimerIdx = 0;
+  _runNextMultiSegment();
+}
+window.startMultiTimer = startMultiTimer;
+
+function _runNextMultiSegment() {
+  if (_multiTimerIdx >= _multiTimerQueue.length) {
+    _multiTimerQueue = [];
+    _multiTimerIdx = 0;
+    showToast('冷热交替引导完成！体表循环全面激活');
+    playWorkoutCompleteSound();
+    return;
+  }
+  const seg = _multiTimerQueue[_multiTimerIdx];
+  _multiTimerIdx++;
+  startTimer(seg.sec, `[${_multiTimerIdx}/${_multiTimerQueue.length}] ${seg.label}`);
+}
+
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && _timerEndTime > 0) {
+    if (Date.now() >= _timerEndTime && !_timerFired) {
+      _timerFired = true;
+      playDing();
+      _notifyRestDone();
+      const bar = document.getElementById('universal-timer');
+      if (bar) setTimeout(() => bar.classList.remove('show'), 3000);
+    }
+  }
+});
 
 function startTimer(seconds, label = "休息中") {
   clearInterval(_timerInterval);
@@ -2719,6 +2800,8 @@ function startTimer(seconds, label = "休息中") {
 
   const total = seconds;
   const endTime = Date.now() + seconds * 1000;
+  _timerEndTime = endTime;
+  _timerFired = false;
 
   function update() {
     const remain = Math.max(0, Math.ceil((endTime - Date.now()) / 1000));
@@ -2729,11 +2812,15 @@ function startTimer(seconds, label = "休息中") {
 
     if (remain <= 0) {
       if (remain === 0 && !bar.dataset.dinged) {
+        _timerFired = true;
         playDing();
         _notifyRestDone();
         bar.dataset.dinged = '1';
         if (!(_globalSubMode && _ownerSession() && hasGoal('女性曲线'))) {
           setTimeout(() => { bar.classList.remove('show'); }, 3000);
+        }
+        if (_multiTimerQueue.length > 0 && _multiTimerIdx < _multiTimerQueue.length) {
+          setTimeout(() => { _runNextMultiSegment(); }, 2000);
         }
       }
       
@@ -2988,29 +3075,32 @@ function submitRPE(rpe, isSkip = false) {
     }
 
     if (!_dayIsSwim) {
-      // Assess intensity and auto-volume adjustment
-      const assessment = assessPlanIntensity();
-      let toastMsg = '';
-      if (assessment.cls === 'intensity-over') {
-        S.volumeMultiplier = Math.max(0.5, (S.volumeMultiplier || 1.0) * 0.93);
-        toastMsg = `强度超标：后续训练量已自动下调 10%`;
-      } else if (assessment.cls === 'intensity-under') {
-        S.volumeMultiplier = Math.min(1.5, (S.volumeMultiplier || 1.0) * 1.03);
-        toastMsg = `强度低于能力：已自动上调后续训练量 5%`;
-      } else {
-        if ((S.volumeMultiplier || 1.0) > 1.0) S.volumeMultiplier = Math.max(1.0, S.volumeMultiplier - 0.05);
-        if ((S.volumeMultiplier || 1.0) < 1.0) S.volumeMultiplier = Math.min(1.0, S.volumeMultiplier + 0.05);
-        toastMsg = `强度适中：完美契合您的体能！`;
-      }
-      showToast(toastMsg);
+      const volChk = document.getElementById('chk-reduce-volume');
+      const userWantsReduce = volChk && volChk.checked;
 
-      // Auto-adjust has stored the new volume multiplier. Preserve future days'
-      // exercise selection so a check-in never reshuffles the upcoming plan; the
-      // new multiplier takes effect on genuinely new days (window roll / 重新生成)
-      // and on explicit 重排剩余. (recalibratePlan / autoAlignPlan still re-pick.)
-      setTimeout(() => {
-        genPlan(true, true);
-      }, 100);
+      if (_pendingEarlyEnd && !userWantsReduce) {
+        showToast(`打卡成功！已按您的设置保留当前计划训练量`);
+      } else if (userWantsReduce) {
+        S.volumeMultiplier = Math.max(0.5, (S.volumeMultiplier || 1.0) * 0.93);
+        showToast(`已按您的选择下调后续训练量 10%`);
+        setTimeout(() => { genPlan(true, true); }, 100);
+      } else {
+        const assessment = assessPlanIntensity();
+        let toastMsg = '';
+        if (assessment.cls === 'intensity-over') {
+          S.volumeMultiplier = Math.max(0.5, (S.volumeMultiplier || 1.0) * 0.93);
+          toastMsg = `强度超标：后续训练量已自动下调 10%`;
+        } else if (assessment.cls === 'intensity-under') {
+          S.volumeMultiplier = Math.min(1.5, (S.volumeMultiplier || 1.0) * 1.03);
+          toastMsg = `强度低于能力：已自动上调后续训练量 5%`;
+        } else {
+          if ((S.volumeMultiplier || 1.0) > 1.0) S.volumeMultiplier = Math.max(1.0, S.volumeMultiplier - 0.05);
+          if ((S.volumeMultiplier || 1.0) < 1.0) S.volumeMultiplier = Math.min(1.0, S.volumeMultiplier + 0.05);
+          toastMsg = `强度适中：完美契合您的体能！`;
+        }
+        showToast(toastMsg);
+        setTimeout(() => { genPlan(true, true); }, 100);
+      }
 
       if (day.workoutType !== '轻量替代') checkGymMilestone(); // recovery day doesn't count toward strength milestones
     } else {
@@ -3041,6 +3131,9 @@ function submitRPE(rpe, isSkip = false) {
   // Reset modal text back to default for next time
   document.getElementById('rpe-modal-title').innerText = '今日疲劳度评估';
   document.getElementById('rpe-modal-desc').innerText = '选择最接近你今天训练感受的分数';
+  const volRow = document.getElementById('volume-down-row');
+  if (volRow) volRow.style.display = 'none';
+  _pendingEarlyEnd = false;
 
   closeRpeModal();
   saveState(); render();
@@ -3048,24 +3141,29 @@ function submitRPE(rpe, isSkip = false) {
   if (typeof renderLog === 'function') renderLog(); // Refresh log view
 }
 
+let _pendingEarlyEnd = false;
+
 function endWorkoutEarly(date) {
   const day = S.plan.days.find(d => d.date === date);
   if (!day) return;
   const checkedCount = Object.keys(S.prog[date] || {}).filter(k => S.prog[date][k]).length;
   const totalEx = day.exercises.length;
 
-  let confirmMsg = '确定结束今日训练并打卡记录吗？';
-  if (checkedCount < totalEx) {
-    confirmMsg = `您完成了 ${checkedCount}/${totalEx} 个动作。确定要提前结束训练并打卡记录吗？\n（未完成的动作将不会被勾选，系统将记录实际完成情况）`;
+  _pendingRpeDate = date;
+  _pendingRpeDay = day;
+  _pendingEarlyEnd = (checkedCount < totalEx);
+
+  const volRow = document.getElementById('volume-down-row');
+  const volChk = document.getElementById('chk-reduce-volume');
+  if (volRow) {
+    volRow.style.display = (checkedCount < totalEx) ? 'block' : 'none';
+    if (volChk) volChk.checked = false;
   }
-  if (confirm(confirmMsg)) {
-    _pendingRpeDate = date;
-    _pendingRpeDay = day;
-    document.getElementById('rpe-modal-title').innerText = checkedCount < totalEx ? '训练提前结束打卡' : '训练完成打卡';
-    document.getElementById('rpe-modal-desc').innerText = `已完成 ${checkedCount}/${totalEx} 个动作，请评估今日的疲劳度：`;
-    updateRpeModalLabels();
-    document.getElementById('rpe-modal').classList.add('open');
-  }
+
+  document.getElementById('rpe-modal-title').innerText = checkedCount < totalEx ? '训练提前结束打卡' : '训练完成打卡';
+  document.getElementById('rpe-modal-desc').innerText = `已完成 ${checkedCount}/${totalEx} 个动作，请评估今日的疲劳度：`;
+  updateRpeModalLabels();
+  document.getElementById('rpe-modal').classList.add('open');
 }
 
 function tog(date, ei) {
@@ -5892,7 +5990,7 @@ function renderExDetailContent() {
   const mistakes = subActive ? [] : (info?.mistakes || []);
   
   document.getElementById('ex-modal-title').textContent = dispName;
-  document.getElementById('ex-modal-muscles').innerHTML = muscles.map(m => `<span class="jchip">${m}</span>`).join('');
+  document.getElementById('ex-modal-muscles').innerHTML = muscles.map(m => `<span class="jchip">${m}</span>`).join('') + (typeof renderMuscleDiagram === 'function' ? renderMuscleDiagram(muscles) : '');
   
   const _e1rm = typeof estimate1RM === 'function' ? estimate1RM(name) : null;
   const _strEl = document.getElementById('ex-modal-strength');
@@ -6145,3 +6243,221 @@ Object.assign(EX_DETAIL, {
   '花环式（malasana）': { muscles: ['髋', '内收肌', '踝'], steps: ['双脚略宽于髋、脚尖微外展，全蹲到底', '双手合十，手肘抵膝内侧向外撑', '脊柱向上延展，深呼吸保持'], tips: ['亚洲蹲的瑜伽版：每天蹲一会儿是最便宜的开髋', '脚跟踩不实可垫毛巾'], mistakes: ['弓背团成球', '重心后倒'] },
   '猴神式（hanumanasana）': { muscles: ['腘绳肌', '髋屈肌'], steps: ['半劈叉准备：前腿伸直、后膝跪地', '双手撑砖，前脚跟向前滑、后膝向后退', '在当前极限处停住，骨盆保持朝正前方'], tips: ['纵劈终点体式，用砖支撑让身体敢放松', '每次只加深一点点，以年为单位进步'], mistakes: ['骨盆歪斜硬贴地', '弹震下压'] },
 });
+
+// ══ Offline SVG Muscle Diagram ═════════════════════════════
+function renderMuscleDiagram(muscles) {
+  if (!Array.isArray(muscles) || !muscles.length) return '';
+  const mStr = muscles.join(' ');
+  const isChest = /胸/.test(mStr);
+  const isBack = /背/.test(mStr);
+  const isShoulder = /肩/.test(mStr);
+  const isBiceps = /二头/.test(mStr);
+  const isTriceps = /三头/.test(mStr);
+  const isGlute = /臀/.test(mStr);
+  const isQuads = /股四|腿/.test(mStr);
+  const isCore = /核心|腹/.test(mStr);
+  const isCalf = /小腿/.test(mStr);
+
+  const activeColor = 'var(--terra)';
+  const baseColor = 'var(--surface3)';
+
+  return `<div style="display:flex;justify-content:center;gap:16px;margin:8px 0 12px;background:var(--surface2);padding:10px;border-radius:10px;align-items:center">
+    <div style="text-align:center">
+      <svg width="60" height="90" viewBox="0 0 100 150" style="display:block;margin:0 auto">
+        <circle cx="50" cy="18" r="10" fill="var(--ink3)" opacity="0.3"/>
+        <rect x="46" y="28" width="8" height="8" fill="var(--ink3)" opacity="0.3"/>
+        <path d="M35 36 L65 36 L60 54 L40 54 Z" fill="${isChest ? activeColor : baseColor}" stroke="var(--border)" stroke-width="1"/>
+        <rect x="41" y="56" width="18" height="26" rx="2" fill="${isCore ? activeColor : baseColor}" stroke="var(--border)" stroke-width="1"/>
+        <circle cx="28" cy="38" r="7" fill="${isShoulder ? activeColor : baseColor}"/>
+        <circle cx="72" cy="38" r="7" fill="${isShoulder ? activeColor : baseColor}"/>
+        <rect x="22" y="46" width="8" height="20" rx="4" fill="${isBiceps ? activeColor : baseColor}"/>
+        <rect x="70" y="46" width="8" height="20" rx="4" fill="${isBiceps ? activeColor : baseColor}"/>
+        <rect x="36" y="84" width="12" height="32" rx="4" fill="${isQuads ? activeColor : baseColor}"/>
+        <rect x="52" y="84" width="12" height="32" rx="4" fill="${isQuads ? activeColor : baseColor}"/>
+        <rect x="38" y="118" width="9" height="24" rx="3" fill="${isCalf ? activeColor : baseColor}"/>
+        <rect x="53" y="118" width="9" height="24" rx="3" fill="${isCalf ? activeColor : baseColor}"/>
+      </svg>
+      <span style="font-size:9px;color:var(--ink3)">正面示意</span>
+    </div>
+    <div style="text-align:center">
+      <svg width="60" height="90" viewBox="0 0 100 150" style="display:block;margin:0 auto">
+        <circle cx="50" cy="18" r="10" fill="var(--ink3)" opacity="0.3"/>
+        <rect x="46" y="28" width="8" height="8" fill="var(--ink3)" opacity="0.3"/>
+        <path d="M32 36 L68 36 L58 64 L42 64 Z" fill="${isBack ? activeColor : baseColor}" stroke="var(--border)" stroke-width="1"/>
+        <rect x="21" y="46" width="8" height="20" rx="4" fill="${isTriceps ? activeColor : baseColor}"/>
+        <rect x="71" y="46" width="8" height="20" rx="4" fill="${isTriceps ? activeColor : baseColor}"/>
+        <path d="M35 66 L65 66 L65 84 L35 84 Z" fill="${isGlute ? activeColor : baseColor}" stroke="var(--border)" stroke-width="1"/>
+        <rect x="36" y="86" width="12" height="30" rx="4" fill="${isQuads || isGlute ? activeColor : baseColor}"/>
+        <rect x="52" y="86" width="12" height="30" rx="4" fill="${isQuads || isGlute ? activeColor : baseColor}"/>
+        <rect x="38" y="118" width="9" height="24" rx="3" fill="${isCalf ? activeColor : baseColor}"/>
+        <rect x="53" y="118" width="9" height="24" rx="3" fill="${isCalf ? activeColor : baseColor}"/>
+      </svg>
+      <span style="font-size:9px;color:var(--ink3)">背面示意</span>
+    </div>
+  </div>`;
+}
+window.renderMuscleDiagram = renderMuscleDiagram;
+
+// ══ Add Extra Exercise Modal (Filtered by today's muscles) ═
+function openAddExerciseModal(date) {
+  const sel = S.plan && S.plan.days.find(d => d.date === date);
+  if (!sel) return;
+  window._addExDate = date;
+
+  const splitGroups = sel._splitGroups || [];
+  const existingGroups = new Set();
+  (sel.exercises || []).forEach(ex => { if (ex.group) existingGroups.add(ex.group); });
+  const targetGroups = Array.from(new Set([...splitGroups, ...existingGroups])).filter(Boolean);
+
+  const grpNames = {
+    chest: '胸部', shoulder: '肩部', back: '背部', biceps: '二头肌', triceps: '三头肌',
+    quads: '股四头肌', hamglutes: '臀腿', glutemed: '臀中肌', calves: '小腿',
+    core: '核心', cardio: '有氧', warmup: '热身', stretch: '拉伸', swimming: '游泳'
+  };
+
+  let modal = document.getElementById('add-ex-modal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'add-ex-modal';
+    modal.className = 'ex-modal-overlay';
+    modal.onclick = e => { if (e.target === modal) modal.classList.remove('open'); };
+    document.body.appendChild(modal);
+  }
+
+  const allGroups = Object.keys(DB);
+  const otherGroups = allGroups.filter(g => !targetGroups.includes(g));
+
+  modal.innerHTML = `<div class="ex-modal-card" onclick="event.stopPropagation()">
+    <div class="ex-modal-hdr">
+      <span class="ex-modal-title">添加额外动作</span>
+      <button class="ex-modal-close" onclick="document.getElementById('add-ex-modal').classList.remove('open')">✕</button>
+    </div>
+    <p style="font-size:12px;color:var(--ink3);margin-bottom:10px">优先展示本日训练肌群，也可展开其他肌群：</p>
+    
+    <div style="font-size:11px;font-weight:600;color:var(--terra);margin-bottom:6px">🎯 今日目标肌群</div>
+    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px">
+      ${targetGroups.length ? targetGroups.map(g => `<button class="chip on" style="font-size:12px;padding:4px 10px" onclick="renderAddExList('${g}')">${grpNames[g] || g}</button>`).join('') : '<span style="font-size:12px;color:var(--ink3)">无特定肌群</span>'}
+    </div>
+    
+    <details style="margin-bottom:12px">
+      <summary style="font-size:11px;color:var(--ink3);cursor:pointer">➕ 展开其他所有肌群</summary>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px">
+        ${otherGroups.map(g => `<button class="chip" style="font-size:12px;padding:4px 10px" onclick="renderAddExList('${g}')">${grpNames[g] || g}</button>`).join('')}
+      </div>
+    </details>
+    
+    <div id="add-ex-list" style="display:flex;flex-direction:column;gap:6px;max-height:260px;overflow-y:auto;padding-right:2px">
+      <div style="font-size:12px;color:var(--ink3);text-align:center;padding:12px">请点击上方肌群选择</div>
+    </div>
+  </div>`;
+
+  modal.classList.add('open');
+  if (targetGroups.length) renderAddExList(targetGroups[0]);
+}
+window.openAddExerciseModal = openAddExerciseModal;
+
+function renderAddExList(groupKey) {
+  const date = window._addExDate;
+  const sel = S.plan && S.plan.days.find(d => d.date === date);
+  if (!sel || !DB[groupKey]) return;
+
+  const usedNames = new Set((sel.exercises || []).map(e => e.name));
+  const excluded = getExcluded();
+  const available = DB[groupKey].filter(e => !usedNames.has(e.n) && !excluded.has(e.n) && S.equip.some(eq => !e.eq || e.eq.includes(eq)));
+
+  const listEl = document.getElementById('add-ex-list');
+  if (!listEl) return;
+
+  if (!available.length) {
+    listEl.innerHTML = `<div style="font-size:12px;color:var(--ink3);text-align:center;padding:12px">该肌群暂无更多可选动作</div>`;
+    return;
+  }
+
+  const diffLabel = ['', '★', '★★', '★★★'];
+  listEl.innerHTML = available.map((ex, idx) => `
+    <button class="swap-option" onclick="doAddExercise('${groupKey}', ${idx})" style="text-align:left">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <span style="font-weight:600;font-size:13px">${ex.n}</span>
+        <span style="font-size:10px;color:var(--amber)">${diffLabel[ex.diff || 1]}</span>
+      </div>
+      <div style="font-size:11px;color:var(--ink3);margin-top:2px">${ex.note || ''}</div>
+    </button>
+  `).join('');
+  window._currentAddExPool = available;
+}
+window.renderAddExList = renderAddExList;
+
+function doAddExercise(groupKey, poolIdx) {
+  const date = window._addExDate;
+  const sel = S.plan && S.plan.days.find(d => d.date === date);
+  const ex = window._currentAddExPool[poolIdx];
+  if (!sel || !ex) return;
+
+  const unit = ex.u || '次';
+  const sets = 3;
+  const reps = unit === '秒' ? 30 : unit === '分钟' ? 10 : 12;
+
+  sel.exercises.push({
+    name: ex.n,
+    note: ex.note || '',
+    sets: sets,
+    reps: reps,
+    unit: unit,
+    group: groupKey,
+    muscle: ex.muscle || [],
+    diff: ex.diff,
+    isWarmup: false,
+    isStretch: false,
+    bi: !!ex.bi,
+    addedManually: true
+  });
+
+  saveState();
+  render();
+  const modal = document.getElementById('add-ex-modal');
+  if (modal) modal.classList.remove('open');
+  showToast(`已添加额外动作：「${ex.n}」`);
+}
+window.doAddExercise = doAddExercise;
+
+// ══ Post-Workout Hydro & Thermal Recovery Module ═══════════
+function renderRecoveryModule(sel) {
+  if (!S.equip.includes('泳池')) return '';
+  return `<details class="recovery-box" style="margin-top:12px;background:var(--surface2);border-radius:10px;padding:10px 12px;border:1px solid var(--border)">
+  <summary style="font-size:13px;font-weight:600;color:var(--ink);cursor:pointer;display:flex;align-items:center;justify-content:space-between">
+    <span>🧖 训练后水疗与水温恢复</span>
+    <span style="font-size:11px;color:var(--ink3)">桑拿 · Hot Tub · 热躺椅 ▾</span>
+  </summary>
+  <div style="margin-top:10px;display:flex;flex-direction:column;gap:8px">
+    <div style="display:flex;align-items:center;justify-content:space-between;background:var(--surface1);padding:8px 10px;border-radius:8px">
+      <div>
+        <div style="font-size:13px;font-weight:600;color:var(--ink)">🧖 干蒸 / 湿蒸桑拿</div>
+        <div style="font-size:10px;color:var(--ink3)">15-20分钟 · 促进血液循环与深层排汗</div>
+      </div>
+      <button class="act-play-btn" onclick="startTimer(15*60,'🧖 桑拿中 · 保持长呼吸')">开始 15分</button>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;background:var(--surface1);padding:8px 10px;border-radius:8px">
+      <div>
+        <div style="font-size:13px;font-weight:600;color:var(--ink)">🛁 热水水力Spa (Hot Tub)</div>
+        <div style="font-size:10px;color:var(--ink3)">10-15分钟 · 水力冲刷缓解关节与肌肉张力</div>
+      </div>
+      <button class="act-play-btn" onclick="startTimer(10*60,'🛁 Hot Tub水疗中')">开始 10分</button>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;background:var(--surface1);padding:8px 10px;border-radius:8px">
+      <div>
+        <div style="font-size:13px;font-weight:600;color:var(--ink)">🛋️ 石板热躺椅放松</div>
+        <div style="font-size:10px;color:var(--ink3)">10-15分钟 · 全身体表静止热传导放松</div>
+      </div>
+      <button class="act-play-btn" onclick="startTimer(10*60,'🛋️ 热躺椅放松中')">开始 10分</button>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;background:var(--surface1);padding:8px 10px;border-radius:8px">
+      <div>
+        <div style="font-size:13px;font-weight:600;color:var(--ink)">🔄 冷热交替浴引导</div>
+        <div style="font-size:10px;color:var(--ink3)">冷1min ↔ 热3min 循环3轮 · 运动科学血管泵动</div>
+      </div>
+      <button class="act-play-btn" onclick="startMultiTimer([{sec:60,label:'冷水冲洗/浸泡'},{sec:180,label:'Hot Tub/热水池'},{sec:60,label:'冷水冲洗/浸泡'},{sec:180,label:'Hot Tub/热水池'},{sec:60,label:'冷水冲洗/浸泡'},{sec:180,label:'Hot Tub/热水池'},{sec:60,label:'冷水收尾完成'}])">启动引导</button>
+    </div>
+  </div>
+</details>`;
+}
+window.renderRecoveryModule = renderRecoveryModule;

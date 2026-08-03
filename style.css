@@ -3084,42 +3084,7 @@ button, .chip, .adj-btn, .regen-btn, .exrow, .dc, .tab, .act-play-btn {
   touch-action: manipulation;
 }
 
-/* BDSM Submissive Mode Overrides */
-body.sub-active {
-    --terra: #b06ad4;
-    --brand: #b06ad4;
-    --ink: #e8d5f5;
-    --ink2: #c4a0e0;
-    --ink3: #9870b8;
-    --bg: #0b0818;
-    --surface: #160d2a;
-    --surface2: #1e1238;
-    --border: #3a1d60;
-    --border2: #5a3280;
-    background-image: radial-gradient(120% 80% at 50% -10%, rgba(130, 60, 200, .18), transparent 60%);
-}
-
-body.sub-active .hdr {
-    color: var(--terra);
-    text-shadow: 0 0 8px rgba(160, 80, 220, 0.35);
-}
-
-body.sub-active .btn {
-    background: linear-gradient(135deg, #8b3fc8, #6a25a0);
-    box-shadow: 0 4px 12px rgba(140, 60, 200, 0.3);
-}
-
-body.sub-active .chip {
-    border-color: rgba(160, 80, 220, 0.4);
-    color: #d0a0f0;
-}
-
-body.sub-active .chip.active {
-    background: #8b3fc8;
-    color: #fff;
-    border-color: #8b3fc8;
-    box-shadow: 0 2px 8px rgba(140, 60, 200, 0.4);
-}
+/* BDSM Submissive Mode Overrides (Removed purple theme overrides to share standard theme) */
 
 /* Strobing Overlay during Guided Mode */
 @keyframes subStrobe {
@@ -3147,45 +3112,6 @@ body.sub-active .chip.active {
     padding: 6px 10px;
     animation: dmkFade 4.5s ease forwards;
 }
-
-/* ── Sub Active Theme (定制配色) ── */
-body.sub-active {
-    --bg: #0d0714;
-    --surface: #140b1e;
-    --surface2: #1e1029;
-    --border: rgba(232,121,249,0.18);
-    --border2: rgba(232,121,249,0.32);
-    --ink: #f9e8ff;
-    --ink2: #e0b8f5;
-    --ink3: #b08cca;
-    --terra: #f472b6;
-    --terra-bg: rgba(244,114,182,0.1);
-    --terra-br: rgba(244,114,182,0.3);
-    --sage: #c084fc;
-    --sage-bg: rgba(192,132,252,0.1);
-    --sage-br: rgba(192,132,252,0.28);
-    --amber: #e879f9;
-    --amber-bg: rgba(232,121,249,0.1);
-    --blue: #a78bfa;
-    --blue-bg: rgba(167,139,250,0.1);
-}
-body.sub-active .day-card,
-body.sub-active .wh {
-    border-color: rgba(232,121,249,0.15);
-    background: linear-gradient(135deg, #140b1e 0%, #1a0d26 100%);
-}
-body.sub-active .act-card {
-    border-left-color: rgba(192,132,252,0.5);
-}
-body.sub-active .panel-title {
-    background: linear-gradient(90deg, #f0abfc, #c084fc);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-}
-body.sub-active .dc.done { background: rgba(192,132,252,0.12); border-color: rgba(192,132,252,0.3); }
-body.sub-active .btn-primary { background: linear-gradient(135deg, #9333ea, #db2777); border: none; }
-body.sub-active .btn-secondary { border-color: rgba(192,132,252,0.4); color: #c084fc; }
 
 .sub-task-panel {
     margin: 14px 0 4px;
