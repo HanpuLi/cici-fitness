@@ -1399,22 +1399,30 @@ function pickSwimExercises() {
   const maxDiff = level === '入门' ? 1 : level === '进阶' ? 2 : 3;
   const pool = (DB.swimming || []).filter(ex => ex.diff <= maxDiff && !excluded.has(ex.n));
   const result = [];
-  // Phase order: warmup → tech → main → cooldown
+  
+  // Proportional time allocation: ~65% for water drills, 35% reserved for thermal recovery
+  const totalMins = S.dur || 60;
+  const swimMins = Math.max(25, Math.round(totalMins * 0.65));
+  const remMins = Math.max(15, swimMins - 10); // reserve 5m warmup + 5m cooldown
+  
+  const phaseTimes = {
+    warmup: 5,
+    tech: Math.round(remMins * 0.6),
+    main: Math.round(remMins * 0.4),
+    cooldown: 5
+  };
+  
   const phases = ['warmup', 'tech', 'main', 'cooldown'];
-  const phaseTimes = { warmup: 5, tech: level === '入门' ? 25 : level === '进阶' ? 20 : 20, main: level === '入门' ? 15 : level === '进阶' ? 20 : 20, cooldown: 5 };
   const _sps = _ownerSession() ? new Set(_PRIVATE_POOL) : null;
-  // Owner: skip lap-swimming main phase entirely, expand tech quota
   const _ownerPool = !!_sps;
+
   phases.forEach(phase => {
     if (_ownerPool && phase === 'main') return; // no lap swimming for owner
     const pExs = pool.filter(ex => ex.swimPhase === phase);
-    // Shuffle within phase for variety
     for (let i = pExs.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1));[pExs[i], pExs[j]] = [pExs[j], pExs[i]] }
-    // Private exercises float to front in tech phase
     if (_sps && phase === 'tech') pExs.sort((a, b) => (_sps.has(a.n) ? 0 : 1) - (_sps.has(b.n) ? 0 : 1));
-    // Pick exercises: warmup/cooldown = 1, tech = owner gets up to 6, standard up to 3-4, main = up to 2
     const pick = phase === 'warmup' ? 1 : phase === 'cooldown' ? 1 : phase === 'tech' ? Math.min(pExs.length, _ownerPool ? 6 : (level === '入门' ? 4 : 3)) : Math.min(pExs.length, 2);
-    const totalTime = phaseTimes[phase];
+    const totalTime = phaseTimes[phase] || 10;
     pExs.slice(0, pick).forEach((ex, i) => {
       const mins = Math.max(3, Math.round(totalTime / pick));
       result.push({ name: ex.n, sets: 1, reps: mins, unit: '分钟', note: ex.note, group: 'swimming', diff: ex.diff, isWarmup: phase === 'warmup', isStretch: phase === 'cooldown', bi: false, swimPhase: phase });
@@ -6436,32 +6444,44 @@ window.doAddExercise = doAddExercise;
 // ══ Post-Workout Hydro & Thermal Recovery Module ═══════════
 function renderRecoveryModule(sel) {
   if (!S.equip.includes('泳池')) return '';
+
+  const totalMins = (sel && sel.duration) || S.dur || 60;
+  const swimMins = Math.max(20, Math.round(totalMins * 0.65));
+  const recoveryMins = Math.max(10, totalMins - swimMins);
+
+  const saunaMins = Math.max(8, Math.round(recoveryMins * 0.55));
+  const hottubMins = Math.max(5, Math.round(recoveryMins * 0.45));
+  const loungerMins = Math.max(5, Math.round(recoveryMins * 0.35));
+
   return `<details class="recovery-box" style="margin-top:12px;background:var(--surface2);border-radius:10px;padding:10px 12px;border:1px solid var(--border)">
   <summary style="font-size:13px;font-weight:600;color:var(--ink);cursor:pointer;display:flex;align-items:center;justify-content:space-between">
     <span>🧖 训练后水疗与水温恢复</span>
     <span style="font-size:11px;color:var(--ink3)">桑拿 · Hot Tub · 热躺椅 ▾</span>
   </summary>
   <div style="margin-top:10px;display:flex;flex-direction:column;gap:8px">
+    <div style="font-size:11px;color:var(--terra);background:var(--surface1);padding:6px 10px;border-radius:6px;line-height:1.4">
+      💡 <b>智能比例算入健身时间</b>（设为${totalMins}分钟）：建议水中训练 ${swimMins}分钟 + 排毒放松 ${recoveryMins}分钟
+    </div>
     <div style="display:flex;align-items:center;justify-content:space-between;background:var(--surface1);padding:8px 10px;border-radius:8px">
       <div>
         <div style="font-size:13px;font-weight:600;color:var(--ink)">🧖 干蒸 / 湿蒸桑拿</div>
-        <div style="font-size:10px;color:var(--ink3)">15-20分钟 · 促进血液循环与深层排汗</div>
+        <div style="font-size:10px;color:var(--ink3)">智能匹配 ${saunaMins}分钟 · 促进血液循环与深层排汗</div>
       </div>
-      <button class="act-play-btn" onclick="startTimer(15*60,'🧖 桑拿中 · 保持长呼吸')">开始 15分</button>
+      <button class="act-play-btn" onclick="startTimer(${saunaMins}*60,'🧖 桑拿中 · 保持长呼吸')">开始 ${saunaMins}分</button>
     </div>
     <div style="display:flex;align-items:center;justify-content:space-between;background:var(--surface1);padding:8px 10px;border-radius:8px">
       <div>
         <div style="font-size:13px;font-weight:600;color:var(--ink)">🛁 热水水力Spa (Hot Tub)</div>
-        <div style="font-size:10px;color:var(--ink3)">10-15分钟 · 水力冲刷缓解关节与肌肉张力</div>
+        <div style="font-size:10px;color:var(--ink3)">智能匹配 ${hottubMins}分钟 · 水力冲刷缓解关节与肌肉张力</div>
       </div>
-      <button class="act-play-btn" onclick="startTimer(10*60,'🛁 Hot Tub水疗中')">开始 10分</button>
+      <button class="act-play-btn" onclick="startTimer(${hottubMins}*60,'🛁 Hot Tub水疗中')">开始 ${hottubMins}分</button>
     </div>
     <div style="display:flex;align-items:center;justify-content:space-between;background:var(--surface1);padding:8px 10px;border-radius:8px">
       <div>
         <div style="font-size:13px;font-weight:600;color:var(--ink)">🛋️ 石板热躺椅放松</div>
-        <div style="font-size:10px;color:var(--ink3)">10-15分钟 · 全身体表静止热传导放松</div>
+        <div style="font-size:10px;color:var(--ink3)">智能匹配 ${loungerMins}分钟 · 全身体表静止热传导放松</div>
       </div>
-      <button class="act-play-btn" onclick="startTimer(10*60,'🛋️ 热躺椅放松中')">开始 10分</button>
+      <button class="act-play-btn" onclick="startTimer(${loungerMins}*60,'🛋️ 热躺椅放松中')">开始 ${loungerMins}分</button>
     </div>
     <div style="display:flex;align-items:center;justify-content:space-between;background:var(--surface1);padding:8px 10px;border-radius:8px">
       <div>
