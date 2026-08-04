@@ -345,19 +345,20 @@
 
             <div style="text-align:center;padding:16px 0 24px">
                 <span id="app-version" style="font-size:11px;color:var(--ink3);cursor:pointer;user-select:none" onclick="toggleChangelog()">
-                    Cici健身计划 v2.0.0 (build 137) · 点击查看更新日志 ▾
+                    Cici健身计划 v2.1.0 (build 140) · 点击查看完整更新日志 ▾
                 </span>
-                <div id="changelog-box" style="display:none;margin-top:12px;text-align:left;background:var(--surface2);border-radius:10px;padding:12px;font-size:12px;line-height:1.6;color:var(--ink2)">
-                    <div style="font-weight:600;color:var(--ink);margin-bottom:6px">🎉 v2.0.0 (2026-08-04) 更新详情：</div>
-                    <ul style="margin:0;padding-left:18px">
-                        <li>提前结束训练可自主勾选是否下调后续训练量</li>
-                        <li>新增「+ 手动添加动作」，优先推荐当日训练肌群</li>
-                        <li>逐动作 RPE 行增加快捷休息计时按钮 (⏱️ 45s)</li>
-                        <li>动作行支持「✕ 划掉」永久排除器械/做不了的动作，并在 AI 导出中附带说明</li>
-                        <li>新增训练后水疗恢复模块（桑拿 / Hot Tub / 热躺椅 / 冷热交替引导）</li>
-                        <li>新增离线肌群图解（在动作详情中直观显示发力部位）</li>
-                        <li>新增系统通知独立开关（与提示音解耦）</li>
-                        <li>计时器后台恢复（切回前台自动补触发完成提醒）</li>
+                <div id="changelog-box" style="display:none;margin-top:12px;text-align:left;background:var(--surface2);border-radius:10px;padding:14px;font-size:12px;line-height:1.6;color:var(--ink2)">
+                    <div style="font-weight:600;color:var(--ink);margin-bottom:8px;font-size:13px">🎉 v2.1.0 (2026-08-04) 核心架构与功能更新：</div>
+                    <ul style="margin:0;padding-left:18px;display:flex;flex-direction:column;gap:4px">
+                        <li><b>⚡ 训练量与下调控制</b>：提前结束训练支持自主勾选是否下调剩余训练量，设置中可开启/关闭默认下调开关。</li>
+                        <li><b>⏱️ 全局休息与后台恢复</b>：逐动作 RPE 行快捷开启 45s 组间休息计时；增加 <code>sessionStorage</code> 状态恢复，手机切回前台或 iOS 进程重建自动接续。</li>
+                        <li><b>✕ 动作划掉与排除系统</b>：动作卡片及详情弹窗支持醒目红色软胶囊「✕ 划掉/永久排除」，并在设置中随时恢复，AI 分析导出自动带入排除日志。</li>
+                        <li><b>🏋️ 灵活动作库与加练</b>：支持「+ 手动添加动作」，优先按当日肌群筛选库内动作；任何支持换项的动作均可一键替换。</li>
+                        <li><b>🧬 国际开源解剖图图库</b>：接入 wger 官方专业人体解剖矢量 SVG 肌肉图库，直观展示主发力肌群与辅助肌群。</li>
+                        <li><b>♨️ 温泉水疗与恢复模块</b>：游泳日/力量日根据总训练时长智能配比游泳与 Sauna / Hot Tub / 热躺椅恢复时间，支持 7 段冷热交替浴自动引导。</li>
+                        <li><b>🔔 系统通知与音频解耦</b>：Notification 桌面/系统通知与 Web Audio 提示音独立开关。</li>
+                        <li><b>📱 全系统离线 PWA 预载</b>：将 <code>护肤计划.html</code>、WebFont 图标与全套 wger 矢量解剖图库纳入 Service Worker 离线缓存清单。</li>
+                        <li><b>🛠️ 容错与稳定性提升</b>：全面修复 DOM 容器与运行时异常，提升 iOS 与 Safari 浏览器下的流畅度。</li>
                     </ul>
                 </div>
             </div>

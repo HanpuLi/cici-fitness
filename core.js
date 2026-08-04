@@ -1,3 +1,11 @@
+// ══ System Version ═════════════════════════════════════════
+const APP_VERSION = 'v2.1.0';
+const APP_BUILD = 140;
+const APP_BUILD_DATE = '2026-08-04';
+window.APP_VERSION = APP_VERSION;
+window.APP_BUILD = APP_BUILD;
+window.APP_BUILD_DATE = APP_BUILD_DATE;
+
 // ══ Firebase Config ══════════════════════════════════════
 const firebaseConfig = { apiKey: "AIzaSyB12HcJxsqqmWoih3wnfpyqu9LDzEE9nXs", authDomain: "cici-fitness.firebaseapp.com", projectId: "cici-fitness", storageBucket: "cici-fitness.firebasestorage.app", messagingSenderId: "375793627351", appId: "1:375793627351:web:f2dbfd8e107206417f4092", measurementId: "G-ZHCCRWZ57P" };
 
