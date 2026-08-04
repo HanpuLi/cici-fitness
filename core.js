@@ -6056,7 +6056,7 @@ function renderExDetailContent() {
   const mistakes = subActive ? [] : (info?.mistakes || []);
   
   document.getElementById('ex-modal-title').textContent = dispName;
-  document.getElementById('ex-modal-muscles').innerHTML = muscles.map(m => `<span class="jchip">${m}</span>`).join('') + (typeof renderMuscleDiagram === 'function' ? renderMuscleDiagram(muscles) : '');
+  document.getElementById('ex-modal-muscles').innerHTML = muscles.map(m => `<span class="jchip">${m}</span>`).join('') + (typeof renderMuscleDiagram === 'function' ? renderMuscleDiagram(muscles, dispName) : '');
   
   const _e1rm = typeof estimate1RM === 'function' ? estimate1RM(name) : null;
   const _strEl = document.getElementById('ex-modal-strength');
@@ -6075,22 +6075,25 @@ function renderExDetailContent() {
   document.getElementById('ex-modal-mistakes').innerHTML = mistakes.length ? `<p style="font-size:11px;font-weight:600;color:var(--terra);margin:8px 0 4px">常见错误</p>` + mistakes.map(m => `<div class="ex-tip" style="border-color:var(--terra-br);color:var(--terra)">${m}</div>`).join('') : '';
 
   let actEl = document.getElementById('ex-modal-actions');
-  if (!actEl) {
+  const cardContainer = document.getElementById('ex-modal-card') || document.querySelector('#ex-modal .ex-modal-card');
+  if (!actEl && cardContainer) {
     actEl = document.createElement('div');
     actEl.id = 'ex-modal-actions';
-    document.getElementById('ex-modal-card').appendChild(actEl);
+    cardContainer.appendChild(actEl);
   }
-  actEl.style.cssText = "margin-top:16px;padding-top:12px;border-top:1px solid var(--border);display:flex;gap:8px;flex-wrap:wrap";
-  
-  if (window._currentExDetailDate && window._currentExDetailEi !== null && window._currentExDetailEi !== undefined) {
-    actEl.innerHTML = `
-      <button class="btn btn-out" style="flex:1;font-size:12px;color:var(--sage);border-color:var(--sage-br);padding:8px" onclick="closeExDetail();swapExercise('${window._currentExDetailDate}', ${window._currentExDetailEi})">🔄 替换此动作</button>
-      <button class="btn btn-out" style="flex:1;font-size:12px;color:#ef4444;border-color:rgba(239,68,68,.3);background:rgba(239,68,68,.08);padding:8px;font-weight:600" onclick="closeExDetail();excludeUserExercise('${window._currentExDetailDate}', ${window._currentExDetailEi})">✕ 划掉/永久排除</button>
-    `;
-  } else {
-    actEl.innerHTML = `
-      <button class="btn btn-out" style="width:100%;font-size:12px;color:#ef4444;border-color:rgba(239,68,68,.3);background:rgba(239,68,68,.08);padding:8px;font-weight:600" onclick="closeExDetail();excludeUserExerciseByName('${dispName}')">✕ 划掉/永久排除此动作（避开后续排班）</button>
-    `;
+  if (actEl) {
+    actEl.style.cssText = "margin-top:16px;padding-top:12px;border-top:1px solid var(--border);display:flex;gap:8px;flex-wrap:wrap";
+    
+    if (window._currentExDetailDate && window._currentExDetailEi !== null && window._currentExDetailEi !== undefined) {
+      actEl.innerHTML = `
+        <button class="btn btn-out" style="flex:1;font-size:12px;color:var(--sage);border-color:var(--sage-br);padding:8px" onclick="closeExDetail();swapExercise('${window._currentExDetailDate}', ${window._currentExDetailEi})">🔄 替换此动作</button>
+        <button class="btn btn-out" style="flex:1;font-size:12px;color:#ef4444;border-color:rgba(239,68,68,.3);background:rgba(239,68,68,.08);padding:8px;font-weight:600" onclick="closeExDetail();excludeUserExercise('${window._currentExDetailDate}', ${window._currentExDetailEi})">✕ 划掉/永久排除</button>
+      `;
+    } else {
+      actEl.innerHTML = `
+        <button class="btn btn-out" style="width:100%;font-size:12px;color:#ef4444;border-color:rgba(239,68,68,.3);background:rgba(239,68,68,.08);padding:8px;font-weight:600" onclick="closeExDetail();excludeUserExerciseByName('${dispName}')">✕ 划掉/永久排除此动作（避开后续排班）</button>
+      `;
+    }
   }
 }
 
