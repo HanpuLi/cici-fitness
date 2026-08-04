@@ -6332,7 +6332,22 @@ Object.assign(EX_DETAIL, {
   '猴神式（hanumanasana）': { muscles: ['腘绳肌', '髋屈肌'], steps: ['半劈叉准备：前腿伸直、后膝跪地', '双手撑砖，前脚跟向前滑、后膝向后退', '在当前极限处停住，骨盆保持朝正前方'], tips: ['纵劈终点体式，用砖支撑让身体敢放松', '每次只加深一点点，以年为单位进步'], mistakes: ['骨盆歪斜硬贴地', '弹震下压'] },
 });
 
-// ══ Anatomical Muscle Target & Form Cue Card ═════════════════
+// ══ Official Open-Source (wger) Anatomical Muscle Diagram Database ════════
+const WGER_MUSCLES = {
+  biceps: { main: "https://wger.de/static/images/muscles/main/muscle-1.8790f8a0b3b9.svg", sec: "https://wger.de/static/images/muscles/secondary/muscle-1.e08c58a194b9.svg" },
+  shoulders: { main: "https://wger.de/static/images/muscles/main/muscle-2.e1e1205a3202.svg", sec: "https://wger.de/static/images/muscles/secondary/muscle-2.74ea636ad97b.svg" },
+  chest: { main: "https://wger.de/static/images/muscles/main/muscle-4.c9fa9a228bc8.svg", sec: "https://wger.de/static/images/muscles/secondary/muscle-4.955e74ea6083.svg" },
+  triceps: { main: "https://wger.de/static/images/muscles/main/muscle-5.8a2b934b5486.svg", sec: "https://wger.de/static/images/muscles/secondary/muscle-5.68eb84d675a5.svg" },
+  abs: { main: "https://wger.de/static/images/muscles/main/muscle-6.592f938fa8c7.svg", sec: "https://wger.de/static/images/muscles/secondary/muscle-6.370f77c2860e.svg" },
+  calves: { main: "https://wger.de/static/images/muscles/main/muscle-7.edbd8c381b0c.svg", sec: "https://wger.de/static/images/muscles/secondary/muscle-7.2f836b0cd383.svg" },
+  glutes: { main: "https://wger.de/static/images/muscles/main/muscle-8.fbdfb46f3bc0.svg", sec: "https://wger.de/static/images/muscles/secondary/muscle-8.605e4e1a0277.svg" },
+  trapezius: { main: "https://wger.de/static/images/muscles/main/muscle-9.b491050a7108.svg", sec: "https://wger.de/static/images/muscles/secondary/muscle-9.be1b5e41906b.svg" },
+  quads: { main: "https://wger.de/static/images/muscles/main/muscle-10.b1445ea1acf6.svg", sec: "https://wger.de/static/images/muscles/secondary/muscle-10.55e36d852778.svg" },
+  hamstrings: { main: "https://wger.de/static/images/muscles/main/muscle-11.54ef31755917.svg", sec: "https://wger.de/static/images/muscles/secondary/muscle-11.a2bc76fe157a.svg" },
+  lats: { main: "https://wger.de/static/images/muscles/main/muscle-12.6a5de7a0e373.svg", sec: "https://wger.de/static/images/muscles/secondary/muscle-12.974a8c6def63.svg" },
+  obliques: { main: "https://wger.de/static/images/muscles/main/muscle-14.153978038d0b.svg", sec: "https://wger.de/static/images/muscles/secondary/muscle-14.afd582849ae9.svg" }
+};
+
 function renderMuscleDiagram(muscles, exName = '') {
   if (!Array.isArray(muscles) || !muscles.length) muscles = ['全身'];
   const mStr = (muscles.join(' ') + ' ' + (exName || '')).toLowerCase();
@@ -6340,13 +6355,29 @@ function renderMuscleDiagram(muscles, exName = '') {
   const isChest = /胸/.test(mStr);
   const isBack = /背/.test(mStr);
   const isShoulder = /肩|三角肌/.test(mStr);
+  const isBiceps = /二头|肱二/.test(mStr);
+  const isTriceps = /三头|肱三/.test(mStr);
   const isGlute = /臀/.test(mStr);
   const isQuads = /股四|大腿前/.test(mStr);
   const isHamstrings = /腘绳|大腿后/.test(mStr);
+  const isCore = /核心|腹/.test(mStr);
+  const isCalf = /小腿|踝/.test(mStr);
   const isSwim = /游泳|自由泳|蛙泳|仰泳|蝶泳/.test(mStr);
 
   let primaryName = muscles[0] || '目标肌群';
   let secondaryName = muscles.slice(1).join(' · ') || '';
+
+  let imgInfo = null;
+  if (isChest) imgInfo = WGER_MUSCLES.chest;
+  else if (isBack) imgInfo = WGER_MUSCLES.lats;
+  else if (isGlute) imgInfo = WGER_MUSCLES.glutes;
+  else if (isQuads) imgInfo = WGER_MUSCLES.quads;
+  else if (isHamstrings) imgInfo = WGER_MUSCLES.hamstrings;
+  else if (isShoulder) imgInfo = WGER_MUSCLES.shoulders;
+  else if (isBiceps) imgInfo = WGER_MUSCLES.biceps;
+  else if (isTriceps) imgInfo = WGER_MUSCLES.triceps;
+  else if (isCore) imgInfo = WGER_MUSCLES.abs;
+  else if (isCalf) imgInfo = WGER_MUSCLES.calves;
 
   let posePattern = '';
   if (isChest) {
@@ -6393,7 +6424,14 @@ function renderMuscleDiagram(muscles, exName = '') {
       </div>`;
   }
 
+  const imgSection = imgInfo ? `
+    <div style="display:flex;justify-content:center;align-items:center;gap:12px;background:#fff;border-radius:10px;padding:12px;margin-bottom:10px;box-shadow:0 1px 3px rgba(0,0,0,0.06)">
+      <img src="${imgInfo.main}" alt="${primaryName}" style="max-width:130px;height:160px;object-fit:contain" loading="lazy" />
+      ${imgInfo.sec ? `<img src="${imgInfo.sec}" alt="Secondary" style="max-width:130px;height:160px;object-fit:contain;opacity:0.85" loading="lazy" />` : ''}
+    </div>` : '';
+
   return `<div style="margin:10px 0;background:var(--surface2);border-radius:10px;padding:10px 12px;border:1px solid var(--border)">
+    ${imgSection}
     <div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap">
       <span style="font-size:10px;background:rgba(224,117,94,.15);color:var(--terra);border:1px solid rgba(224,117,94,.3);padding:3px 8px;border-radius:12px;font-weight:600">🎯 主发力：${primaryName}</span>
       ${secondaryName && secondaryName !== '—' ? `<span style="font-size:10px;background:rgba(245,158,11,.15);color:#d97706;border:1px solid rgba(245,158,11,.3);padding:3px 8px;border-radius:12px;font-weight:600">⚡ 协同辅助：${secondaryName}</span>` : ''}

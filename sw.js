@@ -1,4 +1,4 @@
-const CACHE = 'cici-fitness-v135';
+const CACHE = 'cici-fitness-v136';
 
 // ── Local assets: always pre-cached on install ──
 const LOCAL_ASSETS = [
@@ -16,10 +16,23 @@ const CDN_ASSETS = [
   'https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300..700;1,300..700&family=DM+Mono:wght@300;400&family=Noto+Serif+SC:wght@300;400;600;700&family=Outfit:wght@300;400;500;600;700&family=ZCOOL+XiaoWei&display=swap',
   // Tabler Icons CSS
   'https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css',
+  // WGER Open-Source Muscle Anatomy Diagrams
+  'https://wger.de/static/images/muscles/main/muscle-1.8790f8a0b3b9.svg',
+  'https://wger.de/static/images/muscles/main/muscle-2.e1e1205a3202.svg',
+  'https://wger.de/static/images/muscles/main/muscle-4.c9fa9a228bc8.svg',
+  'https://wger.de/static/images/muscles/main/muscle-5.8a2b934b5486.svg',
+  'https://wger.de/static/images/muscles/main/muscle-6.592f938fa8c7.svg',
+  'https://wger.de/static/images/muscles/main/muscle-7.edbd8c381b0c.svg',
+  'https://wger.de/static/images/muscles/main/muscle-8.fbdfb46f3bc0.svg',
+  'https://wger.de/static/images/muscles/main/muscle-9.b491050a7108.svg',
+  'https://wger.de/static/images/muscles/main/muscle-10.b1445ea1acf6.svg',
+  'https://wger.de/static/images/muscles/main/muscle-11.54ef31755917.svg',
+  'https://wger.de/static/images/muscles/main/muscle-12.6a5de7a0e373.svg',
+  'https://wger.de/static/images/muscles/main/muscle-14.153978038d0b.svg'
 ];
 
-// ── Domains that get stale-while-revalidate (font files, icon woff2, etc.) ──
-const SWR_DOMAINS = ['fonts.gstatic.com', 'cdn.jsdelivr.net'];
+// ── Domains that get stale-while-revalidate (font files, icon woff2, muscle SVGs, etc.) ──
+const SWR_DOMAINS = ['fonts.gstatic.com', 'cdn.jsdelivr.net', 'wger.de'];
 
 self.addEventListener('install', e => e.waitUntil(
   caches.open(CACHE).then(c => {
