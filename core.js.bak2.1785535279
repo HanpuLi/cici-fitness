@@ -34,7 +34,7 @@ function migrateLegacyKeys(uid) {
 }
 
 // ══ State ════════════════════════════════════════════════
-const S = { goal: '女性薄肌', level: '初级', days: 3, dur: 60, equip: ['健身房全套'], focus: ['均衡全身'], limits: '', plan: null, selDate: null, prog: {}, adj: {}, weights: {}, exRpe: {}, volumeMultiplier: 1.0, restDur: 45, swimLevel: '入门', weightLevel: '初级', periodMode: false, cycleEnabled: true, cycleDay: 1, cycleLength: 28, vacuumDays: [], autoVolumeAdjust: true };
+const S = { goal: '女性薄肌', level: '初级', days: 3, dur: 60, equip: ['健身房全套'], focus: ['均衡全身'], limits: '', plan: null, selDate: null, prog: {}, adj: {}, weights: {}, volumeMultiplier: 1.0, restDur: 45, swimLevel: '入门', periodMode: false, cycleEnabled: true, cycleDay: 1, cycleLength: 28, vacuumDays: [] };
 let LOG = lg(K.log) || [];
 let W_HIST = lg(K.wh) || {};
 let PR_LIST = lg(K.pr) || []; // {date,exercise,weight,prev}
@@ -155,60 +155,8 @@ function getExcluded() {
   }
   // Cici 反馈健身房没有这两台具体机器 → 永久排除,计划自动用同肌群备选(坐姿划船/器械上背划船/面拉/弹力带划船等)补位
   if (hasGoal('翘臀美背')) { s.add('T把划船'); s.add('直臂下压机'); }
-  if (Array.isArray(S.userExcluded)) {
-    S.userExcluded.forEach(e => s.add(e));
-  }
   return s;
 }
-
-function excludeUserExercise(date, ei) {
-  const sel = S.plan && S.plan.days.find(d => d.date === date);
-  if (!sel || !sel.exercises || !sel.exercises[ei]) return;
-  const ex = sel.exercises[ei];
-  const name = ex.name;
-  const reason = prompt(`永久排除动作/器械「${name}」？\n后续所有计划将自动避开此动作。\n如有需要可填入排除原因（如：做不了 / 健身房缺器械）：`, "做不了 / 缺器械");
-  if (reason === null) return;
-  if (!S.userExcluded) S.userExcluded = [];
-  if (!S.userExcluded.includes(name)) S.userExcluded.push(name);
-  if (!S.userExcludeReasons) S.userExcludeReasons = {};
-  S.userExcludeReasons[name] = reason || '用户手动排除';
-  
-  saveState();
-  
-  // Replace in current day if alternative available
-  let group = null;
-  for (const [g, exs] of Object.entries(DB)) { if (exs.find(e => e.n === name)) { group = g; break; } }
-  if (group && DB[group]) {
-    const used = sel.exercises.map(e => e.name);
-    const excluded = getExcluded();
-    const alts = DB[group].filter(e => e.n !== name && !used.includes(e.n) && !excluded.has(e.n) && S.equip.some(eq => !e.eq || e.eq.includes(eq)));
-    if (alts.length > 0) {
-      const alt = alts[0];
-      sel.exercises[ei] = { name: alt.n, note: alt.note || '', sets: ex.sets, reps: ex.reps, unit: ex.unit || alt.u || '次', group: ex.group, muscle: alt.muscle || [], diff: alt.diff, isWarmup: false, isStretch: false, bi: !!alt.bi };
-      showToast(`已排除「${name}」，自动换为「${alt.n}」`);
-    } else {
-      sel.exercises.splice(ei, 1);
-      showToast(`已排除「${name}」`);
-    }
-  } else {
-    sel.exercises.splice(ei, 1);
-    showToast(`已排除「${name}」`);
-  }
-  saveState();
-  render();
-  if (typeof renderExcludedList === 'function') renderExcludedList();
-}
-window.excludeUserExercise = excludeUserExercise;
-
-function restoreUserExercise(name) {
-  if (S.userExcluded) S.userExcluded = S.userExcluded.filter(n => n !== name);
-  if (S.userExcludeReasons) delete S.userExcludeReasons[name];
-  saveState();
-  showToast(`已恢复动作：「${name}」`);
-  render();
-  if (typeof renderExcludedList === 'function') renderExcludedList();
-}
-window.restoreUserExercise = restoreUserExercise;
 
 // ══ Exercise Database (overhauled) ═══════════════════════
 // Each exercise: n=name, eq=equipment, cat=category, muscle=primary muscles, diff=difficulty 1-3, note=cue
@@ -1062,12 +1010,6 @@ function pickExercises(split, excluded) {
     if (favGroups.includes(g)) cnt = cnt + 1;
     groupBudget[g] = cnt;
   });
-  // 全局配额裁剪:各组保底≥1叠加后可能超出时长预算,按 totalTarget 削最大的组(修#8,保底每组≥1)
-  { let _sum = Object.values(groupBudget).reduce((a, b) => a + b, 0), _guard = 0;
-    while (_sum > totalTarget && _guard++ < 60) {
-      let _mg = null, _mv = 1; for (const g in groupBudget) { if (groupBudget[g] > _mv) { _mv = groupBudget[g]; _mg = g; } }
-      if (!_mg) break; groupBudget[_mg]--; _sum--;
-    } }
 
   split.groups.forEach(grp => {
     const count = groupBudget[grp] || 0;
@@ -1264,28 +1206,17 @@ function getLastWeight(exName, excludePeriod = false) {
     for (let i = hist.length - 1; i >= 0; i--) {
       if (!hist[i].period) return hist[i];
     }
-    return null; // 全是经期记录 → 返回null,让上层用默认而非经期减载值(修#10)
   }
   return hist[hist.length - 1];
 }
 
 // ══ Weight Rounding by Equipment Type ═══════════════════
 function _isDumbbell(n) { return n.includes('哑铃') || n.includes('壶铃') }
-function _isBarbell(n) {
-  if (n.includes('杠铃') || n.includes('史密斯')) return true;
-  if (!n.includes('硬拉')) return false;
-  if (_isDumbbell(n) || n.includes('单腿') || n.includes('单臂') || n.includes('徒手')) return false;
-  const ex = (() => { for (const exs of Object.values(DB)) { const f = exs.find(e => e.n === n); if (f) return f } return null })();
-  if (ex && ex.eq && ex.eq.length && ex.eq.every(e => e === '无器材' || e === '哑铃' || e === '壶铃')) return false;
-  return true;
-}
+function _isBarbell(n) { return n.includes('杠铃') || n.includes('硬拉') || n.includes('史密斯') }
 function roundWeight(w, exName) {
   if (_isBarbell(exName)) return Math.round(w / 2.5) * 2.5; // 杠铃: 2.5kg倍数
   return Math.round(w); // 哑铃/壶铃/器械/绳索: 整数kg
 }
-// 逐动作 RPE(感受):按 date-ei 存;打卡时优先于"整场RPE"记进 W_HIST,让自动调重更准
-function getExRpe(date, ei) { if (!S.exRpe) S.exRpe = {}; const v = S.exRpe[date + '-' + ei]; return (v === undefined || v === null) ? null : v; }
-function setExRpe(date, ei, val) { if (!S.exRpe) S.exRpe = {}; S.exRpe[date + '-' + ei] = val; if (typeof saveState === 'function') saveState(); if (typeof render === 'function') render(); }
 function getWeightStep(exName) {
   if (_isBarbell(exName)) return 2.5;
   return 1;
@@ -1294,14 +1225,12 @@ function getWeightStep(exName) {
 // Default weight recommendation based on exercise type + difficulty level
 function getDefaultWeight(exName) {
   const n = exName;
-  const wl = S.weightLevel || '初级';   // 重量档独立于水平(动作难度),默认保守
 
   // ── Equipment detection (name + DB fallback) ──
+  const isBarbell = _isBarbell(n);
   const _dbEx = (() => { for (const exs of Object.values(DB)) { const f = exs.find(e => e.n === n); if (f) return f } return null })();
   const isDumbbell = n.includes('哑铃') || n.includes('壶铃') || n.includes('高脚杯') || (_dbEx && _dbEx.eq.some(e => e === '哑铃' || e === '壶铃'));
   const isCable = n.includes('绳索') || n.includes('缆绳');
-  // 硬拉≠杠铃:哑铃/单腿/徒手的硬拉不按杠铃给重量(修_isBarbell仅凭名字含"硬拉"就判杠铃、塞15kg起始的误判)
-  const isBarbell = n.includes('杠铃') || n.includes('史密斯') || (n.includes('硬拉') && !isDumbbell && !isCable && !n.includes('单腿') && !n.includes('单臂') && !n.includes('徒手') && !(_dbEx && _dbEx.eq.length && _dbEx.eq.every(e => e === '无器材')));
 
   // ── Movement category detection ──
   // 下肢复合 (Squat/Deadlift/Leg Press/Hip Thrust)
@@ -1313,7 +1242,7 @@ function getDefaultWeight(exName) {
   // 上肢拉 (Row/Pulldown)
   const isUpperPull = n.includes('划船') || n.includes('引体') || n.includes('下拉') || n.includes('直立划船');
   // 小肌群孤立 (Curl/Extension/Lateral Raise)
-  const isIsolation = n.includes('弯举') || n.includes('臂屈伸') || n.includes('侧平举') || n.includes('前平举') || n.includes('飞鸟') || n.includes('夹胸') || n.includes('外展') || n.includes('内收') || n.includes('画腿') || n.includes('侧抬') || n.includes('后踢') || n.includes('踢腿') || n.includes('绕环') || n.includes('平衡') || n.includes('开合');
+  const isIsolation = n.includes('弯举') || n.includes('臂屈伸') || n.includes('侧平举') || n.includes('前平举') || n.includes('飞鸟') || n.includes('夹胸');
   // 其他腿部/臀部
   const isLeg = isLegCompound || n.includes('腿') || n.includes('臀') || n.includes('股') || n.includes('弓步');
 
@@ -1334,32 +1263,32 @@ function getDefaultWeight(exName) {
     else if (isOverhead) cat = 'overhead';
     else if (isUpperPull) cat = 'upperPull';
     else if (isIsolation) cat = 'isolation';
-    return roundWeight(bases[cat][wl] || bases[cat]['初级'], n);
+    return roundWeight(bases[cat][S.level] || bases[cat]['初级'], n);
   }
 
   // ── 哑铃/壶铃: 整数kg, 按肌群大小微调 ──
   if (isDumbbell) {
     const dbases = { 初级: 2, 中级: 5, 高级: 8 };
-    let w = dbases[wl] || 2;
-    if (isIsolation) w = Math.max(1, Math.round(w * 0.6));
-    else if (isLegCompound) w = Math.round(w * 1.5);
+    let w = dbases[S.level] || 2;
+    if (isLeg) w = Math.round(w * 1.5);
+    else if (isIsolation) w = Math.max(1, Math.round(w * 0.6));
     return roundWeight(w, n);
   }
 
   // ── 绳索: 整数kg ──
   if (isCable) {
     const cbases = { 初级: 5, 中级: 10, 高级: 15 };
-    let w = cbases[wl] || 5;
-    if (isIsolation) w = Math.max(2, Math.round(w * 0.7));
-    else if (isLegCompound) w = Math.round(w * 1.5);
+    let w = cbases[S.level] || 5;
+    if (isLeg) w = Math.round(w * 1.5);
+    else if (isIsolation) w = Math.max(2, Math.round(w * 0.7));
     return roundWeight(w, n);
   }
 
   // ── 器械 (坐姿推胸机/腿屈伸/etc): 整数kg ──
   const mbases = { 初级: 5, 中级: 10, 高级: 15 };
-  let w = mbases[wl] || 5;
-  if (isIsolation) w = Math.max(2, Math.round(w * 0.7));
-  else if (isLegCompound) w = Math.round(w * 1.5);
+  let w = mbases[S.level] || 5;
+  if (isLeg) w = Math.round(w * 1.5);
+  else if (isIsolation) w = Math.max(2, Math.round(w * 0.7));
   return roundWeight(w, n);
 }
 
@@ -1376,7 +1305,17 @@ function suggestWeight(exName) {
   let target;
   const last = getLastWeight(exName, true); // Get last non-period weight
   if (!last) {
-    target = getDefaultWeight(exName); // 无非经期历史(含全经期)→ 用默认起始,不从经期减载值递进(修#10)
+    const fallbackLast = getLastWeight(exName, false);
+    if (!fallbackLast) {
+      target = getDefaultWeight(exName);
+    } else {
+      const w = fallbackLast.weight, rpe = fallbackLast.rpe || 6;
+      const step = getWeightStep(exName);
+      if (rpe <= 4) target = roundWeight(w + step * 2, exName);
+      else if (rpe <= 6) target = roundWeight(w + step, exName);
+      else if (rpe <= 8) target = w;
+      else target = Math.max(step, roundWeight(w - step, exName));
+    }
   } else {
     const w = last.weight, rpe = last.rpe || 6;
     const step = getWeightStep(exName);
@@ -1399,30 +1338,22 @@ function pickSwimExercises() {
   const maxDiff = level === '入门' ? 1 : level === '进阶' ? 2 : 3;
   const pool = (DB.swimming || []).filter(ex => ex.diff <= maxDiff && !excluded.has(ex.n));
   const result = [];
-  
-  // Proportional time allocation: ~65% for water drills, 35% reserved for thermal recovery
-  const totalMins = S.dur || 60;
-  const swimMins = Math.max(25, Math.round(totalMins * 0.65));
-  const remMins = Math.max(15, swimMins - 10); // reserve 5m warmup + 5m cooldown
-  
-  const phaseTimes = {
-    warmup: 5,
-    tech: Math.round(remMins * 0.6),
-    main: Math.round(remMins * 0.4),
-    cooldown: 5
-  };
-  
+  // Phase order: warmup → tech → main → cooldown
   const phases = ['warmup', 'tech', 'main', 'cooldown'];
+  const phaseTimes = { warmup: 5, tech: level === '入门' ? 25 : level === '进阶' ? 20 : 20, main: level === '入门' ? 15 : level === '进阶' ? 20 : 20, cooldown: 5 };
   const _sps = _ownerSession() ? new Set(_PRIVATE_POOL) : null;
+  // Owner: skip lap-swimming main phase entirely, expand tech quota
   const _ownerPool = !!_sps;
-
   phases.forEach(phase => {
     if (_ownerPool && phase === 'main') return; // no lap swimming for owner
     const pExs = pool.filter(ex => ex.swimPhase === phase);
+    // Shuffle within phase for variety
     for (let i = pExs.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1));[pExs[i], pExs[j]] = [pExs[j], pExs[i]] }
+    // Private exercises float to front in tech phase
     if (_sps && phase === 'tech') pExs.sort((a, b) => (_sps.has(a.n) ? 0 : 1) - (_sps.has(b.n) ? 0 : 1));
+    // Pick exercises: warmup/cooldown = 1, tech = owner gets up to 6, standard up to 3-4, main = up to 2
     const pick = phase === 'warmup' ? 1 : phase === 'cooldown' ? 1 : phase === 'tech' ? Math.min(pExs.length, _ownerPool ? 6 : (level === '入门' ? 4 : 3)) : Math.min(pExs.length, 2);
-    const totalTime = phaseTimes[phase] || 10;
+    const totalTime = phaseTimes[phase];
     pExs.slice(0, pick).forEach((ex, i) => {
       const mins = Math.max(3, Math.round(totalTime / pick));
       result.push({ name: ex.n, sets: 1, reps: mins, unit: '分钟', note: ex.note, group: 'swimming', diff: ex.diff, isWarmup: phase === 'warmup', isStretch: phase === 'cooldown', bi: false, swimPhase: phase });
@@ -1740,7 +1671,7 @@ function assessPlanIntensity() {
   gymLogs.forEach(l => {
     totalRpe += (l.rpe || 6);
     totalExLogged += (l.exerciseCount || 0);
-    totalExPlanned += (l.exercises ? l.exercises.filter(e => !e.isWarmup && !e.isStretch).length : (l.exerciseCount || 6));
+    totalExPlanned += (l.exercises ? l.exercises.length : (l.exerciseCount || 6));
     if (l.rpe >= 8) hasHighRpe++;
   });
 
@@ -1832,12 +1763,14 @@ hasGoal('翘臀美背') ? (GLUTE_BACK_SPLITS[gymPerWeek] || GLUTE_BACK_SPLITS[3]
     const scheduledType = firstFutureGymDay.workoutType;
     const match = (scheduledType === expectedType || scheduledType.includes(expectedType) || expectedType.includes(scheduledType.slice(0, 4)));
     if (!match) {
-      // #6 不再静默重排:旧行为会重挑未来天(覆盖你手改的动作)且 genPlan 末尾强跳"今日"页。
-      // 改为温和提示 + 亮出「重排剩余」按钮,是否重排由你决定。
-      const _rb = document.getElementById('recal-btn'); if (_rb) _rb.style.display = '';
-      if (typeof showToast === 'function' && !window._autoAlignNotified) {
-        window._autoAlignNotified = true;
-        setTimeout(() => showToast('检测到漏练,后续顺序可能偏移。想对齐就点「重排剩余」(会按当前进度重排;你手改过的未来动作会被覆盖)', 6000), 900);
+      console.log(`[Auto-Align] Missed workouts detected. Scheduled today: ${scheduledType}, Expected: ${expectedType}. Recalibrating...`);
+      if (!window._isAutoAligning) {
+        window._isAutoAligning = true;
+        try {
+          genPlan(true);
+        } finally {
+          window._isAutoAligning = false;
+        }
       }
     }
   }
@@ -2178,7 +2111,6 @@ ${ex.weight ? `<div class="wt-hint" style="margin-top:2px;display:block">${ex.we
           h += `</div>`;
         } else { h += `<div class="hist-empty">\u8be5\u65e5\u8bad\u7ec3\u8be6\u60c5\u4e0d\u53ef\u7528</div>` }
         if (lg.note) h += `<div class="hist-note" style="margin-top:12px;padding:10px 14px;background:var(--surface2);border-radius:8px;font-size:12px;font-style:italic;color:var(--ink2)">"${lg.note}"</div>`;
-        h += typeof renderRecoveryModule === 'function' ? renderRecoveryModule(sel) : '';
       } else {
         const pd = S.prog[sel.date] || {};
         const locked = isLocked(sel);
@@ -2209,7 +2141,7 @@ ${ex.weight ? `<div class="wt-hint" style="margin-top:2px;display:block">${ex.we
             }
             h += `<div class="exrow${done ? ' done-ex' : ''}" onclick="tog('${sel.date}',${i})">
 <div style="flex:1;min-width:0">
-<div class="exname">${ex.name} <i class="ti ti-info-circle" style="font-size:12px;opacity:.4;vertical-align:middle" onclick="event.stopPropagation();showExDetail('${ex.name}')"></i>${phase !== 'warmup' && phase !== 'cooldown' ? ` <span class="swap-btn" onclick="event.stopPropagation();swapExercise('${sel.date}',${i})" title="替换动作" style="border:1px solid var(--sage);color:var(--sage);border-radius:2px;padding:0 4px;font-size:10px;margin-left:4px">替换</span><span class="swap-btn" onclick="event.stopPropagation();excludeUserExercise('${sel.date}',${i})" title="划掉/永久排除此动作" style="border:1px solid rgba(220,38,38,.4);color:#ef4444;border-radius:2px;padding:0 4px;font-size:10px;margin-left:4px">✕划掉</span>` : ''}</div>
+<div class="exname">${ex.name} <i class="ti ti-info-circle" style="font-size:12px;opacity:.4;vertical-align:middle" onclick="event.stopPropagation();showExDetail('${ex.name}')"></i></div>
 <div class="exnote">${ex.note}</div>
 <span class="pool-reps">${reps}\u5206\u949f</span>
 ${!done ? `<button class="act-play-btn" onclick="event.stopPropagation();startTimer(${reps * 60}, '${ex.name}')">\u25b6 \u5f00\u59cb\u8ba1\u65f6 ${reps}\u5206\u949f</button>` : ''}
@@ -2217,8 +2149,7 @@ ${!done ? `<button class="act-play-btn" onclick="event.stopPropagation();startTi
 <button class="cb${done ? ' ck' : ''}" onclick="event.stopPropagation();tog('${sel.date}',${i})"><i class="ti ti-check"></i></button>
 </div>`;
           });
-          h += `${!locked && !isDone(sel) ? `<button class="btn btn-out" style="width:100%;margin-top:8px;font-size:12px;border-style:dashed;padding:6px;color:var(--ink2)" onclick="openAddExerciseModal('${sel.date}')">+ 手动添加动作</button>` : ''}</div>`;
-          h += typeof renderRecoveryModule === 'function' ? renderRecoveryModule(sel) : '';
+          h += `</div>`;
           // Fixed bottom complete button
           const alreadyLogged = LOG.some(l => l.date === sel.date); // key on date only (matches isDone/delLog/stats); date+type let a re-typed day double-log
           if (!alreadyLogged) {
@@ -2231,7 +2162,7 @@ ${!done ? `<button class="act-play-btn" onclick="event.stopPropagation();startTi
 </button>
 </div>`;
           }
-          h += `</div>`; // close pool-mode // close pool-mode
+          h += `</div>`; // close pool-mode
 
           // ── Standard gym / private day render ──
         } else {
@@ -2262,14 +2193,14 @@ ${locked ? `<span class="warn-tag" style="background:var(--surface3);color:var(-
               } catch(e) {}
             }
             return `<div class="exrow${done ? ' done-ex' : ''}"><div style="flex:1;min-width:0">
-<div class="exname" onclick="showExDetail('${ex.name}')" style="cursor:pointer">${dispName}${_pvSet && _pvSet.has(ex.name) ? `<span class="pdot"${isSub && EX_SUB_DESC[ex.name] ? ` onclick="event.stopPropagation();_showPrivDesc('${ex.name}')" style="cursor:pointer"` : ''}></span>` : ''}${needsWt && W_HIST[ex.name] && W_HIST[ex.name].length > 0 && (curW || 0) >= Math.max(...W_HIST[ex.name].map(h => h.weight)) ? ` <span title="个人纪录" style="font-size:9px;color:var(--terra);border:1px solid var(--terra);border-radius:2px;padding:0 2px;margin-left:4px;font-weight:600">纪录</span>` : ''} <i class="ti ti-info-circle" style="font-size:11px;opacity:.4;vertical-align:middle"></i> <span class="demo-btn" onclick="event.stopPropagation();openDemo('${ex.name}')" title="看B站示范" style="border:1px solid var(--terra);color:var(--terra);border-radius:2px;padding:0 4px;font-size:10px;margin-left:4px">▶示范</span>${!locked && !ex.isWarmup && !ex.isStretch ? ` <span class="swap-btn" onclick="event.stopPropagation();swapExercise('${sel.date}',${i})" title="替换动作" style="border:1px solid var(--sage);color:var(--sage);border-radius:2px;padding:0 4px;font-size:10px;margin-left:4px">替换</span><span class="swap-btn" onclick="event.stopPropagation();excludeUserExercise('${sel.date}',${i})" title="划掉/永久排除此动作" style="border:1px solid rgba(220,38,38,.4);color:#ef4444;border-radius:2px;padding:0 4px;font-size:10px;margin-left:4px">✕划掉</span>` : ''}</div>
+<div class="exname" onclick="showExDetail('${ex.name}')" style="cursor:pointer">${dispName}${_pvSet && _pvSet.has(ex.name) ? `<span class="pdot"${isSub && EX_SUB_DESC[ex.name] ? ` onclick="event.stopPropagation();_showPrivDesc('${ex.name}')" style="cursor:pointer"` : ''}></span>` : ''}${needsWt && W_HIST[ex.name] && W_HIST[ex.name].length > 0 && (curW || 0) >= Math.max(...W_HIST[ex.name].map(h => h.weight)) ? ` <span title="个人纪录" style="font-size:9px;color:var(--terra);border:1px solid var(--terra);border-radius:2px;padding:0 2px;margin-left:4px;font-weight:600">纪录</span>` : ''} <i class="ti ti-info-circle" style="font-size:11px;opacity:.4;vertical-align:middle"></i> <span class="demo-btn" onclick="event.stopPropagation();openDemo('${ex.name}')" title="看B站示范" style="border:1px solid var(--terra);color:var(--terra);border-radius:2px;padding:0 4px;font-size:10px;margin-left:4px">▶示范</span>${!locked && !ex.isWarmup && !ex.isStretch ? ` <span class="swap-btn" onclick="event.stopPropagation();swapExercise('${sel.date}',${i})" title="替换动作" style="border:1px solid var(--sage);color:var(--sage);border-radius:2px;padding:0 4px;font-size:10px;margin-left:4px">替换</span>` : ''}</div>
 <div class="exnote">${(ex.muscle || []).map(m => `<span style="font-size:9px;background:var(--surface2);color:var(--ink2);padding:1px 4px;border-radius:2px;margin-right:4px;display:inline-block">${m}</span>`).join('')}${dispNote}${ex.bi ? ' (左右各做一遍算1组)' : ''}</div>
 ${needsWt && !locked ? `<div class="wt-row">
 <input type="number" class="wt-input" value="${dispW || ''}" placeholder="${sugW || ''}" onchange="setWeight('${sel.date}',${i},+this.value)" step="${getWeightStep(ex.name)}" min="0">
 <span class="wt-unit">kg</span>
 ${lastW ? `<span class="wt-hint">\u4e0a\u6b21 ${lastW.weight}kg</span>` : `<span class="wt-sug">\u5efa\u8bae ${sugW || '?'}kg</span>`}
 ${sugW && lastW && sugW !== lastW.weight ? `<span class="wt-sug">\u2192 ${sugW}kg</span>` : ''}
-</div><div style="display:flex;gap:5px;align-items:center;margin-top:4px;flex-wrap:wrap"><span style="font-size:10px;color:var(--ink3)">\u611f\u53d7</span>${[['\u8f7b\u677e', 4], ['\u521a\u597d', 6.5], ['\u5403\u529b', 8.5]].map(([lbl, v]) => `<span onclick="setExRpe('${sel.date}',${i},${v})" style="font-size:10px;padding:2px 8px;border-radius:10px;cursor:pointer;border:1px solid ${getExRpe(sel.date, i) === v ? 'var(--terra)' : 'rgba(128,128,128,.3)'};color:${getExRpe(sel.date, i) === v ? 'var(--terra)' : 'var(--ink3)'};background:${getExRpe(sel.date, i) === v ? 'rgba(200,120,90,.1)' : 'transparent'}">${lbl}</span>`).join('')}<span style="margin-left:auto;display:inline-flex"><span onclick="event.stopPropagation();startTimer(${S.restDur||45},'组间休息')" style="font-size:10px;padding:2px 8px;border-radius:10px;cursor:pointer;border:1px solid rgba(128,128,128,.3);color:var(--ink3);background:var(--surface2)">⏱️ ${S.restDur||45}s 休息</span></span></div>`: ''}
+</div>`: ''}
 ${needsWt && locked && lastW ? `<span class="wt-hint" style="margin-top:2px;display:block">${curW || lastW.weight}kg</span>` : ''}
 ${(ex.unit === '\u79d2' || ex.unit === '\u5206\u949f') && !locked ? `<button class="act-play-btn" onclick="startTimer(${ex.unit === '\u5206\u949f' ? reps * 60 : reps}, '${ex.name}')">\u8ba1\u65f6</button>` : ''}
 </div>
@@ -2281,7 +2212,7 @@ ${!locked ? `
 <button class="cb${done ? ' ck' : ''}" style="cursor:default;pointer-events:none;opacity:${done ? 1 : 0.15}"><i class="ti ti-check"></i></button>
 `}
 </div>`;
-          }).join('')}${!locked && !isDone(sel) && !sel.isSwimDay ? `<button class="btn btn-out" style="width:100%;margin-top:8px;font-size:12px;border-style:dashed;padding:6px;color:var(--ink2)" onclick="openAddExerciseModal('${sel.date}')">+ 手动添加动作</button>` : ''}${typeof renderRecoveryModule === 'function' ? renderRecoveryModule(sel) : ''}</div>`;
+          }).join('')}</div>`;
 
           if (_globalSubMode && _ownerSession()) {
             const _sdb = _getSubDb(), _sdec = s => { try { return decodeURIComponent(atob(s)); } catch(e) { return ''; } };
@@ -2319,7 +2250,6 @@ ${!locked ? `
     }
   } else if (sel && sel.isRest) {
     h += `<div class="tip" style="text-align:center;padding:2rem">\u4f11\u606f\u65e5 \u2014 \u597d\u597d\u6062\u590d\uff0c\u660e\u5929\u7ee7\u7eed</div>`;
-    h += typeof renderRecoveryModule === 'function' ? renderRecoveryModule(sel) : '';
   }
   h += `<div class="tip">${tip}</div>`;
   if (_globalSubMode && _ownerSession() && hasGoal('女性曲线')) {
@@ -2640,7 +2570,7 @@ function _refreshNextDayPrivate() {
 
 function _applySubTheme() {
   const isSub = !!(_globalSubMode && _ownerSession());
-  document.body.classList.remove('sub-active');
+  document.body.classList.toggle('sub-active', isSub);
 
   let panicBtn = document.getElementById('sub-panic-btn');
   let fluidOverlay = document.getElementById('sub-fluid-overlay');
@@ -2655,8 +2585,19 @@ function _applySubTheme() {
       panicBtn.onclick = () => { _globalSubMode = false; render(); };
       document.body.appendChild(panicBtn);
     }
+    if (!fluidOverlay) {
+      fluidOverlay = document.createElement('div');
+      fluidOverlay.id = 'sub-fluid-overlay';
+      fluidOverlay.style = 'position:fixed;inset:0;pointer-events:none;z-index:9998;background:radial-gradient(circle at 50% 0%, rgba(244,114,182,0.15) 0%, transparent 60%), radial-gradient(circle at 100% 100%, rgba(192,132,252,0.1) 0%, transparent 50%);box-shadow:inset 0 0 40px rgba(232,121,249,0.1);animation:fluidPulse 6s infinite alternate ease-in-out;';
+      document.body.appendChild(fluidOverlay);
+      
+      const style = document.createElement('style');
+      style.id = 'sub-fluid-style';
+      style.textContent = `@keyframes fluidPulse { 0% { opacity: 0.7; transform: scale(1); } 100% { opacity: 1; transform: scale(1.02); } }`;
+      document.head.appendChild(style);
+    }
     panicBtn.style.display = 'block';
-    if (fluidOverlay) fluidOverlay.style.display = 'none';
+    fluidOverlay.style.display = 'block';
   } else {
     if (panicBtn) panicBtn.style.display = 'none';
     if (fluidOverlay) fluidOverlay.style.display = 'none';
@@ -2718,78 +2659,6 @@ function _showRitual(cb) {
   setTimeout(dismiss, 4000);
 }
 
-function _notifMuted() { try { return localStorage.getItem('notifMuted') === '1'; } catch (e) { return false; } }
-function toggleNotif() { const m = !_notifMuted(); try { localStorage.setItem('notifMuted', m ? '1' : '0'); } catch (e) {} return m; }
-
-function _ensureNotifyPermission() {
-  try { if (!_notifMuted() && 'Notification' in window && Notification.permission === 'default') Notification.requestPermission(); } catch (e) {}
-}
-function _notifyRestDone() {
-  try {
-    if (_notifMuted()) return;
-    if ('Notification' in window && Notification.permission === 'granted') {
-      const n = new Notification('⏰ 休息结束', { body: '休息结束，开始下一组 💪', tag: 'rest-done', renotify: true });
-      setTimeout(() => { try { n.close(); } catch (e) {} }, 8000);
-    }
-  } catch (e) {}
-}
-
-let _timerEndTime = 0;
-let _timerFired = false;
-let _multiTimerQueue = [];
-let _multiTimerIdx = 0;
-
-function startMultiTimer(segments) {
-  if (!segments || !segments.length) return;
-  _multiTimerQueue = segments;
-  _multiTimerIdx = 0;
-  _runNextMultiSegment();
-}
-window.startMultiTimer = startMultiTimer;
-
-function _runNextMultiSegment() {
-  if (_multiTimerIdx >= _multiTimerQueue.length) {
-    _multiTimerQueue = [];
-    _multiTimerIdx = 0;
-    showToast('冷热交替引导完成！体表循环全面激活');
-    playWorkoutCompleteSound();
-    return;
-  }
-  const seg = _multiTimerQueue[_multiTimerIdx];
-  _multiTimerIdx++;
-  startTimer(seg.sec, `[${_multiTimerIdx}/${_multiTimerQueue.length}] ${seg.label}`);
-}
-
-// Restore timer from sessionStorage (e.g. iOS killed page)
-try {
-  const storedEnd = Number(sessionStorage.getItem('__timer_end__') || 0);
-  if (storedEnd > 0 && _timerEndTime === 0) {
-    _timerEndTime = storedEnd;
-    if (Date.now() >= storedEnd) {
-      _timerFired = true;
-      setTimeout(() => { playDing(); _notifyRestDone(); }, 500);
-      try { sessionStorage.removeItem('__timer_end__'); sessionStorage.removeItem('__timer_label__'); } catch(e) {}
-    } else {
-      const remainSec = Math.ceil((storedEnd - Date.now()) / 1000);
-      const storedLabel = sessionStorage.getItem('__timer_label__') || '恢复计时';
-      startTimer(remainSec, storedLabel);
-    }
-  }
-} catch(e) {}
-
-document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'visible' && _timerEndTime > 0) {
-    if (Date.now() >= _timerEndTime && !_timerFired) {
-      _timerFired = true;
-      playDing();
-      _notifyRestDone();
-      const bar = document.getElementById('universal-timer');
-      if (bar) setTimeout(() => bar.classList.remove('show'), 3000);
-      try { sessionStorage.removeItem('__timer_end__'); sessionStorage.removeItem('__timer_label__'); } catch(e) {}
-    }
-  }
-});
-
 function startTimer(seconds, label = "休息中") {
   clearInterval(_timerInterval);
   _releaseWakeLock();
@@ -2824,14 +2693,10 @@ function startTimer(seconds, label = "休息中") {
   delete bar.dataset.dinged;
   bar.classList.add('show');
   unlockAudio();
-  _ensureNotifyPermission();
   playRestStartSound();
 
   const total = seconds;
   const endTime = Date.now() + seconds * 1000;
-  _timerEndTime = endTime;
-  _timerFired = false;
-  try { sessionStorage.setItem('__timer_end__', String(endTime)); sessionStorage.setItem('__timer_label__', label); } catch(e) {}
 
   function update() {
     const remain = Math.max(0, Math.ceil((endTime - Date.now()) / 1000));
@@ -2842,15 +2707,10 @@ function startTimer(seconds, label = "休息中") {
 
     if (remain <= 0) {
       if (remain === 0 && !bar.dataset.dinged) {
-        _timerFired = true;
         playDing();
-        _notifyRestDone();
         bar.dataset.dinged = '1';
         if (!(_globalSubMode && _ownerSession() && hasGoal('女性曲线'))) {
           setTimeout(() => { bar.classList.remove('show'); }, 3000);
-        }
-        if (_multiTimerQueue.length > 0 && _multiTimerIdx < _multiTimerQueue.length) {
-          setTimeout(() => { _runNextMultiSegment(); }, 2000);
         }
       }
       
@@ -3105,44 +2965,29 @@ function submitRPE(rpe, isSkip = false) {
     }
 
     if (!_dayIsSwim) {
-      const isManual = (S.autoVolumeAdjust === false);
-      const volChk = document.getElementById('chk-reduce-volume');
-      const userWantsReduce = isManual && volChk && volChk.checked;
-
-      if (isManual) {
-        if (_pendingEarlyEnd && !userWantsReduce) {
-          showToast(`打卡成功！已按您的设置保留当前计划训练量`);
-        } else if (userWantsReduce) {
-          S.volumeMultiplier = Math.max(0.5, (S.volumeMultiplier || 1.0) * 0.93);
-          showToast(`已按您的选择下调后续训练量 10%`);
-          setTimeout(() => { genPlan(true, true); }, 100);
-        } else {
-          const assessment = assessPlanIntensity();
-          if (assessment.cls === 'intensity-over') {
-            S.volumeMultiplier = Math.max(0.5, (S.volumeMultiplier || 1.0) * 0.93);
-            showToast(`强度超标：后续训练量已自动下调 10%`);
-            setTimeout(() => { genPlan(true, true); }, 100);
-          } else {
-            showToast(`打卡成功！`);
-          }
-        }
+      // Assess intensity and auto-volume adjustment
+      const assessment = assessPlanIntensity();
+      let toastMsg = '';
+      if (assessment.cls === 'intensity-over') {
+        S.volumeMultiplier = Math.max(0.5, (S.volumeMultiplier || 1.0) * 0.9);
+        toastMsg = `强度超标：后续训练量已自动下调 10%`;
+      } else if (assessment.cls === 'intensity-under') {
+        S.volumeMultiplier = Math.min(1.5, (S.volumeMultiplier || 1.0) * 1.05);
+        toastMsg = `强度低于能力：已自动上调后续训练量 5%`;
       } else {
-        const assessment = assessPlanIntensity();
-        let toastMsg = '';
-        if (assessment.cls === 'intensity-over') {
-          S.volumeMultiplier = Math.max(0.5, (S.volumeMultiplier || 1.0) * 0.93);
-          toastMsg = `强度超标：后续训练量已自动下调 10%`;
-        } else if (assessment.cls === 'intensity-under') {
-          S.volumeMultiplier = Math.min(1.5, (S.volumeMultiplier || 1.0) * 1.03);
-          toastMsg = `强度低于能力：已自动上调后续训练量 5%`;
-        } else {
-          if ((S.volumeMultiplier || 1.0) > 1.0) S.volumeMultiplier = Math.max(1.0, S.volumeMultiplier - 0.05);
-          if ((S.volumeMultiplier || 1.0) < 1.0) S.volumeMultiplier = Math.min(1.0, S.volumeMultiplier + 0.05);
-          toastMsg = `强度适中：完美契合您的体能！`;
-        }
-        showToast(toastMsg);
-        setTimeout(() => { genPlan(true, true); }, 100);
+        if ((S.volumeMultiplier || 1.0) > 1.0) S.volumeMultiplier = Math.max(1.0, S.volumeMultiplier - 0.05);
+        if ((S.volumeMultiplier || 1.0) < 1.0) S.volumeMultiplier = Math.min(1.0, S.volumeMultiplier + 0.05);
+        toastMsg = `强度适中：完美契合您的体能！`;
       }
+      showToast(toastMsg);
+
+      // Auto-adjust has stored the new volume multiplier. Preserve future days'
+      // exercise selection so a check-in never reshuffles the upcoming plan; the
+      // new multiplier takes effect on genuinely new days (window roll / 重新生成)
+      // and on explicit 重排剩余. (recalibratePlan / autoAlignPlan still re-pick.)
+      setTimeout(() => {
+        genPlan(true, true);
+      }, 100);
 
       if (day.workoutType !== '轻量替代') checkGymMilestone(); // recovery day doesn't count toward strength milestones
     } else {
@@ -3155,7 +3000,7 @@ function submitRPE(rpe, isSkip = false) {
       const w = getWeight(date, i);
       if (w && w > 0 && !ex.isWarmup && !ex.isStretch && ex.unit === '次' && S.prog[date] && S.prog[date][i]) { // only record weight for exercises actually completed
         if (!W_HIST[ex.name]) W_HIST[ex.name] = [];
-        W_HIST[ex.name].push({ date, weight: w, rpe: (getExRpe(date, i) ?? actualRpe), period: S.periodMode, reps: getAdj(date, i, 'r', ex.reps) }); // 逐动作RPE优先(无则用整场RPE);reps=实际调整次数 → 估算 1RM
+        W_HIST[ex.name].push({ date, weight: w, rpe: actualRpe, period: S.periodMode, reps: getAdj(date, i, 'r', ex.reps) }); // reps → 估算 1RM
         if (W_HIST[ex.name].length > 50) W_HIST[ex.name] = W_HIST[ex.name].slice(-50);
       }
     });
@@ -3173,9 +3018,6 @@ function submitRPE(rpe, isSkip = false) {
   // Reset modal text back to default for next time
   document.getElementById('rpe-modal-title').innerText = '今日疲劳度评估';
   document.getElementById('rpe-modal-desc').innerText = '选择最接近你今天训练感受的分数';
-  const volRow = document.getElementById('volume-down-row');
-  if (volRow) volRow.style.display = 'none';
-  _pendingEarlyEnd = false;
 
   closeRpeModal();
   saveState(); render();
@@ -3183,30 +3025,24 @@ function submitRPE(rpe, isSkip = false) {
   if (typeof renderLog === 'function') renderLog(); // Refresh log view
 }
 
-let _pendingEarlyEnd = false;
-
 function endWorkoutEarly(date) {
   const day = S.plan.days.find(d => d.date === date);
   if (!day) return;
   const checkedCount = Object.keys(S.prog[date] || {}).filter(k => S.prog[date][k]).length;
   const totalEx = day.exercises.length;
 
-  _pendingRpeDate = date;
-  _pendingRpeDay = day;
-  _pendingEarlyEnd = (checkedCount < totalEx);
-
-  const volRow = document.getElementById('volume-down-row');
-  const volChk = document.getElementById('chk-reduce-volume');
-  const manualMode = (S.autoVolumeAdjust === false);
-  if (volRow) {
-    volRow.style.display = (manualMode && checkedCount < totalEx) ? 'block' : 'none';
-    if (volChk) volChk.checked = false;
+  let confirmMsg = '确定结束今日训练并打卡记录吗？';
+  if (checkedCount < totalEx) {
+    confirmMsg = `您完成了 ${checkedCount}/${totalEx} 个动作。确定要提前结束训练并打卡记录吗？\n（未完成的动作将不会被勾选，系统将记录实际完成情况）`;
   }
-
-  document.getElementById('rpe-modal-title').innerText = checkedCount < totalEx ? '训练提前结束打卡' : '训练完成打卡';
-  document.getElementById('rpe-modal-desc').innerText = `已完成 ${checkedCount}/${totalEx} 个动作，请评估今日的疲劳度：`;
-  updateRpeModalLabels();
-  document.getElementById('rpe-modal').classList.add('open');
+  if (confirm(confirmMsg)) {
+    _pendingRpeDate = date;
+    _pendingRpeDay = day;
+    document.getElementById('rpe-modal-title').innerText = checkedCount < totalEx ? '训练提前结束打卡' : '训练完成打卡';
+    document.getElementById('rpe-modal-desc').innerText = `已完成 ${checkedCount}/${totalEx} 个动作，请评估今日的疲劳度：`;
+    updateRpeModalLabels();
+    document.getElementById('rpe-modal').classList.add('open');
+  }
 }
 
 function tog(date, ei) {
@@ -6033,7 +5869,7 @@ function renderExDetailContent() {
   const mistakes = subActive ? [] : (info?.mistakes || []);
   
   document.getElementById('ex-modal-title').textContent = dispName;
-  document.getElementById('ex-modal-muscles').innerHTML = muscles.map(m => `<span class="jchip">${m}</span>`).join('') + (typeof renderMuscleDiagram === 'function' ? renderMuscleDiagram(muscles) : '');
+  document.getElementById('ex-modal-muscles').innerHTML = muscles.map(m => `<span class="jchip">${m}</span>`).join('');
   
   const _e1rm = typeof estimate1RM === 'function' ? estimate1RM(name) : null;
   const _strEl = document.getElementById('ex-modal-strength');
@@ -6286,233 +6122,3 @@ Object.assign(EX_DETAIL, {
   '花环式（malasana）': { muscles: ['髋', '内收肌', '踝'], steps: ['双脚略宽于髋、脚尖微外展，全蹲到底', '双手合十，手肘抵膝内侧向外撑', '脊柱向上延展，深呼吸保持'], tips: ['亚洲蹲的瑜伽版：每天蹲一会儿是最便宜的开髋', '脚跟踩不实可垫毛巾'], mistakes: ['弓背团成球', '重心后倒'] },
   '猴神式（hanumanasana）': { muscles: ['腘绳肌', '髋屈肌'], steps: ['半劈叉准备：前腿伸直、后膝跪地', '双手撑砖，前脚跟向前滑、后膝向后退', '在当前极限处停住，骨盆保持朝正前方'], tips: ['纵劈终点体式，用砖支撑让身体敢放松', '每次只加深一点点，以年为单位进步'], mistakes: ['骨盆歪斜硬贴地', '弹震下压'] },
 });
-
-// ══ Offline SVG Muscle Diagram ═════════════════════════════
-function renderMuscleDiagram(muscles) {
-  if (!Array.isArray(muscles) || !muscles.length) return '';
-  const mStr = muscles.join(' ');
-  const isChest = /胸/.test(mStr);
-  const isBack = /背/.test(mStr);
-  const isShoulder = /肩/.test(mStr);
-  const isBiceps = /二头/.test(mStr);
-  const isTriceps = /三头/.test(mStr);
-  const isGlute = /臀/.test(mStr);
-  const isQuads = /股四|腿/.test(mStr);
-  const isCore = /核心|腹/.test(mStr);
-  const isCalf = /小腿/.test(mStr);
-
-  const activeColor = 'var(--terra)';
-  const baseColor = 'var(--surface3)';
-
-  return `<div style="display:flex;justify-content:center;gap:16px;margin:8px 0 12px;background:var(--surface2);padding:10px;border-radius:10px;align-items:center">
-    <div style="text-align:center">
-      <svg width="60" height="90" viewBox="0 0 100 150" style="display:block;margin:0 auto">
-        <circle cx="50" cy="18" r="10" fill="var(--ink3)" opacity="0.3"/>
-        <rect x="46" y="28" width="8" height="8" fill="var(--ink3)" opacity="0.3"/>
-        <path d="M35 36 L65 36 L60 54 L40 54 Z" fill="${isChest ? activeColor : baseColor}" stroke="var(--border)" stroke-width="1"/>
-        <rect x="41" y="56" width="18" height="26" rx="2" fill="${isCore ? activeColor : baseColor}" stroke="var(--border)" stroke-width="1"/>
-        <circle cx="28" cy="38" r="7" fill="${isShoulder ? activeColor : baseColor}"/>
-        <circle cx="72" cy="38" r="7" fill="${isShoulder ? activeColor : baseColor}"/>
-        <rect x="22" y="46" width="8" height="20" rx="4" fill="${isBiceps ? activeColor : baseColor}"/>
-        <rect x="70" y="46" width="8" height="20" rx="4" fill="${isBiceps ? activeColor : baseColor}"/>
-        <rect x="36" y="84" width="12" height="32" rx="4" fill="${isQuads ? activeColor : baseColor}"/>
-        <rect x="52" y="84" width="12" height="32" rx="4" fill="${isQuads ? activeColor : baseColor}"/>
-        <rect x="38" y="118" width="9" height="24" rx="3" fill="${isCalf ? activeColor : baseColor}"/>
-        <rect x="53" y="118" width="9" height="24" rx="3" fill="${isCalf ? activeColor : baseColor}"/>
-      </svg>
-      <span style="font-size:9px;color:var(--ink3)">正面示意</span>
-    </div>
-    <div style="text-align:center">
-      <svg width="60" height="90" viewBox="0 0 100 150" style="display:block;margin:0 auto">
-        <circle cx="50" cy="18" r="10" fill="var(--ink3)" opacity="0.3"/>
-        <rect x="46" y="28" width="8" height="8" fill="var(--ink3)" opacity="0.3"/>
-        <path d="M32 36 L68 36 L58 64 L42 64 Z" fill="${isBack ? activeColor : baseColor}" stroke="var(--border)" stroke-width="1"/>
-        <rect x="21" y="46" width="8" height="20" rx="4" fill="${isTriceps ? activeColor : baseColor}"/>
-        <rect x="71" y="46" width="8" height="20" rx="4" fill="${isTriceps ? activeColor : baseColor}"/>
-        <path d="M35 66 L65 66 L65 84 L35 84 Z" fill="${isGlute ? activeColor : baseColor}" stroke="var(--border)" stroke-width="1"/>
-        <rect x="36" y="86" width="12" height="30" rx="4" fill="${isQuads || isGlute ? activeColor : baseColor}"/>
-        <rect x="52" y="86" width="12" height="30" rx="4" fill="${isQuads || isGlute ? activeColor : baseColor}"/>
-        <rect x="38" y="118" width="9" height="24" rx="3" fill="${isCalf ? activeColor : baseColor}"/>
-        <rect x="53" y="118" width="9" height="24" rx="3" fill="${isCalf ? activeColor : baseColor}"/>
-      </svg>
-      <span style="font-size:9px;color:var(--ink3)">背面示意</span>
-    </div>
-  </div>`;
-}
-window.renderMuscleDiagram = renderMuscleDiagram;
-
-// ══ Add Extra Exercise Modal (Filtered by today's muscles) ═
-function openAddExerciseModal(date) {
-  const sel = S.plan && S.plan.days.find(d => d.date === date);
-  if (!sel) return;
-  window._addExDate = date;
-
-  const splitGroups = sel._splitGroups || [];
-  const existingGroups = new Set();
-  (sel.exercises || []).forEach(ex => { if (ex.group) existingGroups.add(ex.group); });
-  const targetGroups = Array.from(new Set([...splitGroups, ...existingGroups])).filter(Boolean);
-
-  const grpNames = {
-    chest: '胸部', shoulder: '肩部', back: '背部', biceps: '二头肌', triceps: '三头肌',
-    quads: '股四头肌', hamglutes: '臀腿', glutemed: '臀中肌', calves: '小腿',
-    core: '核心', cardio: '有氧', warmup: '热身', stretch: '拉伸', swimming: '游泳'
-  };
-
-  let modal = document.getElementById('add-ex-modal');
-  if (!modal) {
-    modal = document.createElement('div');
-    modal.id = 'add-ex-modal';
-    modal.className = 'ex-modal-overlay';
-    modal.onclick = e => { if (e.target === modal) modal.classList.remove('open'); };
-    document.body.appendChild(modal);
-  }
-
-  const allGroups = Object.keys(DB);
-  const otherGroups = allGroups.filter(g => !targetGroups.includes(g));
-
-  modal.innerHTML = `<div class="ex-modal-card" onclick="event.stopPropagation()">
-    <div class="ex-modal-hdr">
-      <span class="ex-modal-title">添加额外动作</span>
-      <button class="ex-modal-close" onclick="document.getElementById('add-ex-modal').classList.remove('open')">✕</button>
-    </div>
-    <p style="font-size:12px;color:var(--ink3);margin-bottom:10px">优先展示本日训练肌群，也可展开其他肌群：</p>
-    
-    <div style="font-size:11px;font-weight:600;color:var(--terra);margin-bottom:6px">🎯 今日目标肌群</div>
-    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px">
-      ${targetGroups.length ? targetGroups.map(g => `<button class="chip on" style="font-size:12px;padding:4px 10px" onclick="renderAddExList('${g}')">${grpNames[g] || g}</button>`).join('') : '<span style="font-size:12px;color:var(--ink3)">无特定肌群</span>'}
-    </div>
-    
-    <details style="margin-bottom:12px">
-      <summary style="font-size:11px;color:var(--ink3);cursor:pointer">➕ 展开其他所有肌群</summary>
-      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px">
-        ${otherGroups.map(g => `<button class="chip" style="font-size:12px;padding:4px 10px" onclick="renderAddExList('${g}')">${grpNames[g] || g}</button>`).join('')}
-      </div>
-    </details>
-    
-    <div id="add-ex-list" style="display:flex;flex-direction:column;gap:6px;max-height:260px;overflow-y:auto;padding-right:2px">
-      <div style="font-size:12px;color:var(--ink3);text-align:center;padding:12px">请点击上方肌群选择</div>
-    </div>
-  </div>`;
-
-  modal.classList.add('open');
-  if (targetGroups.length) renderAddExList(targetGroups[0]);
-}
-window.openAddExerciseModal = openAddExerciseModal;
-
-function renderAddExList(groupKey) {
-  const date = window._addExDate;
-  const sel = S.plan && S.plan.days.find(d => d.date === date);
-  if (!sel || !DB[groupKey]) return;
-
-  const usedNames = new Set((sel.exercises || []).map(e => e.name));
-  const excluded = getExcluded();
-  const available = DB[groupKey].filter(e => !usedNames.has(e.n) && !excluded.has(e.n) && S.equip.some(eq => !e.eq || e.eq.includes(eq)));
-
-  const listEl = document.getElementById('add-ex-list');
-  if (!listEl) return;
-
-  if (!available.length) {
-    listEl.innerHTML = `<div style="font-size:12px;color:var(--ink3);text-align:center;padding:12px">该肌群暂无更多可选动作</div>`;
-    return;
-  }
-
-  const diffLabel = ['', '★', '★★', '★★★'];
-  listEl.innerHTML = available.map((ex, idx) => `
-    <button class="swap-option" onclick="doAddExercise('${groupKey}', ${idx})" style="text-align:left">
-      <div style="display:flex;justify-content:space-between;align-items:center">
-        <span style="font-weight:600;font-size:13px">${ex.n}</span>
-        <span style="font-size:10px;color:var(--amber)">${diffLabel[ex.diff || 1]}</span>
-      </div>
-      <div style="font-size:11px;color:var(--ink3);margin-top:2px">${ex.note || ''}</div>
-    </button>
-  `).join('');
-  window._currentAddExPool = available;
-}
-window.renderAddExList = renderAddExList;
-
-function doAddExercise(groupKey, poolIdx) {
-  const date = window._addExDate;
-  const sel = S.plan && S.plan.days.find(d => d.date === date);
-  const ex = window._currentAddExPool[poolIdx];
-  if (!sel || !ex) return;
-
-  const unit = ex.u || '次';
-  const sets = 3;
-  const reps = unit === '秒' ? 30 : unit === '分钟' ? 10 : 12;
-
-  sel.exercises.push({
-    name: ex.n,
-    note: ex.note || '',
-    sets: sets,
-    reps: reps,
-    unit: unit,
-    group: groupKey,
-    muscle: ex.muscle || [],
-    diff: ex.diff,
-    isWarmup: false,
-    isStretch: false,
-    bi: !!ex.bi,
-    addedManually: true
-  });
-
-  saveState();
-  render();
-  const modal = document.getElementById('add-ex-modal');
-  if (modal) modal.classList.remove('open');
-  showToast(`已添加额外动作：「${ex.n}」`);
-}
-window.doAddExercise = doAddExercise;
-
-// ══ Post-Workout Hydro & Thermal Recovery Module ═══════════
-function renderRecoveryModule(sel) {
-  if (!S.equip.includes('泳池')) return '';
-
-  const totalMins = (sel && sel.duration) || S.dur || 60;
-  const swimMins = Math.max(20, Math.round(totalMins * 0.65));
-  const recoveryMins = Math.max(10, totalMins - swimMins);
-
-  const saunaMins = Math.max(8, Math.round(recoveryMins * 0.55));
-  const hottubMins = Math.max(5, Math.round(recoveryMins * 0.45));
-  const loungerMins = Math.max(5, Math.round(recoveryMins * 0.35));
-
-  return `<details class="recovery-box" style="margin-top:12px;background:var(--surface2);border-radius:10px;padding:10px 12px;border:1px solid var(--border)">
-  <summary style="font-size:13px;font-weight:600;color:var(--ink);cursor:pointer;display:flex;align-items:center;justify-content:space-between">
-    <span>🧖 训练后水疗与水温恢复</span>
-    <span style="font-size:11px;color:var(--ink3)">桑拿 · Hot Tub · 热躺椅 ▾</span>
-  </summary>
-  <div style="margin-top:10px;display:flex;flex-direction:column;gap:8px">
-    <div style="font-size:11px;color:var(--terra);background:var(--surface1);padding:6px 10px;border-radius:6px;line-height:1.4">
-      💡 <b>智能比例算入健身时间</b>（设为${totalMins}分钟）：建议水中训练 ${swimMins}分钟 + 排毒放松 ${recoveryMins}分钟
-    </div>
-    <div style="display:flex;align-items:center;justify-content:space-between;background:var(--surface1);padding:8px 10px;border-radius:8px">
-      <div>
-        <div style="font-size:13px;font-weight:600;color:var(--ink)">🧖 干蒸 / 湿蒸桑拿</div>
-        <div style="font-size:10px;color:var(--ink3)">智能匹配 ${saunaMins}分钟 · 促进血液循环与深层排汗</div>
-      </div>
-      <button class="act-play-btn" onclick="startTimer(${saunaMins}*60,'🧖 桑拿中 · 保持长呼吸')">开始 ${saunaMins}分</button>
-    </div>
-    <div style="display:flex;align-items:center;justify-content:space-between;background:var(--surface1);padding:8px 10px;border-radius:8px">
-      <div>
-        <div style="font-size:13px;font-weight:600;color:var(--ink)">🛁 热水水力Spa (Hot Tub)</div>
-        <div style="font-size:10px;color:var(--ink3)">智能匹配 ${hottubMins}分钟 · 水力冲刷缓解关节与肌肉张力</div>
-      </div>
-      <button class="act-play-btn" onclick="startTimer(${hottubMins}*60,'🛁 Hot Tub水疗中')">开始 ${hottubMins}分</button>
-    </div>
-    <div style="display:flex;align-items:center;justify-content:space-between;background:var(--surface1);padding:8px 10px;border-radius:8px">
-      <div>
-        <div style="font-size:13px;font-weight:600;color:var(--ink)">🛋️ 石板热躺椅放松</div>
-        <div style="font-size:10px;color:var(--ink3)">智能匹配 ${loungerMins}分钟 · 全身体表静止热传导放松</div>
-      </div>
-      <button class="act-play-btn" onclick="startTimer(${loungerMins}*60,'🛋️ 热躺椅放松中')">开始 ${loungerMins}分</button>
-    </div>
-    <div style="display:flex;align-items:center;justify-content:space-between;background:var(--surface1);padding:8px 10px;border-radius:8px">
-      <div>
-        <div style="font-size:13px;font-weight:600;color:var(--ink)">🔄 冷热交替浴引导</div>
-        <div style="font-size:10px;color:var(--ink3)">冷1min ↔ 热3min 循环3轮 · 运动科学血管泵动</div>
-      </div>
-      <button class="act-play-btn" onclick="startMultiTimer([{sec:60,label:'冷水冲洗/浸泡'},{sec:180,label:'Hot Tub/热水池'},{sec:60,label:'冷水冲洗/浸泡'},{sec:180,label:'Hot Tub/热水池'},{sec:60,label:'冷水冲洗/浸泡'},{sec:180,label:'Hot Tub/热水池'},{sec:60,label:'冷水收尾完成'}])">启动引导</button>
-    </div>
-  </div>
-</details>`;
-}
-window.renderRecoveryModule = renderRecoveryModule;
