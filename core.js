@@ -6332,7 +6332,7 @@ Object.assign(EX_DETAIL, {
   '猴神式（hanumanasana）': { muscles: ['腘绳肌', '髋屈肌'], steps: ['半劈叉准备：前腿伸直、后膝跪地', '双手撑砖，前脚跟向前滑、后膝向后退', '在当前极限处停住，骨盆保持朝正前方'], tips: ['纵劈终点体式，用砖支撑让身体敢放松', '每次只加深一点点，以年为单位进步'], mistakes: ['骨盆歪斜硬贴地', '弹震下压'] },
 });
 
-// ══ Comprehensive Anatomical Muscle & Pose Illustration Suite ═════════
+// ══ Anatomical Muscle Target & Form Cue Card ═════════════════
 function renderMuscleDiagram(muscles, exName = '') {
   if (!Array.isArray(muscles) || !muscles.length) muscles = ['全身'];
   const mStr = (muscles.join(' ') + ' ' + (exName || '')).toLowerCase();
@@ -6340,113 +6340,64 @@ function renderMuscleDiagram(muscles, exName = '') {
   const isChest = /胸/.test(mStr);
   const isBack = /背/.test(mStr);
   const isShoulder = /肩|三角肌/.test(mStr);
-  const isBiceps = /二头|肱二/.test(mStr);
-  const isTriceps = /三头|肱三/.test(mStr);
   const isGlute = /臀/.test(mStr);
   const isQuads = /股四|大腿前/.test(mStr);
   const isHamstrings = /腘绳|大腿后/.test(mStr);
-  const isCore = /核心|腹/.test(mStr);
-  const isCalf = /小腿|踝/.test(mStr);
   const isSwim = /游泳|自由泳|蛙泳|仰泳|蝶泳/.test(mStr);
 
-  const activeColor = 'var(--terra)';
-  const secondaryColor = '#f59e0b';
-  const baseColor = 'var(--surface3)';
-
   let primaryName = muscles[0] || '目标肌群';
-  let secondaryName = muscles.slice(1).join(' · ') || '辅助/稳定肌群';
+  let secondaryName = muscles.slice(1).join(' · ') || '';
 
   let posePattern = '';
   if (isChest) {
     posePattern = `
-      <div style="font-size:11px;font-weight:600;color:var(--terra);margin-bottom:4px">🏋️ 推类发力模式 (Push Pattern) · 肘角45°-60° · 沉肩夹胸</div>
-      <div style="font-size:11px;color:var(--ink2);line-height:1.4;background:var(--surface1);padding:6px 8px;border-radius:6px">
-        💡 <b>解刨发力</b>：胸大肌收缩带动肱骨内收，三头肌在推起末端挺直锁紧。离心控制2秒下落，感受胸肌张力拉满。
+      <div style="font-size:11px;font-weight:600;color:var(--terra);margin-bottom:4px">🏋️ 推类发力要领 (Push Pattern)</div>
+      <div style="font-size:11px;color:var(--ink2);line-height:1.4;background:var(--surface1);padding:8px 10px;border-radius:6px">
+        💡 <b>解刨发力</b>：胸大肌主导收缩，肘角保持 45°-60° 沉肩夹胸。离心控制 2 秒匀速下落，感受胸肌张力拉满。
       </div>`;
   } else if (isBack) {
     posePattern = `
-      <div style="font-size:11px;font-weight:600;color:var(--terra);margin-bottom:4px">🏋️‍♀️ 拉类发力模式 (Pull Pattern) · 锁骨展开 · 肩胛下沉收拢</div>
-      <div style="font-size:11px;color:var(--ink2);line-height:1.4;background:var(--surface1);padding:6px 8px;border-radius:6px">
-        💡 <b>解刨发力</b>：背阔肌拉动肘部贴体侧后拽，斜方肌中下束将肩胛骨向中线挤压。挺胸不耸肩，手肘像钩子一样后拉。
+      <div style="font-size:11px;font-weight:600;color:var(--terra);margin-bottom:4px">🏋️‍♀️ 拉类发力要领 (Pull Pattern)</div>
+      <div style="font-size:11px;color:var(--ink2);line-height:1.4;background:var(--surface1);padding:8px 10px;border-radius:6px">
+        💡 <b>解刨发力</b>：背阔肌拉动手肘后拽，肩胛骨向脊柱中线挤压。挺胸沉肩，手肘像钩子一样顺身体后拉。
       </div>`;
   } else if (isGlute || isHamstrings) {
     posePattern = `
-      <div style="font-size:11px;font-weight:600;color:var(--terra);margin-bottom:4px">🍑 臀腿髋铰链模式 (Hinge/Glute Drive) · 骨盆正位 · 臀大肌顶峰收缩</div>
-      <div style="font-size:11px;color:var(--ink2);line-height:1.4;background:var(--surface1);padding:6px 8px;border-radius:6px">
-        💡 <b>解刨发力</b>：臀大肌主导伸髋，膝盖对准第二脚趾避免内扣。顶峰挤压臀部1秒，感受臀大肌与臀中肌深度发力带。
+      <div style="font-size:11px;font-weight:600;color:var(--terra);margin-bottom:4px">🍑 髋铰链发力要领 (Hinge/Glute Drive)</div>
+      <div style="font-size:11px;color:var(--ink2);line-height:1.4;background:var(--surface1);padding:8px 10px;border-radius:6px">
+        💡 <b>解刨发力</b>：骨盆保持正位，臀大肌主导伸髋。顶峰收缩挤压 1 秒，膝盖微屈对准第二脚趾防止内扣。
       </div>`;
   } else if (isQuads) {
     posePattern = `
-      <div style="font-size:11px;font-weight:600;color:var(--terra);margin-bottom:4px">🦵 膝主导下肢屈伸模式 (Squat/Quad Pattern) · 踩实脚底三角</div>
-      <div style="font-size:11px;color:var(--ink2);line-height:1.4;background:var(--surface1);padding:6px 8px;border-radius:6px">
-        💡 <b>解刨发力</b>：股四头肌强力伸膝推地，全程保持全脚掌均匀受力，核心挺直防止腰部反弓代偿。
+      <div style="font-size:11px;font-weight:600;color:var(--terra);margin-bottom:4px">🦵 下肢屈伸发力要领 (Squat/Quad Pattern)</div>
+      <div style="font-size:11px;color:var(--ink2);line-height:1.4;background:var(--surface1);padding:8px 10px;border-radius:6px">
+        💡 <b>解刨发力</b>：股四头肌伸膝推地，全程脚底三角踩实。核心紧锁保持躯干稳定，避免腰部代偿。
       </div>`;
   } else if (isShoulder) {
     posePattern = `
-      <div style="font-size:11px;font-weight:600;color:var(--terra);margin-bottom:4px">💪 三角肌孤立/推举模式 (Deltoids Alignment) · 沉肩锁定斜方肌</div>
-      <div style="font-size:11px;color:var(--ink2);line-height:1.4;background:var(--surface1);padding:6px 8px;border-radius:6px">
-        💡 <b>解刨发力</b>：前/中/后束精准分工，沉肩锁定斜方肌，让大臂带着手臂抬起，切忌借力甩动。
+      <div style="font-size:11px;font-weight:600;color:var(--terra);margin-bottom:4px">💪 肩部孤立发力要领 (Deltoid Alignment)</div>
+      <div style="font-size:11px;color:var(--ink2);line-height:1.4;background:var(--surface1);padding:8px 10px;border-radius:6px">
+        💡 <b>解刨发力</b>：沉肩锁定斜方肌，让大臂带动手臂向上提起。避免借力甩动，顶峰稍作停顿感应侧束/前束。
       </div>`;
   } else if (isSwim) {
     posePattern = `
-      <div style="font-size:11px;font-weight:600;color:#3b82f6;margin-bottom:4px">🏊 水中动力学与划水相位 (Hydrodynamics Stroke) · 高肘抱水</div>
-      <div style="font-size:11px;color:var(--ink2);line-height:1.4;background:var(--surface1);padding:6px 8px;border-radius:6px">
-        💡 <b>水中发力</b>：抱水-推水-移臂连贯衔接，核心像铁板般稳固降低水阻，打腿由髋部发力传导至脚尖。
+      <div style="font-size:11px;font-weight:600;color:#3b82f6;margin-bottom:4px">🏊 水中动力发力要领 (Hydrodynamics Stroke)</div>
+      <div style="font-size:11px;color:var(--ink2);line-height:1.4;background:var(--surface1);padding:8px 10px;border-radius:6px">
+        💡 <b>水中发力</b>：高肘抱水-推进连贯，核心绷紧保持体表流线型以降低水阻。打腿由髋部发力传导至脚尖。
       </div>`;
   } else {
     posePattern = `
-      <div style="font-size:11px;font-weight:600;color:var(--terra);margin-bottom:4px">🎯 孤立目标精准发力 (Target Isolation)</div>
-      <div style="font-size:11px;color:var(--ink2);line-height:1.4;background:var(--surface1);padding:6px 8px;border-radius:6px">
-        💡 <b>解刨发力</b>：建立意念-肌肉连接（Mind-Muscle Connection），在动作顶峰保持有意识的张力挤压。
+      <div style="font-size:11px;font-weight:600;color:var(--terra);margin-bottom:4px">🎯 目标孤立发力 (Target Isolation)</div>
+      <div style="font-size:11px;color:var(--ink2);line-height:1.4;background:var(--surface1);padding:8px 10px;border-radius:6px">
+        💡 <b>解刨发力</b>：建立意念-肌肉连接（Mind-Muscle Connection），在动作顶峰保持有意识的孤立张力。
       </div>`;
   }
 
-  const frontSvg = `<svg width="80" height="130" viewBox="0 0 100 160" style="display:block;margin:0 auto">
-    <circle cx="50" cy="16" r="10" fill="var(--ink3)" opacity="0.3"/>
-    <rect x="46" y="26" width="8" height="8" fill="var(--ink3)" opacity="0.3"/>
-    <path d="M34 34 Q50 36 66 34 L62 52 Q50 54 38 52 Z" fill="${isChest ? activeColor : baseColor}" stroke="var(--border)" stroke-width="1.2"/>
-    <rect x="41" y="54" width="18" height="28" rx="3" fill="${isCore ? activeColor : baseColor}" stroke="var(--border)" stroke-width="1.2"/>
-    <path d="M26 34 C24 38 24 44 28 46 C32 44 32 38 34 34 Z" fill="${isShoulder ? activeColor : baseColor}" stroke="var(--border)" stroke-width="1"/>
-    <path d="M74 34 C76 38 76 44 72 46 C68 44 68 38 66 34 Z" fill="${isShoulder ? activeColor : baseColor}" stroke="var(--border)" stroke-width="1"/>
-    <rect x="21" y="47" width="9" height="22" rx="4.5" fill="${isBiceps ? activeColor : (isChest || isBack ? secondaryColor : baseColor)}" stroke="var(--border)" stroke-width="1"/>
-    <rect x="70" y="47" width="9" height="22" rx="4.5" fill="${isBiceps ? activeColor : (isChest || isBack ? secondaryColor : baseColor)}" stroke="var(--border)" stroke-width="1"/>
-    <path d="M35 84 L47 84 L45 120 L35 118 Z" fill="${isQuads ? activeColor : baseColor}" stroke="var(--border)" stroke-width="1"/>
-    <path d="M53 84 L65 84 L65 118 L55 120 Z" fill="${isQuads ? activeColor : baseColor}" stroke="var(--border)" stroke-width="1"/>
-    <rect x="36" y="122" width="8" height="26" rx="4" fill="${isCalf ? activeColor : baseColor}"/>
-    <rect x="56" y="122" width="8" height="26" rx="4" fill="${isCalf ? activeColor : baseColor}"/>
-  </svg>`;
-
-  const backSvg = `<svg width="80" height="130" viewBox="0 0 100 160" style="display:block;margin:0 auto">
-    <circle cx="50" cy="16" r="10" fill="var(--ink3)" opacity="0.3"/>
-    <path d="M32 34 L68 34 L60 62 L40 62 Z" fill="${isBack ? activeColor : baseColor}" stroke="var(--border)" stroke-width="1.2"/>
-    <circle cx="28" cy="38" r="6" fill="${isShoulder ? activeColor : baseColor}"/>
-    <circle cx="72" cy="38" r="6" fill="${isShoulder ? activeColor : baseColor}"/>
-    <rect x="21" y="47" width="9" height="22" rx="4.5" fill="${isTriceps ? activeColor : (isChest ? secondaryColor : baseColor)}" stroke="var(--border)" stroke-width="1"/>
-    <rect x="70" y="47" width="9" height="22" rx="4.5" fill="${isTriceps ? activeColor : (isChest ? secondaryColor : baseColor)}" stroke="var(--border)" stroke-width="1"/>
-    <path d="M35 64 Q50 62 65 64 L65 83 Q50 86 35 83 Z" fill="${isGlute ? activeColor : baseColor}" stroke="var(--border)" stroke-width="1.2"/>
-    <rect x="36" y="86" width="11" height="32" rx="4" fill="${isHamstrings || isGlute ? (isHamstrings ? activeColor : secondaryColor) : baseColor}" stroke="var(--border)" stroke-width="1"/>
-    <rect x="53" y="86" width="11" height="32" rx="4" fill="${isHamstrings || isGlute ? (isHamstrings ? activeColor : secondaryColor) : baseColor}" stroke="var(--border)" stroke-width="1"/>
-    <rect x="36" y="122" width="8" height="26" rx="4" fill="${isCalf ? activeColor : baseColor}"/>
-    <rect x="56" y="122" width="8" height="26" rx="4" fill="${isCalf ? activeColor : baseColor}"/>
-  </svg>`;
-
-  return `<div style="margin:12px 0;background:var(--surface2);border-radius:12px;padding:12px;border:1px solid var(--border)">
-    <div style="display:flex;justify-content:space-around;align-items:center;margin-bottom:10px;background:var(--surface1);padding:10px 6px;border-radius:10px">
-      <div style="text-align:center">
-        ${frontSvg}
-        <span style="font-size:10px;font-weight:600;color:var(--ink2)">正面解剖发力</span>
-      </div>
-      <div style="text-align:center">
-        ${backSvg}
-        <span style="font-size:10px;font-weight:600;color:var(--ink2)">背面解剖发力</span>
-      </div>
-    </div>
-
+  return `<div style="margin:10px 0;background:var(--surface2);border-radius:10px;padding:10px 12px;border:1px solid var(--border)">
     <div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap">
-      <span style="font-size:10px;background:rgba(224,117,94,.15);color:var(--terra);border:1px solid rgba(224,117,94,.3);padding:2px 8px;border-radius:12px;font-weight:600">🎯 主发力：${primaryName}</span>
-      ${secondaryName && secondaryName !== '—' ? `<span style="font-size:10px;background:rgba(245,158,11,.15);color:#d97706;border:1px solid rgba(245,158,11,.3);padding:2px 8px;border-radius:12px;font-weight:600">⚡ 协同辅助：${secondaryName}</span>` : ''}
+      <span style="font-size:10px;background:rgba(224,117,94,.15);color:var(--terra);border:1px solid rgba(224,117,94,.3);padding:3px 8px;border-radius:12px;font-weight:600">🎯 主发力：${primaryName}</span>
+      ${secondaryName && secondaryName !== '—' ? `<span style="font-size:10px;background:rgba(245,158,11,.15);color:#d97706;border:1px solid rgba(245,158,11,.3);padding:3px 8px;border-radius:12px;font-weight:600">⚡ 协同辅助：${secondaryName}</span>` : ''}
     </div>
-
     ${posePattern}
   </div>`;
 }
