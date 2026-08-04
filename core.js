@@ -200,6 +200,29 @@ function excludeUserExercise(date, ei) {
 }
 window.excludeUserExercise = excludeUserExercise;
 
+function excludeUserExerciseByName(name) {
+  if (!name) return;
+  const reason = prompt(`永久排除动作/器械「${name}」？\n后续所有计划将自动避开此动作。\n如有需要可填入排除原因（如：做不了 / 健身房缺器械）：`, "做不了 / 缺器械");
+  if (reason === null) return;
+  if (!S.userExcluded) S.userExcluded = [];
+  if (!S.userExcluded.includes(name)) S.userExcluded.push(name);
+  if (!S.userExcludeReasons) S.userExcludeReasons = {};
+  S.userExcludeReasons[name] = reason || '用户手动排除';
+  
+  saveState();
+  if (S.plan && S.plan.days) {
+    S.plan.days.forEach(day => {
+      if (day.exercises) {
+        day.exercises = day.exercises.filter(ex => ex.name !== name);
+      }
+    });
+  }
+  showToast(`已永久排除动作：「${name}」`);
+  render();
+  if (typeof renderExcludedList === 'function') renderExcludedList();
+}
+window.excludeUserExerciseByName = excludeUserExerciseByName;
+
 function restoreUserExercise(name) {
   if (S.userExcluded) S.userExcluded = S.userExcluded.filter(n => n !== name);
   if (S.userExcludeReasons) delete S.userExcludeReasons[name];
@@ -2209,7 +2232,7 @@ ${ex.weight ? `<div class="wt-hint" style="margin-top:2px;display:block">${ex.we
             }
             h += `<div class="exrow${done ? ' done-ex' : ''}" onclick="tog('${sel.date}',${i})">
 <div style="flex:1;min-width:0">
-<div class="exname">${ex.name} <i class="ti ti-info-circle" style="font-size:12px;opacity:.4;vertical-align:middle" onclick="event.stopPropagation();showExDetail('${ex.name}')"></i>${phase !== 'warmup' && phase !== 'cooldown' ? ` <span class="swap-btn" onclick="event.stopPropagation();swapExercise('${sel.date}',${i})" title="替换动作" style="border:1px solid var(--sage);color:var(--sage);border-radius:2px;padding:0 4px;font-size:10px;margin-left:4px">替换</span><span class="swap-btn" onclick="event.stopPropagation();excludeUserExercise('${sel.date}',${i})" title="划掉/永久排除此动作" style="border:1px solid rgba(220,38,38,.4);color:#ef4444;border-radius:2px;padding:0 4px;font-size:10px;margin-left:4px">✕划掉</span>` : ''}</div>
+<div class="exname">${ex.name} <i class="ti ti-info-circle" style="font-size:12px;opacity:.4;vertical-align:middle" onclick="event.stopPropagation();showExDetail('${ex.name}', '${sel.date}', ${i})"></i>${phase !== 'warmup' && phase !== 'cooldown' ? ` <span class="swap-btn" onclick="event.stopPropagation();swapExercise('${sel.date}',${i})" title="替换动作">替换</span><span class="swap-btn exclude-btn" onclick="event.stopPropagation();excludeUserExercise('${sel.date}',${i})" title="划掉/永久排除此动作">✕划掉</span>` : ''}</div>
 <div class="exnote">${ex.note}</div>
 <span class="pool-reps">${reps}\u5206\u949f</span>
 ${!done ? `<button class="act-play-btn" onclick="event.stopPropagation();startTimer(${reps * 60}, '${ex.name}')">\u25b6 \u5f00\u59cb\u8ba1\u65f6 ${reps}\u5206\u949f</button>` : ''}
@@ -2262,7 +2285,7 @@ ${locked ? `<span class="warn-tag" style="background:var(--surface3);color:var(-
               } catch(e) {}
             }
             return `<div class="exrow${done ? ' done-ex' : ''}"><div style="flex:1;min-width:0">
-<div class="exname" onclick="showExDetail('${ex.name}')" style="cursor:pointer">${dispName}${_pvSet && _pvSet.has(ex.name) ? `<span class="pdot"${isSub && EX_SUB_DESC[ex.name] ? ` onclick="event.stopPropagation();_showPrivDesc('${ex.name}')" style="cursor:pointer"` : ''}></span>` : ''}${needsWt && W_HIST[ex.name] && W_HIST[ex.name].length > 0 && (curW || 0) >= Math.max(...W_HIST[ex.name].map(h => h.weight)) ? ` <span title="个人纪录" style="font-size:9px;color:var(--terra);border:1px solid var(--terra);border-radius:2px;padding:0 2px;margin-left:4px;font-weight:600">纪录</span>` : ''} <i class="ti ti-info-circle" style="font-size:11px;opacity:.4;vertical-align:middle"></i> <span class="demo-btn" onclick="event.stopPropagation();openDemo('${ex.name}')" title="看B站示范" style="border:1px solid var(--terra);color:var(--terra);border-radius:2px;padding:0 4px;font-size:10px;margin-left:4px">▶示范</span>${!locked && !ex.isWarmup && !ex.isStretch ? ` <span class="swap-btn" onclick="event.stopPropagation();swapExercise('${sel.date}',${i})" title="替换动作" style="border:1px solid var(--sage);color:var(--sage);border-radius:2px;padding:0 4px;font-size:10px;margin-left:4px">替换</span><span class="swap-btn" onclick="event.stopPropagation();excludeUserExercise('${sel.date}',${i})" title="划掉/永久排除此动作" style="border:1px solid rgba(220,38,38,.4);color:#ef4444;border-radius:2px;padding:0 4px;font-size:10px;margin-left:4px">✕划掉</span>` : ''}</div>
+<div class="exname" onclick="showExDetail('${ex.name}', '${sel.date}', ${i})" style="cursor:pointer">${dispName}${_pvSet && _pvSet.has(ex.name) ? `<span class="pdot"${isSub && EX_SUB_DESC[ex.name] ? ` onclick="event.stopPropagation();_showPrivDesc('${ex.name}')" style="cursor:pointer"` : ''}></span>` : ''}${needsWt && W_HIST[ex.name] && W_HIST[ex.name].length > 0 && (curW || 0) >= Math.max(...W_HIST[ex.name].map(h => h.weight)) ? ` <span title="个人纪录" style="font-size:9px;color:var(--terra);border:1px solid var(--terra);border-radius:2px;padding:0 2px;margin-left:4px;font-weight:600">纪录</span>` : ''} <i class="ti ti-info-circle" style="font-size:11px;opacity:.4;vertical-align:middle"></i> <span class="demo-btn" onclick="event.stopPropagation();openDemo('${ex.name}')" title="看B站示范" style="border:1px solid var(--terra);color:var(--terra);border-radius:2px;padding:0 4px;font-size:10px;margin-left:4px">▶示范</span>${!locked && !ex.isWarmup && !ex.isStretch ? ` <span class="swap-btn" onclick="event.stopPropagation();swapExercise('${sel.date}',${i})" title="替换动作">替换</span><span class="swap-btn exclude-btn" onclick="event.stopPropagation();excludeUserExercise('${sel.date}',${i})" title="划掉/永久排除此动作">✕划掉</span>` : ''}</div>
 <div class="exnote">${(ex.muscle || []).map(m => `<span style="font-size:9px;background:var(--surface2);color:var(--ink2);padding:1px 4px;border-radius:2px;margin-right:4px;display:inline-block">${m}</span>`).join('')}${dispNote}${ex.bi ? ' (左右各做一遍算1组)' : ''}</div>
 ${needsWt && !locked ? `<div class="wt-row">
 <input type="number" class="wt-input" value="${dispW || ''}" placeholder="${sugW || ''}" onchange="setWeight('${sel.date}',${i},+this.value)" step="${getWeightStep(ex.name)}" min="0">
@@ -6050,6 +6073,25 @@ function renderExDetailContent() {
   document.getElementById('ex-modal-steps').innerHTML = steps.map((s, i) => `<div class="ex-step"><span class="ex-step-n">${i + 1}</span><span>${s}</span></div>`).join('');
   document.getElementById('ex-modal-tips').innerHTML = tips.length ? tips.map(t => `<div class="ex-tip">${t}</div>`).join('') : '';
   document.getElementById('ex-modal-mistakes').innerHTML = mistakes.length ? `<p style="font-size:11px;font-weight:600;color:var(--terra);margin:8px 0 4px">常见错误</p>` + mistakes.map(m => `<div class="ex-tip" style="border-color:var(--terra-br);color:var(--terra)">${m}</div>`).join('') : '';
+
+  let actEl = document.getElementById('ex-modal-actions');
+  if (!actEl) {
+    actEl = document.createElement('div');
+    actEl.id = 'ex-modal-actions';
+    document.getElementById('ex-modal-card').appendChild(actEl);
+  }
+  actEl.style.cssText = "margin-top:16px;padding-top:12px;border-top:1px solid var(--border);display:flex;gap:8px;flex-wrap:wrap";
+  
+  if (window._currentExDetailDate && window._currentExDetailEi !== null && window._currentExDetailEi !== undefined) {
+    actEl.innerHTML = `
+      <button class="btn btn-out" style="flex:1;font-size:12px;color:var(--sage);border-color:var(--sage-br);padding:8px" onclick="closeExDetail();swapExercise('${window._currentExDetailDate}', ${window._currentExDetailEi})">🔄 替换此动作</button>
+      <button class="btn btn-out" style="flex:1;font-size:12px;color:#ef4444;border-color:rgba(239,68,68,.3);background:rgba(239,68,68,.08);padding:8px;font-weight:600" onclick="closeExDetail();excludeUserExercise('${window._currentExDetailDate}', ${window._currentExDetailEi})">✕ 划掉/永久排除</button>
+    `;
+  } else {
+    actEl.innerHTML = `
+      <button class="btn btn-out" style="width:100%;font-size:12px;color:#ef4444;border-color:rgba(239,68,68,.3);background:rgba(239,68,68,.08);padding:8px;font-weight:600" onclick="closeExDetail();excludeUserExerciseByName('${dispName}')">✕ 划掉/永久排除此动作（避开后续排班）</button>
+    `;
+  }
 }
 
 var _globalSubMode = false;
@@ -6098,14 +6140,17 @@ function openDemo(name) {
 }
 window.openDemo = openDemo;
 
-function showExDetail(name) {
+function showExDetail(name, date = null, ei = null) {
   _currentExDetailName = name;
+  _currentExDetailDate = date;
+  _currentExDetailEi = ei;
   _exDetailSubMode = !!_globalSubMode;
   _titleClickCount = 0;
 
   renderExDetailContent();
   document.getElementById('ex-modal').classList.add('open');
 }
+window.showExDetail = showExDetail;
 
 function closeExDetail() {
   document.getElementById('ex-modal').classList.remove('open');
@@ -6287,56 +6332,122 @@ Object.assign(EX_DETAIL, {
   '猴神式（hanumanasana）': { muscles: ['腘绳肌', '髋屈肌'], steps: ['半劈叉准备：前腿伸直、后膝跪地', '双手撑砖，前脚跟向前滑、后膝向后退', '在当前极限处停住，骨盆保持朝正前方'], tips: ['纵劈终点体式，用砖支撑让身体敢放松', '每次只加深一点点，以年为单位进步'], mistakes: ['骨盆歪斜硬贴地', '弹震下压'] },
 });
 
-// ══ Offline SVG Muscle Diagram ═════════════════════════════
-function renderMuscleDiagram(muscles) {
-  if (!Array.isArray(muscles) || !muscles.length) return '';
-  const mStr = muscles.join(' ');
+// ══ Comprehensive Anatomical Muscle & Pose Illustration Suite ═════════
+function renderMuscleDiagram(muscles, exName = '') {
+  if (!Array.isArray(muscles) || !muscles.length) muscles = ['全身'];
+  const mStr = (muscles.join(' ') + ' ' + (exName || '')).toLowerCase();
+  
   const isChest = /胸/.test(mStr);
   const isBack = /背/.test(mStr);
-  const isShoulder = /肩/.test(mStr);
-  const isBiceps = /二头/.test(mStr);
-  const isTriceps = /三头/.test(mStr);
+  const isShoulder = /肩|三角肌/.test(mStr);
+  const isBiceps = /二头|肱二/.test(mStr);
+  const isTriceps = /三头|肱三/.test(mStr);
   const isGlute = /臀/.test(mStr);
-  const isQuads = /股四|腿/.test(mStr);
+  const isQuads = /股四|大腿前/.test(mStr);
+  const isHamstrings = /腘绳|大腿后/.test(mStr);
   const isCore = /核心|腹/.test(mStr);
-  const isCalf = /小腿/.test(mStr);
+  const isCalf = /小腿|踝/.test(mStr);
+  const isSwim = /游泳|自由泳|蛙泳|仰泳|蝶泳/.test(mStr);
 
   const activeColor = 'var(--terra)';
+  const secondaryColor = '#f59e0b';
   const baseColor = 'var(--surface3)';
 
-  return `<div style="display:flex;justify-content:center;gap:16px;margin:8px 0 12px;background:var(--surface2);padding:10px;border-radius:10px;align-items:center">
-    <div style="text-align:center">
-      <svg width="60" height="90" viewBox="0 0 100 150" style="display:block;margin:0 auto">
-        <circle cx="50" cy="18" r="10" fill="var(--ink3)" opacity="0.3"/>
-        <rect x="46" y="28" width="8" height="8" fill="var(--ink3)" opacity="0.3"/>
-        <path d="M35 36 L65 36 L60 54 L40 54 Z" fill="${isChest ? activeColor : baseColor}" stroke="var(--border)" stroke-width="1"/>
-        <rect x="41" y="56" width="18" height="26" rx="2" fill="${isCore ? activeColor : baseColor}" stroke="var(--border)" stroke-width="1"/>
-        <circle cx="28" cy="38" r="7" fill="${isShoulder ? activeColor : baseColor}"/>
-        <circle cx="72" cy="38" r="7" fill="${isShoulder ? activeColor : baseColor}"/>
-        <rect x="22" y="46" width="8" height="20" rx="4" fill="${isBiceps ? activeColor : baseColor}"/>
-        <rect x="70" y="46" width="8" height="20" rx="4" fill="${isBiceps ? activeColor : baseColor}"/>
-        <rect x="36" y="84" width="12" height="32" rx="4" fill="${isQuads ? activeColor : baseColor}"/>
-        <rect x="52" y="84" width="12" height="32" rx="4" fill="${isQuads ? activeColor : baseColor}"/>
-        <rect x="38" y="118" width="9" height="24" rx="3" fill="${isCalf ? activeColor : baseColor}"/>
-        <rect x="53" y="118" width="9" height="24" rx="3" fill="${isCalf ? activeColor : baseColor}"/>
-      </svg>
-      <span style="font-size:9px;color:var(--ink3)">正面示意</span>
+  let primaryName = muscles[0] || '目标肌群';
+  let secondaryName = muscles.slice(1).join(' · ') || '辅助/稳定肌群';
+
+  let posePattern = '';
+  if (isChest) {
+    posePattern = `
+      <div style="font-size:11px;font-weight:600;color:var(--terra);margin-bottom:4px">🏋️ 推类发力模式 (Push Pattern) · 肘角45°-60° · 沉肩夹胸</div>
+      <div style="font-size:11px;color:var(--ink2);line-height:1.4;background:var(--surface1);padding:6px 8px;border-radius:6px">
+        💡 <b>解刨发力</b>：胸大肌收缩带动肱骨内收，三头肌在推起末端挺直锁紧。离心控制2秒下落，感受胸肌张力拉满。
+      </div>`;
+  } else if (isBack) {
+    posePattern = `
+      <div style="font-size:11px;font-weight:600;color:var(--terra);margin-bottom:4px">🏋️‍♀️ 拉类发力模式 (Pull Pattern) · 锁骨展开 · 肩胛下沉收拢</div>
+      <div style="font-size:11px;color:var(--ink2);line-height:1.4;background:var(--surface1);padding:6px 8px;border-radius:6px">
+        💡 <b>解刨发力</b>：背阔肌拉动肘部贴体侧后拽，斜方肌中下束将肩胛骨向中线挤压。挺胸不耸肩，手肘像钩子一样后拉。
+      </div>`;
+  } else if (isGlute || isHamstrings) {
+    posePattern = `
+      <div style="font-size:11px;font-weight:600;color:var(--terra);margin-bottom:4px">🍑 臀腿髋铰链模式 (Hinge/Glute Drive) · 骨盆正位 · 臀大肌顶峰收缩</div>
+      <div style="font-size:11px;color:var(--ink2);line-height:1.4;background:var(--surface1);padding:6px 8px;border-radius:6px">
+        💡 <b>解刨发力</b>：臀大肌主导伸髋，膝盖对准第二脚趾避免内扣。顶峰挤压臀部1秒，感受臀大肌与臀中肌深度发力带。
+      </div>`;
+  } else if (isQuads) {
+    posePattern = `
+      <div style="font-size:11px;font-weight:600;color:var(--terra);margin-bottom:4px">🦵 膝主导下肢屈伸模式 (Squat/Quad Pattern) · 踩实脚底三角</div>
+      <div style="font-size:11px;color:var(--ink2);line-height:1.4;background:var(--surface1);padding:6px 8px;border-radius:6px">
+        💡 <b>解刨发力</b>：股四头肌强力伸膝推地，全程保持全脚掌均匀受力，核心挺直防止腰部反弓代偿。
+      </div>`;
+  } else if (isShoulder) {
+    posePattern = `
+      <div style="font-size:11px;font-weight:600;color:var(--terra);margin-bottom:4px">💪 三角肌孤立/推举模式 (Deltoids Alignment) · 沉肩锁定斜方肌</div>
+      <div style="font-size:11px;color:var(--ink2);line-height:1.4;background:var(--surface1);padding:6px 8px;border-radius:6px">
+        💡 <b>解刨发力</b>：前/中/后束精准分工，沉肩锁定斜方肌，让大臂带着手臂抬起，切忌借力甩动。
+      </div>`;
+  } else if (isSwim) {
+    posePattern = `
+      <div style="font-size:11px;font-weight:600;color:#3b82f6;margin-bottom:4px">🏊 水中动力学与划水相位 (Hydrodynamics Stroke) · 高肘抱水</div>
+      <div style="font-size:11px;color:var(--ink2);line-height:1.4;background:var(--surface1);padding:6px 8px;border-radius:6px">
+        💡 <b>水中发力</b>：抱水-推水-移臂连贯衔接，核心像铁板般稳固降低水阻，打腿由髋部发力传导至脚尖。
+      </div>`;
+  } else {
+    posePattern = `
+      <div style="font-size:11px;font-weight:600;color:var(--terra);margin-bottom:4px">🎯 孤立目标精准发力 (Target Isolation)</div>
+      <div style="font-size:11px;color:var(--ink2);line-height:1.4;background:var(--surface1);padding:6px 8px;border-radius:6px">
+        💡 <b>解刨发力</b>：建立意念-肌肉连接（Mind-Muscle Connection），在动作顶峰保持有意识的张力挤压。
+      </div>`;
+  }
+
+  const frontSvg = `<svg width="80" height="130" viewBox="0 0 100 160" style="display:block;margin:0 auto">
+    <circle cx="50" cy="16" r="10" fill="var(--ink3)" opacity="0.3"/>
+    <rect x="46" y="26" width="8" height="8" fill="var(--ink3)" opacity="0.3"/>
+    <path d="M34 34 Q50 36 66 34 L62 52 Q50 54 38 52 Z" fill="${isChest ? activeColor : baseColor}" stroke="var(--border)" stroke-width="1.2"/>
+    <rect x="41" y="54" width="18" height="28" rx="3" fill="${isCore ? activeColor : baseColor}" stroke="var(--border)" stroke-width="1.2"/>
+    <path d="M26 34 C24 38 24 44 28 46 C32 44 32 38 34 34 Z" fill="${isShoulder ? activeColor : baseColor}" stroke="var(--border)" stroke-width="1"/>
+    <path d="M74 34 C76 38 76 44 72 46 C68 44 68 38 66 34 Z" fill="${isShoulder ? activeColor : baseColor}" stroke="var(--border)" stroke-width="1"/>
+    <rect x="21" y="47" width="9" height="22" rx="4.5" fill="${isBiceps ? activeColor : (isChest || isBack ? secondaryColor : baseColor)}" stroke="var(--border)" stroke-width="1"/>
+    <rect x="70" y="47" width="9" height="22" rx="4.5" fill="${isBiceps ? activeColor : (isChest || isBack ? secondaryColor : baseColor)}" stroke="var(--border)" stroke-width="1"/>
+    <path d="M35 84 L47 84 L45 120 L35 118 Z" fill="${isQuads ? activeColor : baseColor}" stroke="var(--border)" stroke-width="1"/>
+    <path d="M53 84 L65 84 L65 118 L55 120 Z" fill="${isQuads ? activeColor : baseColor}" stroke="var(--border)" stroke-width="1"/>
+    <rect x="36" y="122" width="8" height="26" rx="4" fill="${isCalf ? activeColor : baseColor}"/>
+    <rect x="56" y="122" width="8" height="26" rx="4" fill="${isCalf ? activeColor : baseColor}"/>
+  </svg>`;
+
+  const backSvg = `<svg width="80" height="130" viewBox="0 0 100 160" style="display:block;margin:0 auto">
+    <circle cx="50" cy="16" r="10" fill="var(--ink3)" opacity="0.3"/>
+    <path d="M32 34 L68 34 L60 62 L40 62 Z" fill="${isBack ? activeColor : baseColor}" stroke="var(--border)" stroke-width="1.2"/>
+    <circle cx="28" cy="38" r="6" fill="${isShoulder ? activeColor : baseColor}"/>
+    <circle cx="72" cy="38" r="6" fill="${isShoulder ? activeColor : baseColor}"/>
+    <rect x="21" y="47" width="9" height="22" rx="4.5" fill="${isTriceps ? activeColor : (isChest ? secondaryColor : baseColor)}" stroke="var(--border)" stroke-width="1"/>
+    <rect x="70" y="47" width="9" height="22" rx="4.5" fill="${isTriceps ? activeColor : (isChest ? secondaryColor : baseColor)}" stroke="var(--border)" stroke-width="1"/>
+    <path d="M35 64 Q50 62 65 64 L65 83 Q50 86 35 83 Z" fill="${isGlute ? activeColor : baseColor}" stroke="var(--border)" stroke-width="1.2"/>
+    <rect x="36" y="86" width="11" height="32" rx="4" fill="${isHamstrings || isGlute ? (isHamstrings ? activeColor : secondaryColor) : baseColor}" stroke="var(--border)" stroke-width="1"/>
+    <rect x="53" y="86" width="11" height="32" rx="4" fill="${isHamstrings || isGlute ? (isHamstrings ? activeColor : secondaryColor) : baseColor}" stroke="var(--border)" stroke-width="1"/>
+    <rect x="36" y="122" width="8" height="26" rx="4" fill="${isCalf ? activeColor : baseColor}"/>
+    <rect x="56" y="122" width="8" height="26" rx="4" fill="${isCalf ? activeColor : baseColor}"/>
+  </svg>`;
+
+  return `<div style="margin:12px 0;background:var(--surface2);border-radius:12px;padding:12px;border:1px solid var(--border)">
+    <div style="display:flex;justify-content:space-around;align-items:center;margin-bottom:10px;background:var(--surface1);padding:10px 6px;border-radius:10px">
+      <div style="text-align:center">
+        ${frontSvg}
+        <span style="font-size:10px;font-weight:600;color:var(--ink2)">正面解剖发力</span>
+      </div>
+      <div style="text-align:center">
+        ${backSvg}
+        <span style="font-size:10px;font-weight:600;color:var(--ink2)">背面解剖发力</span>
+      </div>
     </div>
-    <div style="text-align:center">
-      <svg width="60" height="90" viewBox="0 0 100 150" style="display:block;margin:0 auto">
-        <circle cx="50" cy="18" r="10" fill="var(--ink3)" opacity="0.3"/>
-        <rect x="46" y="28" width="8" height="8" fill="var(--ink3)" opacity="0.3"/>
-        <path d="M32 36 L68 36 L58 64 L42 64 Z" fill="${isBack ? activeColor : baseColor}" stroke="var(--border)" stroke-width="1"/>
-        <rect x="21" y="46" width="8" height="20" rx="4" fill="${isTriceps ? activeColor : baseColor}"/>
-        <rect x="71" y="46" width="8" height="20" rx="4" fill="${isTriceps ? activeColor : baseColor}"/>
-        <path d="M35 66 L65 66 L65 84 L35 84 Z" fill="${isGlute ? activeColor : baseColor}" stroke="var(--border)" stroke-width="1"/>
-        <rect x="36" y="86" width="12" height="30" rx="4" fill="${isQuads || isGlute ? activeColor : baseColor}"/>
-        <rect x="52" y="86" width="12" height="30" rx="4" fill="${isQuads || isGlute ? activeColor : baseColor}"/>
-        <rect x="38" y="118" width="9" height="24" rx="3" fill="${isCalf ? activeColor : baseColor}"/>
-        <rect x="53" y="118" width="9" height="24" rx="3" fill="${isCalf ? activeColor : baseColor}"/>
-      </svg>
-      <span style="font-size:9px;color:var(--ink3)">背面示意</span>
+
+    <div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap">
+      <span style="font-size:10px;background:rgba(224,117,94,.15);color:var(--terra);border:1px solid rgba(224,117,94,.3);padding:2px 8px;border-radius:12px;font-weight:600">🎯 主发力：${primaryName}</span>
+      ${secondaryName && secondaryName !== '—' ? `<span style="font-size:10px;background:rgba(245,158,11,.15);color:#d97706;border:1px solid rgba(245,158,11,.3);padding:2px 8px;border-radius:12px;font-weight:600">⚡ 协同辅助：${secondaryName}</span>` : ''}
     </div>
+
+    ${posePattern}
   </div>`;
 }
 window.renderMuscleDiagram = renderMuscleDiagram;

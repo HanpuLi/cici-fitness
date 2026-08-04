@@ -689,17 +689,35 @@ textarea:focus {
 
 /* ══ Swap Button ═════════════════════════════════════════ */
 .swap-btn {
-    font-size: 11px;
+    font-size: 10px;
     cursor: pointer;
-    opacity: .25;
-    transition: opacity .2s, transform .2s;
+    opacity: 1 !important;
+    transition: all .15s ease;
     vertical-align: middle;
-    margin-left: 2px;
+    margin-left: 4px;
+    padding: 1px 6px;
+    border-radius: 4px;
+    background: var(--surface2);
+    border: 1px solid var(--sage-br);
+    color: var(--sage);
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
 }
 
 .swap-btn:hover {
-    opacity: .9;
-    transform: rotate(90deg);
+    background: var(--sage-bg);
+    transform: translateY(-1px);
+}
+
+.exclude-btn {
+    border-color: rgba(239, 68, 68, 0.4) !important;
+    color: #ef4444 !important;
+    background: rgba(239, 68, 68, 0.08) !important;
+}
+
+.exclude-btn:hover {
+    background: rgba(239, 68, 68, 0.18) !important;
 }
 
 /* ══ Swap Option (modal) ════════════════════════════════ */
