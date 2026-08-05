@@ -2168,10 +2168,10 @@ ${locked && !d.isRest ? '<i class="ti ti-lock" style="font-size:9px;color:var(--
         h += `<div class="hist-detail-exercises">`;
         lg.exercises.forEach(ex => {
           const isExDone = ex.done !== false;
-          h += `<div class="hist-ex-row${!isExDone ? ' hist-ex-undone' : ''}"><span class="hist-ex-name" onclick="showExDetail('${ex.name}')" style="cursor:pointer; ${!isExDone ? 'text-decoration:line-through;opacity:.6' : ''}">${ex.name} <i class="ti ti-info-circle" style="font-size:11px;opacity:.4"></i></span><span class="hist-ex-detail"><span>${ex.sets || '?'}\u00d7${ex.reps || '?'}${ex.unit || '\u6b21'}</span>${ex.weight ? `<span class="hist-ex-weight">${ex.weight}kg</span>` : ''}</span></div>`;
+          h += `<div class="hist-ex-row${!isExDone ? ' hist-ex-undone' : ''}"><span class="hist-ex-name" onclick="showExDetail('${ex.name}')" style="cursor:pointer; ${!isExDone ? 'text-decoration:line-through;opacity:.6' : ''}">${ex.name} <i class="ti ti-info-circle" style="font-size:11px;opacity:.4"></i></span><span class="hist-ex-detail"><span>${ex.sets || '?'}\u00d7${ex.reps || '?'}${ex.unit || '次'}</span>${ex.weight ? `<span class="hist-ex-weight">${ex.weight}kg</span>` : ''}</span></div>`;
         });
         h += `</div>`;
-      } else { h += `<div class="hist-empty">\u8be5\u65e5\u8bad\u7ec3\u8be6\u60c5\u4e0d\u53ef\u7528</div>` }
+      } else { h += `<div class="hist-empty">该日训练详情不可用</div>` }
       if (lg && lg.note) h += `<div class="hist-note">"${lg.note}"</div>`;
     } else {
       const locked = isLocked(sel);
@@ -2179,11 +2179,11 @@ ${locked && !d.isRest ? '<i class="ti ti-lock" style="font-size:9px;color:var(--
 
       if (locked && lg) {
         h += `<div class="wh">
-<span class="wh-title">${fmtDate(sel.date)} \u00b7 ${lg.workout}</span>
-<span class="badge">${lg.duration || sel.duration}\u5206\u949f</span>
-${lg.isSwimDay ? `<span class="badge" style="background:rgba(59,130,246,.12);color:#3b82f6">${S.swimLevel || '\u5165\u95e8'}</span>` : ''}
-<span class="warn-tag" style="background:rgba(76,175,80,.12);color:#4caf50;border-color:rgba(76,175,80,.25)">\u5df2\u6253\u5365</span>
-<span class="warn-tag">\u5df2\u9501\u5b9a</span>
+<span class="wh-title">${fmtDate(sel.date)} · ${lg.workout}</span>
+<span class="badge">${lg.duration || sel.duration}分钟</span>
+${lg.isSwimDay ? `<span class="badge" style="background:rgba(59,130,246,.12);color:#3b82f6">${S.swimLevel || '入门'}</span>` : ''}
+<span class="warn-tag" style="background:rgba(76,175,80,.12);color:#4caf50;border-color:rgba(76,175,80,.25)">已打卡</span>
+<span class="warn-tag">已锁定</span>
 <button class="regen-btn" style="margin-left:8px;font-size:10px;padding:2px 8px" onclick="unlockDate('${sel.date}')">解除锁定</button>
 ${!sel.isPrivateDay ? `<button class="regen-btn" style="margin-left:6px;font-size:10px;padding:2px 8px;background:var(--sage-bg);color:var(--sage);border-color:var(--sage-br)" onclick="shareWorkout('${sel.date}')">分享卡片</button>` : ""}
 </div>`;
@@ -2191,7 +2191,7 @@ ${!sel.isPrivateDay ? `<button class="regen-btn" style="margin-left:6px;font-siz
         h += `<div class="hist-detail-meta" style="margin-bottom:12px;display:flex;gap:8px;flex-wrap:wrap">`;
         if (lg.rpe) h += `<span class="hist-detail-chip rpe" style="background:rgba(224,117,94,.12);color:var(--terra);padding:4px 10px;border-radius:20px;font-size:11px;font-weight:600">RPE ${lg.rpe}/10</span>`;
         if (lg.mood) h += `<span class="hist-detail-chip mood" style="background:var(--surface2);padding:4px 10px;border-radius:20px;font-size:11px">${lg.mood}</span>`;
-        h += `<span class="hist-detail-chip dur" style="background:var(--surface2);padding:4px 10px;border-radius:20px;font-size:11px">${lg.exerciseCount || (lg.exercises || []).length}\u4e2a\u52a8\u4f5c</span></div>`;
+        h += `<span class="hist-detail-chip dur" style="background:var(--surface2);padding:4px 10px;border-radius:20px;font-size:11px">${lg.exerciseCount || (lg.exercises || []).length}个动作</span></div>`;
 
         if (lg.exercises && lg.exercises.length) {
           h += `<div class="exlist">`;
@@ -2268,19 +2268,19 @@ ${!done ? `<button class="act-play-btn" onclick="event.stopPropagation();startTi
         } else {
           const _isPrivate = !!sel.isPrivateDay;
           h += `<div class="wh">
-<span class="wh-title">${fmtDate(sel.date)} \u00b7 ${sel.workoutType}</span>
+<span class="wh-title">${fmtDate(sel.date)} · ${sel.workoutType}</span>
 ${_isPrivate ? `<span class="badge" style="background:rgba(192,132,90,.12);color:var(--terra);border:1px solid rgba(192,132,90,.25)">私享</span>` : ""}
-<span class="badge">${sel.duration}\u5206\u949f</span>
-${_isSwimDay ? `<span class="badge" style="background:rgba(59,130,246,.12);color:#3b82f6">${S.swimLevel || '\u5165\u95e8'}</span>` : ''}
-${!locked && !_isSwimDay ? `<button class="regen-btn" style="margin-left:auto;font-size:10px;padding:2px 8px" onclick="startTimer(45, '\u7ec4\u95f4\u4f11\u606f')">45s</button><button class="regen-btn" style="margin-left:4px;font-size:10px;padding:2px 8px" onclick="startTimer(60, '\u7ec4\u95f4\u4f11\u606f')">60s</button>` : ''}
-${locked ? `<span class="warn-tag" style="background:var(--surface3);color:var(--ink3);border-color:var(--border)">\u672a\u6253\u5365</span><span class="warn-tag">\u5df2\u9501\u5b9a</span><button class="regen-btn" style="margin-left:8px;font-size:10px;padding:2px 8px" onclick="unlockDate('${sel.date}')">\u89e3\u9664\u9501\u5b9a</button>` : ''}
+<span class="badge">${sel.duration}分钟</span>
+${_isSwimDay ? `<span class="badge" style="background:rgba(59,130,246,.12);color:#3b82f6">${S.swimLevel || '入门'}</span>` : ''}
+${!locked && !_isSwimDay ? `<button class="regen-btn" style="margin-left:auto;font-size:10px;padding:2px 8px" onclick="startTimer(45, '组间休息')">45s</button><button class="regen-btn" style="margin-left:4px;font-size:10px;padding:2px 8px" onclick="startTimer(60, '组间休息')">60s</button>` : ''}
+${locked ? `<span class="warn-tag" style="background:var(--surface3);color:var(--ink3);border-color:var(--border)">未打卡</span><span class="warn-tag">已锁定</span><button class="regen-btn" style="margin-left:8px;font-size:10px;padding:2px 8px" onclick="unlockDate('${sel.date}')">解除锁定</button>` : ''}
 </div>
 <div class="exlist">${sel.exercises.map((ex, i) => {
             const done = pd[i];
             const isSub = _globalSubMode && _ownerSession() && hasGoal('女性曲线');
             const sets = getAdj(sel.date, i, 's', ex.sets);
             const reps = getAdj(sel.date, i, 'r', ex.reps);
-            const needsWt = ex.unit === '\u6b21' && !ex.isWarmup && !ex.isStretch;
+            const needsWt = ex.unit === '次' && !ex.isWarmup && !ex.isStretch;
             const curW = getWeight(sel.date, i);
             const lastW = needsWt ? getLastWeight(ex.name) : null;
             const sugW = needsWt ? suggestWeight(ex.name) : null;
@@ -2298,11 +2298,11 @@ ${locked ? `<span class="warn-tag" style="background:var(--surface3);color:var(-
 ${needsWt && !locked ? `<div class="wt-row">
 <input type="number" class="wt-input" value="${dispW || ''}" placeholder="${sugW || ''}" onchange="setWeight('${sel.date}',${i},+this.value)" step="${getWeightStep(ex.name)}" min="0">
 <span class="wt-unit">kg</span>
-${lastW ? `<span class="wt-hint">\u4e0a\u6b21 ${lastW.weight}kg</span>` : `<span class="wt-sug">\u5efa\u8bae ${sugW || '?'}kg</span>`}
-${sugW && lastW && sugW !== lastW.weight ? `<span class="wt-sug">\u2192 ${sugW}kg</span>` : ''}
-</div><div style="display:flex;gap:5px;align-items:center;margin-top:4px;flex-wrap:wrap"><span style="font-size:10px;color:var(--ink3)">\u611f\u53d7</span>${[['\u8f7b\u677e', 4], ['\u521a\u597d', 6.5], ['\u5403\u529b', 8.5]].map(([lbl, v]) => `<span onclick="setExRpe('${sel.date}',${i},${v})" style="font-size:10px;padding:2px 8px;border-radius:10px;cursor:pointer;border:1px solid ${getExRpe(sel.date, i) === v ? 'var(--terra)' : 'rgba(128,128,128,.3)'};color:${getExRpe(sel.date, i) === v ? 'var(--terra)' : 'var(--ink3)'};background:${getExRpe(sel.date, i) === v ? 'rgba(200,120,90,.1)' : 'transparent'}">${lbl}</span>`).join('')}<span style="margin-left:auto;display:inline-flex"><span onclick="event.stopPropagation();startTimer(${S.restDur||45},'组间休息')" style="font-size:10px;padding:2px 8px;border-radius:10px;cursor:pointer;border:1px solid rgba(128,128,128,.3);color:var(--ink3);background:var(--surface2)">⏱️ ${S.restDur||45}s 休息</span></span></div>`: ''}
+${lastW ? `<span class="wt-hint">上次 ${lastW.weight}kg</span>` : `<span class="wt-sug">建议 ${sugW || '?'}kg</span>`}
+${sugW && lastW && sugW !== lastW.weight ? `<span class="wt-sug">→ ${sugW}kg</span>` : ''}
+</div><div style="display:flex;gap:5px;align-items:center;margin-top:4px;flex-wrap:wrap"><span style="font-size:10px;color:var(--ink3)">感受</span>${[['轻松', 4], ['刚好', 6.5], ['吃力', 8.5]].map(([lbl, v]) => `<span onclick="setExRpe('${sel.date}',${i},${v})" style="font-size:10px;padding:2px 8px;border-radius:10px;cursor:pointer;border:1px solid ${getExRpe(sel.date, i) === v ? 'var(--terra)' : 'rgba(128,128,128,.3)'};color:${getExRpe(sel.date, i) === v ? 'var(--terra)' : 'var(--ink3)'};background:${getExRpe(sel.date, i) === v ? 'rgba(200,120,90,.1)' : 'transparent'}">${lbl}</span>`).join('')}<span style="margin-left:auto;display:inline-flex"><span onclick="event.stopPropagation();startTimer(${S.restDur||45},'组间休息')" style="font-size:10px;padding:2px 8px;border-radius:10px;cursor:pointer;border:1px solid rgba(128,128,128,.3);color:var(--ink3);background:var(--surface2)">⏱️ ${S.restDur||45}s 休息</span></span></div>`: ''}
 ${needsWt && locked && lastW ? `<span class="wt-hint" style="margin-top:2px;display:block">${curW || lastW.weight}kg</span>` : ''}
-${(ex.unit === '\u79d2' || ex.unit === '\u5206\u949f') && !locked ? `<button class="act-play-btn" onclick="startTimer(${ex.unit === '\u5206\u949f' ? reps * 60 : reps}, '${ex.name}')">\u8ba1\u65f6</button>` : ''}
+${(ex.unit === '秒' || ex.unit === '分钟') && !locked ? `<button class="act-play-btn" onclick="startTimer(${ex.unit === '分钟' ? reps * 60 : reps}, '${ex.name}')">计时</button>` : ''}
 </div>
 ${!locked ? `
 <div class="adjg"><button class="ab" onclick="adj('${sel.date}',${i},'s',-1)">-</button><span class="av">${sets}\u7ec4</span><button class="ab" onclick="adj('${sel.date}',${i},'s',1)">+</button></div>
