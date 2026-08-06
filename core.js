@@ -2117,7 +2117,7 @@ function render() {
     else {
       const logE = LOG.find(l => l.date === ds);
       if (logE) { visibleDays.push({ date: ds, isRest: false, _src: 'log', workoutType: logE.workout, duration: logE.duration, exercises: (logE.exercises || []).map(e => ({ name: e.name, sets: e.sets, reps: e.reps, unit: e.unit, weight: e.weight, note: '' })), _logEntry: logE }) }
-      else { visibleDays.push({ date: ds, isRest: true, _src: 'empty', workoutType: '\u2014', exercises: [] }) }
+      else { visibleDays.push({ date: ds, isRest: true, _src: 'empty', workoutType: '—', exercises: [] }) }
     }
   }
   let sel = visibleDays.find(d => d.date === S.selDate);
@@ -2126,11 +2126,11 @@ function render() {
   const todayInView = visibleDays.some(d => d.date === today);
   const isCurrentView = todayInView;
 
-  let h = `<div class="plan-header"><p class="panel-title" style="margin:0">\u8bad\u7ec3\u8ba1\u5212${excludedCount ? `<span class="warn-tag">\u5df2\u8fc7\u6ee4${excludedCount}\u4e2a\u53d7\u9650\u52a8\u4f5c</span>` : ''}</p><button class="regen-btn" onclick="genPlan()">\u91cd\u65b0\u751f\u6210</button></div>
+  let h = `<div class="plan-header"><p class="panel-title" style="margin:0">训练计划${excludedCount ? `<span class="warn-tag">已过滤${excludedCount}个受限动作</span>` : ''}</p><button class="regen-btn" onclick="genPlan()">重新生成</button></div>
 <div class="stats">
-<div class="stat"><div class="stat-val">${workoutDays.length}</div><div class="stat-lbl">\u8ba1\u5212\u5929</div></div>
-<div class="stat"><div class="stat-val">${doneDays.length}/${workoutDays.length}</div><div class="stat-lbl">\u5df2\u5b8c\u6210</div></div>
-<div class="stat"><div class="stat-val">${workoutDays.reduce((s, d) => s + d.exercises.length, 0)}</div><div class="stat-lbl">\u603b\u52a8\u4f5c</div></div>
+<div class="stat"><div class="stat-val">${workoutDays.length}</div><div class="stat-lbl">计划天</div></div>
+<div class="stat"><div class="stat-val">${doneDays.length}/${workoutDays.length}</div><div class="stat-lbl">已完成</div></div>
+<div class="stat"><div class="stat-val">${workoutDays.reduce((s, d) => s + d.exercises.length, 0)}</div><div class="stat-lbl">总动作</div></div>
 </div>`;
 
   if (_globalSubMode && _ownerSession()) {
@@ -2158,10 +2158,10 @@ function render() {
   const vsFmt = viewStart.slice(5).replace('-', '/');
   const veFmt = viewEnd.slice(5).replace('-', '/');
   h += `<div class="cal-nav">
-<button class="cal-nav-btn" onclick="calPrev()"><i class="ti ti-chevron-left" style="font-size:12px"></i> \u4e0a\u4e24\u5468</button>
-${!isCurrentView ? `<button class="cal-nav-btn today-btn" onclick="calGoToday()">\u56de\u5230\u4eca\u5929</button>` : ''}
-<span class="cal-nav-label">${vsFmt} \u2014 ${veFmt}</span>
-<button class="cal-nav-btn" onclick="calNext()" ${isCurrentView ? 'disabled' : ''}> \u4e0b\u4e24\u5468 <i class="ti ti-chevron-right" style="font-size:12px"></i></button>
+<button class="cal-nav-btn" onclick="calPrev()"><i class="ti ti-chevron-left" style="font-size:12px"></i> 上两周</button>
+${!isCurrentView ? `<button class="cal-nav-btn today-btn" onclick="calGoToday()">回到今天</button>` : ''}
+<span class="cal-nav-label">${vsFmt} — ${veFmt}</span>
+<button class="cal-nav-btn" onclick="calNext()" ${isCurrentView ? 'disabled' : ''}> 下两周 <i class="ti ti-chevron-right" style="font-size:12px"></i></button>
 </div>`;
 
   h += `<div class="cal-scroll"><div class="daygrid" id="cal-grid">`;
@@ -2189,7 +2189,7 @@ ${!isCurrentView ? `<button class="cal-nav-btn today-btn" onclick="calGoToday()"
     const click = isNone ? '' : `onclick="selectDate('${d.date}')"`;
     h += `<div class="${cls}" ${drag} ${click}>
 <div class="dn">${fmtDate(d.date)}</div>
-<div class="dt">${d.isRest ? (isPlan ? '\u4f11\u606f' : '\u2014') : d.workoutType}</div>
+<div class="dt">${d.isRest ? (isPlan ? '休息' : '—') : d.workoutType}</div>
 ${done && isPlan ? (_subCal ? '<span style="font-size:9px;color:#c084fc;text-shadow:0 0 6px rgba(192,132,252,0.8)">●</span>' : '<i class="ti ti-check" style="font-size:10px;color:#3e7d52"></i>') : ''}
 ${_subCal && _lockVal ? `<span style="font-size:8px;color:rgba(232,121,249,0.6);letter-spacing:-0.5px">${'|'.repeat(Math.min(_lockVal, 4))}</span>` : ''}
 ${isLog && !isPlan ? '<i class="ti ti-check" style="font-size:10px;color:var(--blue)"></i>' : ''}
@@ -2202,16 +2202,16 @@ ${locked && !d.isRest ? '<i class="ti ti-lock" style="font-size:9px;color:var(--
     const lg = LOG.find(l => l.date === sel.date);
     if (sel._src === 'log' && !planDays.find(dd => dd.date === sel.date)) {
       const lg = sel._logEntry;
-      h += `<div class="wh"><span class="wh-title">${fmtDate(sel.date)} \u00b7 ${sel.workoutType}</span><span class="badge">${sel.duration || '?'}\u5206\u949f</span><span class="warn-tag" style="background:var(--blue-bg);color:var(--blue);border-color:rgba(75,107,138,.25)">\u5386\u53f2\u8bb0\u5f55</span></div>`;
+      h += `<div class="wh"><span class="wh-title">${fmtDate(sel.date)} · ${sel.workoutType}</span><span class="badge">${sel.duration || '?'}分钟</span><span class="warn-tag" style="background:var(--blue-bg);color:var(--blue);border-color:rgba(75,107,138,.25)">历史记录</span></div>`;
       if (lg && lg.exercises && lg.exercises.length) {
         h += `<div class="hist-detail-meta">`;
         if (lg.rpe) h += `<span class="hist-detail-chip rpe">RPE ${lg.rpe}/10</span>`;
         if (lg.mood) h += `<span class="hist-detail-chip mood">${lg.mood}</span>`;
-        h += `<span class="hist-detail-chip dur">${lg.exerciseCount || lg.exercises.length}\u4e2a\u52a8\u4f5c</span></div>`;
+        h += `<span class="hist-detail-chip dur">${lg.exerciseCount || lg.exercises.length}个动作</span></div>`;
         h += `<div class="hist-detail-exercises">`;
         lg.exercises.forEach(ex => {
           const isExDone = ex.done !== false;
-          h += `<div class="hist-ex-row${!isExDone ? ' hist-ex-undone' : ''}"><span class="hist-ex-name" onclick="showExDetail('${ex.name}')" style="cursor:pointer; ${!isExDone ? 'text-decoration:line-through;opacity:.6' : ''}">${ex.name} <i class="ti ti-info-circle" style="font-size:11px;opacity:.4"></i></span><span class="hist-ex-detail"><span>${ex.sets || '?'}\u00d7${ex.reps || '?'}${ex.unit || '次'}</span>${ex.weight ? `<span class="hist-ex-weight">${ex.weight}kg</span>` : ''}</span></div>`;
+          h += `<div class="hist-ex-row${!isExDone ? ' hist-ex-undone' : ''}"><span class="hist-ex-name" onclick="showExDetail('${ex.name}')" style="cursor:pointer; ${!isExDone ? 'text-decoration:line-through;opacity:.6' : ''}">${ex.name} <i class="ti ti-info-circle" style="font-size:11px;opacity:.4"></i></span><span class="hist-ex-detail"><span>${ex.sets || '?'}×${ex.reps || '?'}${ex.unit || '次'}</span>${ex.weight ? `<span class="hist-ex-weight">${ex.weight}kg</span>` : ''}</span></div>`;
         });
         h += `</div>`;
       } else { h += `<div class="hist-empty">该日训练详情不可用</div>` }
@@ -2245,12 +2245,12 @@ ${!sel.isPrivateDay ? `<button class="regen-btn" style="margin-left:6px;font-siz
 <div class="exname" onclick="showExDetail('${ex.name}')" style="cursor:pointer; ${!done ? 'text-decoration:line-through;opacity:.6' : ''}">${ex.name} <i class="ti ti-info-circle" style="font-size:11px;opacity:.4;vertical-align:middle"></i></div>
 ${ex.weight ? `<div class="wt-hint" style="margin-top:2px;display:block">${ex.weight}kg</div>` : ''}
 </div>
-<span class="av" style="opacity:.5;margin-right:12px">${ex.sets || '?'}\u00d7${ex.reps || '?'}${ex.unit || '\u6b21'}</span>
+<span class="av" style="opacity:.5;margin-right:12px">${ex.sets || '?'}×${ex.reps || '?'}${ex.unit || '次'}</span>
 <button class="cb${done ? ' ck' : ''}" style="cursor:default;pointer-events:none;opacity:${done ? 1 : 0.15}"><i class="ti ti-check"></i></button>
 </div>`;
           });
           h += `</div>`;
-        } else { h += `<div class="hist-empty">\u8be5\u65e5\u8bad\u7ec3\u8be6\u60c5\u4e0d\u53ef\u7528</div>` }
+        } else { h += `<div class="hist-empty">该日训练详情不可用</div>` }
         if (lg.note) h += `<div class="hist-note" style="margin-top:12px;padding:10px 14px;background:var(--surface2);border-radius:8px;font-size:12px;font-style:italic;color:var(--ink2)">"${lg.note}"</div>`;
         h += typeof renderRecoveryModule === 'function' ? renderRecoveryModule(sel) : '';
       } else {
@@ -2265,9 +2265,9 @@ ${ex.weight ? `<div class="wt-hint" style="margin-top:2px;display:block">${ex.we
           const PHASE_ICONS = { warmup: '🔥', tech: '🎯', main: '🏊', cooldown: '🧘' };
           h += `<div class="pool-mode">`;
           h += `<div class="wh">
-<span class="wh-title">${fmtDate(sel.date)} \u00b7 ${sel.workoutType}</span>
-<span class="badge" style="background:rgba(59,130,246,.12);color:#3b82f6">${S.swimLevel || '\u5165\u95e8'}</span>
-<span class="badge">${sel.duration}\u5206\u949f</span>
+<span class="wh-title">${fmtDate(sel.date)} · ${sel.workoutType}</span>
+<span class="badge" style="background:rgba(59,130,246,.12);color:#3b82f6">${S.swimLevel || '入门'}</span>
+<span class="badge">${sel.duration}分钟</span>
 </div>`;
           // Group exercises by swim phase
           let lastPhase = '';
@@ -2285,8 +2285,8 @@ ${ex.weight ? `<div class="wt-hint" style="margin-top:2px;display:block">${ex.we
 <div style="flex:1;min-width:0">
 <div class="exname">${ex.name} <i class="ti ti-info-circle" style="font-size:12px;opacity:.4;vertical-align:middle" onclick="event.stopPropagation();showExDetail('${ex.name}', '${sel.date}', ${i})"></i>${phase !== 'warmup' && phase !== 'cooldown' ? ` <span class="swap-btn" onclick="event.stopPropagation();swapExercise('${sel.date}',${i})" title="替换动作">替换</span><span class="swap-btn exclude-btn" onclick="event.stopPropagation();excludeUserExercise('${sel.date}',${i})" title="划掉/永久排除此动作">✕划掉</span>` : ''}</div>
 <div class="exnote">${ex.note}</div>
-<span class="pool-reps">${reps}\u5206\u949f</span>
-${!done ? `<button class="act-play-btn" onclick="event.stopPropagation();startTimer(${reps * 60}, '${ex.name}')">\u25b6 \u5f00\u59cb\u8ba1\u65f6 ${reps}\u5206\u949f</button>` : ''}
+<span class="pool-reps">${reps}分钟</span>
+${!done ? `<button class="act-play-btn" onclick="event.stopPropagation();startTimer(${reps * 60}, '${ex.name}')">▶ 开始计时 ${reps}分钟</button>` : ''}
 </div>
 <button class="cb${done ? ' ck' : ''}" onclick="event.stopPropagation();tog('${sel.date}',${i})"><i class="ti ti-check"></i></button>
 </div>`;
@@ -2297,7 +2297,7 @@ ${!done ? `<button class="act-play-btn" onclick="event.stopPropagation();startTi
           const alreadyLogged = LOG.some(l => l.date === sel.date); // key on date only (matches isDone/delLog/stats); date+type let a re-typed day double-log
           if (!alreadyLogged) {
             const checkedCount = Object.keys(pd).filter(k => pd[k]).length;
-            const btnText = checkedCount === sel.exercises.length ? '\u5b8c\u6210\u6e38\u6cf3\u8bad\u7ec3' : '\u7ed3\u675f\u8bad\u7ec3\u5e76\u6253\u5361';
+            const btnText = checkedCount === sel.exercises.length ? '完成游泳训练' : '结束训练并打卡';
             const btnCls = checkedCount === sel.exercises.length ? 'btn-complete-workout' : 'btn-end-workout-early';
             h += `<div class="pool-mode-bottom-bar">
 <button class="${btnCls}" onclick="endWorkoutEarly('${sel.date}')">
@@ -2348,10 +2348,10 @@ ${needsWt && locked && lastW ? `<span class="wt-hint" style="margin-top:2px;disp
 ${(ex.unit === '秒' || ex.unit === '分钟') && !locked ? `<button class="act-play-btn" onclick="startTimer(${ex.unit === '分钟' ? reps * 60 : reps}, '${ex.name}')">计时</button>` : ''}
 </div>
 ${!locked ? `
-<div class="adjg"><button class="ab" onclick="adj('${sel.date}',${i},'s',-1)">-</button><span class="av">${sets}\u7ec4</span><button class="ab" onclick="adj('${sel.date}',${i},'s',1)">+</button></div>
+<div class="adjg"><button class="ab" onclick="adj('${sel.date}',${i},'s',-1)">-</button><span class="av">${sets}组</span><button class="ab" onclick="adj('${sel.date}',${i},'s',1)">+</button></div>
 <div class="adjg"><button class="ab" onclick="adj('${sel.date}',${i},'r',-1)">-</button><span class="av">${reps}${ex.unit}${ex.bi ? '/每侧' : ''}</span><button class="ab" onclick="adj('${sel.date}',${i},'r',1)">+</button></div>
 <button class="cb${done ? ' ck' : ''}" onclick="tog('${sel.date}',${i})"><i class="ti ti-check"></i></button>
-`: `<span class="av" style="opacity:.5;margin-right:12px">${sets}\u00d7${reps}${ex.unit}${ex.bi ? '/每侧' : ''}</span>
+`: `<span class="av" style="opacity:.5;margin-right:12px">${sets}×${reps}${ex.unit}${ex.bi ? '/每侧' : ''}</span>
 <button class="cb${done ? ' ck' : ''}" style="cursor:default;pointer-events:none;opacity:${done ? 1 : 0.15}"><i class="ti ti-check"></i></button>
 `}
 </div>`;
@@ -2392,7 +2392,7 @@ ${!locked ? `
       }
     }
   } else if (sel && sel.isRest) {
-    h += `<div class="tip" style="text-align:center;padding:2rem">\u4f11\u606f\u65e5 \u2014 \u597d\u597d\u6062\u590d\uff0c\u660e\u5929\u7ee7\u7eed</div>`;
+    h += `<div class="tip" style="text-align:center;padding:2rem">休息日 — 好好恢复，明天继续</div>`;
     h += typeof renderRecoveryModule === 'function' ? renderRecoveryModule(sel) : '';
   }
   h += `<div class="tip">${tip}</div>`;
@@ -6220,15 +6220,15 @@ function showHistoryDetail(dateStr) {
   const content = document.getElementById('hist-modal-content');
   if (!modal || !content) return;
   const d = new Date(dateStr + 'T12:00:00');
-  const dayName = ['\u5468\u65e5', '\u5468\u4e00', '\u5468\u4e8c', '\u5468\u4e09', '\u5468\u56db', '\u5468\u4e94', '\u5468\u516d'][d.getDay()];
-  const dateFmt = `${d.getFullYear()}\u5e74${d.getMonth() + 1}\u6708${d.getDate()}\u65e5 ${dayName}`;
-  if (!entries.length) { content.innerHTML = `<div class="hist-detail-header"><span class="hist-detail-date">${dateFmt}</span><button class="ex-modal-close" onclick="closeHistModal()">\u2715</button></div><div class="hist-empty">\u8be5\u65e5\u6682\u65e0\u8bad\u7ec3\u8bb0\u5f55</div>`; modal.classList.add('open'); return }
-  let html = `<div class="hist-detail-header"><span class="hist-detail-date">${dateFmt}</span><button class="ex-modal-close" onclick="closeHistModal()">\u2715</button></div>`;
+  const dayName = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'][d.getDay()];
+  const dateFmt = `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日 ${dayName}`;
+  if (!entries.length) { content.innerHTML = `<div class="hist-detail-header"><span class="hist-detail-date">${dateFmt}</span><button class="ex-modal-close" onclick="closeHistModal()">✕</button></div><div class="hist-empty">该日暂无训练记录</div>`; modal.classList.add('open'); return }
+  let html = `<div class="hist-detail-header"><span class="hist-detail-date">${dateFmt}</span><button class="ex-modal-close" onclick="closeHistModal()">✕</button></div>`;
   entries.forEach(entry => {
-    html += `<div class="hist-detail-meta"><span class="hist-detail-chip type">${entry.workout || '\u8bad\u7ec3'}</span><span class="hist-detail-chip dur">${entry.duration || '?'}\u5206\u949f</span>${entry.rpe ? `<span class="hist-detail-chip rpe">RPE ${entry.rpe}/10</span>` : ''}${entry.mood ? `<span class="hist-detail-chip mood">${entry.mood}</span>` : ''}</div>`;
+    html += `<div class="hist-detail-meta"><span class="hist-detail-chip type">${entry.workout || '训练'}</span><span class="hist-detail-chip dur">${entry.duration || '?'}分钟</span>${entry.rpe ? `<span class="hist-detail-chip rpe">RPE ${entry.rpe}/10</span>` : ''}${entry.mood ? `<span class="hist-detail-chip mood">${entry.mood}</span>` : ''}</div>`;
     if (entry.exercises && entry.exercises.length) {
       html += `<div class="hist-detail-exercises">`;
-      entry.exercises.forEach(ex => { html += `<div class="hist-ex-row"><span class="hist-ex-name" onclick="showExDetail('${ex.name}')" style="cursor:pointer">${ex.name} <i class="ti ti-info-circle" style="font-size:11px;opacity:.4"></i></span><span class="hist-ex-detail"><span>${ex.sets || '?'}\u00d7${ex.reps || '?'}${ex.unit || '\u6b21'}</span>${ex.weight ? `<span class="hist-ex-weight">${ex.weight}kg</span>` : ''}</span></div>` });
+      entry.exercises.forEach(ex => { html += `<div class="hist-ex-row"><span class="hist-ex-name" onclick="showExDetail('${ex.name}')" style="cursor:pointer">${ex.name} <i class="ti ti-info-circle" style="font-size:11px;opacity:.4"></i></span><span class="hist-ex-detail"><span>${ex.sets || '?'}×${ex.reps || '?'}${ex.unit || '次'}</span>${ex.weight ? `<span class="hist-ex-weight">${ex.weight}kg</span>` : ''}</span></div>` });
       html += `</div>`
     }
     if (entry.note) html += `<div class="hist-note">"${entry.note}"</div>`;
