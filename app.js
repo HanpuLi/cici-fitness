@@ -687,6 +687,26 @@ if (imported) {
 };reader.readAsText(file);
 }
 
+// 本地快照恢复 UI(数据安全网)
+function showSnapshotRestore(){
+if(typeof listSnapshots!=='function'){return}
+const ring=listSnapshots();
+if(!ring.length){alert('还没有本地快照(用一阵子后每天会自动存档,异常时也会自动拦截存档)');return}
+const rows=ring.slice().reverse().map((s,ri)=>{
+const idx=ring.length-1-ri;
+const tag=/predrop/.test(s.reason)?' · 异常拦截存档':(s.reason==='pre-restore'?' · 恢复前':'');
+return `<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid rgba(128,128,128,.15)"><div><b>${s.d}</b> <span style="opacity:.6;font-size:12px">${s.vol||0} 条${tag}</span></div><button class="exp-btn" onclick="doRestoreSnapshot(${idx})">恢复</button></div>`;
+}).join('');
+const m=document.createElement('div');m.id='snap-restore-modal';
+m.style.cssText='position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;padding:16px';
+m.innerHTML=`<div style="background:var(--card,#fff);color:var(--ink,#222);border-radius:14px;padding:18px;max-width:420px;width:100%;max-height:82vh;overflow:auto"><div style="font-size:16px;font-weight:700;margin-bottom:4px">🕘 恢复本地快照</div><div style="font-size:12px;opacity:.65;margin-bottom:12px">每天自动存档 + 检测到数据异常时自动拦截存档。恢复会先把"当前"也存一份,可再切回。</div>${rows}<button class="exp-btn" style="width:100%;margin-top:14px" onclick="document.getElementById('snap-restore-modal').remove()">关闭</button></div>`;
+document.body.appendChild(m);
+}
+function doRestoreSnapshot(idx){
+if(!confirm('恢复到这份快照?当前数据会先自动存一份(可再切回),然后刷新。'))return;
+if(restoreSnapshot(idx)){try{sessionStorage.setItem('_justImported','1')}catch(e){}location.reload();}
+}
+
 // ══ Sync Toast ═══════════════════════════════════════════
 let _toastTimer=null;
 function showToast(msg, dur){
@@ -718,6 +738,7 @@ updateProfileUI();
 // just-recovered keys with a stale/empty cloud doc before our first push.
 if(user && typeof migrateLegacyKeys==='function' && migrateLegacyKeys(user.uid)) _localDirty=true;
 loadState();
+if(typeof saveSnapshot==='function') saveSnapshot('load');
 if(typeof render === 'function') render();
 if(typeof renderLog === 'function') renderLog();
 if(typeof renderStats === 'function') renderStats();
@@ -809,14 +830,23 @@ if(_localDirty){
     console.log('[sync] skipped cloud→local: local changes pending push');
     return;
 }
+const cd=doc.data();
+// 骤降拦截:云端数据比本地大幅偏少 → 疑似"旧云盖新本地"(丢数据主因),拦住不覆盖,反把本地推上云
+const localVol=_dataVolume(k=>lg(K[k]));
+const cloudVol=_dataVolume(k=>cd[K[k]]);
+if(localVol>=15 && cloudVol < localVol*0.6){
+  saveSnapshot('predrop-blocked');
+  _localDirty=true; clearTimeout(_pushTimer); _pushTimer=setTimeout(pushToCloud,0);
+  showToast('⚠ 云端数据异常偏少，已保留本机数据'); return;
+}
 let changed=false;
-Object.entries(doc.data()).forEach(([k,v])=>{
+Object.entries(cd).forEach(([k,v])=>{
 const nk=nsKey(k);
 const lv=localStorage.getItem(nk);
 const cv=JSON.stringify(v);
 if(lv!==cv){try{localStorage.setItem(nk,cv);changed=true}catch{}}
 });
-if(changed){loadState();renderLog();showToast('已从云端同步')}
+if(changed){loadState();renderLog();showToast('已从云端同步');saveSnapshot('post-sync')}
 },e=>console.warn('Sync error:',e));
 // Initial push — send local data up first so cloud has latest(刚导入过则立即推,尽量缩短被旧快照覆盖的窗口)
 setTimeout(()=>pushToCloud(),_justImported?0:1000);

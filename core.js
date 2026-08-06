@@ -41,6 +41,49 @@ function migrateLegacyKeys(uid) {
   return any;
 }
 
+// ══ 数据安全网:本地快照环 + 骤降拦截 + 恢复 ═══════════════════════
+// 防的是"某次本地改动没成功上云 → 下次打开被较旧云端覆盖"这类丢数据。
+// 纯新增:不改任何现有读写路径,只额外存档 + 提供恢复。
+const SNAP_KEEP = 12;
+// resolve(businessKeyName) → 该 key 的解析后值(本地或云端各给一个 resolver)
+function _dataVolume(resolve) {
+  let n = 0;
+  const a = resolve('log'); if (Array.isArray(a)) n += a.length;
+  const wh = resolve('wh'); if (wh && typeof wh === 'object') n += Object.keys(wh).length;
+  const b = resolve('body'); if (Array.isArray(b)) n += b.length;
+  const p = resolve('pr'); if (Array.isArray(p)) n += p.length;
+  const sd = resolve('sub_depth'); if (sd && Array.isArray(sd.metrics)) n += sd.metrics.length;
+  const sw = resolve('swim_log'); if (sw && typeof sw.count === 'number') n += sw.count;
+  const gm = resolve('gym_log'); if (gm && typeof gm.count === 'number') n += gm.count;
+  return n;
+}
+function _localDate() { const t = new Date(); return t.getFullYear() + '-' + String(t.getMonth() + 1).padStart(2, '0') + '-' + String(t.getDate()).padStart(2, '0'); }
+function saveSnapshot(reason) {
+  try {
+    const uid = currentUid(); if (uid === 'anon') return;
+    const vol = _dataVolume(k => lg(K[k]));
+    if (vol === 0 && !/^pre-restore/.test(reason || '')) return;   // 空数据不占位
+    const snap = { t: Date.now(), d: _localDate(), reason: reason || '', vol: vol, data: {} };
+    Object.values(K).forEach(k => { const v = localStorage.getItem(uid + '__' + k); if (v !== null) snap.data[k] = v; });
+    const rk = uid + '__snap_ring';
+    let ring = []; try { ring = JSON.parse(localStorage.getItem(rk) || '[]'); } catch {}
+    const last = ring[ring.length - 1];
+    const instant = /^(predrop|pre-restore)/;   // 拦截前/恢复前的即时快照:总是新增,不合并
+    if (last && last.d === snap.d && !instant.test(reason || '') && !instant.test(last.reason || '')) ring[ring.length - 1] = snap;
+    else ring.push(snap);
+    while (ring.length > SNAP_KEEP) ring.shift();
+    localStorage.setItem(rk, JSON.stringify(ring));
+  } catch (e) {}
+}
+function listSnapshots() { try { return JSON.parse(localStorage.getItem(currentUid() + '__snap_ring') || '[]'); } catch { return []; } }
+function restoreSnapshot(idx) {
+  const ring = listSnapshots(); const snap = ring[idx]; if (!snap) return false;
+  saveSnapshot('pre-restore');   // 恢复前先把"当前"存一份,别把现在弄丢
+  const uid = currentUid();
+  Object.entries(snap.data || {}).forEach(([k, v]) => { try { localStorage.setItem(uid + '__' + k, v); } catch {} });
+  return true;
+}
+
 // ══ State ════════════════════════════════════════════════
 const S = { goal: '女性薄肌', level: '初级', days: 3, dur: 60, equip: ['健身房全套'], focus: ['均衡全身'], limits: '', plan: null, selDate: null, prog: {}, adj: {}, weights: {}, exRpe: {}, volumeMultiplier: 1.0, restDur: 45, swimLevel: '入门', weightLevel: '初级', periodMode: false, cycleEnabled: true, cycleDay: 1, cycleLength: 28, vacuumDays: [], autoVolumeAdjust: true };
 let LOG = lg(K.log) || [];
