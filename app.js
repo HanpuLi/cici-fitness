@@ -60,8 +60,8 @@ function updateThemeBtn(theme){
 
 // ══ State Persistence ════════════════════════════════════
 function saveState(){
-ls(K.settings,{goal:S.goal,level:S.level,days:S.days,dur:S.dur,equip:S.equip,focus:S.focus,limits:S.limits,volumeMultiplier:S.volumeMultiplier,restDur:S.restDur,swimLevel:S.swimLevel,weightLevel:S.weightLevel,periodMode:S.periodMode,displayName:S.displayName,sealChar:S.sealChar,cycleEnabled:S.cycleEnabled,cycleDay:S.cycleDay,cycleLength:S.cycleLength,vacuumDays:S.vacuumDays,partnerDays:S.partnerDays,partnerUid:S.partnerUid,cheer:S.cheer});
-if(S.plan)ls(K.plan,{plan:S.plan,prog:S.prog,adj:S.adj,weights:S.weights,exRpe:S.exRpe,unlockedDates:S.unlockedDates});
+ls(K.settings,{goal:S.goal,level:S.level,days:S.days,dur:S.dur,equip:S.equip,focus:S.focus,limits:S.limits,volumeMultiplier:S.volumeMultiplier,restDur:S.restDur,swimLevel:S.swimLevel,weightLevel:S.weightLevel,periodMode:S.periodMode,displayName:S.displayName,sealChar:S.sealChar,cycleEnabled:S.cycleEnabled,cycleDay:S.cycleDay,cycleLength:S.cycleLength,vacuumDays:S.vacuumDays,partnerDays:S.partnerDays,partnerUid:S.partnerUid,autoVolumeAdjust:S.autoVolumeAdjust,userExcluded:S.userExcluded,userExcludeReasons:S.userExcludeReasons,cheer:S.cheer});
+if(S.plan)ls(K.plan,{plan:S.plan,prog:S.prog,adj:S.adj,weights:S.weights,exRpe:S.exRpe,poolLounger:S.poolLounger,flexProg:S.flexProg,unlockedDates:S.unlockedDates});
 localStorage.setItem(nsKey('fit_selDate'), S.selDate || '');
 }
 function loadState(){
@@ -81,6 +81,8 @@ if(p&&p.plan&&p.plan.days){
     S.adj=p.adj||{};
     S.weights=p.weights||{};
     S.exRpe=p.exRpe||{};
+    S.poolLounger=p.poolLounger||{};
+    S.flexProg=p.flexProg||{};
     S.unlockedDates=p.unlockedDates||[];
 }
 else{S.plan=null;}
@@ -376,7 +378,7 @@ else if(i>0)break;
 const monthLogs=LOG.filter(l=>l.date.startsWith(thisMonth));
 const t7str=addDays(tStr,-6); // -6 + 双闭区间 = 7 天窗口(原 -7 是 8 天)
 const weekDays=S.plan?S.plan.days.filter(d=>!d.isRest&&d.date>=t7str&&d.date<=tStr):[];
-const weekDone=weekDays.filter(d=>isDone(d)).length;
+const weekDone=weekDays.filter(d=>LOG.some(l=>l.date===d.date)).length; // 与"本月训练天/连续天数"口径一致:以已打卡(LOG)为准,而非勾满即算
 const weekTotal=weekDays.length;
 const weekPct=weekTotal?Math.round(weekDone/weekTotal*100):0;
 
@@ -732,6 +734,8 @@ firebase.auth().onAuthStateChanged(handleAuth);
 
 function handleAuth(user){
 _user=user;
+// 切账号时复位专项模式残留(否则登出→Cici 登录后仍可能给她弹"🟣 专项描述"提示)
+if(typeof _globalSubMode!=='undefined'){_globalSubMode=false;_exDetailSubMode=false;}
 updateProfileUI();
 // Recover pre-namespace data into this account before reading state. If anything
 // was migrated, mark local dirty so the realtime listener can't overwrite the

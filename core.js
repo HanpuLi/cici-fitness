@@ -28,7 +28,7 @@ function migrateLegacyKeys(uid) {
   if (localStorage.getItem('__ns_migrated__' + uid)) return false;
   const owner = localStorage.getItem('__legacy_owner_uid__');
   if (owner && owner !== uid) { localStorage.setItem('__ns_migrated__' + uid, '1'); return false; }
-  const BARE = ['fit_s1', 'fit_p1', 'fit_pr1', 'fit_log1', 'fit_adj1', 'fit_wh1', 'fit_pr', 'fit_swim', 'fit_gym_ach', 'fit_selDate', 'fit_body1'];
+  const BARE = ['fit_s1', 'fit_p1', 'fit_pr1', 'fit_log1', 'fit_adj1', 'fit_wh1', 'fit_pr', 'fit_swim', 'fit_gym_ach', 'fit_selDate', 'fit_body1', 'fit_sub_depth'];
   let any = false;
   BARE.forEach(k => {
     const src = localStorage.getItem(k);
@@ -85,7 +85,7 @@ function restoreSnapshot(idx) {
 }
 
 // ══ State ════════════════════════════════════════════════
-const S = { goal: '女性薄肌', level: '初级', days: 3, dur: 60, equip: ['健身房全套'], focus: ['均衡全身'], limits: '', plan: null, selDate: null, prog: {}, adj: {}, weights: {}, exRpe: {}, volumeMultiplier: 1.0, restDur: 45, swimLevel: '入门', weightLevel: '初级', periodMode: false, cycleEnabled: true, cycleDay: 1, cycleLength: 28, vacuumDays: [], autoVolumeAdjust: true };
+const S = { goal: '女性薄肌', level: '初级', days: 3, dur: 60, equip: ['健身房全套'], focus: ['均衡全身'], limits: '', plan: null, selDate: null, prog: {}, adj: {}, weights: {}, exRpe: {}, poolLounger: {}, flexProg: {}, volumeMultiplier: 1.0, restDur: 45, swimLevel: '入门', weightLevel: '初级', periodMode: false, cycleEnabled: true, cycleDay: 1, cycleLength: 28, vacuumDays: [], autoVolumeAdjust: true };
 let LOG = lg(K.log) || [];
 let W_HIST = lg(K.wh) || {};
 let PR_LIST = lg(K.pr) || []; // {date,exercise,weight,prev}
@@ -212,6 +212,52 @@ function getExcluded() {
   return s;
 }
 
+// ── 每日按序号存的状态(prog/weights/adj/exRpe)在动作数组增删/替换时的维护 ──
+// prog[date] 形如 {下标:bool};weights/exRpe 键为 `date-下标`;adj 键为 `date-下标-s|r`。
+function _clearExState(date, ei) {
+  if (S.prog[date]) delete S.prog[date][ei];
+  if (S.weights) delete S.weights[date + '-' + ei];
+  if (S.adj) { delete S.adj[date + '-' + ei + '-s']; delete S.adj[date + '-' + ei + '-r']; }
+  if (S.exRpe) delete S.exRpe[date + '-' + ei];
+}
+// 从某天动作数组删掉下标 ri(原长度 oldLen)后,把所有 >ri 的状态整体前移一位,避免打勾/重量错位一格
+function _reindexAfterRemoval(date, ri, oldLen) {
+  const shift = (get, set, del) => {
+    for (let j = ri; j < oldLen - 1; j++) { const v = get(j + 1); if (v !== undefined) set(j, v); else del(j); }
+    del(oldLen - 1);
+  };
+  if (S.prog[date]) shift(j => S.prog[date][j], (j, v) => S.prog[date][j] = v, j => delete S.prog[date][j]);
+  if (S.weights) shift(j => S.weights[date + '-' + j], (j, v) => S.weights[date + '-' + j] = v, j => delete S.weights[date + '-' + j]);
+  if (S.exRpe) shift(j => S.exRpe[date + '-' + j], (j, v) => S.exRpe[date + '-' + j] = v, j => delete S.exRpe[date + '-' + j]);
+  if (S.adj) ['-s', '-r'].forEach(suf => shift(j => S.adj[date + '-' + j + suf], (j, v) => S.adj[date + '-' + j + suf] = v, j => delete S.adj[date + '-' + j + suf]));
+}
+// 拖拽换天:进度要跟着内容走 → 交换两天所有按日期/下标存的状态
+function _swapDayState(a, b) {
+  const pa = S.prog[a], pb = S.prog[b];
+  if (pb !== undefined) S.prog[a] = pb; else delete S.prog[a];
+  if (pa !== undefined) S.prog[b] = pa; else delete S.prog[b];
+  const swapPrefix = obj => {
+    if (!obj) return;
+    const pA = a + '-', pB = b + '-', va = {}, vb = {};
+    Object.keys(obj).forEach(k => {
+      if (k.startsWith(pA)) { va[k.slice(pA.length)] = obj[k]; delete obj[k]; }
+      else if (k.startsWith(pB)) { vb[k.slice(pB.length)] = obj[k]; delete obj[k]; }
+    });
+    Object.keys(va).forEach(s => obj[pB + s] = va[s]);
+    Object.keys(vb).forEach(s => obj[pA + s] = vb[s]);
+  };
+  swapPrefix(S.weights); swapPrefix(S.exRpe); swapPrefix(S.adj);
+}
+// 有效重量:用户照预填的"建议重量"做但没手动改输入框时 getWeight 为空 → 回退用建议值,
+// 否则 W_HIST 永远空、重量建议永不递进、进步图/个人纪录失效
+function _effWeight(date, i, ex) {
+  let w = getWeight(date, i);
+  if ((w === null || w === undefined) && ex && !ex.isWarmup && !ex.isStretch && ex.unit === '次' && typeof suggestWeight === 'function') {
+    w = suggestWeight(ex.name);
+  }
+  return (w && w > 0) ? w : null;
+}
+
 function excludeUserExercise(date, ei) {
   const sel = S.plan && S.plan.days.find(d => d.date === date);
   if (!sel || !sel.exercises || !sel.exercises[ei]) return;
@@ -229,20 +275,28 @@ function excludeUserExercise(date, ei) {
   // Replace in current day if alternative available
   let group = null;
   for (const [g, exs] of Object.entries(DB)) { if (exs.find(e => e.n === name)) { group = g; break; } }
-  if (group && DB[group]) {
-    const used = sel.exercises.map(e => e.name);
-    const excluded = getExcluded();
-    const alts = DB[group].filter(e => e.n !== name && !used.includes(e.n) && !excluded.has(e.n) && S.equip.some(eq => !e.eq || e.eq.includes(eq)));
-    if (alts.length > 0) {
-      const alt = alts[0];
-      sel.exercises[ei] = { name: alt.n, note: alt.note || '', sets: ex.sets, reps: ex.reps, unit: ex.unit || alt.u || '次', group: ex.group, muscle: alt.muscle || [], diff: alt.diff, isWarmup: false, isStretch: false, bi: !!alt.bi };
-      showToast(`已排除「${name}」，自动换为「${alt.n}」`);
-    } else {
-      sel.exercises.splice(ei, 1);
-      showToast(`已排除「${name}」`);
-    }
+  const used = sel.exercises.map(e => e.name);
+  const excluded = getExcluded();
+  const isSwimEx = ex.group === 'swimming' || ex.swimPhase;
+  let alts = [];
+  if (isSwimEx) {
+    // 游泳动作:限同阶段替补(否则 swimPhase 丢失、泳日分组错乱)
+    const maxDiff = S.swimLevel === '入门' ? 1 : S.swimLevel === '进阶' ? 2 : 3;
+    alts = (DB.swimming || []).filter(e => e.swimPhase === ex.swimPhase && e.n !== name && !used.includes(e.n) && !excluded.has(e.n) && e.diff <= maxDiff);
+  } else if (group && DB[group]) {
+    // 装备过滤与生成计划一致:特判"无器材"(否则有器械的用户换不出徒手动作)
+    alts = DB[group].filter(e => e.n !== name && !used.includes(e.n) && !excluded.has(e.n) && (!e.eq || e.eq.some(q => q === '无器材' || S.equip.includes(q))));
+  }
+  if (alts.length > 0) {
+    const alt = alts[0];
+    _clearExState(date, ei); // 新动作用干净槽位,不继承旧动作的勾选/重量/组数
+    sel.exercises[ei] = { name: alt.n, note: alt.note || '', sets: ex.sets, reps: ex.reps, unit: ex.unit || alt.u || '次', group: ex.group, muscle: alt.muscle || [], diff: alt.diff, isWarmup: false, isStretch: false, bi: !!alt.bi };
+    if (alt.swimPhase) sel.exercises[ei].swimPhase = alt.swimPhase;
+    showToast(`已排除「${name}」，自动换为「${alt.n}」`);
   } else {
+    const oldLen = sel.exercises.length;
     sel.exercises.splice(ei, 1);
+    _reindexAfterRemoval(date, ei, oldLen); // 后续动作前移一位,按序号存的状态跟着搬,避免错位
     showToast(`已排除「${name}」`);
   }
   saveState();
@@ -260,14 +314,20 @@ function excludeUserExerciseByName(name) {
   if (!S.userExcludeReasons) S.userExcludeReasons = {};
   S.userExcludeReasons[name] = reason || '用户手动排除';
   
-  saveState();
   if (S.plan && S.plan.days) {
     S.plan.days.forEach(day => {
-      if (day.exercises) {
-        day.exercises = day.exercises.filter(ex => ex.name !== name);
+      if (!day.exercises) return;
+      // 倒序删除并逐个重排该天的按序号状态,避免打勾/重量错位
+      for (let i = day.exercises.length - 1; i >= 0; i--) {
+        if (day.exercises[i].name === name) {
+          const oldLen = day.exercises.length;
+          day.exercises.splice(i, 1);
+          _reindexAfterRemoval(day.date, i, oldLen);
+        }
       }
     });
   }
+  saveState(); // 排除列表 + 计划改动一起落盘
   showToast(`已永久排除动作：「${name}」`);
   render();
   if (typeof renderExcludedList === 'function') renderExcludedList();
@@ -1533,8 +1593,9 @@ const COMBO_PATTERNS = {
 // ── Period mode: gentle land-based alternative to swim ──
 function pickPeriodAlternative() {
   const excluded = getExcluded();
-  const corePool = (DB.core || []).filter(ex => ex.diff <= 1 && !excluded.has(ex.n) && !ex.n.includes('转体') && !ex.n.includes('卷腹') && !ex.n.includes('抬腿') && !ex.n.includes('伐木'));
-  const cardioPool = (DB.cardio || []).filter(ex => ex.diff <= 1 && !excluded.has(ex.n) && !ex.n.includes('跳') && !ex.n.includes('波比'));
+  const _equipOk = ex => !ex.eq || ex.eq.some(q => q === '无器材' || S.equip.includes(q)); // 按用户装备过滤,别开出没有的器械
+  const corePool = (DB.core || []).filter(ex => ex.diff <= 1 && !excluded.has(ex.n) && _equipOk(ex) && !ex.n.includes('转体') && !ex.n.includes('卷腹') && !ex.n.includes('抬腿') && !ex.n.includes('伐木'));
+  const cardioPool = (DB.cardio || []).filter(ex => ex.diff <= 1 && !excluded.has(ex.n) && _equipOk(ex) && !ex.n.includes('跳') && !ex.n.includes('波比'));
   const exercises = [];
   // 1. Warm-up: light cardio 10min
   const warmup = cardioPool.find(ex => ex.n.includes('椭圆') || ex.n.includes('骑行') || ex.n.includes('慢跑')) || cardioPool[0];
@@ -1737,7 +1798,7 @@ hasGoal('翘臀美背') ? (GLUTE_BACK_SPLITS[gymPerWeek] || GLUTE_BACK_SPLITS[3]
       if (S.periodMode) {
         days.push({ date: ds, isRest: false, isSwimDay: false, workoutType: '轻量替代', duration: 40, exercises: pickPeriodAlternative() });
       } else {
-        days.push({ date: ds, isRest: false, isSwimDay: true, workoutType: '游泳训练', duration: 50, exercises: pickSwimExercises() });
+        days.push({ date: ds, isRest: false, isSwimDay: true, workoutType: '游泳训练', duration: S.dur, exercises: pickSwimExercises() });
       }
     } else {
       days.push({ date: ds, isRest: true, workoutType: '休息', duration: 0, exercises: [] });
@@ -2827,6 +2888,8 @@ function _runNextMultiSegment() {
     _multiTimerIdx = 0;
     showToast('冷热交替引导完成！体表循环全面激活');
     playWorkoutCompleteSound();
+    clearInterval(_timerInterval); // 最后一段收尾:停表+放屏幕锁
+    _releaseWakeLock();
     return;
   }
   const seg = _multiTimerQueue[_multiTimerIdx];
@@ -2920,11 +2983,20 @@ function startTimer(seconds, label = "休息中") {
         playDing();
         _notifyRestDone();
         bar.dataset.dinged = '1';
-        if (!(_globalSubMode && _ownerSession() && hasGoal('女性曲线'))) {
+        const _subOvertime = _globalSubMode && _ownerSession() && hasGoal('女性曲线');
+        if (!_subOvertime) {
           setTimeout(() => { bar.classList.remove('show'); }, 3000);
         }
-        if (_multiTimerQueue.length > 0 && _multiTimerIdx < _multiTimerQueue.length) {
+        const _isMulti = _multiTimerQueue.length > 0;
+        // 多段表(冷热交替浴):无论中途还是最后一段都续跑一次——最后一段会命中完成分支(提示+复位+收尾)
+        if (_isMulti) {
           setTimeout(() => { _runNextMultiSegment(); }, 2000);
+        }
+        // 收尾:非 sub-mode 罚站、且不是多段表 → 释放 setInterval 与屏幕唤醒锁(多段表由 _runNextMultiSegment 收尾)。
+        // 原来的清理写在恒不成立的 remain<=-3 分支里=死代码,导致计时结束后空转、屏幕不灭耗电。
+        if (!_subOvertime && !_isMulti) {
+          clearInterval(_timerInterval);
+          _releaseWakeLock();
         }
       }
       
@@ -2958,9 +3030,6 @@ function startTimer(seconds, label = "休息中") {
             bar.style.boxShadow = '0 0 10px rgba(255, 0, 0, 0.4)';
           }
         }
-      } else if (remain <= -3) {
-         clearInterval(_timerInterval);
-         _releaseWakeLock();
       }
     }
   }
@@ -3082,6 +3151,7 @@ function closeRpeModal() {
   _pendingRpeDate = null;
   _pendingRpeDay = null;
   _editingLogIdx = null;
+  _pendingEarlyEnd = false; // 从弹窗外部关闭也复位,否则残留会让"练满"被误判成提前结束、跳过强度评估
 }
 
 function editLog(idx) {
@@ -3138,6 +3208,9 @@ function submitRPE(rpe, isSkip = false) {
       };
     }
 
+    // 防同日重复打卡:重算/改类型后再次打卡会走到这,同一天只保留一条(与全app的日期唯一键一致)
+    const _dupIdx = LOG.findIndex(l => l.date === date);
+    if (_dupIdx !== -1) LOG.splice(_dupIdx, 1);
     LOG.unshift({
       date: date,
       workout: day.workoutType,
@@ -3149,7 +3222,7 @@ function submitRPE(rpe, isSkip = false) {
         sets: getAdj(date, i, 's', ex.sets),
         reps: getAdj(date, i, 'r', ex.reps),
         unit: ex.unit,
-        weight: getWeight(date, i) || null,
+        weight: _effWeight(date, i, ex),
         done: !!(S.prog[date] && S.prog[date][i])
       })),
       mood: moods[actualRpe - 1] || '一般',
@@ -3226,7 +3299,7 @@ function submitRPE(rpe, isSkip = false) {
 
     // Save weight history per exercise
     day.exercises.forEach((ex, i) => {
-      const w = getWeight(date, i);
+      const w = _effWeight(date, i, ex); // 没手动改则回退建议值,保证照做也进历史
       if (w && w > 0 && !ex.isWarmup && !ex.isStretch && ex.unit === '次' && S.prog[date] && S.prog[date][i]) { // only record weight for exercises actually completed
         if (!W_HIST[ex.name]) W_HIST[ex.name] = [];
         W_HIST[ex.name].push({ date, weight: w, rpe: (getExRpe(date, i) ?? actualRpe), period: S.periodMode, reps: getAdj(date, i, 'r', ex.reps) }); // 逐动作RPE优先(无则用整场RPE);reps=实际调整次数 → 估算 1RM
@@ -3311,7 +3384,7 @@ function tog(date, ei) {
   }
 
   if (day && isDone(day)) {
-    const exists = LOG.find(l => l.date === date && l.workout === day.workoutType);
+    const exists = LOG.find(l => l.date === date); // 全app以"日期"为唯一打卡键;曾用 date+类型 → 重算改类型后同日可二次打卡
     if (!exists) {
       _pendingRpeDate = date;
       _pendingRpeDay = day;
@@ -3367,7 +3440,7 @@ function swapExercise(date, ei) {
   if (!group) { showToast('找不到替代动作'); return }
   const used = sel.exercises.map(e => e.name);
   const excluded = getExcluded();
-  const alts = DB[group].filter(e => e.n !== ex.name && !used.includes(e.n) && !excluded.has(e.n) && S.equip.some(eq => !e.eq || e.eq.includes(eq)));
+  const alts = DB[group].filter(e => e.n !== ex.name && !used.includes(e.n) && !excluded.has(e.n) && (!e.eq || e.eq.some(q => q === '无器材' || S.equip.includes(q))));
   if (!alts.length) { showToast('没有更多替代动作'); return }
   // Show choice modal
   const diffLabel = ['', '★', '★★', '★★★'];
@@ -3413,10 +3486,8 @@ function doSwap(date, ei, altIdx) {
   // second swap's swim-detection don't break.
   sel.exercises[ei] = { name: alt.n, note: alt.note || '', sets: ex.sets, reps: newReps, unit: newUnit, group: ex.group, muscle: alt.muscle || [], diff: alt.diff, isWarmup: false, isStretch: false, bi: !!alt.bi };
   if (alt.swimPhase) sel.exercises[ei].swimPhase = alt.swimPhase;
-  // The new exercise inherits a fresh slot — drop the previous exercise's weight/adjust/done.
-  if (S.weights) delete S.weights[date + '-' + ei];
-  if (S.adj) { delete S.adj[date + '-' + ei + '-s']; delete S.adj[date + '-' + ei + '-r']; }
-  if (S.prog[date]) delete S.prog[date][ei];
+  // The new exercise inherits a fresh slot — drop the previous exercise's weight/adjust/done/rpe.
+  _clearExState(date, ei);
   document.getElementById('swap-modal').classList.remove('open');
   saveState(); render();
   showToast(`已替换为 ${alt.n}`);
@@ -3477,6 +3548,9 @@ function dragDrop(e, targetDate) {
   [src.isRest, tgt.isRest] = [tgt.isRest, src.isRest];
   [src.isSwimDay, tgt.isSwimDay] = [tgt.isSwimDay, src.isSwimDay];
   [src.duration, tgt.duration] = [tgt.duration, src.duration];
+  [src._splitGroups, tgt._splitGroups] = [tgt._splitGroups, src._splitGroups]; // 私享按肌群挑动作要靠它
+  [src.isPrivateDay, tgt.isPrivateDay] = [tgt.isPrivateDay, src.isPrivateDay];
+  _swapDayState(src.date, tgt.date); // 勾选/重量/组数次数按日期存,跟着内容一起换,避免"勾了一半没打卡"的天错位
   saveState(); render();
   showToast('已交换训练顺序');
 }
@@ -6560,7 +6634,7 @@ function renderAddExList(groupKey) {
 
   const usedNames = new Set((sel.exercises || []).map(e => e.name));
   const excluded = getExcluded();
-  const available = DB[groupKey].filter(e => !usedNames.has(e.n) && !excluded.has(e.n) && S.equip.some(eq => !e.eq || e.eq.includes(eq)));
+  const available = DB[groupKey].filter(e => !usedNames.has(e.n) && !excluded.has(e.n) && (!e.eq || e.eq.some(q => q === '无器材' || S.equip.includes(q))));
 
   const listEl = document.getElementById('add-ex-list');
   if (!listEl) return;
@@ -6618,23 +6692,69 @@ function doAddExercise(groupKey, poolIdx) {
 window.doAddExercise = doAddExercise;
 
 // ══ Post-Workout Hydro & Thermal Recovery Module ═══════════
-function renderRecoveryModule(sel) {
-  if (!S.equip.includes('泳池')) return '';
+// 小区有两个泳池区、交替去,其中一个没有热躺椅 → 按日期记住"本次去哪个"。
+// 未选过的日子沿用最近一次的选择(交替时点一下切换即可),没有任何历史时默认"有热躺椅"。
+function _poolHasLounger(date) {
+  const m = S.poolLounger || {};
+  if (date in m) return m[date];
+  const prior = Object.keys(m).filter(d => d < date).sort();
+  if (prior.length) return m[prior[prior.length - 1]];
+  const any = Object.keys(m).sort();
+  if (any.length) return m[any[0]];
+  return true;
+}
+function setPoolLounger(date, has) {
+  if (!S.poolLounger) S.poolLounger = {};
+  S.poolLounger[date] = has;
+  saveState(); render();
+}
+window.setPoolLounger = setPoolLounger;
 
-  const totalMins = (sel && sel.duration) || S.dur || 60;
+function renderRecoveryModule(sel) {
+  // 桑拿/Hot Tub 只在游泳日出现——健身日不会为了泡桑拿特地换泳衣
+  if (!sel || !sel.isSwimDay) return '';
+
+  // 跟随「每次时长」设置(与游泳动作的时间分配同一来源 S.dur),而不是写死的 sel.duration
+  const totalMins = S.dur || sel.duration || 60;
   const swimMins = Math.max(20, Math.round(totalMins * 0.65));
   const recoveryMins = Math.max(10, totalMins - swimMins);
 
-  const saunaMins = Math.max(8, Math.round(recoveryMins * 0.55));
-  const hottubMins = Math.max(5, Math.round(recoveryMins * 0.45));
-  const loungerMins = Math.max(5, Math.round(recoveryMins * 0.35));
+  const hasLounger = _poolHasLounger(sel.date);
+
+  // 按权重瓜分 recoveryMins,余数落到最后一项 → 各项加总正好等于 recoveryMins(无四舍五入溢出)
+  let saunaMins, hottubMins, loungerMins;
+  if (hasLounger) {
+    saunaMins = Math.round(recoveryMins * 0.45);
+    hottubMins = Math.round(recoveryMins * 0.30);
+    loungerMins = recoveryMins - saunaMins - hottubMins;
+  } else {
+    saunaMins = Math.round(recoveryMins * 0.60);
+    hottubMins = recoveryMins - saunaMins;
+    loungerMins = 0;
+  }
+
+  const segBtn = (has, label) => `<button onclick="setPoolLounger('${sel.date}',${has})" style="flex:1;font-size:11px;padding:5px 8px;border-radius:6px;border:1px solid ${hasLounger === has ? 'var(--terra)' : 'var(--border)'};background:${hasLounger === has ? 'rgba(200,120,90,.12)' : 'var(--surface1)'};color:${hasLounger === has ? 'var(--terra)' : 'var(--ink3)'};font-weight:${hasLounger === has ? '600' : '400'};cursor:pointer">${label}</button>`;
+
+  const loungerRow = hasLounger ? `
+    <div style="display:flex;align-items:center;justify-content:space-between;background:var(--surface1);padding:8px 10px;border-radius:8px">
+      <div>
+        <div style="font-size:13px;font-weight:600;color:var(--ink)">🛋️ 石板热躺椅放松</div>
+        <div style="font-size:10px;color:var(--ink3)">智能匹配 ${loungerMins}分钟 · 全身体表静止热传导放松</div>
+      </div>
+      <button class="act-play-btn" onclick="startTimer(${loungerMins}*60,'🛋️ 热躺椅放松中')">开始 ${loungerMins}分</button>
+    </div>` : '';
 
   return `<details class="recovery-box" style="margin-top:12px;background:var(--surface2);border-radius:10px;padding:10px 12px;border:1px solid var(--border)">
   <summary style="font-size:13px;font-weight:600;color:var(--ink);cursor:pointer;display:flex;align-items:center;justify-content:space-between">
     <span>🧖 训练后水疗与水温恢复</span>
-    <span style="font-size:11px;color:var(--ink3)">桑拿 · Hot Tub · 热躺椅 ▾</span>
+    <span style="font-size:11px;color:var(--ink3)">桑拿 · Hot Tub${hasLounger ? ' · 热躺椅' : ''} ▾</span>
   </summary>
   <div style="margin-top:10px;display:flex;flex-direction:column;gap:8px">
+    <div style="display:flex;gap:6px;align-items:center">
+      <span style="font-size:11px;color:var(--ink3);white-space:nowrap">📍 本次泳池区</span>
+      ${segBtn(true, '🛋️ 有热躺椅')}
+      ${segBtn(false, '🚫 无热躺椅')}
+    </div>
     <div style="font-size:11px;color:var(--terra);background:var(--surface1);padding:6px 10px;border-radius:6px;line-height:1.4">
       💡 <b>智能比例算入健身时间</b>（设为${totalMins}分钟）：建议水中训练 ${swimMins}分钟 + 排毒放松 ${recoveryMins}分钟
     </div>
@@ -6652,13 +6772,7 @@ function renderRecoveryModule(sel) {
       </div>
       <button class="act-play-btn" onclick="startTimer(${hottubMins}*60,'🛁 Hot Tub水疗中')">开始 ${hottubMins}分</button>
     </div>
-    <div style="display:flex;align-items:center;justify-content:space-between;background:var(--surface1);padding:8px 10px;border-radius:8px">
-      <div>
-        <div style="font-size:13px;font-weight:600;color:var(--ink)">🛋️ 石板热躺椅放松</div>
-        <div style="font-size:10px;color:var(--ink3)">智能匹配 ${loungerMins}分钟 · 全身体表静止热传导放松</div>
-      </div>
-      <button class="act-play-btn" onclick="startTimer(${loungerMins}*60,'🛋️ 热躺椅放松中')">开始 ${loungerMins}分</button>
-    </div>
+    ${loungerRow}
     <div style="display:flex;align-items:center;justify-content:space-between;background:var(--surface1);padding:8px 10px;border-radius:8px">
       <div>
         <div style="font-size:13px;font-weight:600;color:var(--ink)">🔄 冷热交替浴引导</div>
