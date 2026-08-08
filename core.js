@@ -6189,7 +6189,15 @@ function renderExDetailContent() {
     if (subActive) {
       _strEl.innerHTML = '';
     } else {
-      const _demo = `<a href="https://search.bilibili.com/all?keyword=${encodeURIComponent(name + ' 动作教学')}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:4px;font-size:12px;color:var(--terra);text-decoration:none;margin-bottom:10px"><i class="ti ti-player-play"></i>看视频示范（B站搜索）</a>`;
+      const _dq = encodeURIComponent(name + ' 动作教学');
+      const _djump = (href, label, title) => `<a href="${href}" target="_blank" rel="noopener" title="${title}" style="display:inline-flex;align-items:center;gap:3px;font-size:11px;color:var(--terra);text-decoration:none;border:1px solid var(--terra-br);border-radius:14px;padding:4px 11px;background:var(--terra-bg);font-weight:600">${label}</a>`;
+      const _demo = `<div style="font-size:11px;color:var(--ink3);margin-bottom:5px">🎬 动作示范 · 看怎么做</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">
+        ${_djump('https://www.douyin.com/search/' + _dq, '▶ 抖音', '在抖音搜索该动作演示')}
+        ${_djump('https://www.xiaohongshu.com/search_result?keyword=' + _dq, '📕 小红书', '在小红书搜索该动作演示')}
+        ${_djump('https://search.bilibili.com/all?keyword=' + _dq, '📺 B站', '在B站搜索该动作视频')}
+        ${_djump('https://keep.com/', '🟢 Keep', '打开 Keep app（Keep 无关键词搜索链接，需自行搜索）')}
+      </div>`;
       const _str = _e1rm ? `<div style="background:var(--surface2);border-radius:8px;padding:8px 10px;margin-bottom:10px;font-size:12px"><div style="display:flex;justify-content:space-between"><span>预计 1RM（基于你的历史）</span><b style="color:var(--terra)">≈ ${_e1rm} kg</b></div><div style="font-size:11px;color:var(--ink3);margin-top:4px">目标重量参考：力量5次≈${weightForReps(_e1rm, 5)}・增肌10次≈${weightForReps(_e1rm, 10)}・塑形15次≈${weightForReps(_e1rm, 15)} kg</div></div>` : '';
       _strEl.innerHTML = _demo + _str;
     }
@@ -6264,7 +6272,8 @@ function handleTitleClick() {
 
 // 一键看示范:直接开 B 站搜该动作教学(练到不会的当场看,不用退出app满世界找)
 function openDemo(name) {
-  try { window.open('https://search.bilibili.com/all?keyword=' + encodeURIComponent(name + ' 动作教学'), '_blank', 'noopener'); } catch (e) {}
+  // 「▶示范」快捷按钮 → 抖音搜索(动作演示最多);详情弹窗里另有 抖音/小红书/B站/Keep 一排
+  try { window.open('https://www.douyin.com/search/' + encodeURIComponent(name + ' 动作教学'), '_blank', 'noopener'); } catch (e) {}
 }
 window.openDemo = openDemo;
 
