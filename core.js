@@ -2202,10 +2202,10 @@ function render() {
       h += `<div class="sub-daily-quote">${_dts[_di]}</div>`;
     }
     const _streak = SUB_DEPTH.streak || 0;
-    if (_streak >= 2) h += `<div style="text-align:center;margin:-4px 0 10px"><span style="font-size:10px;color:rgba(232,121,249,0.55);border:1px solid rgba(232,121,249,0.18);border-radius:20px;padding:2px 12px;letter-spacing:0.1em">连续 ${_streak} 天</span></div>`;
+    if (_streak >= 2) h += `<div style="text-align:center;margin:-4px 0 10px"><span style="font-size:10px;color:rgba(var(--terra-rgb),0.55);border:1px solid rgba(var(--terra-rgb),0.18);border-radius:20px;padding:2px 12px;letter-spacing:0.1em">连续 ${_streak} 天</span></div>`;
     const _recentM = (SUB_DEPTH.metrics || []).slice(-8);
     if (_recentM.length >= 2) {
-      const _mrow = (k, lbl) => `<div class="smc-row"><span class="smc-lbl">${lbl}</span><div>${_recentM.map(m => { const v = ((m?.[k] || 1) - 1) / 3; return `<span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:rgba(232,121,249,${(0.15 + v * 0.8).toFixed(2)});margin:0 2px;vertical-align:middle"></span>`; }).join('')}</div></div>`;
+      const _mrow = (k, lbl) => `<div class="smc-row"><span class="smc-lbl">${lbl}</span><div>${_recentM.map(m => { const v = ((m?.[k] || 1) - 1) / 3; return `<span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:rgba(var(--terra-rgb),${(0.15 + v * 0.8).toFixed(2)});margin:0 2px;vertical-align:middle"></span>`; }).join('')}</div></div>`;
       h += `<div class="sub-metrics-chart">${_mrow('sec','sec')}${_mrow('lock','lock')}${_mrow('mental','◇')}</div>`;
     }
   }
@@ -2251,8 +2251,8 @@ ${!isCurrentView ? `<button class="cal-nav-btn today-btn" onclick="calGoToday()"
     h += `<div class="${cls}" ${drag} ${click}>
 <div class="dn">${fmtDate(d.date)}</div>
 <div class="dt">${d.isRest ? (isPlan ? '休息' : '—') : d.workoutType}</div>
-${done && isPlan ? (_subCal ? '<span style="font-size:9px;color:#c084fc;text-shadow:0 0 6px rgba(192,132,252,0.8)">●</span>' : '<i class="ti ti-check" style="font-size:10px;color:#3e7d52"></i>') : ''}
-${_subCal && _lockVal ? `<span style="font-size:8px;color:rgba(232,121,249,0.6);letter-spacing:-0.5px">${'|'.repeat(Math.min(_lockVal, 4))}</span>` : ''}
+${done && isPlan ? (_subCal ? '<span style="font-size:9px;color:var(--terra);text-shadow:0 0 6px rgba(var(--terra-rgb),0.8)">●</span>' : '<i class="ti ti-check" style="font-size:10px;color:#3e7d52"></i>') : ''}
+${_subCal && _lockVal ? `<span style="font-size:8px;color:rgba(var(--terra-rgb),0.6);letter-spacing:-0.5px">${'|'.repeat(Math.min(_lockVal, 4))}</span>` : ''}
 ${isLog && !isPlan ? '<i class="ti ti-check" style="font-size:10px;color:var(--blue)"></i>' : ''}
 ${locked && !d.isRest ? '<i class="ti ti-lock" style="font-size:9px;color:var(--ink3)"></i>' : ''}
 </div>`;
@@ -2430,7 +2430,7 @@ ${!locked ? `
               _picks.forEach((t, i) => {
                 h += `<div class="sub-task-item${_td[i] ? ' done' : ''}" onclick="_subTaskToggle('${sel.date}',${i})"><span class="sub-task-check">${_td[i] ? '◆' : '◇'}</span><span class="sub-task-text">${t}</span></div>`;
               });
-              if (_allDone) h += `<div style="text-align:center;font-size:10px;color:rgba(232,121,249,0.4);padding:4px 0 2px;letter-spacing:0.08em">已完成</div>`;
+              if (_allDone) h += `<div style="text-align:center;font-size:10px;color:rgba(var(--terra-rgb),0.4);padding:4px 0 2px;letter-spacing:0.08em">已完成</div>`;
               h += `</div>`;
             }
           }
@@ -2701,8 +2701,8 @@ function _showSetMsg(text) {
   if (existing) existing.remove();
   const div = document.createElement('div');
   div.id = '_set-msg-overlay';
-  div.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(8,4,16,0.93);border:1px solid rgba(232,121,249,0.22);border-radius:12px;padding:14px 22px;z-index:2500;text-align:center;pointer-events:none;max-width:280px';
-  div.innerHTML = `<div style="color:rgba(240,171,252,0.88);font-size:13px;line-height:1.65">${text}</div>`;
+  div.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(8,4,16,0.93);border:1px solid rgba(var(--terra-rgb),0.22);border-radius:12px;padding:14px 22px;z-index:2500;text-align:center;pointer-events:none;max-width:280px';
+  div.innerHTML = `<div style="color:rgba(var(--terra-rgb),0.88);font-size:13px;line-height:1.65">${text}</div>`;
   document.body.appendChild(div);
   setTimeout(() => { if (document.body.contains(div)) div.remove(); }, 2200);
 }
@@ -2710,11 +2710,11 @@ function _showSetMsg(text) {
 function _openSubDiary(date) {
   const entry = LOG.find(l => l.date === date);
   if (!entry) return;
-  const BTN = 'padding:8px 20px;border-radius:8px;font-size:13px;cursor:pointer;font-family:inherit;border:1px solid rgba(232,121,249,0.3)';
+  const BTN = 'padding:8px 20px;border-radius:8px;font-size:13px;cursor:pointer;font-family:inherit;border:1px solid rgba(var(--terra-rgb),0.3)';
   const div = document.createElement('div');
   div.id = '_sub-diary-overlay';
   div.style.cssText = 'position:fixed;inset:0;background:rgba(6,3,14,0.96);z-index:3200;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px;gap:14px';
-  div.innerHTML = `<div style="font-size:10px;color:rgba(232,121,249,0.4);letter-spacing:0.12em">${date}</div><textarea id="_sdt" style="width:100%;max-width:320px;min-height:130px;background:rgba(20,11,30,0.9);border:1px solid rgba(232,121,249,0.2);border-radius:10px;color:#f0abfc;font-size:13px;line-height:1.75;padding:12px;font-family:inherit;resize:none;outline:none" placeholder="…">${entry.subDiary || ''}</textarea><div style="display:flex;gap:12px"><button style="${BTN};background:rgba(232,121,249,0.12);color:#f0abfc" onclick="_saveSubDiary('${date}')">保存</button><button style="${BTN};background:transparent;color:rgba(192,132,252,0.5)" onclick="document.getElementById('_sub-diary-overlay').remove()">取消</button></div>`;
+  div.innerHTML = `<div style="font-size:10px;color:rgba(var(--terra-rgb),0.4);letter-spacing:0.12em">${date}</div><textarea id="_sdt" style="width:100%;max-width:320px;min-height:130px;background:rgba(20,11,30,0.9);border:1px solid rgba(var(--terra-rgb),0.2);border-radius:10px;color:var(--terra);font-size:13px;line-height:1.75;padding:12px;font-family:inherit;resize:none;outline:none" placeholder="…">${entry.subDiary || ''}</textarea><div style="display:flex;gap:12px"><button style="${BTN};background:rgba(var(--terra-rgb),0.12);color:var(--terra)" onclick="_saveSubDiary('${date}')">保存</button><button style="${BTN};background:transparent;color:rgba(var(--terra-rgb),0.5)" onclick="document.getElementById('_sub-diary-overlay').remove()">取消</button></div>`;
   document.body.appendChild(div);
   setTimeout(() => { const t = document.getElementById('_sdt'); if (t) t.focus(); }, 50);
 }
@@ -2752,7 +2752,7 @@ function _checkStreakMilestone(streak) {
 function _showStreakReward(streak, text) {
   const div = document.createElement('div');
   div.style.cssText = 'position:fixed;inset:0;background:rgba(6,3,14,0.98);z-index:3100;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px;text-align:center;cursor:pointer';
-  div.innerHTML = `<div style="font-size:10px;letter-spacing:0.18em;color:rgba(232,121,249,0.45);margin-bottom:18px">连续 ${streak} 天</div><div style="color:rgba(240,171,252,0.97);font-size:15px;line-height:2.1;max-width:290px;text-shadow:0 0 24px rgba(232,121,249,0.9),0 0 60px rgba(167,139,250,0.4)">${text}</div><div style="margin-top:28px;width:32px;height:1px;background:rgba(232,121,249,0.25)"></div>`;
+  div.innerHTML = `<div style="font-size:10px;letter-spacing:0.18em;color:rgba(var(--terra-rgb),0.45);margin-bottom:18px">连续 ${streak} 天</div><div style="color:rgba(var(--terra-rgb),0.97);font-size:15px;line-height:2.1;max-width:290px;text-shadow:0 0 24px rgba(var(--terra-rgb),0.9),0 0 60px rgba(var(--terra-rgb),0.4)">${text}</div><div style="margin-top:28px;width:32px;height:1px;background:rgba(var(--terra-rgb),0.25)"></div>`;
   document.body.appendChild(div);
   div.addEventListener('click', () => div.remove());
   setTimeout(() => { if (document.body.contains(div)) div.remove(); }, 6000);
@@ -2832,7 +2832,7 @@ function _showPrivDesc(name) {
   const steps = (EX_SUB_DESC[name].steps || []).map(dec).filter(Boolean);
   const div = document.createElement('div');
   div.style.cssText = 'position:fixed;inset:0;background:rgba(8,4,16,0.95);z-index:3000;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:36px;text-align:center;cursor:pointer';
-  div.innerHTML = `<div style="color:#f0abfc;font-size:14px;font-weight:600;margin-bottom:14px;text-shadow:0 0 16px rgba(232,121,249,0.8)">${n}</div><div style="color:rgba(233,196,255,0.8);font-size:13px;line-height:1.85;max-width:300px">${steps.join('<br><br>')}</div><div style="margin-top:20px;font-size:11px;color:rgba(192,132,252,0.4)">点击关闭</div>`;
+  div.innerHTML = `<div style="color:var(--terra);font-size:14px;font-weight:600;margin-bottom:14px;text-shadow:0 0 16px rgba(var(--terra-rgb),0.8)">${n}</div><div style="color:rgba(var(--terra-rgb),0.8);font-size:13px;line-height:1.85;max-width:300px">${steps.join('<br><br>')}</div><div style="margin-top:20px;font-size:11px;color:rgba(var(--terra-rgb),0.4)">点击关闭</div>`;
   document.body.appendChild(div);
   div.addEventListener('click', () => div.remove());
   setTimeout(() => { if (document.body.contains(div)) div.remove(); }, 6000);
@@ -2846,7 +2846,7 @@ function _showRitual(cb) {
   const text = texts[Math.floor(Math.random() * texts.length)];
   const div = document.createElement('div');
   div.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.93);z-index:2000;display:flex;align-items:center;justify-content:center;padding:40px;text-align:center;cursor:pointer';
-  div.innerHTML = `<div style="color:rgba(238,185,255,0.95);font-size:15px;line-height:1.9;max-width:300px;text-shadow:0 0 20px rgba(180,60,240,0.7)">${text}</div>`;
+  div.innerHTML = `<div style="color:rgba(var(--terra-rgb),0.95);font-size:15px;line-height:1.9;max-width:300px;text-shadow:0 0 20px rgba(var(--terra-rgb),0.7)">${text}</div>`;
   document.body.appendChild(div);
   const dismiss = () => { div.remove(); cb(); };
   div.addEventListener('click', dismiss);
@@ -3400,7 +3400,7 @@ function tog(date, ei) {
           const text = msgs[Math.floor(Math.random() * msgs.length)];
           const div = document.createElement('div');
           div.style.cssText = 'position:fixed;inset:0;background:rgba(8,4,16,0.97);z-index:3000;display:flex;align-items:center;justify-content:center;padding:40px;text-align:center;cursor:pointer';
-          div.innerHTML = `<div style="color:rgba(238,185,255,0.97);font-size:15px;line-height:2;max-width:300px;text-shadow:0 0 24px rgba(232,121,249,0.9)">${text}</div>`;
+          div.innerHTML = `<div style="color:rgba(var(--terra-rgb),0.97);font-size:15px;line-height:2;max-width:300px;text-shadow:0 0 24px rgba(var(--terra-rgb),0.9)">${text}</div>`;
           document.body.appendChild(div);
           const done = () => { div.remove(); _openRpe(); };
           div.addEventListener('click', done);
@@ -6309,9 +6309,9 @@ function showHistoryDetail(dateStr) {
     if (_globalSubMode && _ownerSession() && entry.subMetrics) {
       const sm = entry.subMetrics;
       const dots = (val, max = 4) => Array.from({length: max}, (_, i) =>
-        `<span style="display:inline-block;width:6px;height:6px;border-radius:50%;margin:0 2px;background:${i < val ? '#e879f9' : 'rgba(232,121,249,0.15)'}"></span>`
+        `<span style="display:inline-block;width:6px;height:6px;border-radius:50%;margin:0 2px;background:${i < val ? 'var(--terra)' : 'rgba(var(--terra-rgb),0.15)'}"></span>`
       ).join('');
-      html += `<div style="padding:6px 12px 2px;display:flex;gap:12px;align-items:center"><span style="font-size:10px;color:rgba(192,132,252,0.5)">sec</span>${dots(sm.sec)}<span style="font-size:10px;color:rgba(192,132,252,0.5)">lock</span>${dots(sm.lock)}<span style="font-size:10px;color:rgba(192,132,252,0.5)">◇</span>${dots(sm.mental)}</div>`;
+      html += `<div style="padding:6px 12px 2px;display:flex;gap:12px;align-items:center"><span style="font-size:10px;color:rgba(var(--terra-rgb),0.5)">sec</span>${dots(sm.sec)}<span style="font-size:10px;color:rgba(var(--terra-rgb),0.5)">lock</span>${dots(sm.lock)}<span style="font-size:10px;color:rgba(var(--terra-rgb),0.5)">◇</span>${dots(sm.mental)}</div>`;
     }
     if (_globalSubMode && _ownerSession()) {
       const diary = entry.subDiary || '';
