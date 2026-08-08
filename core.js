@@ -6461,19 +6461,21 @@ Object.assign(EX_DETAIL, {
 });
 
 // ══ Official Open-Source (wger) Anatomical Muscle Diagram Database ════════
+// SVG 已下载到本地 ./muscles/ 同源目录(原从 wger.de 外链,但 wger 不发 CORS →
+// 永远缓存不上、每次看图都得实时连 wger,网络不稳就"图解全不可用")。本地化后可被 SW 正常缓存、离线可用。
 const WGER_MUSCLES = {
-  biceps: { main: "https://wger.de/static/images/muscles/main/muscle-1.8790f8a0b3b9.svg", sec: "https://wger.de/static/images/muscles/secondary/muscle-1.e08c58a194b9.svg" },
-  shoulders: { main: "https://wger.de/static/images/muscles/main/muscle-2.e1e1205a3202.svg", sec: "https://wger.de/static/images/muscles/secondary/muscle-2.74ea636ad97b.svg" },
-  chest: { main: "https://wger.de/static/images/muscles/main/muscle-4.c9fa9a228bc8.svg", sec: "https://wger.de/static/images/muscles/secondary/muscle-4.955e74ea6083.svg" },
-  triceps: { main: "https://wger.de/static/images/muscles/main/muscle-5.8a2b934b5486.svg", sec: "https://wger.de/static/images/muscles/secondary/muscle-5.68eb84d675a5.svg" },
-  abs: { main: "https://wger.de/static/images/muscles/main/muscle-6.592f938fa8c7.svg", sec: "https://wger.de/static/images/muscles/secondary/muscle-6.370f77c2860e.svg" },
-  calves: { main: "https://wger.de/static/images/muscles/main/muscle-7.edbd8c381b0c.svg", sec: "https://wger.de/static/images/muscles/secondary/muscle-7.2f836b0cd383.svg" },
-  glutes: { main: "https://wger.de/static/images/muscles/main/muscle-8.fbdfb46f3bc0.svg", sec: "https://wger.de/static/images/muscles/secondary/muscle-8.605e4e1a0277.svg" },
-  trapezius: { main: "https://wger.de/static/images/muscles/main/muscle-9.b491050a7108.svg", sec: "https://wger.de/static/images/muscles/secondary/muscle-9.be1b5e41906b.svg" },
-  quads: { main: "https://wger.de/static/images/muscles/main/muscle-10.b1445ea1acf6.svg", sec: "https://wger.de/static/images/muscles/secondary/muscle-10.55e36d852778.svg" },
-  hamstrings: { main: "https://wger.de/static/images/muscles/main/muscle-11.54ef31755917.svg", sec: "https://wger.de/static/images/muscles/secondary/muscle-11.a2bc76fe157a.svg" },
-  lats: { main: "https://wger.de/static/images/muscles/main/muscle-12.6a5de7a0e373.svg", sec: "https://wger.de/static/images/muscles/secondary/muscle-12.974a8c6def63.svg" },
-  obliques: { main: "https://wger.de/static/images/muscles/main/muscle-14.153978038d0b.svg", sec: "https://wger.de/static/images/muscles/secondary/muscle-14.afd582849ae9.svg" }
+  biceps: { main: "./muscles/m1-main.svg", sec: "./muscles/m1-sec.svg" },
+  shoulders: { main: "./muscles/m2-main.svg", sec: "./muscles/m2-sec.svg" },
+  chest: { main: "./muscles/m4-main.svg", sec: "./muscles/m4-sec.svg" },
+  triceps: { main: "./muscles/m5-main.svg", sec: "./muscles/m5-sec.svg" },
+  abs: { main: "./muscles/m6-main.svg", sec: "./muscles/m6-sec.svg" },
+  calves: { main: "./muscles/m7-main.svg", sec: "./muscles/m7-sec.svg" },
+  glutes: { main: "./muscles/m8-main.svg", sec: "./muscles/m8-sec.svg" },
+  trapezius: { main: "./muscles/m9-main.svg", sec: "./muscles/m9-sec.svg" },
+  quads: { main: "./muscles/m10-main.svg", sec: "./muscles/m10-sec.svg" },
+  hamstrings: { main: "./muscles/m11-main.svg", sec: "./muscles/m11-sec.svg" },
+  lats: { main: "./muscles/m12-main.svg", sec: "./muscles/m12-sec.svg" },
+  obliques: { main: "./muscles/m14-main.svg", sec: "./muscles/m14-sec.svg" }
 };
 
 function renderMuscleDiagram(muscles, exName = '') {
@@ -6554,8 +6556,8 @@ function renderMuscleDiagram(muscles, exName = '') {
 
   const imgSection = imgInfo ? `
     <div style="display:flex;justify-content:center;align-items:center;gap:12px;background:#fff;border-radius:10px;padding:12px;margin-bottom:10px;box-shadow:0 1px 3px rgba(0,0,0,0.06)">
-      <img src="${imgInfo.main}" alt="${primaryName}" style="max-width:130px;height:160px;object-fit:contain" loading="lazy" />
-      ${imgInfo.sec ? `<img src="${imgInfo.sec}" alt="Secondary" style="max-width:130px;height:160px;object-fit:contain;opacity:0.85" loading="lazy" />` : ''}
+      <img src="${imgInfo.main}" alt="${primaryName}" style="max-width:130px;height:160px;object-fit:contain" loading="lazy" onerror="this.style.display='none'" />
+      ${imgInfo.sec ? `<img src="${imgInfo.sec}" alt="Secondary" style="max-width:130px;height:160px;object-fit:contain;opacity:0.85" loading="lazy" onerror="this.style.display='none'" />` : ''}
     </div>` : '';
 
   return `<div style="margin:10px 0;background:var(--surface2);border-radius:10px;padding:10px 12px;border:1px solid var(--border)">

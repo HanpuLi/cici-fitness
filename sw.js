@@ -1,4 +1,4 @@
-const CACHE = 'cici-fitness-v143';
+const CACHE = 'cici-fitness-v144';
 
 // ── Local assets: always pre-cached on install ──
 const LOCAL_ASSETS = [
@@ -15,24 +15,21 @@ const CDN_ASSETS = [
   // Google Fonts CSS
   'https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300..700;1,300..700&family=DM+Mono:wght@300;400&family=Noto+Serif+SC:wght@300;400;600;700&family=Outfit:wght@300;400;500;600;700&family=ZCOOL+XiaoWei&display=swap',
   // Tabler Icons CSS
-  'https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css',
-  // WGER Open-Source Muscle Anatomy Diagrams
-  'https://wger.de/static/images/muscles/main/muscle-1.8790f8a0b3b9.svg',
-  'https://wger.de/static/images/muscles/main/muscle-2.e1e1205a3202.svg',
-  'https://wger.de/static/images/muscles/main/muscle-4.c9fa9a228bc8.svg',
-  'https://wger.de/static/images/muscles/main/muscle-5.8a2b934b5486.svg',
-  'https://wger.de/static/images/muscles/main/muscle-6.592f938fa8c7.svg',
-  'https://wger.de/static/images/muscles/main/muscle-7.edbd8c381b0c.svg',
-  'https://wger.de/static/images/muscles/main/muscle-8.fbdfb46f3bc0.svg',
-  'https://wger.de/static/images/muscles/main/muscle-9.b491050a7108.svg',
-  'https://wger.de/static/images/muscles/main/muscle-10.b1445ea1acf6.svg',
-  'https://wger.de/static/images/muscles/main/muscle-11.54ef31755917.svg',
-  'https://wger.de/static/images/muscles/main/muscle-12.6a5de7a0e373.svg',
-  'https://wger.de/static/images/muscles/main/muscle-14.153978038d0b.svg'
+  'https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css'
 ];
 
-// ── Domains that get stale-while-revalidate (font files, icon woff2, muscle SVGs, etc.) ──
-const SWR_DOMAINS = ['fonts.gstatic.com', 'cdn.jsdelivr.net', 'wger.de'];
+// ── 肌肉解剖图:已本地化到 ./muscles/(原 wger.de 外链无 CORS → 缓存不上、每次实时连 wger,网络不稳就"图解全不可用") ──
+const MUSCLE_ASSETS = [
+  './muscles/m1-main.svg', './muscles/m1-sec.svg', './muscles/m2-main.svg', './muscles/m2-sec.svg',
+  './muscles/m4-main.svg', './muscles/m4-sec.svg', './muscles/m5-main.svg', './muscles/m5-sec.svg',
+  './muscles/m6-main.svg', './muscles/m6-sec.svg', './muscles/m7-main.svg', './muscles/m7-sec.svg',
+  './muscles/m8-main.svg', './muscles/m8-sec.svg', './muscles/m9-main.svg', './muscles/m9-sec.svg',
+  './muscles/m10-main.svg', './muscles/m10-sec.svg', './muscles/m11-main.svg', './muscles/m11-sec.svg',
+  './muscles/m12-main.svg', './muscles/m12-sec.svg', './muscles/m14-main.svg', './muscles/m14-sec.svg'
+];
+
+// ── Domains that get stale-while-revalidate (font files, icon woff2, etc.) ──
+const SWR_DOMAINS = ['fonts.gstatic.com', 'cdn.jsdelivr.net'];
 
 self.addEventListener('install', e => e.waitUntil(
   caches.open(CACHE).then(c => {
@@ -42,7 +39,11 @@ self.addEventListener('install', e => e.waitUntil(
     const cdnP = Promise.allSettled(CDN_ASSETS.map(url =>
       fetch(url, { mode: 'cors' }).then(r => { if (r.ok) return c.put(url, r) }).catch(() => { })
     ));
-    return Promise.all([localP, cdnP]);
+    // 本地肌肉图:同源,best-effort 预缓存(不进原子 addAll,免得个别文件缺失拖垮整个安装)
+    const muscleP = Promise.allSettled(MUSCLE_ASSETS.map(url =>
+      fetch(url).then(r => { if (r.ok) return c.put(url, r) }).catch(() => { })
+    ));
+    return Promise.all([localP, cdnP, muscleP]);
   }).then(() => self.skipWaiting())
 ));
 
