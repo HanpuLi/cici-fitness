@@ -92,6 +92,8 @@ PR_LIST=lg(K.pr)||[];
 BODY_LOG=lg(K.body)||[];
 if(typeof rebuildAchievementsFromLogs === 'function') rebuildAchievementsFromLogs();
 applySettingsToUI();
+if(typeof _migrateExerciseNames==='function') _migrateExerciseNames(); // 动作改名:历史数据跟着搬
+if(S.plan && typeof _purgeGatedFromPlan==='function') _purgeGatedFromPlan(); // 非 owner:清掉历史计划里的门控动作
 render();
 if(S.plan && typeof autoAlignPlan==='function') autoAlignPlan();
 _initialLoad = false;
