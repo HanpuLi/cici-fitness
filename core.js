@@ -871,6 +871,13 @@ const DB = {
     { n: '花环式（malasana）', eq: ['无器材', '健身房全套'], muscle: ['下肢', '内收肌', '核心'], diff: 1, note: '双脚与髋宽或稍宽，脚尖外旋45°，深蹲到底脚跟落地，双肘撑开双膝外展，双手合十，骨盆下沉放松', u: '秒' },
     { n: '猴神式（hanumanasana）', eq: ['无器材', '健身房全套'], muscle: ['髋屈肌', '腘绳', '下肢'], diff: 3, note: '前腿向前伸直，后腿向后伸直，完成前后劈叉，骨盆水平正对前方，双手置于两侧支撑，循序渐进下沉', u: '秒', bi: true }
   ],
+  // 仪态(2026-08-27):不进主循环 —— SPLITS 不引用 posture,只由 _appendPosture() 按需挑。
+  // 练的是"站着不动就好看"的那部分:体态、步态、颈线、骨盆位置。
+  posture: [
+    { n: '头顶书本走姿（poise walk）', eq: ['无器材', '健身房全套'], muscle: ['姿势', '核心'], diff: 1, note: '头顶一本书沿直线慢走，下巴微收、头顶向上延伸，书不掉=颈椎中立、重心稳', u: '秒', hold: 60 },
+    { n: '猫步走（catwalk）', eq: ['无器材', '健身房全套'], muscle: ['姿势', '臀中肌', '核心'], diff: 2, note: '沿一条直线走，每步落脚踩在中线上、骨盆随步子自然左右送，肩不晃、目视前方', u: '秒', hold: 60 },
+    { n: '靠墙站立体态检查（wall posture check）', eq: ['无器材', '健身房全套'], muscle: ['姿势'], diff: 1, note: '后脑勺、上背、臀、小腿贴墙，腰后只留一掌厚度，肩胛下沉、下巴微收，记住这个位置再离墙', u: '秒', hold: 45 },
+  ],
 };
 
 // ══ Split Templates ═════════════════════════════════════════
@@ -1425,6 +1432,11 @@ function pickExercises(split, excluded) {
     else { for (let i = pool.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1));[pool[i], pool[j]] = [pool[j], pool[i]] } }
     // For focused groups, put compound moves first
     if (favGroups.includes(grp)) pool.sort((a, b) => (a.diff === b.diff ? 0 : b.diff - a.diff));
+    // 曲线焦点补弱:掉队的那个点,它的动作在本组里先被挑走(owner)
+    if (_ownerSession()) {
+      const _wf = _weakFocusMoves();
+      if (_wf.size) pool.sort((a, b) => (_wf.has(a.n) ? 0 : 1) - (_wf.has(b.n) ? 0 : 1));
+    }
     // Owner session: private pool exercises float to the top —— 但臀腿主力肌群例外:
     // 「优先练出臀」时负重复合动作(臀推/硬拉/外展器械)不能被徒手地板动作挤掉名额,
     // 私有动作由后面的「私享收尾」块保底,不占主力名额。
@@ -1499,6 +1511,10 @@ function pickExercises(split, excluded) {
     }
   }
 
+  // 曲线焦点补弱:掉队的那个点今天没排上就补一个(owner)。必须排在拉伸之前 ——
+  // 它算主体动作,会参与器械聚类;放在拉伸之后会让主体动作被拉伸夹开。
+  if (_ownerSession()) _appendWeakFocus(result, used, excluded, sets);
+
   // 上肢紧致（「上肢紧致」重点，且非上肢日）：轻量高次数塑形，紧致不增维度、不练宽度
   if (S.focus && S.focus.includes('上肢紧致') && !hasUpper) {
     const tone = ['绳索下压', '哑铃臂屈伸', '面拉', '反向飞鸟机', '俯身飞鸟', '坐姿划船', '锤式弯举'];
@@ -1544,7 +1560,138 @@ function pickExercises(split, excluded) {
     });
   }
 
+  // 仪态日课:混进收尾,每天轮换 2 个(owner)
+  if (_ownerSession()) _appendPosture(result, used, excluded, 2);
+
   return _clusterByEquip(result); // 同器械的排在一起,少来回跑(反馈④)
+}
+
+// 补弱:近 4 周练得最少的两个曲线焦点,它们的动作在同肌群里优先被选中。
+// (面板上写了"下次生成计划会往这边加",这就是兑现那句话的地方。)
+function _weakFocusMoves() {
+  try {
+    const st = curveFocusStats(4);
+    if (!st.some(f => f.sets > 0)) return new Set();   // 没数据不瞎补
+    const weak = st.slice().sort((a, b) => a.pct - b.pct).slice(0, 2).map(f => f.key);
+    const set = new Set();
+    CURVE_FOCUS.filter(f => weak.includes(f.key)).forEach(f => f.moves.forEach(m => set.add(m)));
+    return set;
+  } catch (e) { return new Set(); }
+}
+
+// 最弱的那个焦点如果今天一个动作都没排上(比如胯宽的动作全在 glutemed 组,
+// 而今天是臀腿日),就直接追加一个 —— 光靠"同组内提优先级"补不到跨组的缺口。
+function _appendWeakFocus(result, used, excluded, sets) {
+  try {
+    const st = curveFocusStats(4);
+    if (!st.some(f => f.sets > 0)) return;
+    const weak = st.slice().sort((a, b) => a.pct - b.pct)[0];
+    const focus = CURVE_FOCUS.find(f => f.key === weak.key);
+    if (!focus || weak.pct >= 60) return;
+    if (result.some(e => focus.moves.includes(e.name))) return;   // 今天已经练到了
+    const cands = focus.moves.map(m => {
+      for (const exs of Object.values(DB)) { const f = exs.find(e => e.n === m); if (f) return f }
+      return null;
+    }).filter(ex => ex && !used.has(ex.n) && !excluded.has(ex.n) &&
+      ex.eq.some(q => q === '无器材' || S.equip.includes(q)) && (ex.diff || 1) <= (S.level === '初级' ? 2 : 3));
+    if (!cands.length) return;
+    const seed = parseInt(todayStr().replace(/-/g, ''), 10) || 0;
+    const ex = cands[seed % cands.length];
+    used.add(ex.n);
+    const isTime = (ex.u === '秒' || ex.u === '分钟');
+    result.push({
+      name: ex.n, sets: Math.min(sets, 3), reps: isTime ? (ex.hold || 45) : 15, unit: isTime ? '秒' : '次',
+      note: ex.note + ` — 补弱:近 4 周「${focus.name}」只练了 ${weak.sets}/${weak.target} 组,掉队了`,
+      group: 'glutemed', diff: ex.diff, bi: !!ex.bi, muscle: ex.muscle || []
+    });
+  } catch (e) { }
+}
+
+// ══ 仪态日课(2026-08-27) ═══════════════════════════════════
+// Cait 要的是"站着不动就好看"那部分:颈线、肩胛位置、骨盆位置、步态、踮立。
+// 不另开模块 —— 按她的选择混进现有计划,排在收尾,不占主计划名额。
+const POSTURE_POOL = [
+  '靠墙站立体态检查（wall posture check）', '头顶书本走姿（poise walk）', '猫步走（catwalk）',
+  '收下巴', '肩胛后缩保持', '靠墙天使', '骨盆前后倾（pelvic tilt）',
+  '双腿relevé踮立保持', '单腿relevé踮立', '高跪姿开胸（kneeling chest opener）',
+];
+// 每天换着来:按日期轮转,不随机 —— 同一天重开 app 不会换掉已经练一半的
+function _appendPosture(result, used, excluded, n) {
+  const pool = POSTURE_POOL.filter(name => !used.has(name) && !excluded.has(name));
+  if (!pool.length) return;
+  const seed = parseInt(todayStr().replace(/-/g, ''), 10) || 0;
+  const step = Math.max(1, Math.floor(pool.length / Math.max(1, n)));   // 两个动作在池子里隔开,别一次给两个踮立
+  for (let i = 0; i < n && pool.length; i++) {
+    const ex = (() => { for (const exs of Object.values(DB)) { const f = exs.find(e => e.n === pool[(seed + i * step) % pool.length]); if (f) return f } return null })();
+    if (!ex || used.has(ex.n)) continue;
+    used.add(ex.n);
+    const isTime = (ex.u === '秒' || ex.u === '分钟');
+    result.push({
+      name: ex.n, sets: 1, reps: isTime ? (ex.hold || 45) : 12, unit: isTime ? '秒' : '次',
+      note: '仪态 · ' + ex.note, group: 'posture', diff: ex.diff, isPosture: true, bi: !!ex.bi, muscle: ex.muscle
+    });
+  }
+}
+
+// ══ 曲线焦点(2026-08-27) ═══════════════════════════════════
+// 把"练臀"拆成看得见的承重点:每个点有自己的动作簇、自己的周目标组数、
+// 以及一条对应的围度指标。练了多少 / 尺寸往哪走,两条线并排看。
+// 一个动作只归第一个匹配的焦点(顺序即优先级)。
+const CURVE_FOCUS = [
+  { key: 'hipw', name: '胯宽', why: '臀中肌/臀小肌把髋部往外撑——腰胯比里真正改得动的那个变量', metric: 'hipw', dir: 'up', weekly: 9,
+    moves: ['器械外展机', '站姿绳索单腿外展', '弹力带螃蟹步', '弹力带蚌式开合', '侧卧抬腿', '消防栓式',
+            '四足髋绕环（hip CARs）', '侧卧抬腿画圈', '驴踢腿（donkey kick）', '四足跪姿髋外展', '臀部激活蚌式'] },
+  { key: 'peak', name: '臀峰', why: '臀大肌上束顶起峰型——侧面那条弧线', metric: 'hip', dir: 'up', weekly: 9,
+    moves: ['臀推', '史密斯臀推', '肩胛垫高臀推', '蛙式臀桥', '蛙式臀冲', '臀桥', '臀桥开合', '臀桥保持',
+            '跪姿挺髋（kneeling hip thrust）', '高跪姿挺髋保持（kneeling hip thrust hold）', '高跪姿夹枕挺髋保持',
+            '绳索后踢腿', '俯卧挺髋抬腿', '跪姿后踢腿', '跪姿直腿后踢', '跪姿深蹲（kneeling squat）',
+            '臀桥夹球保持', '蛙式臀桥保持（frog pump hold）', '臀推顶端外展保持', '壶铃摆动'] },
+  { key: 'thigh', name: '大腿填充', why: '内收肌+股四把大腿填满,并拢时那条缝才有形状', metric: 'thigh', dir: 'up', weekly: 8,
+    moves: ['器械内收机', '相扑深蹲', '哥萨克深蹲', '腿屈伸', '倒蹬机', '哈克深蹲', '钟摆深蹲',
+            '高脚杯深蹲', '壶铃高脚杯深蹲', '保加利亚分腿蹲', '哑铃弓步蹲', '腿弯举', '坐姿腿弯举',
+            '站姿单腿弯举机', '杠铃深蹲', '史密斯深蹲', '颈前杠铃深蹲', '相扑深蹲保持（sumo squat hold）',
+            '罗马尼亚硬拉', '传统硬拉'] },
+  { key: 'waist', name: '细腰', why: '腹横肌把腰收紧;绕开一切增厚腰侧的动作', metric: 'waist', dir: 'down', weekly: 6,
+    moves: ['腹横肌真空吸', '平板支撑', '侧平板支撑', '死虫式', '死虫式保持（dead bug hold）',
+            '死虫式（慢速对角）', '仰卧对角抬举（dead bug 变体）', '卷腹', '坐姿卷腹机',
+            '仰卧直腿下放（leg lowering）', '悬挂抬腿', '罗马椅抬腿', '侧平板髋部下沉（side plank hip dip）'] },
+  { key: 'back', name: '腰窝背沟', why: '竖脊+背阔撑出背面的层次,腰窝是收腰的视觉锚', metric: null, dir: null, weekly: 6,
+    moves: ['山羊挺身', '坐姿划船', 'T把划船', '器械上背划船', '俯身划船', '哑铃单臂划船',
+            '高位下拉', '引体向上', '助力引体向上机', '杠铃斜板划船', '弹力带划船', '绳索直臂下压', '直臂下压机'] },
+  { key: 'line', name: '颈线肩线', why: '肩胛下沉+颈椎中立——脖子显长、锁骨露出来', metric: null, dir: null, weekly: 5,
+    moves: ['面拉', '俯卧YTW', '靠墙天使', '肩胛后缩保持', '收下巴', '颈深屈肌保持（chin tuck hold）',
+            '反向飞鸟机', '俯身飞鸟', '靠墙站立体态检查（wall posture check）', '高跪姿开胸（kneeling chest opener）'] },
+  { key: 'ankle', name: '脚踝小腿', why: '踮立与提踵——高跟站得住,脚背绷出线条', metric: 'ankle', dir: null, weekly: 4,
+    moves: ['站姿提踵', '坐姿提踵', '史密斯提踵', '腿举机提踵', '单腿relevé踮立', '双腿relevé踮立保持',
+            '头顶书本走姿（poise walk）', '猫步走（catwalk）'] },
+];
+// 近 N 周:每个焦点练了多少组(只算打了勾的),以及对应围度往哪个方向走了
+function curveFocusStats(weeks = 4) {
+  const since = addDays(todayStr(), -7 * weeks);
+  const idx = {};
+  CURVE_FOCUS.forEach(f => f.moves.forEach(m => { if (!idx[m]) idx[m] = f.key }));
+  const sets = {}; CURVE_FOCUS.forEach(f => sets[f.key] = 0);
+  (typeof LOG !== 'undefined' ? LOG : []).forEach(l => {
+    if (!l || l.date < since) return;
+    (l.exercises || []).forEach(e => {
+      if (!e || e.done === false) return;
+      const k = idx[e.name]; if (!k) return;
+      sets[k] += (e.sets || 1);
+    });
+  });
+  return CURVE_FOCUS.map(f => {
+    const target = f.weekly * weeks;
+    let trend = null, from = null, to = null;
+    if (f.metric && typeof BODY_LOG !== 'undefined') {
+      const pts = BODY_LOG.filter(x => x.date >= since && x[f.metric] != null);
+      if (pts.length >= 2) {
+        from = pts[0][f.metric]; to = pts[pts.length - 1][f.metric];
+        trend = Math.round((to - from) * 10) / 10;
+      }
+    }
+    return { key: f.key, name: f.name, why: f.why, metric: f.metric, dir: f.dir,
+             sets: sets[f.key], target, pct: Math.min(100, Math.round(sets[f.key] / target * 100)), trend, from, to };
+  });
 }
 
 // ══ 同器械聚类(2026-08-26 反馈④) ═══════════════════════════
@@ -1576,7 +1723,7 @@ function equipZone(name) {
   return '垫上/徒手';
 }
 function _clusterByEquip(exs) {
-  const isMain = e => e && !e.isWarmup && !e.isStretch && e.group !== 'cardio' && e.group !== 'swimming';
+  const isMain = e => e && !e.isWarmup && !e.isStretch && !e.isPosture && e.group !== 'cardio' && e.group !== 'swimming';
   const slots = exs.map((e, i) => i).filter(i => isMain(exs[i]));
   if (slots.length < 3) return exs;
   const UPPER = ['chest', 'shoulder', 'back', 'biceps', 'triceps'];

@@ -313,12 +313,28 @@ function logVacuum(){
   S.vacuumDays.push(t); if(S.vacuumDays.length>400)S.vacuumDays=S.vacuumDays.slice(-400);
   saveState(); if(typeof showToast==='function')showToast('真空吸已打卡 ✓'); if(typeof renderStats==='function')renderStats();
 }
+// ══ 围度字段(2026-08-27 扩到 10 项) ═════════════════════
+// core:true 的 4 项常显,其余收在"更多围度"里。better = 往哪个方向走算好。
+// 量法写在 tip 里 —— 每次量的位置不一样,数字就是噪声。
+const BODY_FIELDS=[
+  {k:'weight',lbl:'体重',u:'kg',better:null,core:true,tip:'固定早起空腹、同一台秤'},
+  {k:'waist',lbl:'腰围',u:'cm',better:'down',core:true,tip:'最细处(肋下与髂嵴之间),正常呼气末、别收腹'},
+  {k:'hip',lbl:'臀围',u:'cm',better:'up',core:true,tip:'臀部最丰满处水平一圈,脚并拢'},
+  {k:'thigh',lbl:'大腿围',u:'cm',better:'up',core:true,tip:'大腿中段,双脚与髋同宽站立'},
+  {k:'bust',lbl:'胸围',u:'cm',better:'up',core:false,tip:'乳点水平一圈,软尺不勒'},
+  {k:'hipw',lbl:'胯宽',u:'cm',better:'up',core:false,tip:'正面站直,两侧大转子(髋部最外突点)之间的横向宽度——不是围度'},
+  {k:'lowab',lbl:'下腹',u:'cm',better:'down',core:false,tip:'脐下 5cm 水平一圈,低腰线那一圈'},
+  {k:'upthigh',lbl:'大腿根',u:'cm',better:'up',core:false,tip:'紧贴臀褶下方最粗处'},
+  {k:'calf',lbl:'小腿',u:'cm',better:null,core:false,tip:'小腿最粗处'},
+  {k:'ankle',lbl:'脚踝',u:'cm',better:'down',core:false,tip:'踝骨上方最细处'},
+];
+const BODY_KEYS=BODY_FIELDS.map(f=>f.k);
 function logBody(){
   const g=id=>{const el=document.getElementById(id);if(!el)return null;const v=parseFloat(el.value);return isFinite(v)&&v>0?Math.round(v*10)/10:null;};
-  const e={date:todayStr(),weight:g('b-weight'),waist:g('b-waist'),hip:g('b-hip'),thigh:g('b-thigh')};
-  if(['weight','waist','hip','thigh'].every(k=>e[k]==null)){showToast('请至少填写一项');return;}
+  const e={date:todayStr()}; BODY_KEYS.forEach(k=>{e[k]=g('b-'+k)});
+  if(BODY_KEYS.every(k=>e[k]==null)){showToast('请至少填写一项');return;}
   const i=BODY_LOG.findIndex(x=>x.date===e.date);
-  if(i>=0){['weight','waist','hip','thigh'].forEach(k=>{if(e[k]!=null)BODY_LOG[i][k]=e[k];});}
+  if(i>=0){BODY_KEYS.forEach(k=>{if(e[k]!=null)BODY_LOG[i][k]=e[k];});}
   else BODY_LOG.push(e);
   BODY_LOG.sort((a,b)=>a.date.localeCompare(b.date));
   ls(K.body,BODY_LOG);
@@ -331,33 +347,103 @@ function delBody(date){
   ls(K.body,BODY_LOG);
   if(typeof renderStats==='function')renderStats();
 }
+function _bodyLbl(k,fallback){
+  // sub 模式:标签可以被云端(不进仓库的那份)覆盖;取不到就用默认
+  try{
+    if(typeof _globalSubMode!=='undefined'&&_globalSubMode&&typeof _ownerSession==='function'&&_ownerSession()&&typeof _getSubDb==='function'){
+      const bl=(_getSubDb()||{}).body_labels||{};
+      if(bl[k]){const v=decodeURIComponent(atob(bl[k]));if(v)return v;}
+    }
+  }catch(e){}
+  return fallback;
+}
 function renderBodyPanel(){
   const IN='width:100%;padding:6px 8px;margin-top:3px;border:1px solid var(--border);border-radius:6px;background:var(--surface2);color:var(--ink);font-size:14px;box-sizing:border-box';
   const latest=BODY_LOG.length?BODY_LOG[BODY_LOG.length-1]:{};
-  const pv=f=>latest[f]!=null?latest[f]:'';
-  const _isSubBody=typeof _globalSubMode!=='undefined'&&_globalSubMode&&typeof _ownerSession==='function'&&_ownerSession();
-  const lblmap=(_isSubBody&&typeof _getSubDb==='function')?( ()=>{const db=_getSubDb(),dec=s=>{try{return decodeURIComponent(atob(s))}catch(e){return''}};const bl=db?.body_labels||{};return{weight:dec(bl.weight)||'体重',waist:dec(bl.waist)||'腰围',hip:dec(bl.hip)||'臀围',thigh:dec(bl.thigh)||'大腿围'};} )():{weight:'体重',waist:'腰围',hip:'臀围',thigh:'大腿围'};
-  const fld=(id,lbl,u)=>`<label style="font-size:11px;color:var(--ink3)">${lbl}<span style="opacity:.6"> ${u}</span><input id="${id}" type="number" inputmode="decimal" step="0.1" value="${pv(id.slice(2))}" style="${IN}"></label>`;
-  const spark=(f,unit,better)=>{
-    const pts=BODY_LOG.filter(x=>x[f]!=null);
-    if(pts.length<2)return '';
-    const vals=pts.map(x=>x[f]),mn=Math.min(...vals),mx=Math.max(...vals),rg=mx-mn||1;
-    const last=vals[vals.length-1],delta=Math.round((last-vals[0])*10)/10;
-    const good=better==='down'?delta<0:better==='up'?delta>0:null;
+  const L=k=>_bodyLbl(k,(BODY_FIELDS.find(f=>f.k===k)||{}).lbl||k);
+  const val=k=>{for(let i=BODY_LOG.length-1;i>=0;i--){if(BODY_LOG[i][k]!=null)return BODY_LOG[i][k]}return null};
+  const fld=f=>`<label style="font-size:11px;color:var(--ink3)" title="${f.tip}">${L(f.k)}<span style="opacity:.6"> ${f.u}</span><input id="b-${f.k}" type="number" inputmode="decimal" step="0.1" value="${latest[f.k]!=null?latest[f.k]:''}" style="${IN}"></label>`;
+  const core=BODY_FIELDS.filter(f=>f.core).map(fld).join('');
+  const more=BODY_FIELDS.filter(f=>!f.core).map(fld).join('');
+
+  // ── 比例:体型是比例说了算,不是单个数字 ──
+  const ratio=(label,cur,fmt,delta,better,note)=>{
+    if(cur==null)return '';
+    const good=delta==null?null:(better==='down'?delta<0:delta>0);
     const col=good===true?'var(--sage)':good===false?'var(--terra)':'var(--ink3)';
-    return `<div style="margin-bottom:12px"><div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="font-size:12px;font-weight:600">${lblmap[f]}</span><span style="font-size:11px;font-weight:600;color:${col}">${delta>0?'+':''}${delta}${unit} · 现 ${last}${unit}</span></div><div style="display:flex;gap:2px;height:24px;align-items:flex-end">${pts.slice(-14).map(p=>{const h=(p[f]-mn)/rg*70+30;return `<div style="flex:1;background:var(--terra);opacity:.7;border-radius:2px 2px 0 0;height:${h}%" title="${p.date}: ${p[f]}${unit}"></div>`}).join('')}</div></div>`;
+    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 10px;background:var(--surface2);border-radius:8px;margin-bottom:6px"><span style="font-size:12px">${label}${note?`<span style="font-size:10px;color:var(--ink3)"> · ${note}</span>`:''}</span><b style="font-size:15px;color:var(--terra)">${fmt(cur)}${delta!=null?`<span style="font-size:11px;color:${col};margin-left:6px">${delta>0?'+':''}${fmt(delta)}</span>`:''}</b></div>`;
   };
-  const whrPts=BODY_LOG.filter(x=>x.waist!=null&&x.hip!=null);
-  let whrBlock='';
-  if(whrPts.length){
-    const cur=whrPts[whrPts.length-1].waist/whrPts[whrPts.length-1].hip;
-    const d=whrPts.length>1?Math.round((cur-whrPts[0].waist/whrPts[0].hip)*100)/100:null;
-    whrBlock=`<div style="display:flex;justify-content:space-between;align-items:center;margin:10px 0;padding:8px 10px;background:var(--surface2);border-radius:8px"><span style="font-size:12px">腰臀比 WHR<span style="font-size:10px;color:var(--ink3)"> · 越低越沙漏</span></span><b style="font-size:16px;color:var(--terra)">${cur.toFixed(2)}${d!=null?`<span style="font-size:11px;color:${d<0?'var(--sage)':d>0?'var(--terra)':'var(--ink3)'};margin-left:6px">${d>0?'+':''}${d}</span>`:''}</b></div>`;
+  const pair=(a,b,f)=>{ // 取首尾两次都量全的记录,算比例的变化
+    const pts=BODY_LOG.filter(x=>x[a]!=null&&(b==null||x[b]!=null));
+    if(!pts.length)return [null,null];
+    const cur=f(pts[pts.length-1]),first=f(pts[0]);
+    return [cur,pts.length>1?cur-first:null];
+  };
+  const [whr,whrD]=pair('waist','hip',x=>x.waist/x.hip);
+  const [hwd,hwdD]=pair('waist','hip',x=>x.hip-x.waist);
+  const [bwd,bwdD]=pair('bust','waist',x=>x.bust-x.waist);
+  const [tw,twD]=pair('thigh','waist',x=>x.thigh/x.waist);
+  const [hw,hwD]=pair('hipw',null,x=>x.hipw);
+  const r2=v=>Math.round(v*100)/100, r1=v=>Math.round(v*10)/10;
+  let ratios=[
+    ratio('腰臀比 WHR',whr,r2,whrD,'down','目标 0.70,越低越沙漏'),
+    ratio('臀腰差',hwd,r1,hwdD,'up','cm,越大轮廓越明显'),
+    ratio('胸腰差',bwd,r1,bwdD,'up','cm'),
+    ratio('大腿/腰',tw,r2,twD,'up','大腿相对腰的丰满度'),
+    ratio('胯宽',hw,r1,hwD,'up','cm,臀中肌撑出来的横向宽度'),
+  ].filter(Boolean).join('');
+  if(whr!=null){
+    const gap=Math.round((whr-0.70)*100)/100;
+    ratios+=`<div style="font-size:11px;color:var(--ink3);margin:2px 0 10px">${gap<=0?'WHR 已经到 0.70 以下了 —— 沙漏线成立,继续保持。':`离 0.70 还差 ${gap} —— 走臀围往上、腰围往下两头夹,别靠掉秤。`}</div>`;
   }
-  const charts=['weight','waist','hip','thigh'].map(f=>spark(f,f==='weight'?'kg':'cm',f==='waist'?'down':f==='hip'?'up':null)).join('');
-  const _subBodyTitle=(_isSubBody&&typeof _getSubDb==='function')?(()=>{const db=_getSubDb(),dec=s=>{try{return decodeURIComponent(atob(s))}catch(e){return''}};return dec(db?.body_labels?.panel_title)||'';})():'';
-  const hist=BODY_LOG.length?`<details style="margin-top:6px"><summary style="font-size:11px;color:var(--ink3);cursor:pointer">历史记录 (${BODY_LOG.length})</summary><div style="margin-top:6px">${[...BODY_LOG].reverse().slice(0,40).map(x=>`<div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;padding:4px 0;border-bottom:1px solid var(--border)"><span>${x.date}</span><span style="color:var(--ink3);flex:1;text-align:right;margin-right:8px">${[x.weight!=null?x.weight+'kg':'',x.waist!=null?lblmap.waist[0]+x.waist:'',x.hip!=null?lblmap.hip[0]+x.hip:'',x.thigh!=null?lblmap.thigh[0]+x.thigh:''].filter(Boolean).join(' · ')}</span><span onclick="delBody('${x.date}')" style="color:var(--terra);cursor:pointer;padding:0 4px">✕</span></div>`).join('')}</div></details>`:'';
-  return `<div class="panel"><p class="panel-title">${_subBodyTitle||'身体记录 📏'} <span style="font-size:11px;color:var(--ink3);font-weight:400">${_subBodyTitle?'':' 体型才是真正的进度'}</span></p><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">${fld('b-weight',lblmap.weight,'kg')}${fld('b-waist',lblmap.waist,'cm')}${fld('b-hip',lblmap.hip,'cm')}${fld('b-thigh',lblmap.thigh,'cm')}</div><button onclick="logBody()" class="exp-btn" style="width:100%;margin-top:10px">保存今日数据</button>${(()=>{const d=S.vacuumDays||[],t=todayStr();let st=0;for(let i=0;i<400;i++){const ds=addDays(t,-i);if(d.includes(ds))st++;else if(i>0)break;}const dn=d.includes(t);return `<div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px;padding:8px 10px;background:var(--surface2);border-radius:8px"><div><div style="font-size:12px;font-weight:600">真空吸收腰打卡</div><div style="font-size:10px;color:var(--ink3)">连续 ${st} 天 · 累计 ${d.length} 次</div></div><button onclick="logVacuum()" class="exp-btn" style="font-size:12px;padding:6px 12px${dn?';opacity:.5':''}">${dn?'今日已打 ✓':'今日打卡'}</button></div>`;})()}${whrBlock}${charts}${hist}</div>`;
+
+  const spark=f=>{
+    const pts=BODY_LOG.filter(x=>x[f.k]!=null);
+    if(pts.length<2)return '';
+    const vals=pts.map(x=>x[f.k]),mn=Math.min(...vals),mx=Math.max(...vals),rg=mx-mn||1;
+    const last=vals[vals.length-1],delta=Math.round((last-vals[0])*10)/10;
+    const good=f.better==='down'?delta<0:f.better==='up'?delta>0:null;
+    const col=good===true?'var(--sage)':good===false?'var(--terra)':'var(--ink3)';
+    return `<div style="margin-bottom:12px"><div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="font-size:12px;font-weight:600">${L(f.k)}</span><span style="font-size:11px;font-weight:600;color:${col}">${delta>0?'+':''}${delta}${f.u} · 现 ${last}${f.u}</span></div><div style="display:flex;gap:2px;height:24px;align-items:flex-end">${pts.slice(-14).map(p=>{const h=(p[f.k]-mn)/rg*70+30;return `<div style="flex:1;background:var(--terra);opacity:.7;border-radius:2px 2px 0 0;height:${h}%" title="${p.date}: ${p[f.k]}${f.u}"></div>`}).join('')}</div></div>`;
+  };
+  const charts=BODY_FIELDS.map(spark).join('');
+  const vac=(()=>{const d=S.vacuumDays||[],t=todayStr();let st=0;for(let i=0;i<400;i++){const ds=addDays(t,-i);if(d.includes(ds))st++;else if(i>0)break;}const dn=d.includes(t);return `<div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px;padding:8px 10px;background:var(--surface2);border-radius:8px"><div><div style="font-size:12px;font-weight:600">真空吸收腰打卡</div><div style="font-size:10px;color:var(--ink3)">连续 ${st} 天 · 累计 ${d.length} 次</div></div><button onclick="logVacuum()" class="exp-btn" style="font-size:12px;padding:6px 12px${dn?';opacity:.5':''}">${dn?'今日已打 ✓':'今日打卡'}</button></div>`;})();
+  const hist=BODY_LOG.length?`<details style="margin-top:6px"><summary style="font-size:11px;color:var(--ink3);cursor:pointer">历史记录 (${BODY_LOG.length})</summary><div style="margin-top:6px">${[...BODY_LOG].reverse().slice(0,40).map(x=>`<div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;padding:4px 0;border-bottom:1px solid var(--border)"><span>${x.date}</span><span style="color:var(--ink3);flex:1;text-align:right;margin-right:8px">${BODY_FIELDS.filter(f=>x[f.k]!=null).map(f=>(f.k==='weight'?x.weight+'kg':L(f.k).slice(0,2)+x[f.k])).join(' · ')}</span><span onclick="delBody('${x.date}')" style="color:var(--terra);cursor:pointer;padding:0 4px">✕</span></div>`).join('')}</div></details>`:'';
+  const title=_bodyLbl('panel_title','身体记录 📏');
+  return `<div class="panel"><p class="panel-title">${title} <span style="font-size:11px;color:var(--ink3);font-weight:400"> 体型才是真正的进度</span></p>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">${core}</div>
+<details style="margin-top:8px"><summary style="font-size:11px;color:var(--ink3);cursor:pointer">更多围度(胸/胯宽/下腹/大腿根/小腿/脚踝)</summary><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px">${more}</div><div style="font-size:10px;color:var(--ink3);margin-top:6px">每项都有量法提示(长按/悬停标签)。位置固定住,数字才有意义。</div></details>
+<button onclick="logBody()" class="exp-btn" style="width:100%;margin-top:10px">保存今日数据</button>${vac}
+${ratios?`<div style="margin-top:12px">${ratios}</div>`:''}${charts}${hist}</div>`;
+}
+
+// ══ 曲线焦点面板(2026-08-27) ═══════════════════════════════
+// 左边:这 4 周每个承重点练了多少组 / 目标多少。右边:对应围度往哪个方向走。
+// 练量够但尺寸不动 = 吃不够或该加重;尺寸动但练量少 = 别的因素,别归功于训练。
+function renderCurvePanel(){
+  if(typeof curveFocusStats!=='function')return '';
+  const st=curveFocusStats(4);
+  const total=st.reduce((a,f)=>a+f.sets,0);
+  const weak=[...st].sort((a,b)=>a.pct-b.pct)[0];
+  const rows=st.map(f=>{
+    const col=f.pct>=100?'var(--sage)':f.pct>=60?'var(--terra)':'var(--ink3)';
+    const good=f.trend==null?null:(f.dir==='up'?f.trend>0:f.dir==='down'?f.trend<0:null);
+    const tcol=good===true?'var(--sage)':good===false?'var(--terra)':'var(--ink3)';
+    const trend=f.trend!=null
+      ? `<span style="font-size:11px;color:${tcol};white-space:nowrap">${f.trend>0?'+':''}${f.trend}cm</span>`
+      : (f.metric?`<span style="font-size:10px;color:var(--ink3);white-space:nowrap">没量</span>`:'');
+    return `<div style="margin-bottom:10px">
+<div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px">
+<span style="font-size:12px;font-weight:600">${f.name}</span>
+<span style="font-size:11px;color:var(--ink3)">${f.sets}/${f.target} 组 ${trend}</span></div>
+<div class="progress-bar" style="margin-top:4px"><div class="progress-fill" style="width:${f.pct}%;background:${col}"></div></div>
+<div style="font-size:10px;color:var(--ink3);margin-top:3px">${f.why}</div></div>`;
+  }).join('');
+  const hint=total===0
+    ? '还没有打卡数据 —— 练几次之后这里就会告诉你哪个点在掉队。'
+    : `最弱的一条是<b style="color:var(--terra)">${weak.name}</b>(${weak.sets}/${weak.target} 组)。下次生成计划时我会往这边加,你也可以直接在计划里手动添加动作补上。`;
+  return `<div class="panel"><p class="panel-title">曲线焦点 <span style="font-size:11px;color:var(--ink3);font-weight:400"> 近 4 周 · 练了多少 vs 尺寸往哪走</span></p>
+${rows}<div style="font-size:11px;color:var(--ink2);margin-top:8px;padding:8px 10px;background:var(--surface2);border-radius:8px">${hint}</div></div>`;
 }
 
 // ══ Stats ════════════════════════════════════════════════
@@ -427,13 +513,14 @@ break;
 }
 });
 });
-const grpNames={chest:'胸',shoulder:'肩',back:'背',biceps:'二头',triceps:'三头',quads:'股四头',hamglutes:'臀腿',glutemed:'臀中肌',calves:'小腿',core:'核心',cardio:'有氧',warmup:'热身',stretch:'拉伸',swim_upper:'游泳(上肢)',swim_lower:'游泳(下肢)',swim_core:'游泳(核心)',swim_cardio:'游泳(心肺)'};
+const grpNames={chest:'胸',shoulder:'肩',back:'背',biceps:'二头',triceps:'三头',quads:'股四头',hamglutes:'臀腿',glutemed:'臀中肌',calves:'小腿',core:'核心',cardio:'有氧',warmup:'热身',stretch:'拉伸',posture:'仪态',swim_upper:'游泳(上肢)',swim_lower:'游泳(下肢)',swim_core:'游泳(核心)',swim_cardio:'游泳(心肺)'};
 const distEntries=Object.entries(dist).sort((a,b)=>b[1]-a[1]);
 const maxDist=distEntries[0]?.[1]||1;
 
 el.innerHTML=`
 <div class="streak-box"><div class="streak-num">${streak}</div><div class="streak-lbl">连续打卡天数</div></div>
 ${typeof renderBodyPanel==='function'?renderBodyPanel():''}
+${typeof renderCurvePanel==='function'?renderCurvePanel():''}
 <div class="panel">
   <p class="panel-title" style="margin-bottom:.75rem">近12周训练热图</p>
   <div class="heat-grid">${heatHtml}</div>
@@ -632,7 +719,7 @@ break;
 }
 });
 });
-const grpNames={chest:'胸',shoulder:'肩',back:'背',biceps:'二头',triceps:'三头',quads:'股四头',hamglutes:'臀腿',glutemed:'臀中肌',calves:'小腿',core:'核心',cardio:'有氧',warmup:'热身',stretch:'拉伸',swim_upper:'游泳(上肢)',swim_lower:'游泳(下肢)',swim_core:'游泳(核心)',swim_cardio:'游泳(心肺)'};
+const grpNames={chest:'胸',shoulder:'肩',back:'背',biceps:'二头',triceps:'三头',quads:'股四头',hamglutes:'臀腿',glutemed:'臀中肌',calves:'小腿',core:'核心',cardio:'有氧',warmup:'热身',stretch:'拉伸',posture:'仪态',swim_upper:'游泳(上肢)',swim_lower:'游泳(下肢)',swim_core:'游泳(核心)',swim_cardio:'游泳(心肺)'};
 const distStr=Object.entries(dist).sort((a,b)=>b[1]-a[1]).map(([g,c])=>`${grpNames[g]||g}${c}组`).join('·');
 
 let logStr=recent.map(l=>{
