@@ -82,6 +82,12 @@ if (!app.includes("fetch('assets/obfuscated_v2.json')")) {
 if (!app.includes('allowedReaders: pu?[pu]:[]')) {
   errors.push('app.js: shared-profile reader whitelist invariant missing');
 }
+if (/status\.innerHTML\s*=\s*[`'"][^\n]*_partnerProfile/.test(app)) {
+  errors.push('app.js: partner-controlled profile data must not be rendered through innerHTML');
+}
+if (!app.includes("nameEl.textContent=String(_partnerProfile.name||'搭子')")) {
+  errors.push('app.js: partner display name must use textContent');
+}
 
 if (errors.length) {
   console.error(errors.join('\n'));

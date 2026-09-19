@@ -8,6 +8,7 @@ Security-relevant areas include:
 
 - Firestore rule changes and any widening of cross-account reads;
 - fields added to the partner-facing shared-profile whitelist;
+- rendering of partner-controlled shared-profile fields; cross-account strings must use textContent/DOM text nodes rather than innerHTML;
 - authentication/session handling;
 - cloud/local conflict resolution that could overwrite user data;
 - service-worker changes that accidentally cache authentication or database requests;

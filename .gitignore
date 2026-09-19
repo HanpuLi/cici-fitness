@@ -2,6 +2,7 @@
 *.bak*
 *.bin
 scratch/
+node_modules/
 akanexi@*
 
 AGENTS.md
