@@ -2,7 +2,7 @@
   "name": "健身计划",
   "short_name": "健身计划",
   "version": "2.1.0",
-  "start_url": "./Index.html",
+  "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#f5f4ef",
   "theme_color": "#6b5344",

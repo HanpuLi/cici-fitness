@@ -1978,7 +1978,7 @@ initFirebase();
 
 // Fetch BDSM database
 (function() {
-  fetch('scratch/obfuscated_v2.json')
+  fetch('assets/obfuscated_v2.json')
     .then(r => r.text())
     .then(text => {
       localStorage.setItem('__obfuscated_v2_cache__', text);

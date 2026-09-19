@@ -1,9 +1,9 @@
-const CACHE = 'cici-fitness-v148';
+const CACHE = 'cici-fitness-v149';
 
 // ── Local assets: always pre-cached on install ──
 const LOCAL_ASSETS = [
-  './Index.html', './core.js', './app.js', './style.css',
-  './manifest.json', './icon.svg', './dev.js'
+  './index.html', './core.js', './app.js', './style.css',
+  './manifest.json', './icon.svg', './dev.js', './assets/obfuscated_v2.json'
 ];
 
 // ── External CDN assets to pre-cache ──
