@@ -23,7 +23,7 @@ python3 -m http.server 8000
 # open http://127.0.0.1:8000/
 ```
 
-Run the same checks as CI:
+Run the same static checks as CI:
 
 ```sh
 node --check core.js
@@ -32,6 +32,15 @@ node --check dev.js
 node --check sw.js
 node tools/check-static.mjs
 ```
+
+Firestore rules have emulator-backed access-control tests:
+
+```sh
+npm ci
+npm run test:rules
+```
+
+The rules test requires a Java runtime because the Firebase Firestore emulator is a JVM process.
 
 The repository intentionally does not track local operator notes, Finder metadata, scratch work or unrelated personal pages.
 
