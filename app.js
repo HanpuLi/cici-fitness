@@ -1082,6 +1082,13 @@ window.sendCheer=function(emoji){
   saveState(); pushProfile(); updatePairUI(); if(typeof render==='function')render();
   showToast('已给搭子加油 '+(emoji||'💪'));
 };
+function _pairActionLink(label){
+  const a=document.createElement('a');
+  a.href='#';
+  a.textContent=label;
+  a.addEventListener('click',e=>{e.preventDefault();unpairPartner();});
+  return a;
+}
 function updatePairUI(){
   const me=document.getElementById('my-pair-code');
   if(me) me.textContent=_user?_user.uid:'（请先登录）';
@@ -1092,15 +1099,25 @@ function updatePairUI(){
   const status=document.getElementById('pair-status');
   if(status){
     const pu=partnerUid();
+    status.replaceChildren();
     if(!pu){ status.style.display='none'; }
     else{
       status.style.display='block';
       if(_partnerProfile){
         const c=_partnerProfile.cheer;
-        const cheerLine=(c&&c.date===todayStr())?` · TA今天给你 ${c.emoji}`:'';
-        status.innerHTML=`已连接 <b>${_partnerProfile.name||'搭子'}</b> · 今日：${_partnerProfile.todayType}${_partnerProfile.todayDone?' ✓':''}${cheerLine} · <a href="#" onclick="unpairPartner();return false">解除</a>`;
+        const cheerEmoji=(c&&c.date===todayStr())?String(c.emoji||''):'';
+        const nameEl=document.createElement('b');
+        nameEl.textContent=String(_partnerProfile.name||'搭子');
+        status.append(document.createTextNode('已连接 '),nameEl);
+        status.append(document.createTextNode(
+          ` · 今日：${String(_partnerProfile.todayType||'—')}${_partnerProfile.todayDone?' ✓':''}${cheerEmoji?` · TA今天给你 ${cheerEmoji}`:''} · `
+        ));
+        status.append(_pairActionLink('解除'));
       }else{
-        status.innerHTML=`已保存配对码，等对方也填上你的配对码即可连接 · <a href="#" onclick="unpairPartner();return false">取消</a>`;
+        status.append(
+          document.createTextNode('已保存配对码，等对方也填上你的配对码即可连接 · '),
+          _pairActionLink('取消')
+        );
       }
     }
   }
