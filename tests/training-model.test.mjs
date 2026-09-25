@@ -17,10 +17,14 @@ test('creates bounded budgets for 30/45/60/90 minute sessions', () => {
 });
 
 test('default strength targets scale with session duration', () => {
-  assert.ok(TM.createSessionBudget({ duration: 30, sets: 3, restSec: 45 }).mainTarget <= 4);
-  assert.ok(TM.createSessionBudget({ duration: 45, sets: 3, restSec: 45 }).mainTarget <= 5);
-  assert.ok(TM.createSessionBudget({ duration: 60, sets: 3, restSec: 45 }).mainTarget <= 6);
-  assert.ok(TM.createSessionBudget({ duration: 90, sets: 3, restSec: 45 }).mainTarget <= 8);
+  const b30 = TM.createSessionBudget({ duration: 30, sets: 3, restSec: 45 });
+  const b45 = TM.createSessionBudget({ duration: 45, sets: 3, restSec: 45 });
+  const b60 = TM.createSessionBudget({ duration: 60, sets: 3, restSec: 45 });
+  const b90 = TM.createSessionBudget({ duration: 90, sets: 3, restSec: 45 });
+  assert.ok(b30.mainTarget >= 3 && b30.mainTarget <= 4);
+  assert.ok(b45.mainTarget >= 4 && b45.mainTarget <= 5);
+  assert.ok(b60.mainTarget >= 5 && b60.mainTarget <= 6);
+  assert.ok(b90.mainTarget <= 8);
 });
 
 test('high-impact cardio is only budgeted for no-equipment sessions and caps at five minutes', () => {
@@ -34,6 +38,13 @@ test('high-impact cardio is only budgeted for no-equipment sessions and caps at 
   assert.equal(result.exercises.length, 1);
   assert.ok(result.exercises[0].reps <= 5);
   assert.equal(result.exercises[0].optional, true);
+
+  const gymResult = TM.fitExercisesToBudget([
+    { name: '波比跳', group: 'cardio', sets: 1, reps: 15, unit: '分钟', muscle: ['全身'] },
+    { name: '椭圆机', group: 'cardio', sets: 1, reps: 12, unit: '分钟', muscle: ['心肺'] }
+  ], gym);
+  assert.equal(gymResult.exercises.length, 1);
+  assert.equal(gymResult.exercises[0].name, '椭圆机');
 });
 
 test('fitted plans stay within duration plus five minutes', () => {

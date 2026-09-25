@@ -23,7 +23,8 @@
   function createSessionBudget(options = {}) {
     const duration = clamp(Number(options.duration) || 60, 20, 180);
     const sets = clamp(Number(options.sets) || 3, 1, 8);
-    const restSec = clamp(Number(options.restSec) || 45, 0, 240);
+    const rawRestSec = Number(options.restSec);
+    const restSec = clamp(Number.isFinite(rawRestSec) ? rawRestSec : 45, 0, 240);
     const cardioFocus = !!options.cardioFocus;
     const noEquipmentOnly = !!options.noEquipmentOnly;
 
@@ -34,7 +35,7 @@
       ? clamp(Math.round(duration * 0.22), 6, 20)
       : (duration >= 60 ? 8 : duration >= 45 ? 6 : duration >= 30 ? 3 : 0);
 
-    const highImpactMax = noEquipmentOnly ? Math.min(5, conditioning || 5) : 0;
+    const highImpactMax = noEquipmentOnly ? Math.min(5, conditioning) : 0;
     const strength = Math.max(0, duration - warmup - conditioning - cooldown - transitions);
     const perStrengthExercise = estimateStrengthExerciseMinutes(sets, restSec);
     const range = targetRange(duration);
@@ -90,7 +91,8 @@
 
   function estimatePlanMinutes(exercises, options = {}) {
     const list = Array.isArray(exercises) ? exercises : [];
-    const restSec = Number(options.restSec) || 45;
+    const rawRestSec = Number(options.restSec);
+    const restSec = Number.isFinite(rawRestSec) ? rawRestSec : 45;
     const transitionPerExercise = options.transitionPerExercise == null ? 0.25 : Number(options.transitionPerExercise);
     const transition = Math.max(0, list.length - 1) * Math.max(0, transitionPerExercise);
     const work = list.reduce((sum, ex) => sum + estimateExerciseMinutes(ex, restSec), 0);
@@ -152,7 +154,7 @@
     const cooldown = [...requiredCool, ...list.filter(ex => ex && (ex.isStretch || ex.group === 'stretch' || ex.group === 'posture') && !requiredSet.has(ex)).slice(0, coolSlots)];
 
     const replacement = new Map();
-    let conditioning = list.filter(ex => ex && ex.group === 'cardio').slice(0, 1).map(ex => {
+    let conditioning = list.filter(ex => ex && ex.group === 'cardio').map(ex => {
       let out = ex;
       if (isHighImpactCardio(ex)) {
         const minutes = Math.min(5, b.highImpactMax || 0, Number(ex.reps) || 0);
@@ -162,7 +164,7 @@
       }
       replacement.set(ex, out);
       return out;
-    }).filter(ex => !isHighImpactCardio(ex) || ex.reps > 0);
+    }).filter(ex => !isHighImpactCardio(ex) || ex.reps > 0).slice(0, 1);
 
     const selectedOriginals = new Set([...warmup, ...main, ...cooldown]);
     for (const [orig, repl] of replacement.entries()) {
