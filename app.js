@@ -1,5 +1,59 @@
 // ══ app.js — Auth, Sync, Journal, Stats, UI ═════════════
 let _initialLoad = true;
+const _dialogReturnFocus = new Map();
+
+function syncDialogBackground() {
+    const hasOpen = !!document.querySelector('.ex-modal-overlay.open:not([hidden])');
+    for (const el of [document.querySelector('.masthead'), document.querySelector('.wrap')]) {
+        if (!el) continue;
+        el.inert = hasOpen;
+        if (hasOpen) el.setAttribute('aria-hidden','true');
+        else el.removeAttribute('aria-hidden');
+    }
+}
+function openAppDialog(id) {
+    const modal = document.getElementById(id);
+    if (!modal) return;
+    const active = document.activeElement;
+    if (active && active instanceof HTMLElement) _dialogReturnFocus.set(id, active);
+    modal.hidden = false;
+    modal.setAttribute('aria-hidden', 'false');
+    modal.classList.add('open');
+    syncDialogBackground();
+    setTimeout(() => {
+        const focusable = modal.querySelector('input:not([disabled]), textarea:not([disabled]), button:not([disabled]), [href], [tabindex]:not([tabindex="-1"])');
+        if (focusable && focusable instanceof HTMLElement) focusable.focus({preventScroll:true});
+    }, 0);
+}
+function closeAppDialog(id) {
+    const modal = document.getElementById(id);
+    if (!modal) return;
+    modal.classList.remove('open');
+    modal.setAttribute('aria-hidden', 'true');
+    modal.hidden = true;
+    syncDialogBackground();
+    const prev = _dialogReturnFocus.get(id);
+    _dialogReturnFocus.delete(id);
+    if (prev && document.contains(prev)) setTimeout(() => prev.focus({preventScroll:true}), 0);
+}
+window.openAppDialog = openAppDialog;
+window.closeAppDialog = closeAppDialog;
+
+document.addEventListener('keydown', e => {
+    if (e.key !== 'Escape') return;
+    const modal = [...document.querySelectorAll('.ex-modal-overlay.open:not([hidden])')].pop();
+    if (!modal) return;
+    e.preventDefault();
+    const id = modal.id;
+    if (id === 'workout-modal' && typeof wmClose === 'function') wmClose();
+    else if (id === 'login-modal' && typeof closeLoginModal === 'function') closeLoginModal();
+    else if (id === 'rpe-modal' && typeof closeRpeModal === 'function') closeRpeModal();
+    else if (id === 'ex-modal' && typeof closeExDetail === 'function') closeExDetail();
+    else if (id === 'hist-modal' && typeof closeHistModal === 'function') closeHistModal();
+    else if (id === 'share-modal' && typeof closeShareModal === 'function') closeShareModal();
+    else if (id === 'achievement-modal' && typeof closeAchievementModal === 'function') closeAchievementModal();
+    else closeAppDialog(id);
+});
 
 // ══ Dark/Light Mode Toggle ═══════════════════════════════
 (function initTheme(){
@@ -118,10 +172,10 @@ document.querySelectorAll('#g-focus .chip').forEach(b=>{
 const goalInfo = document.getElementById('goal-info');
 if (goalInfo) {
     if (hasGoal('翘臀美背')) {
-        goalInfo.innerHTML = "臀推顶端挤压优先；美背日强化背阔与体态（圆肩改善）；收腰靠真空吸而非减脂；避免直立划船/耸肩。";
+        goalInfo.textContent = "臀推与髋伸展训练臀部，划船/下拉训练背部，面拉/YTW用于肩胛控制。计划避开直立划船；腰围变化以实际测量趋势为准。";
         goalInfo.style.display = "block";
     } else if (hasGoal('女性曲线')) {
-        goalInfo.innerHTML = "极致沙漏：臀大+胯宽+腿丰满同步堆围度，腰只靠真空吸/平板维持，绝不做负重侧屈/转体。大腿要练腘绳/内收/衔接，不只堆股四。上肢几乎不动以免变宽。吃够蛋白(1.6-2g/kg)+轻微热量盈余才能喂大下半身。";
+        goalInfo.textContent = "以下肢肌肥大和体态为重点，覆盖臀大肌、侧臀、股四头、腘绳肌和内收肌；核心练稳定与腹壁控制，上肢保留适量训练。轮廓与围度变化用长期记录判断。";
         goalInfo.style.display = "block";
     } else {
         goalInfo.style.display = "none";
@@ -193,11 +247,11 @@ el.innerHTML=`重合：${g?'健身房 '+g:''}${g&&s?' · ':''}${s?'游泳 '+s:''
 
 // ══ Tabs ═════════════════════════════════════════════════
 function showTab(id,btn){
-document.querySelectorAll('.panel-tab').forEach(p=>p.classList.remove('active'));
-document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
-document.getElementById(id).classList.add('active');
-btn.classList.add('active');
-btn.scrollIntoView({behavior:'smooth',inline:'center',block:'nearest'});
+document.querySelectorAll('.panel-tab').forEach(p=>{p.classList.remove('active');p.hidden=true;});
+document.querySelectorAll('.tab').forEach(t=>{t.classList.remove('active');t.setAttribute('aria-selected','false');});
+const panel=document.getElementById(id);
+if(panel){panel.hidden=false;panel.classList.add('active');}
+if(btn){btn.classList.add('active');btn.setAttribute('aria-selected','true');btn.scrollIntoView({behavior:'smooth',inline:'center',block:'nearest'});}
 if(id==='journal')renderLog();
 if(id==='stats-tab')renderStats();
 }
@@ -407,10 +461,10 @@ function renderBodyPanel(){
     return `<div style="margin-bottom:12px"><div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="font-size:12px;font-weight:600">${L(f.k)}</span><span style="font-size:11px;font-weight:600;color:${col}">${delta>0?'+':''}${delta}${f.u} · 现 ${last}${f.u}</span></div><div style="display:flex;gap:2px;height:24px;align-items:flex-end">${pts.slice(-14).map(p=>{const h=(p[f.k]-mn)/rg*70+30;return `<div style="flex:1;background:var(--terra);opacity:.7;border-radius:2px 2px 0 0;height:${h}%" title="${p.date}: ${p[f.k]}${f.u}"></div>`}).join('')}</div></div>`;
   };
   const charts=BODY_FIELDS.map(spark).join('');
-  const vac=(()=>{const d=S.vacuumDays||[],t=todayStr();let st=0;for(let i=0;i<400;i++){const ds=addDays(t,-i);if(d.includes(ds))st++;else if(i>0)break;}const dn=d.includes(t);return `<div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px;padding:8px 10px;background:var(--surface2);border-radius:8px"><div><div style="font-size:12px;font-weight:600">真空吸收腰打卡</div><div style="font-size:10px;color:var(--ink3)">连续 ${st} 天 · 累计 ${d.length} 次</div></div><button onclick="logVacuum()" class="exp-btn" style="font-size:12px;padding:6px 12px${dn?';opacity:.5':''}">${dn?'今日已打 ✓':'今日打卡'}</button></div>`;})();
+  const vac=(()=>{const d=S.vacuumDays||[],t=todayStr();let st=0;for(let i=0;i<400;i++){const ds=addDays(t,-i);if(d.includes(ds))st++;else if(i>0)break;}const dn=d.includes(t);return `<div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px;padding:8px 10px;background:var(--surface2);border-radius:8px"><div><div style="font-size:12px;font-weight:600">腹壁控制练习打卡</div><div style="font-size:10px;color:var(--ink3)">连续 ${st} 天 · 累计 ${d.length} 次</div></div><button onclick="logVacuum()" class="exp-btn" style="font-size:12px;padding:6px 12px${dn?';opacity:.5':''}">${dn?'今日已打 ✓':'今日打卡'}</button></div>`;})();
   const hist=BODY_LOG.length?`<details style="margin-top:6px"><summary style="font-size:11px;color:var(--ink3);cursor:pointer">历史记录 (${BODY_LOG.length})</summary><div style="margin-top:6px">${[...BODY_LOG].reverse().slice(0,40).map(x=>`<div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;padding:4px 0;border-bottom:1px solid var(--border)"><span>${x.date}</span><span style="color:var(--ink3);flex:1;text-align:right;margin-right:8px">${BODY_FIELDS.filter(f=>x[f.k]!=null).map(f=>(f.k==='weight'?x.weight+'kg':L(f.k).slice(0,2)+x[f.k])).join(' · ')}</span><span onclick="delBody('${x.date}')" style="color:var(--terra);cursor:pointer;padding:0 4px">✕</span></div>`).join('')}</div></details>`:'';
   const title=_bodyLbl('panel_title','身体记录 📏');
-  return `<div class="panel"><p class="panel-title">${title} <span style="font-size:11px;color:var(--ink3);font-weight:400"> 体型才是真正的进度</span></p>
+  return `<div class="panel"><p class="panel-title">${title} <span style="font-size:11px;color:var(--ink3);font-weight:400"> 围度是长期趋势的一部分</span></p>
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">${core}</div>
 <details style="margin-top:8px"><summary style="font-size:11px;color:var(--ink3);cursor:pointer">更多围度(胸/胯宽/下腹/大腿根/小腿/脚踝)</summary><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px">${more}</div><div style="font-size:10px;color:var(--ink3);margin-top:6px">每项都有量法提示(长按/悬停标签)。位置固定住,数字才有意义。</div></details>
 <button onclick="logBody()" class="exp-btn" style="width:100%;margin-top:10px">保存今日数据</button>${vac}
@@ -440,13 +494,62 @@ function renderCurvePanel(){
 <div style="font-size:10px;color:var(--ink3);margin-top:3px">${f.why}</div></div>`;
   }).join('');
   const hint=total===0
-    ? '还没有打卡数据 —— 练几次之后这里就会告诉你哪个点在掉队。'
-    : `最弱的一条是<b style="color:var(--terra)">${weak.name}</b>(${weak.sets}/${weak.target} 组)。下次生成计划时我会往这边加,你也可以直接在计划里手动添加动作补上。`;
-  return `<div class="panel"><p class="panel-title">曲线焦点 <span style="font-size:11px;color:var(--ink3);font-weight:400"> 近 4 周 · 练了多少 vs 尺寸往哪走</span></p>
+    ? '还没有打卡数据。训练几次后，这里会并列显示训练暴露量和实际围度趋势。'
+    : `训练暴露量较少的一条是<b style="color:var(--terra)">${weak.name}</b>(${weak.sets}/${weak.target} 组)，下次计划会优先补足。围度趋势是并列观察项，不把两者直接当作因果。`;
+  return `<div class="panel"><p class="panel-title">训练暴露与围度趋势 <span style="font-size:11px;color:var(--ink3);font-weight:400"> 近 4 周 · 两条数据分开看</span></p>
 ${rows}<div style="font-size:11px;color:var(--ink2);margin-top:8px;padding:8px 10px;background:var(--surface2);border-radius:8px">${hint}</div></div>`;
 }
 
 // ══ Stats ════════════════════════════════════════════════
+function renderTrainingDecisionPanel(tStr){
+  const since=addDays(tStr,-27);
+  const recent=LOG.filter(l=>l.date>=since);
+  const groupNames={chest:'胸',shoulder:'肩',back:'背',biceps:'二头',triceps:'三头',quads:'股四头',hamglutes:'臀腿',glutemed:'侧臀',calves:'小腿',core:'核心'};
+  const sets={}; let done=0, plannedEx=0, plannedMin=0, actualMin=0;
+  const sessionRpes=[], exRpes=[];
+  recent.forEach(l=>{
+    plannedMin += Number(l.plannedDuration ?? l.duration ?? 0);
+    actualMin += Number(l.duration || 0);
+    if(l.rpe) sessionRpes.push(Number(l.rpe));
+    (l.exercises||[]).forEach(ex=>{
+      plannedEx++;
+      if(ex.done!==false) done++;
+      if(ex.rpe!=null) exRpes.push(Number(ex.rpe));
+      if(ex.done===false) return;
+      let grp=null;
+      for(const [g,arr] of Object.entries(DB)){if((arr||[]).some(x=>x.n===ex.name)){grp=g;break;}}
+      if(!grp || ['warmup','stretch','cardio','posture','swimming'].includes(grp)) return;
+      sets[grp]=(sets[grp]||0)+(Number(ex.sets)||1);
+    });
+  });
+  const setEntries=Object.entries(sets).sort((a,b)=>b[1]-a[1]);
+  const maxSet=setEntries[0]?.[1]||1;
+  const completion=plannedEx?Math.round(done/plannedEx*100):0;
+  const avg=a=>a.length?Math.round(a.reduce((x,y)=>x+y,0)/a.length*10)/10:null;
+  const weightMoves=Object.entries(W_HIST).map(([name,h])=>{
+    const hist=(h||[]).filter(x=>x&&x.weight!=null).sort((a,b)=>String(a.date).localeCompare(String(b.date)));
+    if(hist.length<2 || String(hist.at(-1).date)<since) return null;
+    const recentHist=hist.filter(x=>String(x.date)>=since);
+    const first=(recentHist.length>=2?recentHist[0]:hist.at(-2)).weight;
+    const last=hist.at(-1).weight;
+    return {name,delta:Math.round((last-first)*10)/10,last};
+  }).filter(Boolean).sort((a,b)=>Math.abs(b.delta)-Math.abs(a.delta)).slice(0,3);
+  return `<div class="panel decision-panel">
+    <p class="panel-title">近4周训练决策</p>
+    <div class="stats">
+      <div class="stat"><div class="stat-val">${completion}%</div><div class="stat-lbl">动作完成率</div></div>
+      <div class="stat"><div class="stat-val">${plannedMin||0} / ${actualMin||0}</div><div class="stat-lbl">计划 / 实际分钟</div></div>
+      <div class="stat"><div class="stat-val">${avg(sessionRpes)??'—'}</div><div class="stat-lbl">平均 Session RPE</div></div>
+    </div>
+    <div class="stats" style="margin-top:8px">
+      <div class="stat"><div class="stat-val">${exRpes.length}/${done||0}</div><div class="stat-lbl">动作 RPE 覆盖</div></div>
+      <div class="stat"><div class="stat-val">${avg(exRpes)??'—'}</div><div class="stat-lbl">平均动作 RPE</div></div>
+      <div class="stat"><div class="stat-val">${setEntries.reduce((n,[,v])=>n+v,0)}</div><div class="stat-lbl">有效工作组</div></div>
+    </div>
+    ${setEntries.length?`<div style="margin-top:14px"><div style="font-size:11px;font-weight:600;margin-bottom:6px">有效工作组 · 按肌群</div>${setEntries.map(([g,c])=>`<div class="dist-row"><span style="min-width:52px">${groupNames[g]||g}</span><div class="dist-bar-wrap"><div class="dist-bar-fill" style="width:${Math.round(c/maxSet*100)}%"></div></div><span class="dist-val">${c}</span></div>`).join('')}</div>`:''}
+    ${weightMoves.length?`<div style="margin-top:14px"><div style="font-size:11px;font-weight:600;margin-bottom:6px">重量趋势</div>${weightMoves.map(x=>`<div style="display:flex;justify-content:space-between;font-size:11px;padding:3px 0"><span>${x.name}</span><span>${x.last}kg · ${x.delta>0?'+':''}${x.delta}kg</span></div>`).join('')}</div>`:''}
+  </div>`;
+}
 function renderStats(){
 const el=document.getElementById('stats-content');
 if(!el)return;
@@ -518,6 +621,7 @@ const distEntries=Object.entries(dist).sort((a,b)=>b[1]-a[1]);
 const maxDist=distEntries[0]?.[1]||1;
 
 el.innerHTML=`
+${renderTrainingDecisionPanel(tStr)}
 <div class="streak-box"><div class="streak-num">${streak}</div><div class="streak-lbl">连续打卡天数</div></div>
 ${typeof renderBodyPanel==='function'?renderBodyPanel():''}
 ${typeof renderCurvePanel==='function'?renderCurvePanel():''}
@@ -844,13 +948,13 @@ if(typeof updatePairUI==='function')updatePairUI();
 
 window.updateProfileUI = function() {
     // Prefer a user-set display name (Chinese-name friendly) over Google's `given family` split.
-    const gName = (_user && _user.displayName) ? _user.displayName.split(' ')[0] : '我的';
+    const gName = (_user && _user.displayName) ? _user.displayName.split(' ')[0] : '';
     const name = (S.displayName && S.displayName.trim()) ? S.displayName.trim() : gName;
     const seal = (S.sealChar && S.sealChar.trim()) ? S.sealChar.trim() : ((name && name.charAt(0).toUpperCase()) || '健');
     const titleEl = document.getElementById('doc-title');
-    if (titleEl) titleEl.textContent = `${name}健身计划`;
+    if (titleEl) titleEl.textContent = name ? `${name}健身计划` : '我的健身计划';
     const nameEl = document.getElementById('user-name');
-    if (nameEl) { nameEl.textContent = `${name}的计划`; nameEl.style.cursor = 'pointer'; nameEl.title = '点击修改显示名 / 印章'; nameEl.onclick = editProfileName; }
+    if (nameEl) { nameEl.textContent = name ? `${name}的计划` : '我的健身计划'; nameEl.style.cursor = 'pointer'; nameEl.title = '点击修改显示名 / 印章'; nameEl.onclick = editProfileName; }
     const sealEl = document.getElementById('user-seal');
     if (sealEl) { sealEl.textContent = seal; sealEl.style.cursor = 'pointer'; sealEl.title = '点击修改显示名 / 印章'; sealEl.onclick = editProfileName; }
 };
@@ -873,8 +977,8 @@ function signOutUser(){
 if(confirm('确定退出登录？'))firebase.auth().signOut();
 }
 // ── 邮箱/密码登录:纯API无跳转,主屏幕PWA里也能登(绕开Google OAuth在iOS PWA的sessionStorage死结)──
-function openLoginModal(){const m=document.getElementById('login-modal');if(m){const g=document.getElementById('login-msg');if(g)g.textContent='';m.classList.add('open');}}
-function closeLoginModal(){const m=document.getElementById('login-modal');if(m)m.classList.remove('open');}
+function openLoginModal(){const g=document.getElementById('login-msg');if(g)g.textContent='';openAppDialog('login-modal');}
+function closeLoginModal(){closeAppDialog('login-modal');}
 function _loginMsg(t){const e=document.getElementById('login-msg');if(e)e.textContent=t;}
 function _authErr(e){const c=(e&&e.code)||'';
 if(c==='auth/wrong-password'||c==='auth/invalid-credential')return '邮箱或密码错误';
@@ -1302,14 +1406,10 @@ function openShareModal(logEntry) {
         container.innerHTML = `<img src="${imgUrl}" style="max-width:100%; max-height:450px; border-radius:4px; display:block;" alt="打卡卡片预览" />`;
     }
     
-    const modal = document.getElementById('share-modal');
-    if (modal) modal.classList.add('open');
+    openAppDialog('share-modal');
 }
 
-function closeShareModal() {
-    const modal = document.getElementById('share-modal');
-    if (modal) modal.classList.remove('open');
-}
+function closeShareModal() { closeAppDialog('share-modal'); }
 
 function downloadShareCard() {
     if (!_currentShareImgUrl) return;
@@ -1360,12 +1460,10 @@ function openAchievementModal(type, index) {
     actionBtn.style.background = 'var(--sage)';
     
     // Open Modal
-    document.getElementById('achievement-modal').classList.add('open');
+    openAppDialog('achievement-modal');
 }
 
-function closeAchievementModal() {
-    document.getElementById('achievement-modal').classList.remove('open');
-}
+function closeAchievementModal() { closeAppDialog('achievement-modal'); }
 
 function toggleAchShareCard() {
     const btn = document.getElementById('ach-action-btn');
@@ -1988,8 +2086,68 @@ function triggerDevClick() {
     }
 }
 
+// ══ Settings information architecture ════════════════════
+function organizeSettingsSections(){
+    const settings=document.getElementById('settings');
+    const panel=settings && settings.querySelector(':scope > .panel');
+    if(!panel || panel.querySelector('.settings-group')) return;
+
+    const mk=(title,open=false)=>{
+        const d=document.createElement('details');
+        d.className='settings-group';
+        d.open=open;
+        const s=document.createElement('summary');
+        s.textContent=title;
+        const body=document.createElement('div');
+        body.className='settings-group-body';
+        d.append(s,body);
+        return {d,body};
+    };
+    const train=mk('训练',true), body=mk('身体与周期'), partner=mk('搭子与同步'), advanced=mk('高级与数据');
+    const title=panel.querySelector(':scope > .panel-title');
+    if(title) title.after(train.d,body.d,partner.d,advanced.d);
+    else panel.prepend(train.d,body.d,partner.d,advanced.d);
+
+    const move=(el,dest,label=true)=>{
+        if(!el) return;
+        if(label){
+            const prev=el.previousElementSibling;
+            if(prev && prev.classList && prev.classList.contains('sec')) dest.appendChild(prev);
+        }
+        dest.appendChild(el);
+    };
+    const by=id=>document.getElementById(id);
+
+    move(by('g-goal'),train.body); move(by('goal-info'),train.body,false);
+    move(by('g-level'),train.body); move(by('g-weight-level'),train.body);
+    move(by('sl-days')?.closest('.srow'),train.body); move(by('swim-breakdown'),train.body,false);
+    move(by('sl-dur')?.closest('.srow'),train.body);
+    move(by('g-equip'),train.body); move(panel.querySelector('.tecnogym-ref'),train.body,false);
+    move(by('swim-settings'),train.body,false);
+    move(by('g-focus'),train.body); move(by('limits'),train.body); move(by('g-rest'),train.body);
+    const gen=by('gen-btn')?.parentElement; move(gen,train.body,false);
+
+    move(by('cycle-enable-row'),body.body,false); move(by('cycle-block'),body.body,false);
+    move(by('partner-settings'),partner.body,false);
+
+    move(by('sound-enable-row'),advanced.body,false);
+    move(by('notif-enable-row'),advanced.body,false);
+    move(by('auto-vol-row'),advanced.body,false);
+
+    const excluded=by('excluded-panel');
+    if(excluded) advanced.body.appendChild(excluded);
+    const dataButton=panel.parentElement?.querySelector('button[onclick="exportForAI()"]');
+    const dataPanel=dataButton?.closest('.panel');
+    if(dataPanel) advanced.body.appendChild(dataPanel);
+    const version=by('app-version')?.parentElement;
+    if(version) advanced.body.appendChild(version);
+}
+window.organizeSettingsSections=organizeSettingsSections;
+
 // ══ Init ═════════════════════════════════════════════════
+organizeSettingsSections();
 loadState();
+if(typeof restoreGuidedState==='function') restoreGuidedState();
 renderAuthBtn(); // show login button immediately, don't wait for Firebase
 initFirebase();
 

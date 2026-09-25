@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport"
-        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+        content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title id="doc-title">我的健身计划</title>
     <link rel="manifest" href="manifest.json">
     <link rel="icon" href="icon.svg" type="image/svg+xml">
@@ -35,12 +35,12 @@
                 onclick="triggerDevClick()">FITNESS & WELLNESS</p>
         </div>
         <div class="masthead-right" style="display:flex;align-items:center;gap:8px">
-            <button class="theme-toggle" id="theme-btn" onclick="toggleTheme()" title="切换模式"></button>
+            <button class="theme-toggle" id="theme-btn" onclick="toggleTheme()" title="切换模式" aria-label="切换显示模式"></button>
             <div id="auth-btn" class="auth-btn"></div>
         </div>
     </header>
 
-    <div id="universal-timer" class="timer-bar">
+    <div id="universal-timer" class="timer-bar" aria-live="polite" aria-hidden="true">
         <div class="timer-progress" id="timer-progress"></div>
         <div class="timer-content">
             <div class="timer-left">
@@ -57,16 +57,16 @@
 
     <div class="wrap">
         <div class="tabs-wrap">
-            <div class="tabs">
-                <button class="tab active" onclick="showTab('today',this)">今日训练</button>
-                <button class="tab" onclick="showTab('settings',this)">设置</button>
-                <button class="tab" onclick="showTab('journal',this)">日志</button>
-                <button class="tab" onclick="showTab('stats-tab',this)">统计</button>
+            <div class="tabs" role="tablist" aria-label="主要页面">
+                <button class="tab active" id="tab-today" role="tab" aria-selected="true" aria-controls="today" onclick="showTab('today',this)">今日训练</button>
+                <button class="tab" id="tab-settings" role="tab" aria-selected="false" aria-controls="settings" onclick="showTab('settings',this)">设置</button>
+                <button class="tab" id="tab-journal" role="tab" aria-selected="false" aria-controls="journal" onclick="showTab('journal',this)">日志</button>
+                <button class="tab" id="tab-stats" role="tab" aria-selected="false" aria-controls="stats-tab" onclick="showTab('stats-tab',this)">统计</button>
             </div>
         </div>
 
         <!-- Tab: Today -->
-        <div class="panel-tab active" id="today">
+        <div class="panel-tab active" id="today" role="tabpanel" aria-labelledby="tab-today">
             <div id="main">
                 <div class="empty">
                     <i class="ti ti-barbell"></i>
@@ -76,7 +76,7 @@
         </div>
 
         <!-- Tab: Settings -->
-        <div class="panel-tab" id="settings">
+        <div class="panel-tab" id="settings" role="tabpanel" aria-labelledby="tab-settings" hidden>
             <div class="panel">
                 <p class="panel-title">训练设置 <span class="saved-dot" id="saved-dot"></span></p>
 
@@ -346,10 +346,10 @@
 
             <div style="text-align:center;padding:16px 0 24px">
                 <span id="app-version" style="font-size:11px;color:var(--ink3);cursor:pointer;user-select:none" onclick="toggleChangelog()">
-                    Cici健身计划 v2.1.0 (build 140) · 点击查看完整更新日志 ▾
+                    Cici健身计划 v2.2.0 (build 150) · 点击查看完整更新日志 ▾
                 </span>
                 <div id="changelog-box" style="display:none;margin-top:12px;text-align:left;background:var(--surface2);border-radius:10px;padding:14px;font-size:12px;line-height:1.6;color:var(--ink2)">
-                    <div style="font-weight:600;color:var(--ink);margin-bottom:8px;font-size:13px">🎉 v2.1.0 (2026-08-04) 核心架构与功能更新：</div>
+                    <div style="font-weight:600;color:var(--ink);margin-bottom:8px;font-size:13px">v2.2.0 (2026-09-21) 训练质量、引导与无障碍更新：</div>
                     <ul style="margin:0;padding-left:18px;display:flex;flex-direction:column;gap:4px">
                         <li><b>⚡ 训练量与下调控制</b>：提前结束训练支持自主勾选是否下调剩余训练量，设置中可开启/关闭默认下调开关。</li>
                         <li><b>⏱️ 全局休息与后台恢复</b>：逐动作 RPE 行快捷开启 45s 组间休息计时；增加 <code>sessionStorage</code> 状态恢复，手机切回前台或 iOS 进程重建自动接续。</li>
@@ -367,7 +367,7 @@
         </div>
 
         <!-- Tab: Journal -->
-        <div class="panel-tab" id="journal">
+        <div class="panel-tab" id="journal" role="tabpanel" aria-labelledby="tab-journal" hidden>
             <div class="panel">
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
                     <p class="panel-title" style="margin:0">训练日志</p>
@@ -382,28 +382,32 @@
         </div>
 
         <!-- Tab: Stats -->
-        <div class="panel-tab" id="stats-tab">
+        <div class="panel-tab" id="stats-tab" role="tabpanel" aria-labelledby="tab-stats" hidden>
             <div id="stats-content"></div>
         </div>
     </div>
 
     <div class="sync-toast" id="sync-toast"></div>
 
-    <div id="login-modal" class="ex-modal-overlay" onclick="if(event.target===this)closeLoginModal()">
+    <div id="login-modal" class="ex-modal-overlay" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="login-modal-title" hidden onclick="if(event.target===this)closeLoginModal()">
         <div class="ex-modal-card" onclick="event.stopPropagation()">
-            <h3 style="margin-bottom:6px;font-family:var(--font-display);font-size:20px;color:var(--ink)">登录同步</h3>
+            <h3 id="login-modal-title" style="margin-bottom:6px;font-family:var(--font-display);font-size:20px;color:var(--ink)">登录同步</h3>
             <p style="margin-bottom:16px;font-size:12px;color:var(--ink3)">主屏幕版用邮箱登录即可；Safari 里也能用 Google</p>
-            <input id="login-email" type="email" autocomplete="username" placeholder="邮箱" style="width:100%;box-sizing:border-box;padding:12px;margin-bottom:10px;border:1px solid rgba(128,128,128,.3);border-radius:10px;font-size:15px;background:var(--surface2);color:var(--ink)">
-            <input id="login-pass" type="password" autocomplete="current-password" placeholder="密码（至少6位）" style="width:100%;box-sizing:border-box;padding:12px;margin-bottom:14px;border:1px solid rgba(128,128,128,.3);border-radius:10px;font-size:15px;background:var(--surface2);color:var(--ink)">
-            <div style="display:flex;gap:10px;margin-bottom:8px">
-                <button onclick="signInEmail()" style="flex:1;padding:13px;border:none;border-radius:12px;background:var(--terra);color:#fff;font-weight:600;font-size:15px">登录</button>
-                <button onclick="signUpEmail()" style="flex:1;padding:13px;border:1px solid var(--terra);border-radius:12px;background:transparent;color:var(--terra);font-weight:600;font-size:15px">注册</button>
-            </div>
-            <div id="login-msg" style="font-size:12px;color:var(--terra);min-height:16px;text-align:center;margin-bottom:8px"></div>
-            <button onclick="signInGoogle()" style="width:100%;padding:11px;border:1px solid rgba(128,128,128,.3);border-radius:12px;background:transparent;color:var(--ink3);font-size:13px">用 Google 登录（限 Safari）</button>
+            <form id="login-form" onsubmit="event.preventDefault();signInEmail()">
+                <label class="sr-only" for="login-email">邮箱</label>
+                <input id="login-email" type="email" autocomplete="username" placeholder="邮箱" aria-label="邮箱" style="width:100%;box-sizing:border-box;padding:12px;margin-bottom:10px;border:1px solid rgba(128,128,128,.3);border-radius:10px;font-size:15px;background:var(--surface2);color:var(--ink)">
+                <label class="sr-only" for="login-pass">密码</label>
+                <input id="login-pass" type="password" autocomplete="current-password" placeholder="密码（至少6位）" aria-label="密码" style="width:100%;box-sizing:border-box;padding:12px;margin-bottom:14px;border:1px solid rgba(128,128,128,.3);border-radius:10px;font-size:15px;background:var(--surface2);color:var(--ink)">
+                <div style="display:flex;gap:10px;margin-bottom:8px">
+                    <button type="submit" style="flex:1;padding:13px;border:none;border-radius:12px;background:var(--terra);color:#fff;font-weight:600;font-size:15px">登录</button>
+                    <button type="button" onclick="signUpEmail()" style="flex:1;padding:13px;border:1px solid var(--terra);border-radius:12px;background:transparent;color:var(--terra);font-weight:600;font-size:15px">注册</button>
+                </div>
+                <div id="login-msg" role="status" aria-live="polite" style="font-size:12px;color:var(--terra);min-height:16px;text-align:center;margin-bottom:8px"></div>
+            </form>
+            <button type="button" onclick="signInGoogle()" style="width:100%;padding:11px;border:1px solid rgba(128,128,128,.3);border-radius:12px;background:transparent;color:var(--ink3);font-size:13px">用 Google 登录（限 Safari）</button>
         </div>
     </div>
-    <div id="rpe-modal" class="ex-modal-overlay" onclick="if(event.target===this)closeRpeModal()">
+    <div id="rpe-modal" class="ex-modal-overlay" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="rpe-modal-title" hidden onclick="if(event.target===this)closeRpeModal()">
         <div class="ex-modal-card" style="text-align:center" onclick="event.stopPropagation()">
             <h3 id="rpe-modal-title"
                 style="margin-bottom:8px;font-family:var(--font-display);font-size:20px;color:var(--ink)">今日疲劳度评估</h3>
@@ -467,11 +471,11 @@
     </div>
 
     <!-- Exercise Detail Modal -->
-    <div id="ex-modal" class="ex-modal-overlay" onclick="closeExDetail()">
+    <div id="ex-modal" class="ex-modal-overlay" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="ex-modal-title" hidden onclick="closeExDetail()">
         <div class="ex-modal-card" id="ex-modal-card" onclick="event.stopPropagation()">
             <div class="ex-modal-hdr">
                 <h2 id="ex-modal-title" class="ex-modal-title"></h2>
-                <button class="ex-modal-close" onclick="closeExDetail()">&#10005;</button>
+                <button class="ex-modal-close" aria-label="关闭动作详情" onclick="closeExDetail()">&#10005;</button>
             </div>
             <div id="ex-modal-muscles" class="jentry-chips" style="margin-bottom:1rem"></div>
             <div id="ex-modal-strength"></div>
@@ -483,24 +487,24 @@
     </div>
 
     <!-- Guided Workout Mode -->
-    <div id="workout-modal" class="ex-modal-overlay" onclick="if(event.target===this)wmClose()">
+    <div id="workout-modal" class="ex-modal-overlay" role="dialog" aria-modal="true" aria-hidden="true" aria-label="引导训练" hidden onclick="if(event.target===this)wmClose()">
         <div class="ex-modal-card" id="wm-card" onclick="event.stopPropagation()"></div>
     </div>
 
     <!-- History Detail Modal -->
-    <div id="hist-modal" class="ex-modal-overlay" onclick="closeHistModal()">
+    <div id="hist-modal" class="ex-modal-overlay" role="dialog" aria-modal="true" aria-hidden="true" aria-label="训练历史详情" hidden onclick="closeHistModal()">
         <div class="ex-modal-card" onclick="event.stopPropagation()">
             <div id="hist-modal-content"></div>
         </div>
     </div>
 
     <!-- Share Card Modal -->
-    <div id="share-modal" class="ex-modal-overlay" onclick="if(event.target===this)closeShareModal()">
+    <div id="share-modal" class="ex-modal-overlay" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="share-modal-title" hidden onclick="if(event.target===this)closeShareModal()">
         <div class="ex-modal-card" onclick="event.stopPropagation()" style="max-width: 460px; text-align: center;">
             <div class="ex-modal-hdr" style="margin-bottom: 12px;">
-                <h3 class="ex-modal-title"
+                <h3 id="share-modal-title" class="ex-modal-title"
                     style="font-family: var(--font-display); font-size: 18px; color: var(--ink);">分享今日打卡</h3>
-                <button class="ex-modal-close" onclick="closeShareModal()">&#10005;</button>
+                <button class="ex-modal-close" aria-label="关闭分享" onclick="closeShareModal()">&#10005;</button>
             </div>
             <div id="share-card-preview-container"
                 style="margin-bottom: 16px; display: flex; justify-content: center; box-shadow: 0 4px 16px rgba(0,0,0,0.1); border-radius: 8px; overflow: hidden; background: var(--surface2); min-height: 200px; align-items: center;">
@@ -517,13 +521,13 @@
     </div>
 
     <!-- Achievement Detail Modal -->
-    <div id="achievement-modal" class="ex-modal-overlay" onclick="if(event.target===this)closeAchievementModal()">
+    <div id="achievement-modal" class="ex-modal-overlay" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="ach-modal-title" hidden onclick="if(event.target===this)closeAchievementModal()">
         <div class="ex-modal-card" onclick="event.stopPropagation()"
             style="max-width: 400px; text-align: center; position: relative;">
             <div class="ex-modal-hdr" style="margin-bottom: 8px; border-bottom: none;">
                 <h3 id="ach-modal-title" class="ex-modal-title"
                     style="font-size: 18px; color: var(--ink); margin: 0 auto 0 0;">成就详情</h3>
-                <button class="ex-modal-close" onclick="closeAchievementModal()">&#10005;</button>
+                <button class="ex-modal-close" aria-label="关闭成就详情" onclick="closeAchievementModal()">&#10005;</button>
             </div>
             <div id="ach-modal-badge-container" style="display:flex;justify-content:center;margin: 24px 0 16px 0;">
                 <!-- SVG Badge here -->
@@ -554,6 +558,7 @@
     <!-- Developer Testing Console -->
     <script src="dev.js" onerror="console.log('Running in production mode (dev.js not loaded)')"></script>
 
+    <script src="training-model.js"></script>
     <script src="core.js"></script>
     <script src="app.js"></script>
     <script>if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).catch(() => { });</script>

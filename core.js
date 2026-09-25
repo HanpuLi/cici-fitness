@@ -1,7 +1,7 @@
 // ══ System Version ═════════════════════════════════════════
-const APP_VERSION = 'v2.1.0';
-const APP_BUILD = 140;
-const APP_BUILD_DATE = '2026-08-04';
+const APP_VERSION = 'v2.2.0';
+const APP_BUILD = 150;
+const APP_BUILD_DATE = '2026-09-21';
 window.APP_VERSION = APP_VERSION;
 window.APP_BUILD = APP_BUILD;
 window.APP_BUILD_DATE = APP_BUILD_DATE;
@@ -256,11 +256,19 @@ function getExcluded() {
     OWNER_ONLY_MOVES.forEach(e => s.add(e));
   }
   // Cici 反馈健身房没有这两台具体机器 → 永久排除,计划自动用同肌群备选(坐姿划船/器械上背划船/面拉/弹力带划船等)补位
-  if (hasGoal('翘臀美背')) { s.add('T把划船'); s.add('直臂下压机'); }
+  if (hasGoal('翘臀美背')) { s.add('T把划船'); s.add('直臂下压机'); s.add('杠铃直立划船'); }
   if (Array.isArray(S.userExcluded)) {
     S.userExcluded.forEach(e => s.add(e));
   }
   return s;
+}
+
+// 只用于 UI：统计用户能理解、能自行修改的限制，不把 owner/private gating 数量暴露出去。
+function getExplainableExcludedCount() {
+  const s = new Set();
+  LIMIT_RULES.forEach(r => { if (r.kw.some(k => (S.limits || '').includes(k))) r.exclude.forEach(e => s.add(e)); });
+  (S.userExcluded || []).forEach(e => s.add(e));
+  return s.size;
 }
 
 // ── 每日按序号存的状态(prog/weights/adj/exRpe)在动作数组增删/替换时的维护 ──
@@ -1137,7 +1145,7 @@ const SCHEMES = {
   '女性薄肌': {
     sets: { 初级: 3, 中级: 4, 高级: 4 }, reps: { 初级: 15, 中级: 15, 高级: 20 },
     rest: '45-60秒', cardioMin: 15, timePerSet: 105,
-    intensityNote: { 初级: '轻重量高次数，感受发力', 中级: '控制离心，避免肌肉过度代偿', 高级: '全程紧绷，不追求极限重量' },
+    intensityNote: { 初级: '选能稳定完成目标次数的重量，保留2-4次余力', 中级: '控制离心与动作范围，末组保留1-3次余力', 高级: '在动作稳定前提下提高训练刺激，不必每组力竭' },
     weightGuide: { 初级: '约为最大力量的40-50%', 中级: '约为最大力量的50-60%', 高级: '约为最大力量的55-65%' }
   },
   '臀腿塑形': {
@@ -1158,7 +1166,7 @@ const SCHEMES = {
     intensityNote: {
       初级: '臀推顶端挤压，背部动作专注肩胛后收下沉',
       中级: '臀推加重强调臀峰，划船/下拉控制离心',
-      高级: '臀推突破，美背日加量，核心真空吸收紧腰腹'
+      高级: '臀推与背部动作继续渐进；核心训练强调稳定、呼吸和腹壁控制'
     },
     weightGuide: {
       初级: '臀推约max的60-70%，背部约50-60%',
@@ -1170,9 +1178,9 @@ const SCHEMES = {
     sets: { 初级: 3, 中级: 4, 高级: 4 }, reps: { 初级: 15, 中级: 12, 高级: 10 },
     rest: '60-90秒', cardioMin: 12, timePerSet: 115,
     intensityNote: {
-      初级: '先激活臀中肌，外展每次必练做到酸胀；臀推顶端挤压；股四+腘绳认真练，把大腿练丰满',
-      中级: '外展加阻力保持15-20次，臀推顶端2秒挤压；股四/腘绳渐进超负荷堆大腿肉感',
-      高级: '外展向力竭、臀中每次不能跳；臀推/硬拉冲纪录；股四+腘绳大重量堆丰满大腿'
+      初级: '先学会侧臀与髋伸展动作，臀推、股四头和腘绳肌都覆盖到；保留2-4次余力',
+      中级: '外展、臀推与腿部动作逐步增加阻力或次数，保持完整动作范围',
+      高级: '用训练记录推进臀腿主要动作，必要时接近力竭，但以动作质量和恢复为先'
     },
     weightGuide: {
       初级: '臀推约max的60-70%；外展类15-20次能完成的阻力；腿部12-15次到位',
@@ -1182,11 +1190,11 @@ const SCHEMES = {
   }
 };
 const TIPS = {
-  '女性薄肌': '组间休息45-60秒保持心率。训练后必做拉伸避免肌肉结块。重点强化臀腿和核心线条。',
-  '臀腿塑形': '全部精力放在下半身，把视觉重心拉下来。臀推是最优先的动作，直接针对臀大肌。臀中肌侧向训练是改善腰胯比的关键，别跳过。重量选最后两次比较吃力的程度，每周尽量加一点点。蛋白质每公斤体重每天1.6-2克，热量吃够才能长肌肉。',
-  '女性薄肌+臀腿塑形': '以臀腿为主战场，上肢仅做维持性训练。下半身每周2-3次，髋铰链和深蹲交替。上肢每周1-2次轻量推拉即可，不追求上肢增量。蛋白质每公斤体重每天1.6-2克，热量吃够才能长肌肉。',
-  '翘臀美背': '臀推是提臀峰第一动作，顶端挤压1-2秒。你可以也应该练背，背阔分离感和肩胛下沉能让背显挺、视觉收腰。斜方"厚"多半是圆肩体态：停掉直立划船和耸肩，多做面拉、YTW、靠墙天使，把肩膀沉下去。收腰靠真空吸和卷腹收紧腹横肌，不是减脂。',
-  '女性曲线': '极致沙漏：臀中肌外展每次必练不能跳（胯宽靠它）；臀推/硬拉渐进冲圆臀；股四+腘绳+内收都堆围度让大腿丰满柔顺。腰只做真空吸/平板，绝不做负重侧屈/转体（会把腰练方）。上肢几乎不动以免变宽。蛋白1.6-2g/kg+轻微热量盈余才能喂大臀腿；腰围靠真空吸+控总量+有氧，不靠饿。'
+  '女性薄肌': '用可控制的重量完成稳定动作，把注意力放在动作质量、全身均衡和长期训练一致性。训练后拉伸可用于活动度与主观放松，不决定肌肉“长短”或形状。',
+  '臀腿塑形': '下半身是主要训练重点。臀推、髋铰链、深蹲/腿推与外展动作共同覆盖臀腿；重量以动作稳定、最后几次明显吃力但仍能保持技术为准，并逐步增加训练量或负重。',
+  '女性薄肌+臀腿塑形': '以下肢为训练重点，同时保留适量上肢推拉维持力量与体态。体型变化取决于长期训练、饮食、体脂和个体结构，不由某一种次数区间单独决定。',
+  '翘臀美背': '臀推与髋伸展训练臀大肌，划船/下拉与肩胛控制训练背部和体态。计划会避开直立划船；面拉、YTW、靠墙天使用于肩胛控制。腰围变化请以实际测量趋势为准，核心训练主要改善力量与控制。',
+  '女性曲线': '以下肢肌肥大和体态为重点：臀大肌、臀中肌、股四头、腘绳肌和内收肌都要有渐进训练。核心动作以稳定与腹壁控制为主；上肢保留足够训练维持力量和姿态。围度与轮廓变化以长期测量趋势判断，不把单一动作当作局部塑形保证。'
 };
 // Resolve S.goal to a canonical SCHEMES/TIPS key. S.goal may be a combo like
 // '女性薄肌+臀腿塑形' or, from older data, an order-swapped/invalid string. Fall back
@@ -1345,14 +1353,24 @@ function rebuildAchievementsFromLogs() {
 
 // ══ Plan Generator ═══════════════════════════════════════
 // Derive how many exercises fit in session based on duration
-function calcTotalExercises() {
+function currentSessionBudget() {
   const sch = currentScheme();
-  const warmup = 5, cooldown = 10;
-  const available = S.dur - warmup - cooldown;
-  const exTime = sch.timePerSet * (sch.sets[S.level] || 3) / 60; // minutes per exercise
-  let baseTarget = Math.max(2, Math.min(10, Math.floor(available / exTime)));
-  if (S.volumeMultiplier) baseTarget = Math.round(baseTarget * S.volumeMultiplier);
-  return Math.max(1, baseTarget);
+  const sets = sch.sets[S.level] || 3;
+  if (!globalThis.TrainingModel) {
+    return { duration: S.dur, mainTarget: Math.max(3, Math.min(6, Math.round(S.dur / 10))), conditioning: S.dur >= 45 ? 6 : 0, cooldown: 4, restSec: S.restDur ?? 45, highImpactMax: 0 };
+  }
+  return TrainingModel.createSessionBudget({
+    duration: S.dur,
+    sets,
+    restSec: S.restDur ?? 45,
+    cardioFocus: !!(S.focus || []).includes('有氧'),
+    noEquipmentOnly: S.equip.length === 1 && S.equip.includes('无器材')
+  });
+}
+function calcTotalExercises() {
+  let n = currentSessionBudget().mainTarget;
+  if (S.volumeMultiplier) n = Math.max(1, Math.round(n * S.volumeMultiplier));
+  return n;
 }
 
 // 平衡 & 单腿稳定动作（「平衡稳定」重点用；不进常规肌群池，作为附加块）
@@ -1367,6 +1385,7 @@ function pickExercises(split, excluded) {
   const sch = currentScheme();
   const sets = sch.sets[S.level], reps = sch.reps[S.level];
   const focusMap = FOCUS_MAP;
+  const budget = currentSessionBudget();
   const totalTarget = calcTotalExercises();
   // Budget: distribute exercises across groups proportionally, focus groups get +1
   const favGroups = S.focus.length ? S.focus.flatMap(f => focusMap[f] || []) : [];
@@ -1390,7 +1409,8 @@ function pickExercises(split, excluded) {
   }));
   const wSpecificNames = new Set(wSpecific.map(e => e.n));
   const wGlobal = _shufW(wPool.filter(e => e.muscle.includes('全身') && !wSpecificNames.has(e.n)));
-  [...wSpecific.slice(0, 3), ...wGlobal].slice(0, 3).forEach(ex => {
+  const warmupTarget = S.dur <= 30 ? 2 : 3;
+  [...wSpecific.slice(0, warmupTarget), ...wGlobal].slice(0, warmupTarget).forEach(ex => {
     if (used.has(ex.n)) return; used.add(ex.n);
     result.push({ name: ex.n, sets: 1, reps: ex.warmupSec || 45, unit: '秒', note: ex.note, group: 'warmup', diff: ex.diff, isWarmup: true, bi: !!ex.bi, muscle: ex.muscle });
   });
@@ -1461,7 +1481,7 @@ function pickExercises(split, excluded) {
       const exSets = isCardio ? 1 : sets;
       // 计时类:动作自带 hold(描述里写明的保持时长)优先于按等级给的默认秒数,
       // 免得详情写「静躺 1-2 分钟」而计时只跑 30 秒(反馈⑤)
-      const exReps = isCardio ? Math.max(sch.cardioMin, 10) : (isTime ? (ex.hold || (S.level === '初级' ? 30 : S.level === '中级' ? 45 : 60)) : reps);
+      const exReps = isCardio ? Math.max(3, budget.conditioning || 0) : (isTime ? (ex.hold || (S.level === '初级' ? 30 : S.level === '中级' ? 45 : 60)) : reps);
       // Build coaching note combining technique + goal/level context
       // Show the real last recorded weight (W_HIST) instead of a fabricated %max —
       // app has no 1RM input, so the percentage was meaningless. No history → omit.
@@ -1469,26 +1489,38 @@ function pickExercises(split, excluded) {
       const _gluteProg = hasGoal('女性曲线') && ['hamglutes', 'glutemed', 'quads'].includes(grp);
       const wHint = lastW
         ? (_gluteProg ? `（上次 ${lastW.weight}kg → 今天目标:同重多1次,或 +2.5kg）` : `（上次 ${lastW.weight}kg）`)
-        : (_gluteProg ? '（记录今天的重量,下次给你渐进目标——臀围度=渐进负重×吃够）' : '');
+        : (_gluteProg ? '（记录今天的重量，下次可据此给出渐进目标）' : '');
       const coaching = (S.periodMode ? '经期温和模式 | ' : '') + `${ex.note} — ${sch.intensityNote[S.level]}${wHint}`;
       result.push({ name: ex.n, sets: exSets, reps: exReps, unit: isCardio ? '分钟' : (isTime ? '秒' : '次'), note: coaching, group: grp, diff: ex.diff, bi: !!ex.bi, muscle: ex.muscle });
     });
   });
 
-  // Always append cardio finisher if not a pure cardio day
-  if (!split.groups.includes('cardio') && S.dur >= 45) {
+  // Optional conditioning, counted inside the session budget.
+  if (!split.groups.includes('cardio') && budget.conditioning > 0) {
     let cPool = DB.cardio.filter(ex => ex.eq.some(e => e === '无器材' || S.equip.includes(e)));
-    if (S.periodMode) {
-      cPool = cPool.filter(ex => !ex.n.includes('跳') && !ex.n.includes('波比') && !ex.n.includes('攀爬') && !ex.n.includes('单车'));
+    const highImpact = ex => /波比|开合跳|跳绳|跳跃/.test(ex.n);
+    if (S.periodMode) cPool = cPool.filter(ex => !highImpact(ex) && !ex.n.includes('攀爬'));
+    if (S.equip.includes('健身房全套')) {
+      const preferred = cPool.filter(ex => /椭圆|骑行|单车|攀爬|跑步机/.test(ex.n) && !highImpact(ex));
+      if (preferred.length) cPool = preferred;
+      else cPool = cPool.filter(ex => !highImpact(ex));
+    } else if (!(S.equip.length === 1 && S.equip.includes('无器材'))) {
+      cPool = cPool.filter(ex => !highImpact(ex));
     }
     if (hasGoal('臀腿塑形') || hasGoal('翘臀美背') || hasGoal('女性曲线')) {
-      const legCardio = cPool.filter(ex => ex.n.includes('攀爬') || ex.n.includes('骑行') || ex.n.includes('单车') || ex.n.includes('椭圆'));
-      cPool = legCardio.length ? legCardio : cPool.filter(ex => !ex.n.includes('上肢功率'));
+      const legCardio = cPool.filter(ex => /攀爬|骑行|单车|椭圆|跑步机/.test(ex.n));
+      if (legCardio.length) cPool = legCardio;
     }
     if (cPool.length) {
       const cEx = cPool[Math.floor(Math.random() * cPool.length)];
-      const cardioNote = (hasGoal('臀腿塑形') || hasGoal('翘臀美背') || hasGoal('女性曲线')) ? '臀腿有氧收尾 — 优先攀爬机/骑行机，保持对下肢的刺激' : '薄肌有氧收尾 — 保持心率120-140，帮助肌肉拉长';
-      result.push({ name: cEx.n, sets: 1, reps: 15, unit: '分钟', note: cardioNote, group: 'cardio', diff: cEx.diff, muscle: cEx.muscle });
+      const hi = highImpact(cEx);
+      const mins = hi ? Math.min(5, budget.highImpactMax || 0) : Math.max(3, budget.conditioning);
+      if (mins > 0) {
+        const cardioNote = hi
+          ? '可选短间歇 · 最多5分钟；动作质量下降就停止'
+          : '可控强度有氧 · 以RPE 5–7/10或仍能说短句的强度为准';
+        result.push({ name: cEx.n, sets: 1, reps: mins, unit: '分钟', note: cardioNote, group: 'cardio', diff: cEx.diff, muscle: cEx.muscle, optional: hi });
+      }
     }
   }
 
@@ -1506,7 +1538,7 @@ function pickExercises(split, excluded) {
       pPool.slice(0, 2 - already).forEach(ex => {
         used.add(ex.n);
         const isTime = (ex.u === '秒' || ex.u === '分钟');
-        result.push({ name: ex.n, sets: 2, reps: isTime ? (ex.hold || 45) : 15, unit: isTime ? '秒' : '次', note: ex.note, group: ex._g, diff: ex.diff, bi: !!ex.bi, muscle: ex.muscle || [] });
+        result.push({ name: ex.n, sets: 2, reps: isTime ? (ex.hold || 45) : 15, unit: isTime ? '秒' : '次', note: ex.note, group: ex._g, diff: ex.diff, bi: !!ex.bi, muscle: ex.muscle || [], keepForMode: true });
       });
     }
   }
@@ -1515,12 +1547,12 @@ function pickExercises(split, excluded) {
   // 它算主体动作,会参与器械聚类;放在拉伸之后会让主体动作被拉伸夹开。
   if (_ownerSession()) _appendWeakFocus(result, used, excluded, sets);
 
-  // 上肢紧致（「上肢紧致」重点，且非上肢日）：轻量高次数塑形，紧致不增维度、不练宽度
+  // 上肢紧致（「上肢紧致」重点，且非上肢日）：保留适量上肢训练，用训练量控制重点
   if (S.focus && S.focus.includes('上肢紧致') && !hasUpper) {
     const tone = ['绳索下压', '哑铃臂屈伸', '面拉', '反向飞鸟机', '俯身飞鸟', '坐姿划船', '锤式弯举'];
     let tp = tone.map(n => { for (const g of ['triceps', 'shoulder', 'back', 'biceps']) { const f = (DB[g] || []).find(e => e.n === n); if (f) return { ex: f, grp: g } } return null }).filter(o => o && o.ex.eq.some(e => e === '无器材' || S.equip.includes(e)) && !used.has(o.ex.n) && !excluded.has(o.ex.n));
     for (let i = tp.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1));[tp[i], tp[j]] = [tp[j], tp[i]] }
-    tp.slice(0, 2).forEach(o => { used.add(o.ex.n); result.push({ name: o.ex.n, sets: Math.min(sets, 3), reps: 18, unit: '次', note: o.ex.note + ' — 轻塑形：高次数轻重量，紧致不增维度', group: o.grp, diff: o.ex.diff, bi: !!o.ex.bi, muscle: o.ex.muscle }) });
+    tp.slice(0, 2).forEach(o => { used.add(o.ex.n); result.push({ name: o.ex.n, sets: Math.min(sets, 3), reps: 18, unit: '次', note: o.ex.note + ' — 辅助训练：用可控重量完成较高次数，保持动作稳定', group: o.grp, diff: o.ex.diff, bi: !!o.ex.bi, muscle: o.ex.muscle }) });
   }
   // 平衡 & 单腿稳定（「平衡稳定」重点）
   if (S.focus && S.focus.includes('平衡稳定')) {
@@ -1540,30 +1572,38 @@ function pickExercises(split, excluded) {
   const sSpecificNames = new Set(sSpecific.map(e => e.n));
   const sGlobal = _shufS(sPool.filter(e => e.muscle.includes('全身') && !sSpecificNames.has(e.n)));
   const _flex = S.focus && S.focus.includes('柔韧灵活'); // 柔韧重点 → 收尾多排几个拉伸/开髋动作
-  const sTarget = _flex ? 7 : 4;
+  const sTarget = _flex ? (S.dur >= 60 ? 4 : 3) : (S.dur <= 30 ? 1 : 2);
   [...sSpecific.slice(0, sTarget), ...sGlobal].slice(0, sTarget).forEach(ex => {
     if (used.has(ex.n)) return; used.add(ex.n);
     result.push({ name: ex.n, sets: 1, reps: ex.hold || 30, unit: '秒', note: ex.note, group: 'stretch', diff: ex.diff, isStretch: true, bi: !!ex.bi, muscle: ex.muscle });
   });
 
-  // ── 肩颈放松附加模块(Cici 反馈:缓解肩颈僵硬疼痛;约5-8分钟,练完追加,不占主计划名额) ──
+  // 翘臀美背收尾只补少量肩胛控制/放松，不额外堆出一整个训练块。
   if (hasGoal('翘臀美背')) {
-    [
-      { name: '面拉', sets: 2, reps: 15, unit: '次', note: '肩颈放松·拉向面部两侧并外旋，激活后束、改善圆肩' },
-      { name: '俯卧YTW', sets: 2, reps: 10, unit: '次', note: '肩颈放松·手臂依次摆Y-T-W，激活下斜方让肩胛下沉' },
-      { name: '靠墙天使', sets: 2, reps: 10, unit: '次', note: '肩颈放松·后背贴墙、手臂沿墙上下滑，全程肩胛贴墙下沉' },
-      { name: '上斜方拉伸', sets: 1, reps: 30, unit: '秒', note: '肩颈放松·头侧倒向一侧、同侧手轻扶加深，两侧各30秒放松上斜方' },
-      { name: '颈部环绕', sets: 1, reps: 30, unit: '秒', note: '肩颈放松·缓慢画圈转动颈部放松颈肌，切忌快速甩头' },
-    ].forEach(n => {
-      if (used.has(n.name)) return; used.add(n.name);
-      result.push({ name: n.name, sets: n.sets, reps: n.reps, unit: n.unit, note: n.note, group: 'stretch', diff: 1, isStretch: true, bi: false, muscle: ['肩颈'] });
-    });
+    const shoulderCare = [
+      { name: '面拉', sets: 2, reps: 15, unit: '次', note: '肩胛控制 · 拉向面部两侧并外旋，保持肩膀远离耳朵' },
+      { name: '俯卧YTW', sets: 1, reps: 10, unit: '次', note: '肩胛控制 · 手臂依次摆Y-T-W，动作缓慢' },
+      { name: '靠墙天使', sets: 1, reps: 10, unit: '次', note: '活动度 · 后背贴墙、手臂沿墙上下滑' },
+      { name: '上斜方拉伸', sets: 1, reps: 30, unit: '秒', note: '主观放松 · 两侧各约30秒，不强拉' },
+    ];
+    const seed = parseInt(todayStr().replace(/-/g,''),10) || 0;
+    for (let k = 0; k < 2; k++) {
+      const n = shoulderCare[(seed + k) % shoulderCare.length];
+      if (used.has(n.name)) continue; used.add(n.name);
+      result.push({ name:n.name, sets:n.sets, reps:n.reps, unit:n.unit, note:n.note, group:'posture', diff:1, isPosture:true, bi:false, muscle:['肩颈'] });
+    }
   }
 
   // 仪态日课:混进收尾,每天轮换 2 个(owner)
   if (_ownerSession()) _appendPosture(result, used, excluded, 2);
 
-  return _clusterByEquip(result); // 同器械的排在一起,少来回跑(反馈④)
+  const clustered = _clusterByEquip(result);
+  if (!globalThis.TrainingModel) return clustered;
+  const keepPrivate = ex => !!(ex && ex.keepForMode);
+  return TrainingModel.fitExercisesToBudget(clustered, budget, {
+    flexibilityFocus: !!(S.focus || []).includes('柔韧灵活'),
+    keepPredicate: keepPrivate
+  }).exercises; // 最终用真实时间估算收口，避免“60分钟计划”实际远超60分钟
 }
 
 // 补弱:近 4 周练得最少的两个曲线焦点,它们的动作在同肌群里优先被选中。
@@ -1638,30 +1678,30 @@ function _appendPosture(result, used, excluded, n) {
 // 以及一条对应的围度指标。练了多少 / 尺寸往哪走,两条线并排看。
 // 一个动作只归第一个匹配的焦点(顺序即优先级)。
 const CURVE_FOCUS = [
-  { key: 'hipw', name: '胯宽', why: '臀中肌/臀小肌把髋部往外撑——腰胯比里真正改得动的那个变量', metric: 'hipw', dir: 'up', weekly: 9,
+  { key: 'hipw', name: '胯宽', why: '侧臀训练量；它可能改变肌肉轮廓，但不会改变骨性髋宽。和实际胯围趋势分开看', metric: 'hipw', dir: 'up', weekly: 9,
     moves: ['器械外展机', '站姿绳索单腿外展', '弹力带螃蟹步', '弹力带蚌式开合', '侧卧抬腿', '消防栓式',
             '四足髋绕环（hip CARs）', '侧卧抬腿画圈', '驴踢腿（donkey kick）', '四足跪姿髋外展', '臀部激活蚌式'] },
-  { key: 'peak', name: '臀峰', why: '臀大肌上束顶起峰型——侧面那条弧线', metric: 'hip', dir: 'up', weekly: 9,
+  { key: 'peak', name: '臀峰', why: '臀大肌相关训练暴露量；轮廓变化需结合实际臀围与照片趋势判断', metric: 'hip', dir: 'up', weekly: 9,
     moves: ['臀推', '史密斯臀推', '肩胛垫高臀推', '蛙式臀桥', '蛙式臀冲', '臀桥', '臀桥开合', '臀桥保持',
             '跪姿挺髋（kneeling hip thrust）', '高跪姿挺髋保持（kneeling hip thrust hold）', '高跪姿夹枕挺髋保持',
             '绳索后踢腿', '俯卧挺髋抬腿', '跪姿后踢腿', '跪姿直腿后踢', '跪姿深蹲（kneeling squat）',
             '臀桥夹球保持', '蛙式臀桥保持（frog pump hold）', '臀推顶端外展保持', '壶铃摆动'] },
-  { key: 'thigh', name: '大腿填充', why: '内收肌+股四把大腿填满,并拢时那条缝才有形状', metric: 'thigh', dir: 'up', weekly: 8,
+  { key: 'thigh', name: '大腿填充', why: '大腿主要肌群的训练暴露量；围度变化同时受训练、饮食与个体结构影响', metric: 'thigh', dir: 'up', weekly: 8,
     moves: ['器械内收机', '相扑深蹲', '哥萨克深蹲', '腿屈伸', '倒蹬机', '哈克深蹲', '钟摆深蹲',
             '高脚杯深蹲', '壶铃高脚杯深蹲', '保加利亚分腿蹲', '哑铃弓步蹲', '腿弯举', '坐姿腿弯举',
             '站姿单腿弯举机', '杠铃深蹲', '史密斯深蹲', '颈前杠铃深蹲', '相扑深蹲保持（sumo squat hold）',
             '罗马尼亚硬拉', '传统硬拉'] },
-  { key: 'waist', name: '细腰', why: '腹横肌把腰收紧;绕开一切增厚腰侧的动作', metric: 'waist', dir: 'down', weekly: 6,
+  { key: 'waist', name: '细腰', why: '核心稳定与腹壁控制训练量；腰围变化以实测为准，不把核心动作当作局部减脂', metric: 'waist', dir: 'down', weekly: 6,
     moves: ['腹横肌真空吸', '平板支撑', '侧平板支撑', '死虫式', '死虫式保持（dead bug hold）',
             '死虫式（慢速对角）', '仰卧对角抬举（dead bug 变体）', '卷腹', '坐姿卷腹机',
             '仰卧直腿下放（leg lowering）', '悬挂抬腿', '罗马椅抬腿', '侧平板髋部下沉（side plank hip dip）'] },
-  { key: 'back', name: '腰窝背沟', why: '竖脊+背阔撑出背面的层次,腰窝是收腰的视觉锚', metric: null, dir: null, weekly: 6,
+  { key: 'back', name: '腰窝背沟', why: '背部训练与体态控制的暴露量；外观变化不等同于腰围变化', metric: null, dir: null, weekly: 6,
     moves: ['山羊挺身', '坐姿划船', 'T把划船', '器械上背划船', '俯身划船', '哑铃单臂划船',
             '高位下拉', '引体向上', '助力引体向上机', '杠铃斜板划船', '弹力带划船', '绳索直臂下压', '直臂下压机'] },
-  { key: 'line', name: '颈线肩线', why: '肩胛下沉+颈椎中立——脖子显长、锁骨露出来', metric: null, dir: null, weekly: 5,
+  { key: 'line', name: '颈线肩线', why: '肩胛与颈部控制训练量；主要目标是姿态与动作质量', metric: null, dir: null, weekly: 5,
     moves: ['面拉', '俯卧YTW', '靠墙天使', '肩胛后缩保持', '收下巴', '颈深屈肌保持（chin tuck hold）',
             '反向飞鸟机', '俯身飞鸟', '靠墙站立体态检查（wall posture check）', '高跪姿开胸（kneeling chest opener）'] },
-  { key: 'ankle', name: '脚踝小腿', why: '踮立与提踵——高跟站得住,脚背绷出线条', metric: 'ankle', dir: null, weekly: 4,
+  { key: 'ankle', name: '脚踝小腿', why: '小腿与踝稳定训练量；主要观察力量、稳定性和实际围度趋势', metric: 'ankle', dir: null, weekly: 4,
     moves: ['站姿提踵', '坐姿提踵', '史密斯提踵', '腿举机提踵', '单腿relevé踮立', '双腿relevé踮立保持',
             '头顶书本走姿（poise walk）', '猫步走（catwalk）'] },
 ];
@@ -2082,7 +2122,7 @@ function pickPrivateForSplit(split, excluded, usedSet) {
   return pool.slice(0, 2).map(ex => {
     usedSet.add(ex.n);
     return { name: ex.n, sets: 2, reps: ex.u === '秒' ? 45 : 15, unit: ex.u || '次',
-             note: ex.note, diff: ex.diff, bi: !!ex.bi, muscle: ex.muscle || [] };
+             note: ex.note, diff: ex.diff, bi: !!ex.bi, muscle: ex.muscle || [], keepForMode: true };
   });
 }
 
@@ -2192,9 +2232,15 @@ hasGoal('翘臀美背') ? (GLUTE_BACK_SPLITS[gymPerWeek] || GLUTE_BACK_SPLITS[3]
       // Gym day
       const split = splits[(startSplitIdx + generatedGymCount) % splits.length];
       generatedGymCount++;
-      const exs = pickExercises(split, excluded);
+      let exs = pickExercises(split, excluded);
       if (_ownerSession()) {
         pickPrivateForSplit(split, excluded, _usedPrivate).forEach(e => exs.push(e));
+      }
+      if (globalThis.TrainingModel) {
+        exs = TrainingModel.fitExercisesToBudget(exs, currentSessionBudget(), {
+          flexibilityFocus: !!(S.focus || []).includes('柔韧灵活'),
+          keepPredicate: ex => !!(ex && ex.keepForMode)
+        }).exercises;
       }
       days.push({ date: ds, isRest: false, workoutType: split.type, duration: S.dur, exercises: exs, _splitGroups: split.groups || [] });
     } else if (dayType === 2) {
@@ -2216,7 +2262,7 @@ hasGoal('翘臀美背') ? (GLUTE_BACK_SPLITS[gymPerWeek] || GLUTE_BACK_SPLITS[3]
   if (isSwimPlan) {
     tipText += `\n游泳水平：${SWIM_TIPS[S.swimLevel || '入门']}\n本周安排：${gymPerWeek}天力量 + ${swimPerWeek}天游泳`;
   }
-  S.plan = { days, tip: tipText, rest: sch.rest, excludedCount: excluded.size };
+  S.plan = { days, tip: tipText, rest: sch.rest, excludedCount: getExplainableExcludedCount() };
   // Reset calendar view offset and select today
   _calWeekOffset = 0;
   const todayDay = days.find(d => d.date === today);
@@ -2426,33 +2472,33 @@ function renderOnboarding() {
 
         <div class="onboard-section-title">I. 选择训练重心 <span style="font-size:11px;color:var(--ink3);font-weight:400">（可多选）</span></div>
         <div class="onboard-goal-grid">
-            <div class="onboard-goal-card ${hasGoal('女性薄肌') ? 'on' : ''}" onclick="selectOnboardGoal('女性薄肌')">
+            <button type="button" class="onboard-goal-card ${hasGoal('女性薄肌') ? 'on' : ''}" aria-pressed="${hasGoal('女性薄肌') ? 'true' : 'false'}" onclick="selectOnboardGoal('女性薄肌')">
                 <h3 class="onboard-goal-name">女性薄肌</h3>
-                <p class="onboard-goal-desc">全身比例均衡，低负重高次数，激活深层肌群，改善身体形态与挺拔度。</p>
+                <p class="onboard-goal-desc">全身均衡训练，使用可控制的重量和稳定动作，重点放在动作质量、力量与体态。</p>
                 <div class="onboard-goal-tags">
                     <span class="onboard-goal-tag">全身均衡</span>
-                    <span class="onboard-goal-tag">低负重</span>
-                    <span class="onboard-goal-tag">修长线条</span>
+                    <span class="onboard-goal-tag">动作质量</span>
+                    <span class="onboard-goal-tag">长期一致</span>
                 </div>
-            </div>
-            <div class="onboard-goal-card ${hasGoal('臀腿塑形') ? 'on' : ''}" onclick="selectOnboardGoal('臀腿塑形')">
+            </button>
+            <button type="button" class="onboard-goal-card ${hasGoal('臀腿塑形') ? 'on' : ''}" aria-pressed="${hasGoal('臀腿塑形') ? 'true' : 'false'}" onclick="selectOnboardGoal('臀腿塑形')">
                 <h3 class="onboard-goal-name">臀腿塑形</h3>
-                <p class="onboard-goal-desc">全部精力放在下半身。臀中肌改善腰胯比，大腿前后侧让腿更饱满。</p>
+                <p class="onboard-goal-desc">以下半身为主要训练重点，覆盖臀大肌、侧臀、股四头与腘绳肌，并逐步增加训练刺激。</p>
                 <div class="onboard-goal-tags">
-                    <span class="onboard-goal-tag">纯下半身</span>
-                    <span class="onboard-goal-tag">改善腰胯比</span>
-                    <span class="onboard-goal-tag">渐进超负荷</span>
+                    <span class="onboard-goal-tag">下肢重点</span>
+                    <span class="onboard-goal-tag">肌群覆盖</span>
+                    <span class="onboard-goal-tag">渐进训练</span>
                 </div>
-            </div>
-            <div class="onboard-goal-card ${hasGoal('翘臀美背') ? 'on' : ''}" onclick="selectOnboardGoal('翘臀美背')">
+            </button>
+            <button type="button" class="onboard-goal-card ${hasGoal('翘臀美背') ? 'on' : ''}" aria-pressed="${hasGoal('翘臀美背') ? 'true' : 'false'}" onclick="selectOnboardGoal('翘臀美背')">
                 <h3 class="onboard-goal-name">翘臀美背</h3>
-                <p class="onboard-goal-desc">强化臀峰与背阔。多做面拉/YTW改善圆肩，避免斜方肌与腰部增厚。</p>
+                <p class="onboard-goal-desc">训练臀大肌、背部与肩胛控制，兼顾力量、肌肉轮廓和姿态。计划会避开直立划船。</p>
                 <div class="onboard-goal-tags">
-                    <span class="onboard-goal-tag">臀峰强化</span>
-                    <span class="onboard-goal-tag">背阔分离</span>
-                    <span class="onboard-goal-tag">体态改善</span>
+                    <span class="onboard-goal-tag">臀部训练</span>
+                    <span class="onboard-goal-tag">背部训练</span>
+                    <span class="onboard-goal-tag">肩胛控制</span>
                 </div>
-            </div>
+            </button>
         </div>
 
         <div class="onboard-section-title">II. 个性化参数设定</div>
@@ -2591,11 +2637,11 @@ function render() {
   const todayInView = visibleDays.some(d => d.date === today);
   const isCurrentView = todayInView;
 
-  let h = `<div class="plan-header"><p class="panel-title" style="margin:0">训练计划${excludedCount ? `<span class="warn-tag">已过滤${excludedCount}个受限动作</span>` : ''}</p><button class="regen-btn" onclick="genPlan()">重新生成</button></div>
+  let h = `<div class="plan-header"><p class="panel-title" style="margin:0">训练计划${excludedCount ? `<span class="warn-tag">已按你的限制避开${excludedCount}个动作</span>` : ''}</p><button class="regen-btn" onclick="genPlan()">重新生成</button></div>
 <div class="stats">
 <div class="stat"><div class="stat-val">${workoutDays.length}</div><div class="stat-lbl">计划天</div></div>
 <div class="stat"><div class="stat-val">${doneDays.length}/${workoutDays.length}</div><div class="stat-lbl">已完成</div></div>
-<div class="stat"><div class="stat-val">${workoutDays.reduce((s, d) => s + d.exercises.length, 0)}</div><div class="stat-lbl">总动作</div></div>
+<div class="stat"><div class="stat-val">${workoutDays.reduce((s, d) => s + d.exercises.filter(ex => globalThis.TrainingModel ? TrainingModel.isMainStrength(ex) : (!ex.isWarmup && !ex.isStretch && ex.group !== 'cardio')).length, 0)}</div><div class="stat-lbl">主训练动作</div></div>
 </div>`;
 
   if (_globalSubMode && _ownerSession()) {
@@ -2711,7 +2757,7 @@ ${!sel.isPrivateDay ? `<button class="regen-btn" style="margin-left:6px;font-siz
 ${ex.weight ? `<div class="wt-hint" style="margin-top:2px;display:block">${ex.weight}kg</div>` : ''}
 </div>
 <span class="av" style="opacity:.5;margin-right:12px">${ex.sets || '?'}×${ex.reps || '?'}${ex.unit || '次'}</span>
-<button class="cb${done ? ' ck' : ''}" style="cursor:default;pointer-events:none;opacity:${done ? 1 : 0.15}"><i class="ti ti-check"></i></button>
+<button class="cb${done ? ' ck' : ''}" aria-label="${done ? '已完成' : '未完成'}：${ex.name}" disabled style="cursor:default;opacity:${done ? 1 : 0.15}"><i class="ti ti-check" aria-hidden="true"></i></button>
 </div>`;
           });
           h += `</div>`;
@@ -2753,7 +2799,7 @@ ${ex.weight ? `<div class="wt-hint" style="margin-top:2px;display:block">${ex.we
 <span class="pool-reps">${reps}分钟</span>
 ${!done ? `<button class="act-play-btn" onclick="event.stopPropagation();startTimer(${reps * 60}, '${ex.name}')">▶ 开始计时 ${reps}分钟</button>` : ''}
 </div>
-<button class="cb${done ? ' ck' : ''}" onclick="event.stopPropagation();tog('${sel.date}',${i})"><i class="ti ti-check"></i></button>
+<button class="cb${done ? ' ck' : ''}" aria-label="${done ? '取消完成' : '标记完成'}：${ex.name}" aria-pressed="${done ? 'true' : 'false'}" onclick="event.stopPropagation();tog('${sel.date}',${i})"><i class="ti ti-check" aria-hidden="true"></i></button>
 </div>`;
           });
           h += `${!locked && !isDone(sel) ? `<button class="btn btn-out" style="width:100%;margin-top:8px;font-size:12px;border-style:dashed;padding:6px;color:var(--ink2)" onclick="openAddExerciseModal('${sel.date}')">+ 手动添加动作</button>` : ''}</div>`;
@@ -2815,9 +2861,9 @@ ${(ex.unit === '秒' || ex.unit === '分钟') && !locked ? `<button class="act-p
 ${!locked ? `
 <div class="adjg"><button class="ab" onclick="adj('${sel.date}',${i},'s',-1)">-</button><span class="av">${sets}组</span><button class="ab" onclick="adj('${sel.date}',${i},'s',1)">+</button></div>
 <div class="adjg"><button class="ab" onclick="adj('${sel.date}',${i},'r',-1)">-</button><span class="av">${reps}${ex.unit}${ex.bi ? '/每侧' : ''}</span><button class="ab" onclick="adj('${sel.date}',${i},'r',1)">+</button></div>
-<button class="cb${done ? ' ck' : ''}" onclick="tog('${sel.date}',${i})"><i class="ti ti-check"></i></button>
+<button class="cb${done ? ' ck' : ''}" aria-label="${done ? '取消完成' : '标记完成'}：${ex.name}" aria-pressed="${done ? 'true' : 'false'}" onclick="tog('${sel.date}',${i})"><i class="ti ti-check" aria-hidden="true"></i></button>
 `: `<span class="av" style="opacity:.5;margin-right:12px">${sets}×${reps}${ex.unit}${ex.bi ? '/每侧' : ''}</span>
-<button class="cb${done ? ' ck' : ''}" style="cursor:default;pointer-events:none;opacity:${done ? 1 : 0.15}"><i class="ti ti-check"></i></button>
+<button class="cb${done ? ' ck' : ''}" aria-label="${done ? '已完成' : '未完成'}：${ex.name}" disabled style="cursor:default;opacity:${done ? 1 : 0.15}"><i class="ti ti-check" aria-hidden="true"></i></button>
 `}
 </div>`;
           }).join('')}${!locked && !isDone(sel) && !sel.isSwimDay ? `<button class="btn btn-out" style="width:100%;margin-top:8px;font-size:12px;border-style:dashed;padding:6px;color:var(--ink2)" onclick="openAddExerciseModal('${sel.date}')">+ 手动添加动作</button>` : ''}${typeof renderRecoveryModule === 'function' ? renderRecoveryModule(sel) : ''}</div>`;
@@ -3325,7 +3371,7 @@ document.addEventListener('visibilitychange', () => {
       playDing();
       _notifyRestDone();
       const bar = document.getElementById('universal-timer');
-      if (bar) setTimeout(() => bar.classList.remove('show'), 3000);
+      if (bar) setTimeout(() => { bar.classList.remove('show'); bar.setAttribute('aria-hidden', 'true'); }, 3000);
       try { sessionStorage.removeItem('__timer_end__'); sessionStorage.removeItem('__timer_label__'); } catch(e) {}
     }
   }
@@ -3364,6 +3410,7 @@ function startTimer(seconds, label = "休息中") {
   delete bar.dataset.insulting;
   delete bar.dataset.dinged;
   bar.classList.add('show');
+  bar.setAttribute('aria-hidden', 'false');
   unlockAudio();
   _ensureNotifyPermission();
   playRestStartSound();
@@ -3389,7 +3436,7 @@ function startTimer(seconds, label = "休息中") {
         bar.dataset.dinged = '1';
         const _subOvertime = _globalSubMode && _ownerSession() && hasGoal('女性曲线');
         if (!_subOvertime) {
-          setTimeout(() => { bar.classList.remove('show'); }, 3000);
+          setTimeout(() => { bar.classList.remove('show'); bar.setAttribute('aria-hidden', 'true'); }, 3000);
         }
         const _isMulti = _multiTimerQueue.length > 0;
         // 多段表(冷热交替浴):无论中途还是最后一段都续跑一次——最后一段会命中完成分支(提示+复位+收尾)
@@ -3446,7 +3493,7 @@ function stopTimer() {
   clearInterval(_timerInterval);
   _releaseWakeLock();
   const bar = document.getElementById('universal-timer');
-  if (bar) bar.classList.remove('show');
+  if (bar) { bar.classList.remove('show'); bar.setAttribute('aria-hidden', 'true'); }
 }
 
 let _pendingRpeDate = null;
@@ -3551,7 +3598,7 @@ function updateRpeModalLabels() {
 }
 
 function closeRpeModal() {
-  document.getElementById('rpe-modal').classList.remove('open');
+  if (typeof closeAppDialog === 'function') closeAppDialog('rpe-modal'); else document.getElementById('rpe-modal').classList.remove('open');
   _pendingRpeDate = null;
   _pendingRpeDay = null;
   _editingLogIdx = null;
@@ -3571,7 +3618,7 @@ function editLog(idx) {
   if (noteEl) noteEl.value = l.note || '';
 
   updateRpeModalLabels();
-  document.getElementById('rpe-modal').classList.add('open');
+  if (typeof openAppDialog === 'function') openAppDialog('rpe-modal'); else document.getElementById('rpe-modal').classList.add('open');
 }
 
 function submitRPE(rpe, isSkip = false) {
@@ -3618,7 +3665,8 @@ function submitRPE(rpe, isSkip = false) {
     LOG.unshift({
       date: date,
       workout: day.workoutType,
-      duration: day.duration,
+      duration: day.actualDuration || day.duration,
+      plannedDuration: day.duration,
       exerciseCount: checkedCount,
       rpe: actualRpe,
       exercises: day.exercises.map((ex, i) => ({
@@ -3627,7 +3675,8 @@ function submitRPE(rpe, isSkip = false) {
         reps: getAdj(date, i, 'r', ex.reps),
         unit: ex.unit,
         weight: _effWeight(date, i, ex),
-        done: !!(S.prog[date] && S.prog[date][i])
+        done: !!(S.prog[date] && S.prog[date][i]),
+        rpe: getExRpe(date, i)
       })),
       mood: moods[actualRpe - 1] || '一般',
       note: note,
@@ -3757,7 +3806,7 @@ function endWorkoutEarly(date) {
   document.getElementById('rpe-modal-title').innerText = checkedCount < totalEx ? '训练提前结束打卡' : '训练完成打卡';
   document.getElementById('rpe-modal-desc').innerText = `已完成 ${checkedCount}/${totalEx} 个动作，请评估今日的疲劳度：`;
   updateRpeModalLabels();
-  document.getElementById('rpe-modal').classList.add('open');
+  if (typeof openAppDialog === 'function') openAppDialog('rpe-modal'); else document.getElementById('rpe-modal').classList.add('open');
 }
 
 function tog(date, ei) {
@@ -3796,7 +3845,7 @@ function tog(date, ei) {
         document.getElementById('rpe-modal-title').innerText = '游泳训练完成！';
         document.getElementById('rpe-modal-desc').innerText = '评估今天游泳的累计程度';
       }
-      const _openRpe = () => { updateRpeModalLabels(); document.getElementById('rpe-modal').classList.add('open'); };
+      const _openRpe = () => { updateRpeModalLabels(); if (typeof openAppDialog === 'function') openAppDialog('rpe-modal'); else document.getElementById('rpe-modal').classList.add('open'); };
       if (_globalSubMode && _ownerSession()) {
         const db = _getSubDb(), dec = s => { try { return decodeURIComponent(atob(s)); } catch(e) { return ''; } };
         const msgs = _subTierSlice(db?.complete_texts?.map(dec).filter(Boolean));
@@ -5391,16 +5440,69 @@ function _stopDanmaku() {
 }
 
 // ══ Guided workout mode (逐个动作引导 + 组间自动计时) ══════
-let _wmDate = null, _wmIdx = 0, _wmSet = 1;
+const WM_STATE_KEY = '__guided_workout_state__';
+let _wmDate = null, _wmIdx = 0, _wmSet = 1, _wmPendingRpe = false, _wmStartedAt = 0;
+
 function _wmIsSimple(ex) { return ex.isWarmup || (ex.isStretch && !isWeightedMove(ex.name)) || ex.group === 'cardio' || ex.unit !== '次'; }
+function _wmDialog(open) {
+  const m = document.getElementById('workout-modal');
+  if (!m) return;
+  if (typeof openAppDialog === 'function' && typeof closeAppDialog === 'function') {
+    open ? openAppDialog('workout-modal') : closeAppDialog('workout-modal');
+  } else {
+    m.hidden = !open;
+    m.setAttribute('aria-hidden', open ? 'false' : 'true');
+    m.classList.toggle('open', open);
+  }
+}
+function _saveWmState() {
+  if (!_wmDate) return;
+  try {
+    sessionStorage.setItem(WM_STATE_KEY, JSON.stringify({
+      date: _wmDate, idx: _wmIdx, set: _wmSet,
+      pendingRpe: _wmPendingRpe, startedAt: _wmStartedAt
+    }));
+  } catch (e) {}
+}
+function _clearWmState() {
+  try { sessionStorage.removeItem(WM_STATE_KEY); } catch (e) {}
+  _wmDate = null; _wmIdx = 0; _wmSet = 1; _wmPendingRpe = false; _wmStartedAt = 0;
+}
+function _readWmState(date) {
+  try {
+    const state = JSON.parse(sessionStorage.getItem(WM_STATE_KEY) || 'null');
+    if (!state || (date && state.date !== date)) return null;
+    return state;
+  } catch (e) { return null; }
+}
+function _wmRecordActual(day) {
+  if (!day || !_wmStartedAt) return;
+  const mins = Math.max(1, Math.round((Date.now() - _wmStartedAt) / 60000));
+  day.actualDuration = Math.min(mins, 360);
+}
 function startGuided(date) {
   const day = S.plan && S.plan.days.find(d => d.date === date);
-  if (!day || !day.exercises || !day.exercises.length) { if (typeof showToast === 'function') showToast('今天没有可做的动作'); return; }
+  if (!day || !day.exercises || !day.exercises.length) {
+    if (typeof showToast === 'function') showToast('今天没有可做的动作');
+    return;
+  }
+  const saved = _readWmState(date);
   _wmDate = date;
-  const s = day.exercises.findIndex((ex, i) => !(S.prog[date] && S.prog[date][i]));
-  _wmIdx = s < 0 ? 0 : s; _wmSet = 1;
-  const m = document.getElementById('workout-modal'); if (m) m.classList.add('open');
-  
+  if (saved) {
+    _wmIdx = Math.max(0, Math.min(day.exercises.length - 1, +saved.idx || 0));
+    _wmSet = Math.max(1, +saved.set || 1);
+    _wmPendingRpe = !!saved.pendingRpe;
+    _wmStartedAt = +saved.startedAt || Date.now();
+  } else {
+    const first = day.exercises.findIndex((ex, i) => !(S.prog[date] && S.prog[date][i]));
+    _wmIdx = first < 0 ? 0 : first;
+    _wmSet = 1;
+    _wmPendingRpe = false;
+    _wmStartedAt = Date.now();
+  }
+  _saveWmState();
+  _wmDialog(true);
+
   if (_globalSubMode && _ownerSession()) {
     if (!document.getElementById('sub-strobing-overlay-guided')) {
       const overlay = document.createElement('div');
@@ -5414,62 +5516,172 @@ function startGuided(date) {
     renderGuided();
   }
 }
+function restoreGuidedState() {
+  const saved = _readWmState();
+  if (!saved || !S.plan) return false;
+  const day = S.plan.days.find(d => d.date === saved.date);
+  if (!day || !day.exercises || !day.exercises.length) {
+    _clearWmState();
+    return false;
+  }
+  _wmDate = saved.date;
+  _wmIdx = Math.max(0, Math.min(day.exercises.length - 1, +saved.idx || 0));
+  _wmSet = Math.max(1, +saved.set || 1);
+  _wmPendingRpe = !!saved.pendingRpe;
+  _wmStartedAt = +saved.startedAt || Date.now();
+  _wmDialog(true);
+  renderGuided();
+  return true;
+}
 function wmClose() {
-    const m = document.getElementById('workout-modal');
-    if (m) m.classList.remove('open');
-    if (typeof stopTimer === 'function') stopTimer();
-    const overlay = document.getElementById('sub-strobing-overlay-guided');
-    if (overlay) overlay.remove();
-    _stopDanmaku();
+  _saveWmState();
+  _wmDialog(false);
+  if (typeof stopTimer === 'function') stopTimer();
+  const overlay = document.getElementById('sub-strobing-overlay-guided');
+  if (overlay) overlay.remove();
+  _stopDanmaku();
+}
+function _wmTimerButton(ex, reps) {
+  if (!ex || !['秒', '分钟'].includes(ex.unit)) return '';
+  const sec = ex.unit === '分钟' ? Math.max(1, reps) * 60 : Math.max(1, reps);
+  const label = ex.unit === '分钟' ? `${reps}分钟` : `${reps}秒`;
+  return `<button class="btn btn-out" style="width:100%;margin-bottom:10px" onclick="startTimer(${sec}, ${JSON.stringify(ex.name)})">开始 ${label}</button>`;
 }
 function renderGuided() {
-  const date = _wmDate, day = S.plan && S.plan.days.find(d => d.date === date), card = document.getElementById('wm-card');
+  const date = _wmDate;
+  const day = S.plan && S.plan.days.find(d => d.date === date);
+  const card = document.getElementById('wm-card');
   if (!day || !card) return;
   const list = day.exercises;
-  if (_wmIdx >= list.length) { wmClose(); render(); endWorkoutEarly(date); return; }
-  const ex = list[_wmIdx], simple = _wmIsSimple(ex);
-  const sets = simple ? 1 : getAdj(date, _wmIdx, 's', ex.sets), reps = getAdj(date, _wmIdx, 'r', ex.reps);
+  if (_wmIdx >= list.length) {
+    _wmRecordActual(day);
+    const doneDate = date;
+    _clearWmState();
+    wmClose();
+    render();
+    endWorkoutEarly(doneDate);
+    return;
+  }
+  const ex = list[_wmIdx];
+  const simple = _wmIsSimple(ex);
+  const sets = simple ? 1 : getAdj(date, _wmIdx, 's', ex.sets);
+  const reps = getAdj(date, _wmIdx, 'r', ex.reps);
   const needW = needsWeightUI(ex);
   const lastW = typeof getLastWeight === 'function' ? (getLastWeight(ex.name, true) || getLastWeight(ex.name, false)) : null;
-  const e1rm = typeof estimate1RM === 'function' ? estimate1RM(ex.name) : null, curW = getWeight(date, _wmIdx);
-  let dispName = ex.name; let dispNote = ex.note;
+  const e1rm = typeof estimate1RM === 'function' ? estimate1RM(ex.name) : null;
+  const curW = getWeight(date, _wmIdx);
+  let dispName = ex.name;
+  let dispNote = ex.note;
   const isSub = _globalSubMode && _ownerSession() && hasGoal('女性曲线');
   if (isSub && EX_SUB_DESC[ex.name]) {
     try {
       dispName = _decodeSub(EX_SUB_DESC[ex.name].name) || ex.name;
       dispNote = _decodeSub(EX_SUB_DESC[ex.name].steps[0]) || ex.note;
-    } catch(e) {}
+    } catch (e) {}
   }
-  card.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><span style="font-size:11px;color:var(--ink3)">动作 ${_wmIdx + 1}/${list.length}</span><button class="ex-modal-close" onclick="wmClose()">&#10005;</button></div>
+
+  const head = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><span style="font-size:11px;color:var(--ink3)">动作 ${_wmIdx + 1}/${list.length}</span><button class="ex-modal-close" aria-label="关闭引导训练" onclick="wmClose()">&#10005;</button></div>
   <h2 style="font-family:var(--font-display);font-size:22px;margin:0 0 2px">${dispName}</h2>
-  <p style="font-size:12px;color:var(--ink3);margin:0 0 12px">${(ex.muscle || []).join(' · ') || (ex.isWarmup ? '热身' : ex.isStretch ? '拉伸' : '')}</p>
+  <p style="font-size:12px;color:var(--ink3);margin:0 0 12px">${(ex.muscle || []).join(' · ') || (ex.isWarmup ? '热身' : ex.isStretch ? '拉伸' : '')}</p>`;
+
+  if (_wmPendingRpe && !simple) {
+    card.innerHTML = head + `<div style="font-size:13px;color:var(--ink2);margin:8px 0 14px">这个动作整体感觉怎样？用于下次建议重量。</div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:8px">
+        <button class="btn btn-out" onclick="wmSubmitExerciseRpe(4)">轻松</button>
+        <button class="btn btn-out" onclick="wmSubmitExerciseRpe(6.5)">刚好</button>
+        <button class="btn btn-out" onclick="wmSubmitExerciseRpe(8.5)">吃力</button>
+      </div>
+      <button class="btn btn-out" style="width:100%" onclick="wmSubmitExerciseRpe(null)">跳过</button>`;
+    return;
+  }
+
+  card.innerHTML = head + `
   <div style="font-size:16px;margin-bottom:12px">${simple ? `${reps} ${ex.unit}` : `第 <b style="color:var(--terra);font-size:20px">${_wmSet}</b> / ${sets} 组 · 目标 ${reps} ${ex.unit}${ex.bi ? '/每侧' : ''}`}</div>
-  ${needW ? `<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px"><span style="font-size:12px">重量</span><input id="wm-weight" type="number" inputmode="decimal" step="0.5" value="${curW || ''}" placeholder="${lastW ? lastW.weight : ''}" style="width:96px;padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--surface2);color:var(--ink);font-size:17px"><span style="font-size:11px;color:var(--ink3)">kg${lastW ? ' · 上次' + lastW.weight : ''}${e1rm ? ' · 1RM≈' + e1rm : ''}</span></div>` : ''}
+  ${needW ? `<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px"><span style="font-size:12px">重量</span><input id="wm-weight" aria-label="${dispName}重量" type="number" inputmode="decimal" step="0.5" value="${curW || ''}" placeholder="${lastW ? lastW.weight : ''}" style="width:96px;padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--surface2);color:var(--ink);font-size:17px"><span style="font-size:11px;color:var(--ink3)">kg${lastW ? ' · 上次' + lastW.weight : ''}${e1rm ? ' · 1RM≈' + e1rm : ''}</span></div>` : ''}
   <div style="font-size:12px;color:var(--ink2);background:var(--surface2);border-radius:8px;padding:8px 10px;margin-bottom:16px;line-height:1.55">${dispNote || ''}</div>
-  <div style="display:flex;gap:8px;margin-bottom:8px"><button class="btn btn-out" style="padding:12px 14px" onclick="wmNav(-1)">↑</button><button class="btn" style="flex:1;background:var(--terra);color:#fff;border:none;padding:14px;border-radius:var(--radius-sm);font-weight:600;font-size:15px" onclick="wmDoneSet()">${simple ? '完成 ✓' : (_wmSet < sets ? '完成这组 → 休息' : '完成最后一组 ✓')}</button><button class="btn btn-out" style="padding:12px 14px" onclick="wmNav(1)">↓</button></div>
+  ${simple ? _wmTimerButton(ex, reps) : ''}
+  <div style="display:flex;gap:8px;margin-bottom:8px"><button class="btn btn-out" aria-label="上一个动作" style="padding:12px 14px" onclick="wmNav(-1)">↑</button><button class="btn" style="flex:1;background:var(--terra);color:#fff;border:none;padding:14px;border-radius:var(--radius-sm);font-weight:600;font-size:15px" onclick="wmDoneSet()">${simple ? '完成 ✓' : (_wmSet < sets ? '完成这组 → 休息' : '完成最后一组 ✓')}</button><button class="btn btn-out" aria-label="下一个动作" style="padding:12px 14px" onclick="wmNav(1)">↓</button></div>
   <button class="btn btn-out" style="width:100%;font-size:13px" onclick="wmFinish()">结束训练并打卡</button>`;
+
   const wEl = document.getElementById('wm-weight');
-  if (wEl) wEl.addEventListener('change', () => { const v = parseFloat(wEl.value); if (isFinite(v) && v > 0) setWeight(date, _wmIdx, v); });
+  if (wEl) wEl.addEventListener('change', () => {
+    const v = parseFloat(wEl.value);
+    if (isFinite(v) && v > 0) setWeight(date, _wmIdx, v);
+  });
+}
+function _wmCompleteCurrentExercise() {
+  const date = _wmDate;
+  const day = S.plan && S.plan.days.find(d => d.date === date);
+  if (!day) return;
+  if (!S.prog[date]) S.prog[date] = {};
+  S.prog[date][_wmIdx] = true;
+  saveState();
+  _wmPendingRpe = false;
+  _wmSet = 1;
+  let n = _wmIdx + 1;
+  while (n < day.exercises.length && S.prog[date] && S.prog[date][n]) n++;
+  _wmIdx = n;
+  if (_wmIdx >= day.exercises.length) {
+    _wmRecordActual(day);
+    const doneDate = date;
+    _clearWmState();
+    wmClose();
+    render();
+    endWorkoutEarly(doneDate);
+    return;
+  }
+  _saveWmState();
+  renderGuided();
+}
+function wmSubmitExerciseRpe(val) {
+  if (val != null && typeof setExRpe === 'function') setExRpe(_wmDate, _wmIdx, val);
+  _wmCompleteCurrentExercise();
 }
 function wmDoneSet() {
-  const date = _wmDate, day = S.plan && S.plan.days.find(d => d.date === date); if (!day) return;
-  const ex = day.exercises[_wmIdx], simple = _wmIsSimple(ex), sets = simple ? 1 : getAdj(date, _wmIdx, 's', ex.sets);
+  const date = _wmDate;
+  const day = S.plan && S.plan.days.find(d => d.date === date);
+  if (!day) return;
+  const ex = day.exercises[_wmIdx];
+  const simple = _wmIsSimple(ex);
+  const sets = simple ? 1 : getAdj(date, _wmIdx, 's', ex.sets);
   if (!simple && _wmSet < sets) {
     _wmSet++;
     if (_globalSubMode && _ownerSession()) {
       const msgs = _subPool('set_texts');
       if (msgs && msgs.length) _showSetMsg(msgs[Math.floor(Math.random() * msgs.length)]);
     }
+    _saveWmState();
     if ((S.restDur || 0) > 0 && typeof startTimer === 'function') startTimer(S.restDur, '组间休息');
-    renderGuided(); return;
+    renderGuided();
+    return;
   }
-  if (!S.prog[date]) S.prog[date] = {}; S.prog[date][_wmIdx] = true; saveState();
-  _wmSet = 1; let n = _wmIdx + 1; while (n < day.exercises.length && S.prog[date] && S.prog[date][n]) n++; _wmIdx = n;
-  if (_wmIdx >= day.exercises.length) { wmClose(); render(); endWorkoutEarly(date); return; }
+  if (!simple) {
+    _wmPendingRpe = true;
+    _saveWmState();
+    renderGuided();
+    return;
+  }
+  _wmCompleteCurrentExercise();
+}
+function wmNav(dir) {
+  const day = S.plan && S.plan.days.find(d => d.date === _wmDate);
+  if (!day) return;
+  _wmIdx = Math.max(0, Math.min(day.exercises.length - 1, _wmIdx + dir));
+  _wmSet = 1;
+  _wmPendingRpe = false;
+  _saveWmState();
   renderGuided();
 }
-function wmNav(dir) { const day = S.plan && S.plan.days.find(d => d.date === _wmDate); if (!day) return; _wmIdx = Math.max(0, Math.min(day.exercises.length - 1, _wmIdx + dir)); _wmSet = 1; renderGuided(); }
-function wmFinish() { wmClose(); render(); endWorkoutEarly(_wmDate); }
+function wmFinish() {
+  const date = _wmDate;
+  const day = S.plan && S.plan.days.find(d => d.date === date);
+  _wmRecordActual(day);
+  _clearWmState();
+  if (typeof stopTimer === 'function') stopTimer();
+  wmClose();
+  render();
+  endWorkoutEarly(date);
+}
 
 let _currentExDetailName = '';
 var _exDetailSubMode = false;
@@ -6701,12 +6913,12 @@ function showExDetail(name, date = null, ei = null) {
   _titleClickCount = 0;
 
   renderExDetailContent();
-  document.getElementById('ex-modal').classList.add('open');
+  if (typeof openAppDialog === 'function') openAppDialog('ex-modal'); else document.getElementById('ex-modal').classList.add('open');
 }
 window.showExDetail = showExDetail;
 
 function closeExDetail() {
-  document.getElementById('ex-modal').classList.remove('open');
+  if (typeof closeAppDialog === 'function') closeAppDialog('ex-modal'); else document.getElementById('ex-modal').classList.remove('open');
 }
 
 function calPrev() { _calWeekOffset -= 2; render() }
@@ -6721,7 +6933,7 @@ function showHistoryDetail(dateStr) {
   const d = new Date(dateStr + 'T12:00:00');
   const dayName = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'][d.getDay()];
   const dateFmt = `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日 ${dayName}`;
-  if (!entries.length) { content.innerHTML = `<div class="hist-detail-header"><span class="hist-detail-date">${dateFmt}</span><button class="ex-modal-close" onclick="closeHistModal()">✕</button></div><div class="hist-empty">该日暂无训练记录</div>`; modal.classList.add('open'); return }
+  if (!entries.length) { content.innerHTML = `<div class="hist-detail-header"><span class="hist-detail-date">${dateFmt}</span><button class="ex-modal-close" aria-label="关闭历史详情" onclick="closeHistModal()">✕</button></div><div class="hist-empty">该日暂无训练记录</div>`; if (typeof openAppDialog === 'function') openAppDialog('hist-modal'); else modal.classList.add('open'); return }
   let html = `<div class="hist-detail-header"><span class="hist-detail-date">${dateFmt}</span><button class="ex-modal-close" onclick="closeHistModal()">✕</button></div>`;
   entries.forEach(entry => {
     html += `<div class="hist-detail-meta"><span class="hist-detail-chip type">${entry.workout || '训练'}</span><span class="hist-detail-chip dur">${entry.duration || '?'}分钟</span>${entry.rpe ? `<span class="hist-detail-chip rpe">RPE ${entry.rpe}/10</span>` : ''}${entry.mood ? `<span class="hist-detail-chip mood">${entry.mood}</span>` : ''}</div>`;
@@ -6743,9 +6955,9 @@ function showHistoryDetail(dateStr) {
       html += `<div class="sub-diary-section"><span class="sub-diary-lbl">专属日记</span>${diary ? `<div class="sub-diary-body">${diary.replace(/\n/g,'<br>')}</div>` : ''}<button class="sub-diary-btn" onclick="_openSubDiary('${entry.date}')"> ${diary ? '编辑' : '+ 写下此刻'}</button></div>`;
     }
   });
-  content.innerHTML = html; modal.classList.add('open');
+  content.innerHTML = html; if (typeof openAppDialog === 'function') openAppDialog('hist-modal'); else modal.classList.add('open');
 }
-function closeHistModal() { document.getElementById('hist-modal').classList.remove('open') }
+function closeHistModal() { if (typeof closeAppDialog === 'function') closeAppDialog('hist-modal'); else document.getElementById('hist-modal').classList.remove('open') }
 
 // ══ Emergency Safety Bypass Panic triggers ═════════════════
 // Hitting Escape or double-clicking on non-interactive regions instantly disables sissification view
