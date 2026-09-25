@@ -6,8 +6,8 @@ Live app: https://hanpuli.github.io/cici-fitness/
 
 ## Architecture
 
-- **Static client:** `index.html`, `core.js`, `app.js`, `style.css` and local assets.
-- **Offline support:** `sw.js` pre-caches the application shell and runtime data.
+- **Static client:** `index.html`, `training-model.js`, `core.js`, `app.js`, `style.css` and local assets. `training-model.js` is a small pure-logic layer for session budgeting, duration estimation and exercise-count constraints; it is loaded as a classic script before `core.js`.
+- **Offline support:** `sw.js` pre-caches the application shell, including `training-model.js`, and uses best-effort CDN caching / stale-while-revalidate for web fonts and icon assets.
 - **Local persistence:** application state and recovery snapshots use browser storage, namespaced to the signed-in user where appropriate.
 - **Optional cloud sync:** Firebase Authentication + Firestore.
 - **Access boundary:** `firestore.rules` keeps `/users/{uid}` owner-only. The partner-facing `shared/profile` subdocument is separately gated by an explicit `allowedReaders` list and is populated from a whitelist in the client.
@@ -26,11 +26,13 @@ python3 -m http.server 8000
 Run the same static checks as CI:
 
 ```sh
+node --check training-model.js
 node --check core.js
 node --check app.js
 node --check dev.js
 node --check sw.js
 node tools/check-static.mjs
+node --test tests/training-model.test.mjs
 ```
 
 Firestore rules have emulator-backed access-control tests:
@@ -40,7 +42,7 @@ npm ci
 npm run test:rules
 ```
 
-The rules test requires a Java runtime because the Firebase Firestore emulator is a JVM process.
+The training-model tests use Node's built-in test runner and do not need Firebase. The Firestore rules test remains emulator-backed and requires a Java runtime because the Firebase Firestore emulator is a JVM process. `tests/firestore-rules.test.mjs` is the access-control regression suite and should not be weakened or replaced by client-side checks.
 
 The repository intentionally does not track local operator notes, Finder metadata, scratch work or unrelated personal pages.
 

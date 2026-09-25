@@ -26,12 +26,15 @@ jobs:
           node-version: "22"
       - name: JavaScript syntax
         run: |
+          node --check training-model.js
           node --check core.js
           node --check app.js
           node --check dev.js
           node --check sw.js
       - name: Static and security-boundary checks
         run: node tools/check-static.mjs
+      - name: Training model tests
+        run: node --test tests/training-model.test.mjs
 
   firestore-rules:
     runs-on: ubuntu-latest

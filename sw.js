@@ -1,8 +1,8 @@
-const CACHE = 'cici-fitness-v149';
+const CACHE = 'cici-fitness-v150';
 
 // ── Local assets: always pre-cached on install ──
 const LOCAL_ASSETS = [
-  './index.html', './core.js', './app.js', './style.css',
+  './index.html', './training-model.js', './core.js', './app.js', './style.css',
   './manifest.json', './icon.svg', './dev.js', './assets/obfuscated_v2.json'
 ];
 
@@ -13,8 +13,9 @@ const CDN_ASSETS = [
   'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js',
   'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js',
   // Google Fonts CSS
-  'https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300..700;1,300..700&family=DM+Mono:wght@300;400&family=Noto+Serif+SC:wght@300;400;600;700&family=Outfit:wght@300;400;500;600;700&family=ZCOOL+XiaoWei&display=swap',
-  // Tabler Icons CSS
+  'https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400..800;1,400..600&family=DM+Mono:wght@300;400&family=Noto+Serif+SC:wght@300;400;600;700&family=Outfit:wght@300;400;500;600;700&display=swap',
+  // Fonts/icons served from jsDelivr are best-effort cached too.
+  'https://cdn.jsdelivr.net/npm/lxgw-wenkai-webfont@1.7.0/style.css',
   'https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css'
 ];
 
