@@ -1119,7 +1119,7 @@ details.fold[open] > summary::after { content: ' ▾'; }
 .dev-modal-body { display: flex; flex-direction: column; gap: 10px; font-size: 14px; }
 .dev-json-tree-container { font-family: var(--font-mono); font-size: 12px; line-height: 1.6; overflow-x: auto; border: 1px solid var(--line); padding: 8px; max-height: 50vh; }
 .dev-json-tree-container ul { list-style: none; padding-left: 14px; }
-.dev-textarea { width: 100%; min-height: 160px; font-family: var(--font-mono); font-size: 12px; border: 1px solid var(--line); background: transparent; padding: 8px; }
+.dev-textarea { width: 100%; min-height: 160px; font-family: var(--font-mono); font-size: 16px; border: 1px solid var(--line); background: transparent; padding: 8px; }
 .dev-status-msg { font-family: var(--font-mono); font-size: 12px; }
 .dev-status-msg.error { color: var(--accent); }
 .dev-status-msg.success { color: var(--olive); }
@@ -1131,3 +1131,28 @@ details.fold[open] > summary::after { content: ' ▾'; }
 @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { transition: none !important; animation: none !important; }
 }
+
+/* ══ v3.3 新功能 ═══════════════════════════════════════════════
+   计划页「采纳过的教练提议」、引导训练里的调整 / 换 / 问教练、打卡面板的实际用时。
+   纸墨写法:Courier Prime 小标签、衬线正文、发丝线、方角、墨色;其余地方不受影响。 */
+
+/* 计划页:周历和「当前设置」中间,一条一行,发丝线分隔(节点运行时插入,没有可撤销的就不存在) */
+.plan-props { display: flex; flex-direction: column; }
+.plan-props .plan-prop { padding: 10px 0; border: 0; border-bottom: 1px solid var(--line); border-radius: 0; display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 12px; row-gap: 2px; align-items: center; }
+.plan-props .pp-k { grid-column: 1 / -1; font-family: var(--font-mono); font-size: 12px; letter-spacing: .04em; color: var(--faint); }
+.plan-props .pp-t { font-size: 15px; line-height: 1.5; overflow-wrap: anywhere; }
+.plan-props .link-btn { text-align: right; }
+
+/* 引导训练:动作下面一排文字按钮;「调整」展开 组 / 次 / kg 三行步进,上下发丝线 */
+.wm-edit { display: flex; flex-direction: column; gap: 8px; padding: 8px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.wm-edit .stepper { grid-template-columns: 40px 44px minmax(0, 1fr) 44px; }
+.wm-edit .step-val { font-size: 20px; }
+
+/* 打卡面板:说明下面一行实际用时(开练时间来自第一次勾选 / 第一组 / 开始引导训练) */
+.rpe-elapsed { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 8px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.rpe-elapsed .k { font-family: var(--font-mono); font-size: 12px; letter-spacing: .1em; color: var(--faint); }
+.rpe-elapsed .v { font-size: 22px; line-height: 1; color: var(--ink); }
+.rpe-elapsed .v small { font-family: var(--font-mono); font-size: 13px; color: var(--muted); }
+/* iOS 键盘弹出时布局视口变矮,固定的底栏会贴在键盘上沿、输入条叠在它上面:打字时把底栏藏起来,输入条贴底 */
+body.has-composer:has(#co-chat-text:focus) .tabbar { display: none; }
+body.has-composer:has(#co-chat-text:focus) #composer { bottom: env(safe-area-inset-bottom); }

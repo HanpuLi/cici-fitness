@@ -1,6 +1,6 @@
 // ══ System Version ═════════════════════════════════════════
 const APP_VERSION = 'v3.1.0';
-const APP_BUILD = 156;               // = sw.js 的 CACHE 编号 = index.html 页脚 build(check-static 会查,三处一起改)
+const APP_BUILD = 157;               // = sw.js 的 CACHE 编号 = index.html 页脚 build(check-static 会查,三处一起改)
 const APP_BUILD_DATE = '2026-10-28';
 window.APP_VERSION = APP_VERSION;
 window.APP_BUILD = APP_BUILD;
@@ -2441,10 +2441,10 @@ function _todayNotices(sel, today) {
   if (S.planStale) h += `<div class="stale-bar"><span>训练设置改过了，计划还是按旧设置排的</span><button class="regen-btn" onclick="applyStaleSettings()">按新设置重排</button></div>`;
   if (typeof _todayNotice !== 'undefined' && _todayNotice) h += `<div class="notice" role="status"><span>${_escHtml(_todayNotice)}</span><button class="link-btn" onclick="uiNotice('')">知道了</button></div>`;
   if (sel && sel.date !== today) h += `<div class="notice"><span>正在看 ${fmtDate(sel.date)} ${sel.date.slice(5).replace('-', '/')}</span><button class="link-btn u" onclick="calGoToday()">回到今天</button></div>`;
-  const isIos = /iphone|ipad|ipod/.test((navigator.userAgent || '').toLowerCase());
+  const isIos = /iphone|ipad|ipod/.test((navigator.userAgent || '').toLowerCase()) || (/macintosh/i.test(navigator.userAgent || '') && navigator.maxTouchPoints > 1);   // iPadOS 的 UA 写的是 Macintosh
   const isStandalone = ('standalone' in navigator) && navigator.standalone;
   let hide = false; try { hide = !!localStorage.getItem('hideInstallPrompt'); } catch (e) { }
-  if (isIos && !isStandalone && !hide) h += `<div class="notice" id="ios-install-prompt"><span><span class="faint">[ 装到主屏幕 ]</span> Safari 底部分享 → 添加到主屏幕，离线也能打开。</span><button class="link-btn" onclick="try{localStorage.setItem('hideInstallPrompt','1')}catch(e){};document.getElementById('ios-install-prompt').remove()">关闭</button></div>`;
+  if (isIos && !isStandalone && !hide) h += skinTpl('iosInstall', null, () => `<div class="notice" id="ios-install-prompt"><span><span class="faint">[ 装到主屏幕 ]</span> Safari 右下角 ••• → 分享 → 添加到主屏幕，离线也能打开。</span><button class="link-btn" onclick="try{localStorage.setItem('hideInstallPrompt','1')}catch(e){};document.getElementById('ios-install-prompt').remove()">关闭</button></div>`);
   return h;
 }
 // 主项一行
@@ -2536,6 +2536,7 @@ function togBlock(date, kind) {
   const allDone = idx.every(i => S.prog[date][i]);
   idx.forEach(i => { S.prog[date][i] = !allDone; });
   if (!allDone) {
+    wkMarkStart(date);
     playExerciseDoneSound();
     if (_xMode && _ownerSession()) { const m = _xPick('tog_toast'); if (m) showToast(m, 2500); }
   }
@@ -2566,7 +2567,7 @@ function _readListHtml(exs, date) {
   }).join('')}</div>`;
 }
 function _logMetaHtml(lg) {
-  return `<div class="hist-detail-meta">${lg.rpe ? `<span class="hist-detail-chip rpe">RPE ${lg.rpe}/10</span>` : ''}${lg.mood ? `<span class="hist-detail-chip mood">${lg.mood}</span>` : ''}<span class="hist-detail-chip dur">${lg.exerciseCount || (lg.exercises || []).length} 个动作</span></div>`;
+  return `<div class="hist-detail-meta">${lg.rpe ? `<span class="hist-detail-chip rpe">RPE ${lg.rpe}/10</span>` : ''}${lg.mood ? `<span class="hist-detail-chip mood">${lg.mood}</span>` : ''}<span class="hist-detail-chip dur">${lg.exerciseCount || (lg.exercises || []).length} 个动作</span>${wkLogMin(lg) ? `<span class="hist-detail-chip dur">用时 ${wkLogMin(lg)} min</span>` : ''}</div>`;
 }
 function _dayMuscles(sel) {
   const m = [];
@@ -2708,6 +2709,7 @@ function render() {
   }   // 纸墨正文结束
   mainEl.innerHTML = h;
   if (typeof skinAfterRender === 'function') skinAfterRender('today');
+  _wmSync();
 
   if ('setAppBadge' in navigator) {
     const todayPlan = S.plan?.days.find(d => d.date === today);
@@ -3202,9 +3204,39 @@ function stopTimer() {
   if (bar) bar.classList.remove('show');
 }
 
+// ══ 这天开练的时间(两套风格共用) ═════════════════════════
+// 存本机 localStorage fit_spsets,和运动风格今天页的「做到第几组」同一份:{ 日期: { s: {动作下标: 组数}, t0: 开练时刻 } },
+// 只留近 7 天,不进云端、不进快照。只记今天的:第一次勾动作 / 勾整块 / 完成第一组 / 开始引导训练(看别的日子时点了不算)。
+// 打卡时算出实际用时(分钟),写进那条记录的可选字段 elapsedMin(计划时长 duration 原样不动,统计还在用它)。
+const WK_DAY_KEY = 'fit_spsets';
+const WK_ELAPSED_MAX = 300;   // 超过 5 小时不像一次训练(早上勾了一项、晚上才打卡),就当没有
+function _wkDays() { try { return JSON.parse(localStorage.getItem(nsKey(WK_DAY_KEY)) || '{}') || {}; } catch (e) { return {}; } }
+function _wkDaysSave(a) {
+  const old = addDays(todayStr(), -7);
+  for (const k of Object.keys(a)) if (k < old) delete a[k];
+  try { localStorage.setItem(nsKey(WK_DAY_KEY), JSON.stringify(a)); } catch (e) { }
+}
+function wkStartAt(date) { const d = _wkDays()[date]; return (d && d.t0) || 0; }
+function wkMarkStart(date) {
+  if (date !== todayStr()) return;
+  const a = _wkDays(), d = a[date] || (a[date] = { s: {} });
+  if (d.t0) return;
+  d.t0 = Date.now();
+  _wkDaysSave(a);
+}
+// 实际用时(分钟,至少 1);没有开练时间、或长得不像一次训练就是 null
+function wkElapsedMin(date, at) {
+  const t0 = wkStartAt(date); if (!t0) return null;
+  const m = Math.round(((at || Date.now()) - t0) / 60000);
+  return m >= 0 && m <= WK_ELAPSED_MAX ? Math.max(1, m) : null;
+}
+// 一条打卡记录里的实际用时(分钟);老记录没有这个字段、或者值不对(导入的备份)都是 0
+function wkLogMin(lg) { const m = Math.round(+(lg && lg.elapsedMin)); return m > 0 && m <= WK_ELAPSED_MAX ? m : 0; }
+
 let _pendingRpeDate = null;
 let _pendingRpeDay = null;
 let _editingLogIdx = null;
+let _rpeElapsed = null;   // 打卡面板打开那一刻的实际用时(分钟);挑分数、写备注的时间不算进去
 
 function updateRpeModalLabels() {
   const isOwner = _ownerSession();
@@ -3249,13 +3281,24 @@ function updateRpeModalLabels() {
 let _pickedRpe = null;
 function _rpeEyebrow(day, text) {
   const el = document.getElementById('rpe-eyebrow'); if (!el) return;
-  // 运动风格:完成数挪进标题下面的数字块(skin-sport.js 60 区)
-  skinTpl('rpeEyebrow', { el, day, text }, () => {
+  // 新打卡才有实际用时;编辑旧记录不显示
+  _rpeElapsed = day && !text ? wkElapsedMin(day.date) : null;
+  // 运动风格:完成数挪进标题下面的数字块(skin-sport.js 60 区),实际用时也在那里
+  skinTpl('rpeEyebrow', { el, day, text, elapsed: _rpeElapsed }, () => {
+    _rpeElapsedLine(_rpeElapsed);
     if (text) { el.textContent = text; return; }
     if (!day) { el.textContent = '打卡'; return; }
     const p = S.prog[day.date] || {}, c = Object.keys(p).filter(k => p[k]).length;
     el.textContent = `打卡 · ${day.workoutType} · ${c}/${day.exercises.length}`;
   });
+}
+// 纸墨:说明下面一行「实际用时  48 分钟」(运行时插的节点;没有用时就不出现)
+function _rpeElapsedLine(min) {
+  let row = document.getElementById('rpe-elapsed');
+  if (!min) { if (row) row.remove(); return; }
+  const desc = document.getElementById('rpe-modal-desc'); if (!desc) return;
+  if (!row) { row = document.createElement('div'); row.id = 'rpe-elapsed'; row.className = 'rpe-elapsed'; desc.insertAdjacentElement('afterend', row); }
+  row.innerHTML = `<span class="k">实际用时</span><span class="v">${min}<small> 分钟</small></span>`;
 }
 function pickRPE(n) {
   _pickedRpe = n;
@@ -3277,6 +3320,7 @@ function closeRpeModal() {
   _pendingRpeDate = null;
   _pendingRpeDay = null;
   _editingLogIdx = null;
+  _rpeElapsed = null;
   _pendingEarlyEnd = false; // 从弹窗外部关闭也复位,否则残留会让"练满"被误判成提前结束、跳过强度评估
 }
 
@@ -3333,6 +3377,7 @@ function submitRPE(rpe, isSkip = false) {
       date: date,
       workout: day.workoutType,
       duration: day.duration,
+      ...(_rpeElapsed ? { elapsedMin: _rpeElapsed } : {}),   // 实际用时(分钟,可选;老记录没有)
       exerciseCount: checkedCount,
       rpe: actualRpe,
       exercises: day.exercises.map((ex, i) => ({
@@ -3476,6 +3521,7 @@ function tog(date, ei) {
   S.prog[date][ei] = !S.prog[date][ei];
 
   if (S.prog[date][ei]) {
+    wkMarkStart(date);
     playExerciseDoneSound();
     if (_xMode && _ownerSession()) {
       const m = _xPick('tog_toast');
@@ -4746,6 +4792,7 @@ const EX_DETAIL = {
 // ══ Guided workout mode (逐个动作引导 + 组间自动计时) ══════
 let _wmDate = null, _wmIdx = 0, _wmSet = 1;
 let _wmSide = 0, _wmCd = null;   // 计时动作:双侧动作现在做到第几侧;倒计时 {idx,end,total,timer}
+let _wmAdj = false, _wmExName = null;   // 「调整」展开了没有;上次画的是哪个动作(换 / 划掉之后从第 1 组重新来)
 function _wmIsTimed(ex) { return !!ex && (ex.unit === '秒' || ex.unit === '分钟'); }
 // 「简单」= 只做一轮:热身、纯拉伸、有氧、游泳。按秒计的主项(平板支撑 3×30秒)照样分组 + 组间休息
 function _wmIsSimple(ex) { return ex.isWarmup || (ex.isStretch && !isWeightedMove(ex.name)) || ex.group === 'cardio' || ex.group === 'swimming' || !!ex.swimPhase || (ex.unit !== '次' && ex.unit !== '秒'); }
@@ -4792,7 +4839,8 @@ function startGuided(date) {
   if (!day || !day.exercises || !day.exercises.length) { if (typeof showToast === 'function') showToast('今天没有可做的动作'); return; }
   _wmDate = date;
   const s = day.exercises.findIndex((ex, i) => !(S.prog[date] && S.prog[date][i]));
-  _wmIdx = s < 0 ? 0 : s; _wmSet = 1; _wmSide = 0; _wmStopCd();
+  _wmIdx = s < 0 ? 0 : s; _wmSet = 1; _wmSide = 0; _wmStopCd(); _wmAdj = false; _wmExName = null;
+  wkMarkStart(date);
   const m = document.getElementById('workout-modal'); if (m) m.classList.add('open');
   
   if (_xMode && _ownerSession()) _xGuidedStart(() => renderGuided());
@@ -4811,7 +4859,10 @@ function renderGuided() {
   const list = day.exercises;
   if (_wmIdx >= list.length) { wmClose(); render(); endWorkoutEarly(date); return; }
   const ex = list[_wmIdx], simple = _wmIsSimple(ex);
+  // 换了一个动作(上一个 / 下一个、换 / 划掉):从第 1 组重新来,计时作废,「调整」收起
+  if (_wmExName !== ex.name) { if (_wmExName !== null) { _wmSet = 1; _wmSide = 0; _wmStopCd(); } _wmAdj = false; _wmExName = ex.name; }
   const sets = simple ? 1 : getAdj(date, _wmIdx, 's', ex.sets), reps = getAdj(date, _wmIdx, 'r', ex.reps);
+  if (!simple && _wmSet > sets) _wmSet = sets;   // 「调整」里把组数减到了当前组以下
   const needW = needsWeightUI(ex);
   const lastW = typeof getLastWeight === 'function' ? (getLastWeight(ex.name, true) || getLastWeight(ex.name, false)) : null;
   const e1rm = typeof estimate1RM === 'function' ? estimate1RM(ex.name) : null, curW = getWeight(date, _wmIdx);
@@ -4827,6 +4878,11 @@ function renderGuided() {
   const doneLbl = simple ? '完成 ✓' : (_wmSet < sets ? '完成这组 → 休息' : '完成最后一组 ✓');
   const timed = _wmIsTimed(ex), running = timed && _wmCd && _wmCd.idx === _wmIdx;
   const sideLbl = ex.bi ? (_wmSide ? '另一侧 ' : '第一侧 ') : '';
+  // 调整(组 / 次 / kg,和今天页同一套 adj / stepWeight;它们会 render(),render 末尾 _wmSync 把这张卡重画)、换 / 划掉、问教练
+  const i = _wmIdx, adjOpen = _wmAdj, aiOn = typeof coachAccess === 'function' && coachAccess() === 'on';
+  const canSwap = !(ex.isWarmup || (ex.isStretch && !isWeightedMove(ex.name))) && ex.swimPhase !== 'warmup' && ex.swimPhase !== 'cooldown';
+  const unitLbl = ex.unit === '秒' ? '秒' : ex.unit === '分钟' ? '分钟' : '次';
+  const kgVal = needW ? (curW !== null ? curW : (suggestWeight(ex.name) ?? '—')) : null;
   let mainBtn = `<button class="btn-primary" onclick="wmDoneSet()">${doneLbl}</button>`, cdBlock = '', altBtn = '';
   if (running) {
     cdBlock = `<div class="wm-cd"><div class="tag">${sideLbl}</div><div id="wm-cd" class="cd">${_wmFmt((_wmCd.end - Date.now()) / 1000)}</div><div class="wm-bar"><i id="wm-cd-bar"></i></div></div>`;
@@ -4837,16 +4893,38 @@ function renderGuided() {
     altBtn = `<button class="btn-line" onclick="wmDoneSet()">不计时，直接${doneLbl.replace(' → 休息', '')}</button>`;
   }
   // 运动风格:荧光绿焦点卡(skin-sport.js 60 区);id(wm-weight / wm-cd / wm-cd-bar)和点了调的函数不变
-  card.innerHTML = skinTpl('guided', { date, idx: _wmIdx, set: _wmSet, side: _wmSide, list, ex, simple, sets, reps, needW, lastW, e1rm, curW, dispName, dispNote, timed, running, sideLbl }, () => `<div class="wm-top"><span class="sheet-eyebrow">引导训练 · 动作 ${_wmIdx + 1}/${list.length}</span><button class="ex-modal-close" onclick="wmClose()" aria-label="关闭引导训练">关闭</button></div>
+  card.innerHTML = skinTpl('guided', { date, idx: _wmIdx, set: _wmSet, side: _wmSide, list, ex, simple, sets, reps, needW, lastW, e1rm, curW, dispName, dispNote, timed, running, sideLbl, adjOpen, aiOn, canSwap, unitLbl, kgVal }, () => `<div class="wm-top"><span class="sheet-eyebrow">引导训练 · 动作 ${_wmIdx + 1}/${list.length}</span><button class="ex-modal-close" onclick="wmClose()" aria-label="关闭引导训练">关闭</button></div>
   <h2 class="wm-name">${dispName}</h2>
   <p class="tag">${(ex.muscle || []).join(' · ') || (ex.isWarmup ? '热身' : ex.isStretch ? '拉伸' : '')}</p>
   <div class="wm-set">${simple ? `${reps} ${ex.unit}` : `第 <b>${_wmSet}</b> / ${sets} 组 · 目标 ${reps} ${ex.unit}${ex.bi ? '/每侧' : ''}`}</div>
   ${needW ? `<div class="wm-weight"><label for="wm-weight">重量</label><input id="wm-weight" type="number" inputmode="decimal" step="0.5" value="${curW || ''}" placeholder="${lastW ? lastW.weight : ''}"><span>kg${lastW ? ' · 上次 ' + lastW.weight : ''}${e1rm ? ' · 1RM≈' + e1rm : ''}</span></div>` : ''}
+  <div class="actions wm-acts"><button type="button" class="link-btn" aria-expanded="${adjOpen}" onclick="wmToggleAdj()">${adjOpen ? '▴ 收起' : '▾ 调整'}</button>${canSwap ? `<button type="button" class="link-btn swap-btn" onclick="swapExercise('${date}',${i})">换 / 划掉</button>` : `<button type="button" class="link-btn" onclick="openSwapSheet('${date}',${i})">划掉</button>`}${aiOn ? `<button type="button" class="link-btn" onclick="wmClose();coachAskAbout('${_q(ex.name)}')">问教练</button>` : ''}</div>
+  ${adjOpen ? `<div class="wm-edit">${simple ? '' : _stepRowHtml('组', `${sets}`, `adj('${date}',${i},'s',-1)`, `adj('${date}',${i},'s',1)`, sets <= 1)}${_stepRowHtml(unitLbl, `${reps}${ex.bi ? '<span class="step-unit"> /每侧</span>' : ''}`, `adj('${date}',${i},'r',-1)`, `adj('${date}',${i},'r',1)`, reps <= (ex.unit === '秒' ? 5 : 1))}${needW ? `<div class="stepper"><span class="step-lbl">kg</span><button type="button" class="step-btn" onclick="stepWeight('${date}',${i},-1)" aria-label="重量减少">−</button><span class="step-val">${kgVal}</span><button type="button" class="step-btn" onclick="stepWeight('${date}',${i},1)" aria-label="重量增加">+</button></div>` : ''}</div>` : ''}
   ${dispNote ? `<div class="exnote">${dispNote}</div>` : ''}
   ${cdBlock}<div class="wm-nav"><button class="btn-line" onclick="wmNav(-1)" aria-label="上一个动作">↑</button>${mainBtn}<button class="btn-line" onclick="wmNav(1)" aria-label="下一个动作">↓</button></div>${altBtn}
   <button class="btn-line" onclick="wmFinish()">结束训练并打卡</button>`);
   const wEl = document.getElementById('wm-weight');
   if (wEl) wEl.addEventListener('change', () => { const v = parseFloat(wEl.value); if (isFinite(v) && v > 0) setWeight(date, _wmIdx, v); });
+  if (typeof skinAfterRender === 'function') skinAfterRender('guided');   // 运动风格:卡里的组间倒计时接上计时器
+}
+// 引导卡原地重画:焦点留在刚点的那个按钮上(键盘 / 读屏不丢位置),滚动位置不动
+function _wmRerender() {
+  const card = document.getElementById('wm-card'); if (!card) return;
+  const keyOf = el => el.id || el.getAttribute('onclick') || el.getAttribute('aria-label') || '';
+  const a = document.activeElement, key = a && a !== card && card.contains(a) ? keyOf(a) : '', top = card.scrollTop;
+  renderGuided();
+  card.scrollTop = top;
+  if (key) { const b = [...card.querySelectorAll('button, input')].find(x => keyOf(x) === key && !x.disabled); if (b) try { b.focus({ preventScroll: true }); } catch (e) { } }
+}
+function wmToggleAdj() { _wmAdj = !_wmAdj; _wmRerender(); }
+// render() 末尾调:引导训练开着时,今天页的数据变了(组数 / 次数 / 重量、换了 / 划掉了动作)引导卡跟着变,停在同一个位置
+function _wmSync() {
+  const m = document.getElementById('workout-modal');
+  if (!m || !m.classList.contains('open') || !_wmDate) return;
+  const day = S.plan && S.plan.days.find(d => d.date === _wmDate);
+  if (!day || !day.exercises || !day.exercises.length) { wmClose(); return; }
+  if (_wmIdx >= day.exercises.length) _wmIdx = day.exercises.length - 1;   // 划掉的是最后一个
+  _wmRerender();
 }
 function wmDoneSet() {
   _wmStopCd(); _wmSide = 0;
@@ -4987,7 +5065,7 @@ function showHistoryDetail(dateStr) {
   if (!entries.length) { content.innerHTML = head + `<div class="hist-empty">该日暂无训练记录</div>`; modal.classList.add('open'); return }
   let html = head;
   entries.forEach(entry => {
-    html += skinTpl('histMeta', { entry }, () => `<div class="hist-detail-meta"><span class="hist-detail-chip type">${_escHtml(entry.workout || '训练')}</span><span class="hist-detail-chip dur">${entry.duration || '?'} min</span>${entry.rpe ? `<span class="hist-detail-chip rpe">RPE ${entry.rpe}/10</span>` : ''}${entry.mood ? `<span class="hist-detail-chip mood">${entry.mood}</span>` : ''}</div>`);
+    html += skinTpl('histMeta', { entry }, () => `<div class="hist-detail-meta"><span class="hist-detail-chip type">${_escHtml(entry.workout || '训练')}</span><span class="hist-detail-chip dur">${entry.duration || '?'} min</span>${wkLogMin(entry) ? `<span class="hist-detail-chip dur">用时 ${wkLogMin(entry)} min</span>` : ''}${entry.rpe ? `<span class="hist-detail-chip rpe">RPE ${entry.rpe}/10</span>` : ''}${entry.mood ? `<span class="hist-detail-chip mood">${entry.mood}</span>` : ''}</div>`);
     if (entry.exercises && entry.exercises.length) {
       html += `<div class="hist-detail-exercises">`;
       entry.exercises.forEach(ex => { html += `<div class="hist-ex-row${ex.done === false ? ' hist-ex-undone' : ''}"><button type="button" class="hist-ex-name" ${_detailAttrs(ex.name)}>${ex.name}</button><span class="hist-ex-detail"><span>${ex.sets || '?'}×${ex.reps || '?'}${ex.unit || '次'}</span>${ex.weight ? `<span class="hist-ex-weight">${ex.weight} kg</span>` : ''}</span></div>` });

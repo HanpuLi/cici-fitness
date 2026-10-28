@@ -896,6 +896,8 @@ async function coachAttach(input) {
 }
 // 今天页「问教练」/ 换动作面板「问教练怎么换」:跳到教练页,输入框里先填好开头
 function coachAskAbout(name, kind) {
+  // 从引导训练里来的(引导卡上的「问教练」、引导里打开的换动作面板):先把全屏的引导关掉,不然盖在教练页上
+  const wm = document.getElementById('workout-modal'); if (wm && wm.classList.contains('open') && typeof wmClose === 'function') wmClose();
   showTab('coach');
   setTimeout(() => {
     const ta = document.getElementById('co-chat-text');
@@ -1109,25 +1111,45 @@ function _coachChangeTxt(c) {
   }
   return '?';
 }
+// 卡片上一条改动的文字:采纳以后的「改设置」写当时的「从 → 到」(现在的值已经是新值了)
+function _coachRowTxt(c, open) {
+  return c.op === 'setting' && !open && c.from !== undefined
+    ? `${_SET_NAME[c.key] || c.key}  ${_coachSetFmt(c.key, c.from)} → ${_coachSetFmt(c.key, c.value)}` : _coachChangeTxt(c);
+}
 function _coachPropHtml(p) {
   const open = p.state === 'open', gated = _coachGated();
   const res = open ? p.changes.map(_coachPropCheck) : (p.result || p.changes.map(() => ''));
   const okN = res.filter(x => !x).length;
   const rows = p.changes.map((c, i) => {
-    const bad = res[i], txt = c.op === 'setting' && !open && c.from !== undefined
-      ? `${_SET_NAME[c.key] || c.key}  ${_coachSetFmt(c.key, c.from)} → ${_coachSetFmt(c.key, c.value)}` : _coachChangeTxt(c);
+    const bad = res[i], txt = _coachRowTxt(c, open);
     return `<span class="d">${_esc(c.op === 'setting' ? '设置' : _coachScopeLabel(c.scope))}</span><span class="c${bad ? ' bad' : ''}">${bad ? `<s>${_esc(txt)}</s><small class="co-err">${_esc(bad)}${open ? '，不会改' : '，没改'}</small>` : `${_esc(txt)}${c.why ? `<small>${_esc(c.why)}</small>` : ''}`}</span>`;
   }).join('');
   const drop = (p.dropped || []).filter(n => !gated.has(n));
   let foot = '';
   if (open) foot = `<div class="co-prop-btns"><button type="button" class="btn-primary" onclick="coachPropAct(this,'apply')"${okN ? '' : ' disabled'}>采纳</button><button type="button" class="btn-line" onclick="coachPropAct(this,'reject')">不要</button></div>`;
   else if (p.state === 'applied') foot = `<div class="co-prop-st olive">✓ 已写进计划${okN < p.changes.length ? ` · ${p.changes.length - okN} 条没改` : ''}</div>` + (p.snap ? `<button type="button" class="link-btn u" style="align-self:flex-start" onclick="coachPropAct(this,'undo')">撤销，回到采纳前</button>` : '');
-  else if (p.state === 'rejected') foot = `<div class="co-prop-st faint">— 没改。计划照旧。</div>`;
+  else if (p.state === 'rejected') foot = `<div class="co-prop-st faint">— 没改。计划照旧。</div><button type="button" class="link-btn u" style="align-self:flex-start" onclick="coachPropAct(this,'reopen')">再看看</button>`;
   else if (p.state === 'undone') foot = `<div class="co-prop-st faint">已撤销 · 计划回到采纳前</div>`;
   return skinTpl('coachProp', { p, open, okN, rows, drop }, () => `<div class="co-prop" data-pid="${_esc(p.id)}"><div class="co-prop-h"><span class="dot" aria-hidden="true"></span>提议 · ${okN} 处改动</div>`
     + `<div class="co-prop-list">${rows}</div>`
     + (drop.length ? `<div class="co-meta">还提到 ${drop.length} 个不在你动作库里的动作，已去掉：${_esc(drop.join('、'))}</div>` : '')
     + foot + `</div>`);
+}
+// 计划页「采纳过的教练提议」:还能撤销的(采纳了、快照还在 —— 只有最近一次采纳留快照)每条一句摘要 + 撤销。
+// 撤销按钮放在 .co-prop[data-pid] 里,点了走 coachPropAct 同一套(撤销后 render() 会把这块重画掉)。没有就返回空串,整块不显示。
+function coachPlanProps() {
+  return (_coachLoad().chat || []).filter(m => m.proposal && m.proposal.state === 'applied' && m.proposal.snap).map(m => {
+    const p = m.proposal, res = p.result || [], ok = p.changes.filter((c, i) => !res[i]);
+    const c = ok[0] || p.changes[0];
+    const head = c ? `${c.op === 'setting' ? '设置' : _coachScopeLabel(c.scope)} · ${_coachRowTxt(c, false)}` : '计划改动';
+    return { id: p.id, at: m.at, n: ok.length, text: head + (ok.length > 1 ? ` 等 ${ok.length} 处` : '') };
+  });
+}
+function coachPlanPropsHtml() {
+  const items = coachPlanProps();
+  if (!items.length) return '';
+  return skinTpl('planProps', { items }, () => items.map(it => `<div class="co-prop plan-prop" data-pid="${_esc(it.id)}"><span class="pp-k">[ 教练提议 · 已采纳 ]</span>`
+    + `<span class="pp-t">${_esc(it.text)}</span><button type="button" class="link-btn u" onclick="coachPropAct(this,'undo')">撤销</button></div>`).join(''));
 }
 function _coachPropApply(p) {
   const snap = { days: {}, st: {}, set: {}, aiW: {}, stale: !!S.planStale };
@@ -1218,6 +1240,12 @@ function coachPropAct(btn, act) {
   const p = m.proposal;
   if (act === 'reject' && p.state === 'open') {
     p.state = 'rejected'; m.after = '(她没采纳)';
+    _coachSave(st); _coachShowChat();
+    return;
+  }
+  // 「不要」之后「再看看」:回到待定,采纳 / 不要重新可点(每条改动按现在的计划重新核一遍)
+  if (act === 'reopen' && p.state === 'rejected') {
+    p.state = 'open'; delete m.after;
     _coachSave(st); _coachShowChat();
     return;
   }

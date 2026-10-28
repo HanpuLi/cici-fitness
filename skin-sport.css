@@ -695,6 +695,12 @@ html[data-skin="sport"] #co-plan-req { border-radius: 14px; background: var(--sp
 html[data-skin="sport"] #gen-btn { border-radius: 16px; }
 html[data-skin="sport"] #co-plan-body .co-rv { padding: 12px 14px !important; border: 2px solid var(--ink) !important; border-radius: 16px; font-size: 15px; animation: sp-in .25s ease-out; }
 html[data-skin="sport"] #co-plan-body .co-day { border-top: 1px solid var(--line); }
+/* 采纳过、还能撤销的教练提议(样稿 369–378):周历和当前设置之间,墨色粗边白卡,荧光绿「教练」小签 + 一句摘要 + 撤销 */
+html[data-skin="sport"] #plan-props { display: flex; flex-direction: column; gap: 10px; }
+html[data-skin="sport"] #plan-props .sp-pp { padding: 10px 6px 10px 14px; border: 2px solid var(--ink); border-radius: 18px; background: var(--sp-card); display: flex; flex-direction: row; align-items: center; gap: 10px; animation: sp-in .25s ease-out; }
+html[data-skin="sport"] #plan-props .sp-pp-tag { flex: none; min-height: 26px; padding: 0 9px; border-radius: 999px; background: var(--sp-neon); color: #111111; display: inline-flex; align-items: center; font-family: var(--sp-sans); font-size: 12px; font-weight: 700; }
+html[data-skin="sport"] #plan-props .pp-t { flex: 1; min-width: 0; font-family: var(--sp-sans); font-size: 14px; line-height: 1.45; color: var(--ink); }
+html[data-skin="sport"] #plan-props .link-btn { flex: none; min-height: 44px; padding: 0 12px; color: var(--ink); font-family: var(--sp-sans); font-size: 14px; font-weight: 700; letter-spacing: 0; text-decoration: none; }
 /* —— 20 计划 · 写在这行上面 —— */
 
 /* ══ 30 记录 ═══════════════════════════════════════════════════════════ */
@@ -920,6 +926,8 @@ html[data-skin="sport"] #hist-modal .hist-ex-detail { gap: 10px; font-family: va
 html[data-skin="sport"] #hist-modal .hist-ex-weight { font-weight: 800; color: var(--ink); }
 html[data-skin="sport"] #hist-modal .hist-note { padding: 2px 0 2px 10px; border-left: 3px solid var(--line); font-style: normal; font-size: 14px; color: var(--muted); }
 html[data-skin="sport"] #hist-modal .hist-empty { padding: 16px; border-radius: 18px; background: var(--sp-card); font-family: var(--sp-sans); font-size: 14px; color: var(--muted); }
+/* 历史详情:有实际用时时多一格,四格排成 2 × 2 */
+html[data-skin="sport"] #hist-modal .sp-hm-s.n4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 /* —— 30 记录 · 写在这行上面 —— */
 
 /* ══ 40 教练 ═══════════════════════════════════════════════════════════ */
@@ -1026,6 +1034,13 @@ html[data-skin="sport"] #composer .send:disabled { opacity: .4; }
 html[data-skin="sport"] #composer .co-pending { padding: 8px 12px 0; }
 html[data-skin="sport"] #composer .co-pending img { border: 0; border-radius: 10px; }
 html[data-skin="sport"] #composer .co-pending .link-btn { padding: 0 14px; border: 1.5px solid var(--line); border-radius: 999px; font-weight: 600; text-align: center; }
+/* 提议卡「不要」之后:灰字 + 「再看看」(回到待定,样稿 732–736) */
+html[data-skin="sport"] #co-chat-log .sp-prop-no { display: flex; align-items: center; gap: 8px; min-height: 48px; }
+html[data-skin="sport"] #co-chat-log .sp-prop-no .sp-prop-st { flex: 1; min-width: 0; }
+html[data-skin="sport"] #co-chat-log .sp-prop-no .link-btn { flex: none; min-height: 44px; padding: 0 12px; color: var(--ink); font-family: var(--sp-sans); font-size: 14px; font-weight: 700; letter-spacing: 0; }
+/* iOS 键盘弹出时布局视口变矮,固定的底栏会贴在键盘上沿、输入条叠在它上面:打字时把底栏藏起来,输入条贴底 */
+html[data-skin="sport"] body.has-composer:has(#co-chat-text:focus) .tabbar { display: none; }
+html[data-skin="sport"] body.has-composer:has(#co-chat-text:focus) #composer { bottom: env(safe-area-inset-bottom); }
 /* —— 40 教练 · 写在这行上面 —— */
 
 /* ══ 50 我 + 新手设置 ═════════════════════════════════════════════════ */
@@ -1347,6 +1362,13 @@ html[data-skin="sport"] #achievement-modal .sheet-desc { margin: 0; text-align: 
 /* 轻提示:左右各 16 的整条黑条(深色是浅条),从下面淡入 */
 html[data-skin="sport"] .sync-toast { left: 16px; right: 16px; width: auto; max-width: 528px; margin: 0 auto; transform: translateY(12px); }
 html[data-skin="sport"] .sync-toast.show { transform: none; }
+/* 引导卡里的 调整 / 问教练 / 换 胶囊、调整展开的黑格(和今天页焦点卡同一套样子),组间倒计时用 10 区的 .sp-rest */
+html[data-skin="sport"] .sp-g-card .sp-pill { border-color: #111111; color: #111111; font-weight: 700; }
+html[data-skin="sport"] .sp-g-card .sp-pill.dark.on { background: #111111; color: #d4ff3d; }
+html[data-skin="sport"] .sp-g-card .sp-tile { background: #111111; color: #f4f4f0; }
+html[data-skin="sport"] .sp-g-card .sp-tile .step-lbl { color: #b3b3ab; }
+html[data-skin="sport"] .sp-g-card .sp-tile .step-btn { color: #d4ff3d; }
+html[data-skin="sport"] .sp-g-card .sp-tile .step-btn:disabled { color: #55554f; }
 /* —— 60 弹窗内容 · 写在这行上面 —— */
 
 /* ══ 99 结束 ══════════════════════════════════════════════════════════ */

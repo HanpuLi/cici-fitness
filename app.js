@@ -186,7 +186,7 @@ const m=x.date.slice(0,7);
 if(m!==lastMonth&&_logShowAll){lastMonth=m;const[y,mo]=m.split('-');html+=`<div class="log-month">${y} · ${String(parseInt(mo)).padStart(2,'0')}</div>`;}
 const logIdx=LOG.indexOf(x);
 const open=_logOpen===x.date;
-html+=skinTpl('logRow',{x,open},()=>`<button type="button" class="log-row" aria-expanded="${open}" onclick="toggleLogRow('${x.date}')"><span><span class="lw">${_escHtml(x.workout||'训练')}</span><span class="lt">${x.date.slice(5).replace('-','/')} · ${x.duration||'?'} min · ${x.exerciseCount||0} 个动作${x.mood?' · '+_escHtml(x.mood):''}</span></span><span class="lr">${x.rpe?'RPE '+x.rpe:'—'}</span></button>`);
+html+=skinTpl('logRow',{x,open},()=>`<button type="button" class="log-row" aria-expanded="${open}" onclick="toggleLogRow('${x.date}')"><span><span class="lw">${_escHtml(x.workout||'训练')}</span><span class="lt">${x.date.slice(5).replace('-','/')} · ${x.duration||'?'} min${wkLogMin(x)?' · 用时 '+wkLogMin(x)+' min':''} · ${x.exerciseCount||0} 个动作${x.mood?' · '+_escHtml(x.mood):''}</span></span><span class="lr">${x.rpe?'RPE '+x.rpe:'—'}</span></button>`);
 if(open){
 html+=`<div class="log-detail"><div class="jentry-chips">${x.exercises?x.exercises.map(e=>`<span class="jchip${e.done===false?' undone':''}">${e.name}${e.weight?` ${e.weight}kg`:''}</span>`).join(''):''}</div>`
 +(x.note?`<div class="jentry-note">"${_escHtml(x.note)}"</div>`:'')

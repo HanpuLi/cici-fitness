@@ -359,8 +359,18 @@ function uiPlanSummaryLine() {
   return `${S.days} 天 × ${S.dur} min · ${(S.equip || []).join(' + ') || '无器材'} · ${(S.goal || '').split('+').join(' + ')}`;
 }
 const UI_PLAN_INDEX = [['p1', '01 目标'], ['p2', '02 时间'], ['p3', '03 器械'], ['p4', '04 部位'], ['p5', '05 身体'], ['p6', '06 周期'], ['p7', '07 排除'], ['p8', '08 生成']];
+// 「当前设置」上面:采纳过、还能撤销的教练提议(coach.js 画;没有就把这块拿掉)。节点运行时插在 #plan-summary 前面
+function uiRenderPlanProps() {
+  const sum = document.getElementById('plan-summary'); if (!sum) return;
+  const h = typeof coachPlanPropsHtml === 'function' ? coachPlanPropsHtml() : '';
+  let el = document.getElementById('plan-props');
+  if (!h) { if (el) el.remove(); return; }
+  if (!el) { el = document.createElement('div'); el.id = 'plan-props'; el.className = 'plan-props'; sum.parentNode.insertBefore(el, sum); }
+  if (el.innerHTML !== h) el.innerHTML = h;
+}
 function uiRenderPlanSummary() {
   const el = document.getElementById('plan-summary'); if (!el) return;
+  uiRenderPlanProps();
   let kv = '';
   if (S.plan && S.plan.days && S.plan.days.length) {
     const wd = S.plan.days.filter(d => !d.isRest), done = wd.filter(d => isDone(d)).length;
@@ -632,7 +642,7 @@ function uiRenderMePair() {
     el.innerHTML = uiSecLabel('03 — 训练搭子')
       + `<span class="hint">配对后日历会标出你俩重合的健身房 / 游泳日，能看对方今日状态、互相加油。只分享天数和当日类型。</span>`
       + `<div class="pair-grid"><span class="k">我的配对码</span><code id="my-pair-code" class="pair-code">（请先登录）</code><button type="button" class="btn-line" onclick="copyMyPairCode()">复制</button>`
-      + `<label class="k" for="partner-code-input">搭子配对码</label><input id="partner-code-input" class="line-input" style="font-size:14px" type="text" placeholder="粘贴对方的码" autocomplete="off" spellcheck="false"><button type="button" class="btn-line" id="pair-btn" onclick="savePartnerCode()">连接</button></div>`
+      + `<label class="k" for="partner-code-input">搭子配对码</label><input id="partner-code-input" class="line-input" type="text" placeholder="粘贴对方的码" autocomplete="off" spellcheck="false"><button type="button" class="btn-line" id="pair-btn" onclick="savePartnerCode()">连接</button></div>`
       + `<div id="pair-status" class="pair-status" style="display:none"></div>`
       + `<div id="pair-cheer" style="display:none"><button type="button" class="btn-line" id="cheer-btn" onclick="sendCheer()">给搭子加油</button></div>`
       + `<div id="partner-days-row" style="display:flex;flex-direction:column;gap:6px"><span class="sub-label">还没配对？也可以手动填搭子每周练几天，先看重合日</span><div id="partner-days-chips"></div></div>`
@@ -786,7 +796,7 @@ function uiRenderOobe() {
     if ((S.limits || '').trim()) rows.push(['注意', S.limits.trim()]);
     body = skinTpl('oobe5', rows, () => `<div class="kv" style="font-size:14px;line-height:1.9">${rows.map(([k, v]) => `<span class="k">${k}</span><span>${uiEsc(v)}</span>`).join('')}</div>`
       + `<div style="border-top:1px solid var(--line);padding-top:12px;display:flex;flex-direction:column;gap:8px" class="hint">`
-      + `<span><span class="sub-label">[ 装到主屏幕 ]</span> Safari 底部分享 → 添加到主屏幕。离线也能打开，计时提醒更稳。</span>`
+      + `<span><span class="sub-label">[ 装到主屏幕 ]</span> Safari 右下角 ••• → 分享 → 添加到主屏幕。离线也能打开，计时提醒更稳。</span>`
       + `<span><span class="sub-label">[ 同步 ]</span> 不登录也能用，数据只在这台手机上；想换手机不丢，去「我」登录。</span></div>`);
   }
   const first = !S.plan;

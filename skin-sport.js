@@ -85,18 +85,16 @@ SKIN_TPL.sport.mhChip = (text) => text ? `<span class="sp-mh-chip">${SP.esc(text
 //   → 教练的话(开练后挪到这) → 接下来(其余主项,点开能调) → 99 拉伸 → 完成打卡。
 // 组进度:原来的数据只记「这个动作做完没有」(S.prog),「做到第几组」只存本机(localStorage fit_spsets,不进云端、不进快照),
 //   最后一组做完才调 tog() 记成做完;从别处勾掉 / 取消勾,组点跟着显示满 / 回退。换设备只丢组进度,不丢「做完」。
-const _SP_SETS = 'fit_spsets';
+// 同一份存储里的「这天开练的时间」t0 两套风格共用,读写在 core.js(wkStartAt / wkMarkStart,只记今天),打卡时算实际用时。
 let _spPin = null, _spJust = null;   // 「先做这个」钉住的主项 / 刚做完的主项(给「撤销」),只在内存里
-function _spSetsAll() { try { return JSON.parse(localStorage.getItem(nsKey(_SP_SETS)) || '{}') || {}; } catch (e) { return {}; } }
+function _spSetsAll() { return _wkDays(); }
 function _spSetsPut(date, i, n) {
-  const a = _spSetsAll(), old = addDays(todayStr(), -7);
-  for (const k of Object.keys(a)) if (k < old) delete a[k];
-  const d = a[date] || (a[date] = { s: {} });
-  if (i !== null) d.s[i] = n;
-  if (!d.t0 && (n > 0 || i === null)) d.t0 = Date.now();   // 这天开练的时间:第一组 / 第一个勾
-  try { localStorage.setItem(nsKey(_SP_SETS), JSON.stringify(a)); } catch (e) { }
+  const a = _spSetsAll(), d = a[date] || (a[date] = { s: {} });
+  if (i !== null) (d.s || (d.s = {}))[i] = n;
+  _wkDaysSave(a);
+  if (n > 0 || i === null) wkMarkStart(date);   // 第一组 / 第一个勾 = 开练
 }
-function _spT0(date) { const d = _spSetsAll()[date]; return d && d.t0 || 0; }
+function _spT0(date) { return wkStartAt(date); }
 function _spSetsDone(date, i, sets, done) { if (done) return sets; const d = _spSetsAll()[date]; return Math.min((d && d.s && d.s[i]) || 0, Math.max(0, sets - 1)); }
 // 这一天的主项、当前焦点、完成数(刊头进度环和正文共用)
 function _spDayState(sel) {
@@ -392,6 +390,7 @@ function spRestAdd(sec) {
 // 焦点卡在屏幕上时把顶上的计时条收起来(body.sp-rest-vis),划出去了计时条再出来。
 let _spTick = null;
 function spRestTick() {
+  if (typeof _spGOpen === 'function' && _spGOpen()) return spGRestTick();   // 引导训练开着:倒计时显示在引导卡里(60 区)
   const box = document.getElementById('sp-rest'), el = document.getElementById('sp-elapsed');
   if (!box && !el) { clearInterval(_spTick); _spTick = null; document.body.classList.remove('sp-rest-vis'); return; }
   if (el && +el.dataset.t0) el.textContent = _spClock((Date.now() - +el.dataset.t0) / 1000);
@@ -428,6 +427,8 @@ SKIN_TPL.sport.mh_today = () => {
 SKIN_TPL.sport.coachNote = (n) => `<div class="sp-card sp-coach coach-note" id="co-note"><div class="sp-coach-h"><span class="sp-coach-ico">${SP.icon(SP.I.chat, 16)}</span><b>教练</b><span class="sp-num">${_coachHM(n.at)}</span></div>`
   + `<div class="prose">${_esc(n.text)}</div><button type="button" class="sp-link" onclick="showTab('coach')">接着问${SP.icon(SP.I.arrow, 16, 2.4)}</button></div>`;
 SKIN_TPL.sport.coachFbOpen = (date, fb) => `<div class="sp-card sp-coach co-fb" id="co-fb-${_esc(date)}" aria-live="polite"><div class="sp-coach-h"><span class="sp-coach-ico">${SP.icon(SP.I.chat, 16)}</span><b>教练</b>${fb.at && fb.state === 'ok' ? `<span class="sp-num">${_coachHM(fb.at)}</span>` : ''}</div>`;
+// 装到主屏幕的提示(只在 iOS Safari、还没装时):运动版是白卡 + 粗标题,不带纸墨的方括号标签
+SKIN_TPL.sport.iosInstall = () => `<div class="notice sp-install" id="ios-install-prompt"><span><b>装到主屏幕</b> Safari 右下角 ••• → 分享 → 添加到主屏幕，离线也能打开。</span><button class="link-btn" onclick="try{localStorage.setItem('hideInstallPrompt','1')}catch(e){};document.getElementById('ios-install-prompt').remove()">关闭</button></div>`;
 // —— 10 今天 · 写在这行上面 ——
 
 // ══ 20 计划 ═════════════════════════════════════════════════════════════
@@ -490,6 +491,11 @@ SKIN_TPL.sport.planPhase = () => {
 // 那句留着给读屏(CSS 视觉隐藏),另画一个只给眼睛看的标题,条数用 CSS 计数器数 .ex-list-row(放在列表后面才数得到,CSS order 提到最上)
 SKIN_TPL.sport.planP7 = (ctx, paper) => paper().replace('<div id="excluded-list"></div>',
   `<div id="excluded-list"></div><div class="sec-label sp-sec sp-p7-h" aria-hidden="true"><span class="sp-sec-n">07</span><span class="sp-sec-t">已排除的动作 / 器械</span><span class="sp-p7-n"></span></div>`);
+
+// 采纳过、还能撤销的教练提议(coach.js coachPlanPropsHtml;节点由 ui.js 插在「当前设置」上面):墨色粗边白卡,
+// 荧光绿「教练」小签 + 一句摘要 + 撤销。撤销按钮在 .co-prop[data-pid] 里,走 coachPropAct 同一套
+SKIN_TPL.sport.planProps = ({ items }) => items.map(it => `<div class="co-prop plan-prop sp-pp" data-pid="${SP.esc(it.id)}"><span class="sp-pp-tag">教练</span>`
+  + `<span class="pp-t">${SP.esc(it.text)}，已写进计划</span><button type="button" class="link-btn u" onclick="coachPropAct(this,'undo')">撤销</button></div>`).join('');
 // —— 20 计划 · 写在这行上面 ——
 
 // ══ 30 记录 ═════════════════════════════════════════════════════════════
@@ -561,7 +567,7 @@ SKIN_TPL.sport.logRow = ({ x, open }) => {
   const [, m, d] = x.date.split('-');
   return `<button type="button" class="log-row sp-lrow" aria-expanded="${open}" onclick="toggleLogRow('${x.date}')">`
     + `<span class="sp-ld"><b>${d}</b><i>${_spLog.mon(+m - 1)}</i></span>`
-    + `<span class="sp-lm"><span class="lw">${SP.esc(x.workout || '训练')}</span><span class="lt">${x.duration || '?'} min · ${x.exerciseCount || 0} 个动作${x.mood ? ' · ' + SP.esc(x.mood) : ''}</span></span>`
+    + `<span class="sp-lm"><span class="lw">${SP.esc(x.workout || '训练')}</span><span class="lt">${x.duration || '?'} min${wkLogMin(x) ? ` · 用时 ${wkLogMin(x)} min` : ''} · ${x.exerciseCount || 0} 个动作${x.mood ? ' · ' + SP.esc(x.mood) : ''}</span></span>`
     + (x.rpe ? `<span class="lr">RPE ${x.rpe}</span>` : `<span class="lr none">—</span>`) + `</button>`;
 };
 
@@ -635,8 +641,10 @@ SKIN_TPL.sport.bodyPanel = (c) => `<div class="panel" id="body-panel">${_spLog.h
 
 // 历史详情弹窗(core.js showHistoryDetail):头上大号日期;每条记录先一排数字格(RPE 那格荧光绿底)
 SKIN_TPL.sport.histHead = ({ d, dayName }) => `<div class="hist-detail-header sp-hh"><span class="hist-detail-date sp-hdate"><b>${d.getDate()}</b><span><i>${_spLog.mon(d.getMonth())} ${d.getFullYear()}</i><i>${dayName}</i></span></span><button class="ex-modal-close" onclick="closeHistModal()">关闭</button></div>`;
-SKIN_TPL.sport.histMeta = ({ entry }) => `<div class="hist-detail-meta sp-hm"><div class="sp-hm-n">${SP.esc(entry.workout || '训练')}</div><div class="sp-hm-s">`
+// 有实际用时(打卡记下的 elapsedMin)就多一格「用时 MIN」,四格时排成 2 × 2
+SKIN_TPL.sport.histMeta = ({ entry }) => `<div class="hist-detail-meta sp-hm"><div class="sp-hm-n">${SP.esc(entry.workout || '训练')}</div><div class="sp-hm-s${wkLogMin(entry) && entry.rpe && entry.mood ? ' n4' : ''}">`
   + `<span><b>${entry.duration || '?'}</b><i>MIN</i></span>`
+  + (wkLogMin(entry) ? `<span><b>${wkLogMin(entry)}</b><i>用时 MIN</i></span>` : '')
   + (entry.rpe ? `<span class="on"><b>${entry.rpe}<small>/10</small></b><i>RPE</i></span>` : '')
   + (entry.mood ? `<span><b class="t">${SP.esc(entry.mood)}</b><i>感受</i></span>` : '')
   + `</div></div>`;
@@ -821,14 +829,14 @@ SKIN_TPL.sport.coachChat = ({ chat, streaming }) => {
     + `<div class="co-text sp-bub">${SP.esc(m.text).replace(/\n/g, '<br>')}</div></div>`).join('')
     + (streaming ? coach('', `<div class="co-text sp-bub" id="co-stream"><span class="co-meta">思考中…</span></div>`) : '');
 };
-// 提议卡:墨色粗边白卡;「提议」荧光绿小签;采纳 2 : 不要 1;采纳后荧光绿条 + 撤销
+// 提议卡:墨色粗边白卡;「提议」荧光绿小签;采纳 2 : 不要 1;采纳后荧光绿条 + 撤销;不要之后一行灰字 + 「再看看」(回到待定)
 // rows 是纸墨那版拼好的 <span class="d">哪天</span><span class="c">改什么</span>,结构够用,样子在 CSS 里换
 SKIN_TPL.sport.coachProp = ({ p, open, okN, rows, drop }) => {
   let foot = '';
   if (open) foot = `<div class="co-prop-btns"><button type="button" class="btn-primary" onclick="coachPropAct(this,'apply')"${okN ? '' : ' disabled'}>采纳</button><button type="button" class="btn-line" onclick="coachPropAct(this,'reject')">不要</button></div>`;
   else if (p.state === 'applied') foot = `<div class="sp-prop-done">${SP.tick(18, 2.8)}<span>已写进计划${okN < p.changes.length ? ` · ${p.changes.length - okN} 条没改` : ''}</span>`
     + (p.snap ? `<button type="button" class="link-btn u" onclick="coachPropAct(this,'undo')">撤销</button>` : '') + `</div>`;
-  else if (p.state === 'rejected') foot = `<div class="co-prop-st sp-prop-st">没改，计划照旧。</div>`;
+  else if (p.state === 'rejected') foot = `<div class="sp-prop-no"><span class="co-prop-st sp-prop-st">没改，计划照旧。</span><button type="button" class="link-btn" onclick="coachPropAct(this,'reopen')">再看看</button></div>`;
   else if (p.state === 'undone') foot = `<div class="co-prop-st sp-prop-st">已撤销 · 计划回到采纳前</div>`;
   return `<div class="co-prop sp-prop" data-pid="${SP.esc(p.id)}"><div class="co-prop-h"><span class="sp-prop-tag">提议</span><span class="sp-prop-t">${okN} 处改动</span></div>`
     + `<div class="co-prop-list">${rows}</div>`
@@ -920,7 +928,7 @@ SKIN_TPL.sport.oobe0 = () => `<div class="sp-ob-four">${[['01', '练什么'], ['
 // 最后一步:设置摘要白卡(一行一项)+ 装到主屏幕 / 同步两条说明
 SKIN_TPL.sport.oobe5 = (rows) => `<div class="kv sp-ob-sum">${rows.map(([k, v]) => `<span class="k">${k}</span><span>${uiEsc(v)}</span>`).join('')}</div>`
   + `<div class="sp-ob-tips">`
-  + `<span class="sp-me-ic">${SP.icon(_spMeI.home, 16)}</span><span><b>装到主屏幕</b><span>Safari 底部分享 → 添加到主屏幕。离线也能打开，计时提醒更稳。</span></span>`
+  + `<span class="sp-me-ic">${SP.icon(_spMeI.home, 16)}</span><span><b>装到主屏幕</b><span>Safari 右下角 ••• → 分享 → 添加到主屏幕。离线也能打开，计时提醒更稳。</span></span>`
   + `<span class="sp-me-ic">${SP.icon(_spMeI.cloud, 16)}</span><span><b>同步</b><span>不登录也能用，数据只在这台手机上；想换手机不丢，去「我」登录。</span></span></div>`;
 // —— 50 我 + 新手设置 · 写在这行上面 ——
 
@@ -1018,9 +1026,11 @@ SKIN_TPL.sport.addExList = ({ groupKey, available }) => available.map((ex, idx) 
 }).join('');
 
 // —— 打卡(#rpe-modal 是 index.html 的静态 DOM,样子全在 CSS) ——
-// 小标签只写「打卡 · 类型」,完成数 / 总量 / 计划时长挪到标题下面三块数字。数字块是运动自己插的一个节点,
+// 小标签只写「打卡 · 类型」,完成数 / 总量 / 时长挪到标题下面三块数字。数字块是运动自己插的一个节点,
 // 默认行内 display:none(换回纸墨时不出现),运动 CSS 只在带 .sp-on 时显示;编辑旧记录时不显示。
-SKIN_TPL.sport.rpeEyebrow = ({ el, day, text }) => {
+// 第三格:有开练时间就是实际用时(core.js wkElapsedMin,打卡时一起记进这条记录),没有就是计划时长。
+SKIN_TPL.sport.rpeEyebrow = ({ el, day, text, elapsed }) => {
+  const pl = document.getElementById('rpe-elapsed'); if (pl) pl.remove();   // 纸墨那行「实际用时」(换过风格时可能还留着)
   const title = document.getElementById('rpe-modal-title');
   let box = document.getElementById('sp-rpe-stats');
   if (!box && title) {
@@ -1040,7 +1050,7 @@ SKIN_TPL.sport.rpeEyebrow = ({ el, day, text }) => {
   const tile = (v, k) => `<div class="sp-rpe-stat"><b>${v}</b><span>${k}</span></div>`;
   box.innerHTML = tile(`${c}/${day.exercises.length}`, '完成动作')
     + tile(vol > 0 ? Math.round(vol).toLocaleString('en-US') : '—', '总量 kg')
-    + tile(day.duration ? day.duration : '—', '时长 min');
+    + (elapsed ? tile(elapsed, '用时 min') : tile(day.duration ? day.duration : '—', '时长 min'));
   box.classList.add('sp-on');
 };
 
@@ -1073,9 +1083,25 @@ SKIN_TPL.sport.exTips = ({ how, tips }) => how.map(t => `<div class="ex-tip how"
 SKIN_TPL.sport.exMistakes = (m) => m.length ? `<p class="sec-label sp-ex-warn">常见错误</p>` + m.map(x => `<div class="ex-tip mistake">${x}</div>`).join('') : '';
 
 // —— 引导训练(全屏):今天页「下一项」焦点卡的样子 ——
-// 荧光绿大卡:动作名、64px 组×次 / 重量(重量就是输入框,id 仍是 wm-weight)、组点、黑底荧光绿主按钮
+// 荧光绿大卡:动作名、64px 组×次 / 重量(重量就是输入框,id 仍是 wm-weight)、组点、调整 / 问教练 / 换 胶囊、
+// 调整展开 = 黑格组 / 次 / kg(和焦点卡同一套 adj / stepWeight;改完 core.js _wmSync 重画这张卡)、组间倒计时、黑底荧光绿主按钮
 SKIN_TPL.sport.guided = (c) => {
-  const { idx, set, list, ex, simple, sets, reps, needW, lastW, e1rm, curW, dispName, dispNote, timed, running, sideLbl } = c;
+  const { date, idx, set, list, ex, simple, sets, reps, needW, lastW, e1rm, curW, dispName, dispNote, timed, running, sideLbl, adjOpen, aiOn, canSwap, unitLbl, kgVal } = c;
+  const i = idx;
+  const acts = `<div class="sp-f-acts sp-g-acts"><button type="button" class="sp-pill dark${adjOpen ? ' on' : ''}" aria-expanded="${adjOpen}" onclick="wmToggleAdj()">${SP.icon(SP.I.tune, 16)}${adjOpen ? '收起' : '调整'}</button>`
+    + (aiOn ? `<button type="button" class="sp-pill" onclick="wmClose();coachAskAbout('${_q(ex.name)}')">问教练</button>` : '')
+    + (canSwap ? `<button type="button" class="sp-pill swap-btn" onclick="swapExercise('${date}',${i})">${SP.icon(SP.I.swap, 16)}换 / 划掉</button>`
+      : `<button type="button" class="sp-pill" onclick="openSwapSheet('${date}',${i})">划掉</button>`) + `</div>`;
+  const tile = (lbl, val, dec, inc, decDis, aDec, aInc) => `<div class="sp-tile stepper"><span class="step-val">${val}</span><span class="step-lbl">${lbl}</span>`
+    + `<div class="sp-tile-btns"><button type="button" class="step-btn" onclick="${dec}" aria-label="${aDec}"${decDis ? ' disabled' : ''}>${SP.icon(SP.I.minus, 18, 2.6)}</button>`
+    + `<button type="button" class="step-btn" onclick="${inc}" aria-label="${aInc}">${SP.icon(SP.I.plus, 18, 2.6)}</button></div></div>`;
+  const tiles = !adjOpen ? '' : `<div class="sp-tiles sp-g-tiles">`
+    + (simple ? '' : tile('组', sets, `adj('${date}',${i},'s',-1)`, `adj('${date}',${i},'s',1)`, sets <= 1, '组 减少', '组 增加'))
+    + tile(unitLbl + (ex.bi ? ' / 每侧' : ''), reps, `adj('${date}',${i},'r',-1)`, `adj('${date}',${i},'r',1)`, reps <= (ex.unit === '秒' ? 5 : 1), `${unitLbl} 减少`, `${unitLbl} 增加`)
+    + (needW ? tile('kg', kgVal, `stepWeight('${date}',${i},-1)`, `stepWeight('${date}',${i},1)`, false, '重量减少', '重量增加') : '') + `</div>`;
+  // 组间倒计时:和今天页焦点卡同一个计时器(顶上的计时条),这里只是显示;卡在屏幕上时计时条收起(spGRestTick)
+  const rest = `<div class="sp-rest" id="sp-g-rest" hidden><div class="sp-rest-l"><span class="sp-rest-k">组间休息<span id="sp-g-rest-next">${!simple && set > 1 ? ` · 下一组 ${set}/${sets}` : ''}</span></span><span class="sp-rest-t" id="sp-g-rest-t">0:00</span><div class="sp-rest-bar"><i id="sp-g-rest-bar"></i></div></div>`
+    + `<div class="sp-rest-r"><button type="button" class="sp-rest-add" onclick="spRestAdd(15);spGRestTick()">+15 s</button><button type="button" class="sp-rest-skip" onclick="stopTimer();spGRestTick()">跳过</button></div></div>`;
   const unit = ex.unit || '次';
   const part = (ex.muscle || []).join(' · ') || (ex.isWarmup ? '热身' : ex.isStretch ? '拉伸' : '');
   const doneLbl = simple ? '完成' : set < sets ? `完成第 ${set} 组` : '完成最后一组';
@@ -1102,12 +1128,33 @@ SKIN_TPL.sport.guided = (c) => {
     + `</div>`
     + (simple ? '' : `<div class="sp-g-sets"><span class="sp-g-dots" aria-hidden="true">${dots}</span><span class="sp-g-line">第 ${set} 组 / 共 ${sets} 组</span></div>`)
     + (meta ? `<div class="sp-g-meta">${meta}</div>` : '')
+    + acts + tiles + rest
     + cd + main + `</div>`
     + alt
     + (dispNote ? `<div class="exnote sp-wm-note">${dispNote}</div>` : '')
     + `<div class="wm-nav sp-wm-nav"><button class="btn-line" onclick="wmNav(-1)" aria-label="上一个动作"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>上一个</button>`
     + `<button class="btn-line" onclick="wmNav(1)" aria-label="下一个动作">下一个<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button></div>`
     + `<button class="btn-line sp-wm-end" onclick="wmFinish()">结束训练并打卡</button>`;
+};
+// 引导卡里的组间倒计时:照今天页 spRestTick 的做法,读同一个计时器(_timerKind / _timerEndTime / _timerTotal),每 250ms 刷一次;
+// 显示着的时候收起顶上的计时条(body.sp-rest-vis)。引导关了就停,把计时条的显示交还给今天页
+let _spGTick = null;
+function _spGOpen() { const m = document.getElementById('workout-modal'); return !!(m && m.classList.contains('open') && document.getElementById('sp-g-rest')); }
+function spGRestTick() {
+  const box = document.getElementById('sp-g-rest');
+  if (!_spGOpen()) { clearInterval(_spGTick); _spGTick = null; document.body.classList.remove('sp-rest-vis'); if (typeof spRestTick === 'function') spRestTick(); return; }
+  const bar = document.getElementById('universal-timer');
+  const on = !!bar && bar.classList.contains('show') && _timerKind === '组间休息' && _timerEndTime > Date.now();
+  box.hidden = !on;
+  document.body.classList.toggle('sp-rest-vis', on);
+  if (!on) return;
+  const left = (_timerEndTime - Date.now()) / 1000;
+  document.getElementById('sp-g-rest-t').textContent = _spClock(Math.ceil(left));
+  const b = document.getElementById('sp-g-rest-bar'); if (b) b.style.width = Math.max(0, Math.min(100, left / (_timerTotal || 1) * 100)) + '%';
+}
+SKIN_TPL.sport.after_guided = () => {
+  spGRestTick();
+  if (!_spGTick && _spGOpen()) _spGTick = setInterval(spGRestTick, 250);
 };
 // —— 60 弹窗内容 · 写在这行上面 ——
 
