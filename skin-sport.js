@@ -427,6 +427,34 @@ SKIN_TPL.sport.mh_today = () => {
 SKIN_TPL.sport.coachNote = (n) => `<div class="sp-card sp-coach coach-note" id="co-note"><div class="sp-coach-h"><span class="sp-coach-ico">${SP.icon(SP.I.chat, 16)}</span><b>教练</b><span class="sp-num">${_coachHM(n.at)}</span></div>`
   + `<div class="prose">${_esc(n.text)}</div><button type="button" class="sp-link" onclick="showTab('coach')">接着问${SP.icon(SP.I.arrow, 16, 2.4)}</button></div>`;
 SKIN_TPL.sport.coachFbOpen = (date, fb) => `<div class="sp-card sp-coach co-fb" id="co-fb-${_esc(date)}" aria-live="polite"><div class="sp-coach-h"><span class="sp-coach-ico">${SP.icon(SP.I.chat, 16)}</span><b>教练</b>${fb.at && fb.state === 'ok' ? `<span class="sp-num">${_coachHM(fb.at)}</span>` : ''}</div>`;
+// 训练中陪练(coach.js coachQuickOpen):底部面板 —— 顶上「陪练」小标签 + 动作名大字 + 黑底三格(第几组 / 重量 / 刚才的感受),
+// 中间对话(教练左边荧光绿小头像 + 白卡气泡,我右边墨底气泡),下面一排快捷问题胶囊 + 胶囊输入框 + 圆形发送键
+SKIN_TPL.sport.coachQuick = ({ sugg }) => `<div class="ex-modal-card sp-sh-card sp-cq" onclick="event.stopPropagation()">`
+  + `<div class="sp-cq-top"><div id="cq-head" class="cq-head sp-cq-head"></div><button type="button" class="ex-modal-close" onclick="coachQuickClose()">关闭</button></div>`
+  + `<div id="cq-log" class="cq-log sp-cq-log" aria-live="polite"></div>`
+  + `<div class="chips cq-sugg sp-cq-sugg">${sugg.map(([l, q]) => `<button type="button" class="chip" data-q="${SP.esc(q)}" onclick="coachQuickSend(this.dataset.q)">${SP.esc(l)}</button>`).join('')}</div>`
+  + `<div class="cq-row sp-cq-row"><textarea id="cq-text" rows="1" placeholder="问教练…" aria-label="问教练" onkeydown="if(event.key==='Enter'&&!event.shiftKey&&!event.isComposing){event.preventDefault();coachQuickSend()}"></textarea><button type="button" class="send" id="cq-go" onclick="coachQuickSend()">发送</button></div>`
+  + `<span class="co-meta cq-foot">快模型，回答很短 · 教练看得到你做到第几组 · 今天的陪练记录只存在这台手机上</span></div>`;
+SKIN_TPL.sport.coachQuickHead = ({ t, ex, name, status }) => {
+  let tiles = '';
+  if (ex) {
+    const kg = ex.kg != null ? ex.kg : ex.kgSuggested;
+    tiles = `<div class="sp-cq-tiles">`
+      + `<div><b>${ex.done ? '完成' : `${Math.min(ex.setsDone + 1, ex.sets)}/${ex.sets}`}</b><span>${ex.done ? '这个动作' : '组'}</span></div>`
+      + `<div><b>${kg != null ? SP.esc(kg) : '自重'}</b><span>${kg != null ? (ex.kg != null ? 'KG' : '建议 KG') : '负重'}</span></div>`
+      + `<div><b class="sm">${ex.feel ? SP.esc(ex.feel) : '—'}</b><span>刚才</span></div></div>`;
+  }
+  return `<span class="sheet-eyebrow">陪练 · ${SP.esc(status)}</span><div class="sheet-title">${SP.esc(name || t.type || '今天')}</div>${tiles}`;
+};
+SKIN_TPL.sport.coachQuickLog = ({ msgs, streaming }) => {
+  const av = `<span class="sp-co-av" aria-hidden="true">${SP.icon(SP.I.chat, 15)}</span>`;
+  const coach = inner => `<div class="cq-msg co sp-cq-co">${av}<div class="sp-msg-col">${inner}</div></div>`;
+  if (!msgs.length && !streaming) return `<div class="sp-cq-empty">练到一半有问题直接问：下一组多重、哪里不对劲、想换个动作。教练看得到你做到第几组；让它换动作、改重量、开计时，它会直接改，不合适点「撤销」。</div>`;
+  return msgs.map(m => m.role === 'assistant'
+    ? coach(`<div class="co-text sp-bub">${_coachMd(m.text)}</div>${m.action ? _coachActHtml(m.action) : ''}${m.mem ? _coachMemNoteHtml(m.mem) : ''}${m.meta ? _coachCostLine(m.meta) : ''}`)
+    : `<div class="cq-msg me sp-cq-me"><span class="co-text sp-bub">${SP.esc(m.text)}</span></div>`).join('')
+    + (streaming ? coach(`<div class="co-text sp-bub" id="cq-stream"><span class="co-meta">想一下…</span></div>`) : '');
+};
 // 装到主屏幕的提示(只在 iOS Safari、还没装时):运动版是白卡 + 粗标题,不带纸墨的方括号标签
 SKIN_TPL.sport.iosInstall = () => `<div class="notice sp-install" id="ios-install-prompt"><span><b>装到主屏幕</b> Safari 右下角 ••• → 分享 → 添加到主屏幕，离线也能打开。</span><button class="link-btn" onclick="try{localStorage.setItem('hideInstallPrompt','1')}catch(e){};document.getElementById('ios-install-prompt').remove()">关闭</button></div>`;
 // —— 10 今天 · 写在这行上面 ——
@@ -823,7 +851,7 @@ SKIN_TPL.sport.coachChat = ({ chat, streaming }) => {
   if (!chat.length) return `<div class="sp-co-empty"><span class="sp-co-eyebrow">比如</span>`
     + ['我深蹲总是膝盖往里扣怎么办', '这周只能练两次，怎么安排', '今天很累还要练吗'].map(q => `<span class="sp-co-ex">「${q}」</span>`).join('') + `</div>`;
   return chat.map(m => m.role === 'assistant'
-    ? coach(m.at ? _coachHM(m.at) : '', `<div class="co-text sp-bub">${_coachMd(m.text)}</div>${m.proposal ? _coachPropHtml(m.proposal) : ''}${m.meta ? _coachCostLine(m.meta) : ''}`)
+    ? coach(m.at ? _coachHM(m.at) : '', `<div class="co-text sp-bub">${_coachMd(m.text)}</div>${m.action ? _coachActHtml(m.action) : ''}${m.proposal ? _coachPropHtml(m.proposal) : ''}${m.mem ? _coachMemNoteHtml(m.mem) : ''}${m.meta ? _coachCostLine(m.meta) : ''}`)
     : `<div class="co-msg user sp-msg-me"><span class="who">你${m.at ? ' · ' + _coachHM(m.at) : ''}</span>`
     + (m.img ? `<span class="sp-co-img">${SP.icon(_spCoI.photo, 16, 2)}图片</span>` : '')
     + `<div class="co-text sp-bub">${SP.esc(m.text).replace(/\n/g, '<br>')}</div></div>`).join('')
@@ -843,6 +871,22 @@ SKIN_TPL.sport.coachProp = ({ p, open, okN, rows, drop }) => {
     + (drop.length ? `<div class="co-meta">还提到 ${drop.length} 个不在你动作库里的动作，已去掉：${SP.esc(drop.join('、'))}</div>` : '')
     + foot + `</div>`;
 };
+// 小改卡(对话里 / 陪练面板里都用):已经执行了,所以不是「采纳 / 不要」而是荧光绿小签「已改」+ 一条条带勾 + 撤销胶囊
+// rows 是纸墨那版拼好的 <li>(没改成的划线 + 原因),结构够用,样子在 CSS 里换(40 区 .sp-act)
+_spCoI.mem = 'M7 4h10v16l-5-4-5 4z';
+SKIN_TPL.sport.coachAct = ({ a, okN, rows, drop }) => {
+  const tag = a.state === 'applied' ? '已改' : a.state === 'undone' ? '已撤销' : '没改成';
+  const t = a.state === 'applied' ? `今天 · ${okN} 处` : a.state === 'undone' ? '今天的训练回到改之前' : '这次一条都没改';
+  return `<div class="co-act sp-act${a.state === 'applied' ? '' : ' off'}" data-aid="${SP.esc(a.id)}"><div class="sp-act-h"><span class="sp-act-tag">${tag}</span><span class="sp-act-t">${t}</span></div>`
+    + `<ul class="co-act-list sp-act-list">${rows}</ul>`
+    + (drop.length ? `<div class="co-meta">还提到 ${drop.length} 个不在你今天计划或动作库里的：${SP.esc(drop.join('、'))}</div>` : '')
+    + (a.undoErr ? `<div class="co-meta co-err">${SP.esc(a.undoErr)}</div>` : '')
+    + (a.state === 'applied' && a.snap ? `<button type="button" class="link-btn sp-act-undo" onclick="coachActUndo(this)">${SP.icon(SP.I.swap, 16)}撤销</button>` : '')
+    + `</div>`;
+};
+// 记住 / 忘掉了什么:书签小图标 + 一行字 + 「看看」(去「我 → 05」)
+SKIN_TPL.sport.coachMemNote = ({ parts }) => `<div class="co-memnote sp-memnote"><span class="sp-memnote-ic">${SP.icon(_spCoI.mem, 15)}</span><span class="sp-memnote-t">${parts.map(SP.esc).join(' · ')}</span>`
+  + `<button type="button" class="link-btn sp-memnote-go" onclick="showTab('me')">看看</button></div>`;
 // 刊头右边小胶囊:已开通 = 当前模型,未开通 = 邀请制,未登录 = 未登录
 SKIN_TPL.sport.mh_coach = () => {
   const a = typeof coachAccess === 'function' ? coachAccess() : 'out';
@@ -896,6 +940,14 @@ SKIN_TPL.sport.meAIOn = ({ me, o, models, efforts, effCur }) => `<span class="su
   + `<div class="sp-me-stats"><div><span class="sub-label">本月已用</span><b>$${Number(me.cycle || 0).toFixed(2)}</b></div>`
   + `<div><span class="sub-label">今天</span><b>$${Number(me.today || 0).toFixed(2)}</b>${me.daily_cap ? `<small>上限 $${Number(me.daily_cap).toFixed(2)}</small>` : ''}</div></div>`
   + `<span class="foot-note">额度：每天有上限；每月 17 号重置</span>`;
+// 05 里「教练记住的事」:白卡里一行一条(字 + 日期),右边「删掉」胶囊;底下红框「全部清空」
+SKIN_TPL.sport.meAIMem = ({ mem }) => `<div class="co-mem sp-mem" id="co-mem"><span class="sub-label">教练记住的事</span>`
+  + (mem.loading ? `<span class="note-line" role="status">读取中…</span>`
+    : mem.err ? `<span class="note-line co-err">${SP.esc(mem.err)}</span><button type="button" class="link-btn sp-mem-retry" onclick="coachMemLoad(true)">再试一次</button>`
+      : !mem.items.length ? `<div class="sp-mem-empty">还没有。在对话里跟教练说「记住……」，伤病、偏好、目标这些它会记下，开新对话也不忘。</div>`
+        : `<div class="co-memlist sp-mem-list">${mem.items.map(x => `<div class="co-mem-row"><span class="t">${SP.esc(x.text)}<small>${SP.esc(String(x.at || '').slice(5, 10).replace('-', '/'))}${x.src === 'quick' ? ' · 陪练' : ''}</small></span><button type="button" class="link-btn sp-mem-del" data-id="${SP.esc(x.id)}" onclick="coachMemDelete(this.dataset.id)" aria-label="删掉：${SP.esc(x.text)}">删掉</button></div>`).join('')}</div>`
+        + `<button type="button" class="btn-line sp-mem-clear" onclick="coachMemClear()">全部清空</button>`)
+  + `<span class="foot-note">记在家里的服务器上，只给你自己的教练看；私密内容不会记。</span></div>`;
 // 06 数据:每行左边一个小图标块,右边箭头
 SKIN_TPL.sport.meData = () => {
   const inner = (k, v, ic) => `<span class="sp-me-ic">${SP.icon(ic, 16)}</span><span><span class="rk">${k}</span><span class="rv">${v}</span></span><span class="ra">${SP.icon(_spMeI.next, 16)}</span>`;

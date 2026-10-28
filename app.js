@@ -928,28 +928,38 @@ function partnerUid(){ return (S.partnerUid && String(S.partnerUid).trim()) || n
 
 // Whitelist-only shareable profile. Anything not listed simply never leaves the
 // private doc — that's what keeps owner-only content from ever reaching a partner.
+// train = 搭子互通的训练数据(计划、记录、重量、感受),由 coach.js coachSharedTraining() 按 AI 快照同一套门控过滤:
+// 私密池 / 盆底动作、私密日、私密模式的记录一律不进;身体数据(体重围度、身体情况、周期)和打卡备注原文也不进。
 function buildSharedProfile(){
   const today=todayStr();
   const td=(S.plan&&S.plan.days)?S.plan.days.find(d=>d.date===today):null;
   const myName=(S.displayName&&S.displayName.trim())||(_user&&_user.displayName?_user.displayName.split(' ')[0]:'搭子');
   const pu=partnerUid();
+  let train=null;
+  try{ train=(pu&&typeof coachSharedTraining==='function')?coachSharedTraining():null; }catch(e){ console.warn('shared training build failed:',e); }   // 没配对就不写
   return {
     name: myName,
     days: +S.days||null,
     hasPool: S.equip.includes('泳池'),
-    todayType: td?(td.isRest?'休息':td.workoutType):'—',
+    todayType: td?(td.isPrivateDay?'另有安排':td.isRest?'休息':td.workoutType):'—',
     todayDone: td?!!isDone(td):false,
     swimCount: (typeof SWIM_LOG!=='undefined'&&SWIM_LOG.count)||0,
     cheer: (S.cheer&&S.cheer.date)?S.cheer:null,   // my latest cheer TO my partner
     allowedReaders: pu?[pu]:[],                     // who may read this doc (the rule checks this)
-    lastActive: today
+    lastActive: today,
+    train
   };
 }
+// 整份覆盖(不 merge):这份文档只由 buildSharedProfile 写,覆盖才能把过时的字段 / 已经不分享的数据一起清掉。
+// 和上次推的一字不差就不推(saveState 每次都会排一次推送)
+let _profileLast=null;
 function pushProfile(){
   if(!_db||!_user) return;
   try{
+    const p=buildSharedProfile(), key=_user.uid+'|'+JSON.stringify(p);
+    if(key===_profileLast) return;
     _db.collection('users').doc(_user.uid).collection('shared').doc('profile')
-       .set(buildSharedProfile(),{merge:true}).catch(e=>console.warn('profile push failed:',e));
+       .set(p).then(()=>{_profileLast=key;}).catch(e=>console.warn('profile push failed:',e));
   }catch(e){ console.warn('profile push error:',e); }
 }
 function scheduleProfilePush(){

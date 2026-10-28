@@ -1,4 +1,4 @@
-const CACHE = 'cici-fitness-v158';   // 数字要和 core.js 的 APP_BUILD、index.html 页脚的 build 一致(check-static 会查)
+const CACHE = 'cici-fitness-v159';   // 数字要和 core.js 的 APP_BUILD、index.html 页脚的 build 一致(check-static 会查)
 // 动作演示 GIF:单独一个缓存,只留最近 GIF_MAX 张。来源锁在固定 commit(见 core.js GIF_BASE),内容不会变,
 // 所以缓存优先、跨版本保留;以前走 SWR 进主缓存,看过的每张都存着,越积越多
 const GIF_CACHE = 'cici-fitness-gif-v1';

@@ -1153,6 +1153,45 @@ details.fold[open] > summary::after { content: ' ▾'; }
 .rpe-elapsed .k { font-family: var(--font-mono); font-size: 12px; letter-spacing: .1em; color: var(--faint); }
 .rpe-elapsed .v { font-size: 22px; line-height: 1; color: var(--ink); }
 .rpe-elapsed .v small { font-family: var(--font-mono); font-size: 13px; color: var(--muted); }
+
+/* —— AI 教练:对话 / 陪练里的「已改」小改卡(已经执行,能撤销)、记忆变动一行字 —— */
+.co-act { border: 1px solid var(--line); border-left: 3px solid var(--olive); border-radius: 2px; padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; text-align: left; }
+.co-act-h { display: flex; align-items: center; gap: 8px; font-family: var(--font-mono); font-size: 12px; letter-spacing: .1em; color: var(--olive); }
+.co-act-h .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--olive); flex: none; }
+.co-act-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; font-family: var(--font-mono); font-size: 13px; line-height: 1.6; }
+.co-act-list li { display: flex; flex-direction: column; overflow-wrap: anywhere; }
+.co-act-list small { font-family: var(--font-body); font-size: 13px; line-height: 1.5; color: var(--muted); }
+.co-act-list li.bad s { color: var(--muted); }
+.co-act-list li.bad small { color: var(--accent); }
+.co-memnote { display: flex; flex-wrap: wrap; align-items: center; column-gap: 8px; font-family: var(--font-mono); font-size: 12px; line-height: 1.6; color: var(--muted); }
+.co-memnote .link-btn { font-size: 12px; }
+
+/* —— 训练中陪练:今天页底部面板 —— */
+#coach-quick .cq-card { gap: 10px; }
+.cq-head { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.cq-head .sheet-title { overflow-wrap: anywhere; }
+.cq-state { font-size: 13px; }
+.cq-log { display: flex; flex-direction: column; gap: 12px; min-height: 72px; max-height: 42vh; max-height: 42dvh; overflow-y: auto; overscroll-behavior: contain; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); padding: 10px 0; }
+.cq-msg { display: flex; flex-direction: column; gap: 6px; font-size: 16px; line-height: 1.6; overflow-wrap: anywhere; }
+.cq-msg.me { align-items: flex-end; text-align: right; }
+.cq-msg.me .co-text { max-width: 86%; }
+.cq-msg .who { font-family: var(--font-mono); font-size: 11px; letter-spacing: .1em; color: var(--faint); }
+.cq-msg p + p, .cq-msg ul { margin-top: 6px; }
+.cq-row { display: flex; gap: 10px; align-items: center; }
+.cq-row textarea { flex: 1; min-width: 0; min-height: 44px; max-height: 120px; border: 0; border-bottom: 1px solid var(--line); background: transparent; padding: 10px 0; resize: none; font-family: inherit; font-size: 16px; line-height: 1.4; color: var(--ink); }
+.cq-row textarea:focus { outline: none; border-bottom-color: var(--ink); }
+.cq-row .send { min-height: 44px; padding: 0 14px; border: 0; border-radius: 2px; background: var(--ink); color: var(--paper); font-family: var(--font-mono); font-size: 14px; flex: none; }
+.cq-row .send:disabled { opacity: .4; }
+.cq-sugg .chip:disabled { opacity: .4; }
+.cq-foot { font-size: 11px; line-height: 1.5; }
+
+/* —— 我 → 05「教练记住的事」—— */
+.co-mem { display: flex; flex-direction: column; gap: 6px; }
+.co-memlist { display: flex; flex-direction: column; }
+.co-mem-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 12px; align-items: center; border-bottom: 1px dashed var(--line); padding: 4px 0; }
+.co-mem-row .t { font-size: 15px; line-height: 1.5; overflow-wrap: anywhere; }
+.co-mem-row small { display: block; font-family: var(--font-mono); font-size: 11px; color: var(--faint); }
+.co-mem-row .link-btn { text-align: right; }
 /* iOS 键盘弹出时布局视口变矮,固定的底栏会贴在键盘上沿、输入条叠在它上面:打字时把底栏藏起来,输入条贴底。
    用输入条整体的 :focus-within,不只看文本框:点「发送」时焦点从文本框挪到按钮上,只看文本框的话按下那一刻输入条往上跳,这一下就点空了 */
 body.has-composer:has(#composer:focus-within) .tabbar { display: none; }

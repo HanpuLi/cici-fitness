@@ -22,9 +22,9 @@ function _coachMd(s) {
 
 // ── 动作库 / 快照 ──
 function _coachPriv() { return new Set([..._PRIVATE_POOL]) }
-// 当前账号此刻真能排的动作：过 getExcluded() + 器械 + 私密池
+// 当前账号此刻真能排的动作：过 getExcluded() + 器械 + 门控(私密池 + 盆底，对 owner 也不给 AI)
 function _coachCatalogMap() {
-  const excluded = getExcluded(), priv = _coachPriv(), hasPool = S.equip.includes('泳池'), m = new Map();
+  const excluded = getExcluded(), priv = _coachGated(), hasPool = S.equip.includes('泳池'), m = new Map();
   for (const [g, exs] of Object.entries(DB)) {
     if (g === 'swimming' && !hasPool) continue;
     exs.forEach(ex => {
@@ -43,10 +43,111 @@ function _coachCatalog(full) {
   });
   return out;
 }
+// 哪些打卡记录能给 AI / 搭子看:私密模式的(带 subMetrics)、私密日的,一律不给
+function _coachLogOk() {
+  const privDays = new Set((S.plan?.days || []).filter(d => d.isPrivateDay).map(d => d.date));
+  return l => l && !l.subMetrics && !privDays.has(l.date);
+}
+const _COACH_FEEL = { 4: '轻松', 6.5: '刚好', 8.5: '吃力' };
+function _coachFeel(date, i) { const v = typeof getExRpe === 'function' ? getExRpe(date, i) : null; return v == null ? null : (_COACH_FEEL[v] || `RPE ${v}`) }
+// 一次打卡 → 快照里的一条(动作串格式后端会解析:「名字 [12.5kg ]3×12次[ 未做]」,别改;感受另放 feel)
+function _coachLogItem(l, okEx, withNote) {
+  const ex = [], feel = {};
+  (l.exercises || []).forEach((e, i) => {
+    if (!okEx(e.name)) return;
+    ex.push(`${e.name}${e.weight ? ' ' + e.weight + 'kg' : ''} ${e.sets}×${e.reps}${e.unit || ''}${e.done === false ? ' 未做' : ''}`);
+    const f = _coachFeel(l.date, i); if (f) feel[e.name] = f;
+  });
+  if (!ex.length) return null;
+  return { date: l.date, workout: l.workout, min: l.duration, rpe: l.rpe, ex, ...(Object.keys(feel).length ? { feel } : {}), ...(withNote && l.note ? { note: l.note } : {}) };
+}
+// 更早的记录按月压成一行:几次、平均 RPE、总分钟、练了哪些类型
+function _coachHistory(logs, before) {
+  const by = {};
+  logs.filter(l => l.date < before).forEach(l => {
+    const m = l.date.slice(0, 7), x = by[m] || (by[m] = { month: m, sessions: 0, minutes: 0, rpe: [], types: {} });
+    x.sessions++; x.minutes += +l.duration || 0; if (l.rpe) x.rpe.push(+l.rpe);
+    const t = String(l.workout || '其他').slice(0, 12); x.types[t] = (x.types[t] || 0) + 1;
+  });
+  return Object.values(by).sort((a, b) => b.month.localeCompare(a.month)).slice(0, 12)
+    .map(x => ({ month: x.month, sessions: x.sessions, minutes: x.minutes, ...(x.rpe.length ? { avgRpe: Math.round(x.rpe.reduce((a, b) => a + b, 0) / x.rpe.length * 10) / 10 } : {}), types: x.types }));
+}
+// 每个动作最近几次的重量(最近练过的动作排前面)
+function _coachWeights(okEx, per = 6, maxN = 40) {
+  return Object.fromEntries(Object.entries(typeof W_HIST !== 'undefined' ? W_HIST : {})
+    .filter(([n, h]) => okEx(n) && Array.isArray(h) && h.length)
+    .sort((a, b) => String(b[1][b[1].length - 1].date).localeCompare(String(a[1][a[1].length - 1].date)))
+    .slice(0, maxN)
+    .map(([n, h]) => [n, h.slice(-per).map(x => `${String(x.date).slice(5)} ${x.weight}kg${x.reps ? '×' + x.reps : ''}${x.rpe ? ' RPE' + x.rpe : ''}`)]));
+}
+// 连续打卡天数、本月统计、成就(只数能给人看的记录)
+function _coachStats(logs) {
+  const today = todayStr(), m = today.slice(0, 7), dates = new Set(logs.map(l => l.date));
+  let streak = 0;
+  for (let i = 0; i < 365; i++) { if (dates.has(addDays(today, -i))) streak++; else if (i > 0) break; }
+  const ml = logs.filter(l => l.date.startsWith(m)), rp = ml.filter(l => l.rpe);
+  const ach = (L, kind) => ((L && L.milestones) || []).map(x => `${kind}·${x.title}${x.date ? '(' + x.date + ')' : ''}`);
+  return {
+    streakDays: streak, totalSessions: logs.length,
+    thisMonth: { sessions: ml.length, minutes: ml.reduce((a, l) => a + (+l.duration || 0), 0), ...(rp.length ? { avgRpe: Math.round(rp.reduce((a, l) => a + +l.rpe, 0) / rp.length * 10) / 10 } : {}), prs: PR_LIST.filter(p => p.date && p.date.startsWith(m) && !_coachGated().has(p.exercise)).length },
+    achievements: [...ach(typeof GYM_LOG !== 'undefined' ? GYM_LOG : null, '力量'), ...ach(typeof SWIM_LOG !== 'undefined' ? SWIM_LOG : null, '游泳')],
+  };
+}
+// 今天的实时状态:做到哪个动作第几组、每个动作的感受、开练时间和用时、组间倒计时。私密日 / 门控动作不给
+function _coachTodayState(focusName) {
+  const date = todayStr(), d = S.plan?.days?.find(x => x.date === date);
+  if (!d) return { date, status: '没有计划' };
+  if (d.isPrivateDay) return { date, status: '另有安排' };
+  if (d.isRest) return { date, status: '休息日' };
+  const gated = _coachGated(), pd = S.prog[date] || {}, lg = LOG.find(l => l.date === date);
+  const sp = (typeof _spSetsAll === 'function' ? _spSetsAll()[date] : null) || {};
+  const exercises = [];
+  d.exercises.forEach((e, i) => {
+    if (gated.has(e.name)) return;
+    const sets = getAdj(date, i, 's', e.sets), reps = getAdj(date, i, 'r', e.reps), done = !!pd[i];
+    const w = needsWeightUI(e) ? getWeight(date, i) : null, sug = needsWeightUI(e) && w == null ? suggestWeight(e.name) : null, f = _coachFeel(date, i);
+    exercises.push({
+      name: e.name, sets, reps, unit: e.unit || '次', ...(w != null ? { kg: w } : sug ? { kgSuggested: sug } : {}),
+      setsDone: done ? sets : Math.min((sp.s && sp.s[i]) || 0, sets), done, ...(f ? { feel: f } : {}),
+      ...(e.isWarmup ? { block: '热身' } : e.isStretch && !isWeightedMove(e.name) ? { block: '拉伸' } : {}),
+    });
+  });
+  // 现在在做的:运动风格的焦点卡(钉住的 / 第一个没做完的主项);纸墨同一套规则
+  let cur = null;
+  if (typeof _spDayState === 'function') { const st = _spDayState(d); cur = st.cur ? st.cur[1] : null }
+  else cur = d.exercises.findIndex((e, i) => !pd[i] && !e.isWarmup && !(e.isStretch && !isWeightedMove(e.name)));
+  const ce = cur != null && cur >= 0 ? d.exercises[cur] : null;
+  const t0 = sp.t0 || 0, started = !!t0 || Object.values(pd).some(Boolean);
+  const out = { date, type: d.workoutType, status: lg ? '已打卡' : started ? '训练中' : '没开练', exercises };
+  if (t0) { const t = new Date(t0); out.startedAt = `${String(t.getHours()).padStart(2, '0')}:${String(t.getMinutes()).padStart(2, '0')}`; out.elapsedMin = Math.round((Date.now() - t0) / 60000) }
+  if (ce && !gated.has(ce.name) && !lg) { const x = exercises.find(z => z.name === ce.name); if (x) out.current = { name: ce.name, set: Math.min(x.setsDone + 1, x.sets), of: x.sets } }
+  if (focusName && !gated.has(focusName) && exercises.some(z => z.name === focusName)) out.askingAbout = focusName;
+  if (typeof _timerEndTime !== 'undefined' && _timerEndTime > Date.now() && document.getElementById('universal-timer')?.classList.contains('show')) out.timer = { label: _timerKind === '组间休息' ? '组间休息' : '计时', leftSec: Math.ceil((_timerEndTime - Date.now()) / 1000) };
+  if (lg) out.logged = { rpe: lg.rpe, min: lg.duration };
+  return out;
+}
+// 每条消息都带的实时状态(只放进那一条,不进缓存前缀)
+function buildCoachLive(focusName) { return { today: _coachTodayState(focusName) } }
+// 搭子分享出来的训练数据(对方 app 已经按同一套门控过滤过;这里再按自己的门控过一遍,字串截短)
+function _coachPartner() {
+  const pp = typeof _partnerProfile !== 'undefined' ? _partnerProfile : null;
+  if (!pp || typeof partnerUid !== 'function' || !partnerUid()) return null;
+  const gated = _coachGated(), str = (v, n) => String(v ?? '').slice(0, n);
+  const clean = v => typeof v === 'string' ? ([...gated].some(g => v.includes(g)) ? null : str(v, 120)) : Array.isArray(v) ? v.map(clean).filter(x => x != null).slice(0, 60)
+    : v && typeof v === 'object' ? Object.fromEntries(Object.entries(v).filter(([k]) => !gated.has(k)).slice(0, 60).map(([k, x]) => [str(k, 40), clean(x)]).filter(([, x]) => x != null)) : typeof v === 'number' || typeof v === 'boolean' ? v : null;
+  const t = pp.train && typeof pp.train === 'object' ? pp.train : null;
+  return { name: str(pp.name || '搭子', 20), today: str(pp.todayType || '—', 20), todayDone: !!pp.todayDone, lastActive: str(pp.lastActive, 10),
+    ...(t ? { plan: clean(t.plan), recentLogs: clean(t.logs), history: clean(t.history), weights: clean(t.weights), stats: clean(t.stats) } : { note: '搭子的 app 还没升级，只有今天的类型' }) };
+}
+// 给 AI 的数据快照。私密池 / 盆底动作、私密日、私密模式的记录一律不进(对 owner 也不进);非 owner 另有 getExcluded() 兜底。
+// opts:catalog('names' / 'full')、logDays(明细天数,默认 42)、live(false 不带今天的实时状态)、partner(false 不带搭子)
+// 「主动找你」的推送也用这个函数拿全量快照
 function buildCoachContext(opts = {}) {
-  const today = todayStr(), priv = _coachPriv();
-  const okEx = n => !priv.has(n);
+  const today = todayStr(), gated = _coachGated();
+  const okEx = n => !gated.has(n);
   const sch = currentScheme();
+  const logOk = _coachLogOk(), logs = LOG.filter(logOk).sort((a, b) => a.date.localeCompare(b.date));
+  const from = addDays(today, -(opts.logDays || 42));
   const ctx = {
     settings: {
       goal: S.goal, level: S.level, daysPerWeek: S.days, minutesPerSession: S.dur, equipment: S.equip, focus: S.focus,
@@ -56,16 +157,14 @@ function buildCoachContext(opts = {}) {
       ...(S.cycleEnabled && S.periodMode ? { periodMode: true } : {}),
     },
     userExcluded: (S.userExcluded || []).filter(okEx).map(n => n + (S.userExcludeReasons?.[n] ? `(${S.userExcludeReasons[n]})` : '')),
-    recentLogs: LOG.filter(l => l.date >= addDays(today, -(opts.logDays || 42)) && !l.subMetrics)
-      .sort((a, b) => a.date.localeCompare(b.date))
-      .map(l => {
-        const ex = (l.exercises || []).filter(e => okEx(e.name))
-          .map(e => `${e.name}${e.weight ? ' ' + e.weight + 'kg' : ''} ${e.sets}×${e.reps}${e.unit || ''}${e.done === false ? ' 未做' : ''}`);
-        return ex.length ? { date: l.date, workout: l.workout, min: l.duration, rpe: l.rpe, ex, ...(l.note ? { note: l.note } : {}) } : null;
-      }).filter(Boolean),
+    recentLogs: logs.filter(l => l.date >= from).map(l => _coachLogItem(l, okEx, true)).filter(Boolean),
+    history: _coachHistory(logs, from),
+    weightHistory: _coachWeights(okEx),
+    stats: _coachStats(logs),
     body: BODY_LOG.slice(-12),
     prs: PR_LIST.filter(p => okEx(p.exercise)).slice(-15),
   };
+  if (opts.live !== false) ctx.today = _coachTodayState();
   if (S.plan && S.plan.days) {
     ctx.upcoming = S.plan.days.filter(d => d.date >= today).slice(0, 14).map(d =>
       d.isPrivateDay ? { date: d.date, type: '(另有安排)' } :
@@ -85,7 +184,30 @@ function buildCoachContext(opts = {}) {
     const day = +S.cycleDay || 1, length = +S.cycleLength || 28;
     ctx.cycle = { phase: cyclePhase(day, length).name, day, length, setOn: S.cycleSetAt };
   }
+  if (opts.partner !== false) { const p = _coachPartner(); if (p) ctx.partner = p }
   return ctx;
+}
+// 搭子互通:写进共享文档的训练数据(计划、记录、重量、感受)。和 buildCoachContext 同一套过滤,
+// 另外不放身体数据(体重围度、身体情况、周期)、不放打卡备注原文(可能写了身体情况);只放最近一段 + 按月汇总,控制文档大小
+function coachSharedTraining() {
+  const today = todayStr(), gated = _coachGated(), okEx = n => !gated.has(n);
+  const logs = LOG.filter(_coachLogOk()).sort((a, b) => a.date.localeCompare(b.date)), from = addDays(today, -42);
+  const td = S.plan?.days?.find(d => d.date === today);
+  const t = {
+    v: 1, at: today,
+    plan: (S.plan?.days || []).filter(d => d.date >= today).slice(0, 14).map(d => d.isPrivateDay ? { date: d.date, type: '另有安排' } : d.isRest ? { date: d.date, type: '休息' }
+      : { date: d.date, type: d.workoutType, ex: d.exercises.filter(e => okEx(e.name)).map(e => `${e.name} ${e.sets}×${e.reps}${e.unit}`) }),
+    today: td && !td.isPrivateDay && !td.isRest ? (() => { const s = _coachTodayState(); return { status: s.status, done: (s.exercises || []).filter(e => e.done).length, total: (s.exercises || []).length } })() : null,
+    logs: logs.filter(l => l.date >= from).map(l => _coachLogItem(l, okEx, false)).filter(Boolean),
+    history: _coachHistory(logs, from),
+    weights: _coachWeights(okEx, 5, 30),
+    stats: (({ streakDays, totalSessions, thisMonth, achievements }) => ({ streakDays, totalSessions, thisMonth: { sessions: thisMonth.sessions, minutes: thisMonth.minutes }, achievements }))(_coachStats(logs)),
+  };
+  // Firestore 单文档 1MB:这里卡在 200KB 以内(正常十几 KB),超了先砍最早的明细再砍重量
+  while (JSON.stringify(t).length > 200000 && (t.logs.length > 7 || Object.keys(t.weights).length > 5)) {
+    if (t.logs.length > 7) t.logs = t.logs.slice(Math.ceil(t.logs.length / 4)); else t.weights = Object.fromEntries(Object.entries(t.weights).slice(0, 5));
+  }
+  return t;
 }
 
 // ── 网络 ──
@@ -338,7 +460,53 @@ function coachMeSectionHtml() {
     }).join('')}</div>`
     + `<span class="sub-label" style="margin-top:4px">${o.model ? '思考深度' : '思考深度 · 选「自动」时按任务定'}</span>`
     + `<div style="opacity:${o.model ? 1 : .4}">${uiSeg('co-effort', 'effort', efforts.map(([k, n]) => [k, n]), effCur, { label: '思考深度', disabled: o.model ? {} : Object.fromEntries(efforts.map(([k]) => [k, true])) })}</div>`
-    + `<div class="kv"><span class="k">本月</span><span>已用 $${Number(me.cycle || 0).toFixed(2)}</span><span class="k">今天</span><span>$${Number(me.today || 0).toFixed(2)}${me.daily_cap ? ` / 上限 $${Number(me.daily_cap).toFixed(2)}` : ''}</span><span class="k">额度</span><span>每天有上限；每月 17 号重置</span></div>`);
+    + `<div class="kv"><span class="k">本月</span><span>已用 $${Number(me.cycle || 0).toFixed(2)}</span><span class="k">今天</span><span>$${Number(me.today || 0).toFixed(2)}${me.daily_cap ? ` / 上限 $${Number(me.daily_cap).toFixed(2)}` : ''}</span><span class="k">额度</span><span>每天有上限；每月 17 号重置</span></div>`)
+    + coachMemSectionHtml();
+}
+// ── 我 → 05「教练记住的事」:长期记忆存在后端(按账号),这里列出、逐条删、全清 ──
+// 列表缓存在内存(window._coachMem,按 uid);对话里记住 / 忘掉了什么会把缓存作废,下次画「我」时重新读
+function coachMemSectionHtml() {
+  const uid = _coachUser()?.uid ?? null;
+  let mem = window._coachMem && window._coachMemUid === uid ? window._coachMem : null;
+  if (!mem) { mem = { loading: true }; coachMemLoad() }
+  return skinTpl('meAIMem', { mem }, ({ mem }) => `<div class="co-mem" id="co-mem"><span class="sub-label" style="margin-top:4px">教练记住的事</span>`
+    + (mem.loading ? `<span class="note-line" role="status">读取中…</span>`
+      : mem.err ? `<span class="note-line co-err">${_esc(mem.err)}</span><button type="button" class="link-btn u" style="align-self:flex-start" onclick="coachMemLoad(true)">再试一次</button>`
+        : !mem.items.length ? `<span class="note-line">还没有。在对话里跟教练说「记住……」，伤病、偏好、目标这些它会记下，开新对话也不忘。</span>`
+          : `<div class="co-memlist">${mem.items.map(x => `<div class="co-mem-row"><span class="t">${_esc(x.text)}<small>${_esc(String(x.at || '').slice(5, 10).replace('-', '/'))}${x.src === 'quick' ? ' · 陪练' : ''}</small></span><button type="button" class="link-btn u" data-id="${_esc(x.id)}" onclick="coachMemDelete(this.dataset.id)" aria-label="删掉：${_esc(x.text)}">删掉</button></div>`).join('')}</div>`
+          + `<button type="button" class="btn-line" style="align-self:flex-start" onclick="coachMemClear()">全部清空</button>`)
+    + `<span class="foot-note">记在家里的服务器上，只给你自己的教练看；私密内容不会记。</span></div>`);
+}
+let _coachMemBusy = false;
+async function coachMemLoad(force) {
+  if (_coachMemBusy || coachAccess() !== 'on') return;
+  const uid = _coachUser()?.uid ?? null;
+  if (!force && window._coachMem && window._coachMemUid === uid && !window._coachMem.loading) return;
+  _coachMemBusy = true;
+  let mem;
+  try { const r = await _coachFetch('/api/memory'); mem = { items: Array.isArray(r.items) ? r.items : [] } }
+  catch (e) { mem = { items: [], err: e.code === 404 ? '后端还没升级，暂时看不了' : e.message } }
+  _coachMemBusy = false;
+  window._coachMem = mem; window._coachMemUid = uid;
+  if (typeof uiCurrentTab !== 'undefined' && uiCurrentTab === 'me' && typeof uiRenderMeAI === 'function') uiRenderMeAI();
+}
+async function _coachMemPost(body, okMsg) {
+  try {
+    const r = await _coachFetch('/api/memory', body);
+    window._coachMem = { items: r.items || [] };
+    showToast(okMsg);
+  } catch (e) {
+    if (e.info && Array.isArray(e.info.items)) window._coachMem = { items: e.info.items };
+    showToast(e.message);
+  }
+  window._coachMemUid = _coachUser()?.uid ?? null;
+  if (typeof uiRenderMeAI === 'function') uiRenderMeAI();
+}
+function coachMemDelete(id) { if (id) return _coachMemPost({ op: 'delete', id }, '删掉了 · 教练以后不再参考这条') }
+function coachMemClear() {
+  const n = (window._coachMem?.items || []).length;
+  if (!n || !confirm(`清空教练记住的 ${n} 件事？清了就找不回来。`)) return;
+  return _coachMemPost({ op: 'clear' }, '清空了');
 }
 function coachSetModel(k) {
   const st = _coachLoad(), o = st.opts || {};
@@ -881,7 +1049,7 @@ function _coachShowChat(streaming) {
   if (!el) return;
   const chat = _coachLoad().chat || [];
   el.innerHTML = skinTpl('coachChat', { chat, streaming }, () => chat.length ? chat.map(m => m.role === 'assistant'
-    ? `<div class="co-msg assistant"><span class="who">[ 教练 ]${m.at ? ' ' + _coachHM(m.at) : ''}</span><div class="co-text">${_coachMd(m.text)}</div>${m.proposal ? _coachPropHtml(m.proposal) : ''}${m.meta ? _coachCostLine(m.meta) : ''}</div>`
+    ? `<div class="co-msg assistant"><span class="who">[ 教练 ]${m.at ? ' ' + _coachHM(m.at) : ''}</span><div class="co-text">${_coachMd(m.text)}</div>${m.action ? _coachActHtml(m.action) : ''}${m.proposal ? _coachPropHtml(m.proposal) : ''}${m.mem ? _coachMemNoteHtml(m.mem) : ''}${m.meta ? _coachCostLine(m.meta) : ''}</div>`
     : `<div class="co-msg user"><span class="who">你${m.at ? ' · ' + _coachHM(m.at) : ''}</span>${m.img ? '<span class="co-meta">[ 图片 ]</span>' : ''}<span class="co-text">${_esc(m.text).replace(/\n/g, '<br>')}</span></div>`).join('')
     + (streaming ? `<div class="co-msg assistant"><span class="who">[ 教练 ]</span><div class="co-text" id="co-stream"><span class="co-meta">思考中…</span></div></div>` : '')
     : '<div class="note-line" style="padding:12px 0">比如：「我深蹲总是膝盖往里扣怎么办」「这周只能练两次，怎么安排」「今天很累还要练吗」</div>');
@@ -894,10 +1062,12 @@ async function coachAttach(input) {
   try { _coachPendingImg = await _coachImage(f, 1024) } catch (e) { return showToast(e.message) }
   document.getElementById('co-chat-img').innerHTML = `<div class="co-pending"><img src="${_coachPendingImg}" alt="待发送的图片"><button class="link-btn" onclick="_coachPendingImg=null;this.parentNode.remove()">移除</button></div>`;
 }
-// 今天页「问教练」/ 换动作面板「问教练怎么换」:跳到教练页,输入框里先填好开头
+// 今天页「问教练」/ 换动作面板「问教练怎么换」:正在看今天时就地打开陪练小面板(训练中随时问,带实时状态);
+// 看别的日子、在别的页时照旧跳到教练页,输入框里先填好开头
 function coachAskAbout(name, kind) {
   // 从引导训练里来的(引导卡上的「问教练」、引导里打开的换动作面板):先把全屏的引导关掉,不然盖在教练页上
   const wm = document.getElementById('workout-modal'); if (wm && wm.classList.contains('open') && typeof wmClose === 'function') wmClose();
+  if (typeof uiCurrentTab !== 'undefined' && uiCurrentTab === 'today' && coachAccess() === 'on' && (S.selDate || todayStr()) === todayStr()) return coachQuickOpen(name, kind);
   showTab('coach');
   setTimeout(() => {
     const ta = document.getElementById('co-chat-text');
@@ -906,28 +1076,12 @@ function coachAskAbout(name, kind) {
     try { ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); } catch (e) { }
   }, 60);
 }
-async function coachSend() {
-  const ta = document.getElementById('co-chat-text');
-  const text = (ta.value || '').trim();
-  if (!text && !_coachPendingImg) return;
-  const st = _coachLoad();
-  st.chat = st.chat || [];
-  // 数据快照在对话开头拍一次，整段对话沿用(后端放进第一条消息，缓存命中省钱)；要用最新数据就点「新对话」
-  if (!st.chat.length || !st.chatCtx) st.chatCtx = buildCoachContext({ catalog: 'names', logDays: 28 });
-  const img = _coachPendingImg;
-  st.chat.push({ role: 'user', text: text || '(看图)', img: !!img, at: Date.now() });
-  st.chat = st.chat.slice(-COACH_CHAT_MAX);
-  _coachSave(st);
-  ta.value = ''; _coachPendingImg = null; document.getElementById('co-chat-img').innerHTML = '';
-  _coachShowChat(true);
-  _coachBusy('co-chat-go', true, '…');
-  // 提议卡采纳 / 不要之后补的那句(「(她采纳了)」等)跟着那条助手消息一起发,AI 才知道上回改没改
-  const send = st.chat.slice(-COACH_CHAT_SEND).map(m => ({ role: m.role, text: m.text + (m.role === 'assistant' && m.after ? '\n\n' + m.after : '') }));
-  while (send.length && send[0].role !== 'user') send.shift();
-  let acc = '', meta = null, err = null, prop = null;
+// 对话 / 陪练共用的 SSE 读取:delta 边到边回调;action / proposal / memory / done / error 收起来交给调用方
+async function _coachStream(path, body, onDelta) {
+  const out = { text: '', meta: null, err: null, prop: null, act: null, mem: null };
   try {
     await _coachSerial(async () => {
-      const r = await _coachFetch('/api/chat', { messages: send, context: st.chatCtx, image: img || undefined, ..._coachOpts('chat') }, { stream: true });
+      const r = await _coachFetch(path, body, { stream: true });
       const rd = r.body.getReader(), dec = new TextDecoder();
       let buf = '';
       for (; ;) {
@@ -940,24 +1094,398 @@ async function coachSend() {
           const ev = (block.match(/^event: (.*)$/m) || [])[1], data = (block.match(/^data: (.*)$/m) || [])[1];
           if (!data) continue;
           const j = JSON.parse(data);
-          if (ev === 'delta') { acc += j.t; const s = document.getElementById('co-stream'); if (s) { s.innerHTML = _coachMd(acc); } }
-          else if (ev === 'proposal') prop = j;
-          else if (ev === 'done') { acc = j.text || acc; meta = { model: j.model, effort: j.effort, cost: j.cost } }
-          else if (ev === 'error') err = j.error;
+          if (ev === 'delta') { out.text += j.t; if (onDelta) onDelta(out.text) }
+          else if (ev === 'proposal') out.prop = j;
+          else if (ev === 'action') out.act = j;
+          else if (ev === 'memory') out.mem = j;
+          else if (ev === 'done') { out.text = j.text || out.text; out.meta = { model: j.model, effort: j.effort, cost: j.cost } }
+          else if (ev === 'error') out.err = j.error;
         }
       }
     });
-  } catch (e) { err = e.message }
+  } catch (e) {
+    out.err = e.message;
+    if (_COACH_LOCKED.has(e.status)) { _coachRememberAccess(e.status); setTimeout(() => _coachRefreshEntries(), 0) }
+  }
+  return out;
+}
+// 回来的结果 → 一条助手消息:小改当场执行(留撤销),记忆变动记一行,提议照旧画卡片
+function _coachReplyMsg(res) {
+  const m = { role: 'assistant', text: res.text, meta: res.meta, at: Date.now() };
+  const pr = _coachPropFrom(res.prop);
+  if (pr) m.proposal = pr;
+  if (res.act) { const a = coachTodayAct(res.act); if (a) { m.action = a; m.after = _coachActAfter(a) } }
+  if (res.mem) {
+    const mm = { added: (res.mem.added || []).map(x => String(x.text || '')).filter(Boolean).slice(0, 5), removed: (res.mem.removed || []).map(x => String(x.text || '')).filter(Boolean).slice(0, 5), blocked: +res.mem.blocked || 0 };
+    if (mm.added.length || mm.removed.length || mm.blocked) m.mem = mm;
+    window._coachMem = null;   // 「我 → 05」里的列表下次重新读
+  }
+  return m;
+}
+// 发出去的历史:提议卡 / 小改之后补的那句(「(她采纳了)」「(已直接改了…)」)跟着那条助手消息一起发,AI 才知道改没改成
+function _coachHist(list, n) {
+  const send = list.slice(-n).map(m => ({ role: m.role, text: m.text + (m.role === 'assistant' && m.after ? '\n\n' + m.after : '') }));
+  while (send.length && send[0].role !== 'user') send.shift();
+  return send;
+}
+async function coachSend() {
+  const ta = document.getElementById('co-chat-text');
+  const text = (ta.value || '').trim();
+  if (!text && !_coachPendingImg) return;
+  const st = _coachLoad();
+  st.chat = st.chat || [];
+  // 数据快照在对话开头拍一次，整段对话沿用(后端放进第一条消息，缓存命中省钱)；要用最新数据就点「新对话」。
+  // 今天做到哪、用时这些会变的,每条消息另带 live(只放进那一条)
+  if (!st.chat.length || !st.chatCtx) st.chatCtx = buildCoachContext({ catalog: 'names', logDays: 28 });
+  const img = _coachPendingImg;
+  st.chat.push({ role: 'user', text: text || '(看图)', img: !!img, at: Date.now() });
+  st.chat = st.chat.slice(-COACH_CHAT_MAX);
+  _coachSave(st);
+  ta.value = ''; _coachPendingImg = null; document.getElementById('co-chat-img').innerHTML = '';
+  _coachShowChat(true);
+  _coachBusy('co-chat-go', true, '…');
+  const res = await _coachStream('/api/chat', { messages: _coachHist(st.chat, COACH_CHAT_SEND), context: st.chatCtx, live: buildCoachLive(), gate: [..._coachGated()], image: img || undefined, ..._coachOpts('chat') },
+    t => { const s = document.getElementById('co-stream'); if (s) s.innerHTML = _coachMd(t) });
+  const reply = res.text ? _coachReplyMsg(res) : null;   // 先执行小改(它会改存档),再读存档追加
   const st2 = _coachLoad();
   st2.chat = st2.chat || [];
-  const pr = _coachPropFrom(prop);
-  if (acc) st2.chat.push({ role: 'assistant', text: acc, meta, at: Date.now(), ...(pr ? { proposal: pr } : {}) });
+  if (reply) st2.chat.push(reply);
   else st2.chat.pop(); // 失败就撤回刚才那条，免得历史里两条用户消息连在一起
   _coachSave(st2);
-  if (!acc) ta.value = text;
+  if (!res.text) ta.value = text;
   _coachShowChat();
   _coachBusy('co-chat-go', false);
-  if (err) showToast(err);
+  if (res.err) showToast(res.err);
+}
+
+// ══ 训练中陪练:今天页底部的小对话面板 ══
+// 今天页「问教练」(纸墨主项行 / 运动焦点卡和展开行)在这里就地问,不跳页。每条都带今天的实时状态(做到哪个动作第几组、
+// 刚才的感受、用时),走 /api/quick(快模型、回答很短);面板里同样能直接小改今天的训练(和对话里同一套执行 / 撤销)。
+// 当天的陪练记录存本机(st.quick,换一天自动清空);数据快照在当天第一问时拍一次(缓存命中),实时状态每次现拍。
+const COACH_QUICK_MAX = 16, COACH_QUICK_SEND = 8;
+let _cqFocus = null, _cqBusy = false;
+function _coachQuickState(st) {
+  const today = todayStr();
+  if (!st.quick || st.quick.date !== today) st.quick = { date: today, msgs: [] };
+  return st.quick;
+}
+function _coachQuickEl() {
+  let el = document.getElementById('coach-quick');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'coach-quick';
+    el.className = 'ex-modal-overlay';
+    el.onclick = e => { if (e.target === el) coachQuickClose() };
+    document.body.appendChild(el);
+  }
+  return el;
+}
+function _coachQuickSugg() {
+  const f = _cqFocus, p = f ? `「${f}」` : '';
+  return [['下一组多重', `${p}下一组用多重？`], ['太吃力了', `${p}这组好吃力，怎么办？`], ['换一个', f ? `「${f}」今天想换一个，换什么？` : '今天想换个动作，换什么？'], ['动作要点', `${p}动作要点是什么？`]];
+}
+function coachQuickOpen(name, kind) {
+  if (coachAccess() !== 'on') return;
+  _cqFocus = name && !_coachGated().has(name) ? name : null;
+  const el = _coachQuickEl(), sugg = _coachQuickSugg();
+  el.innerHTML = skinTpl('coachQuick', { sugg }, ({ sugg }) => `<div class="ex-modal-card cq-card" onclick="event.stopPropagation()">`
+    + `<div class="ex-modal-hdr"><div id="cq-head" class="cq-head"></div><button type="button" class="ex-modal-close" onclick="coachQuickClose()">关闭</button></div>`
+    + `<div id="cq-log" class="cq-log" aria-live="polite"></div>`
+    + `<div class="chips cq-sugg">${sugg.map(([l, q]) => `<button type="button" class="chip" data-q="${_esc(q)}" onclick="coachQuickSend(this.dataset.q)">${_esc(l)}</button>`).join('')}</div>`
+    + `<div class="cq-row"><textarea id="cq-text" rows="1" placeholder="问教练…" aria-label="问教练" onkeydown="if(event.key==='Enter'&&!event.shiftKey&&!event.isComposing){event.preventDefault();coachQuickSend()}"></textarea><button type="button" class="send" id="cq-go" onclick="coachQuickSend()">发送</button></div>`
+    + `<span class="co-meta cq-foot">快模型，回答很短 · 教练看得到你做到第几组 · 今天的陪练记录只存在这台手机上</span></div>`);
+  el.classList.add('open');
+  _coachQuickPaint();
+  const ta = document.getElementById('cq-text');
+  if (ta && kind === '换' && _cqFocus) ta.value = `「${_cqFocus}」今天做不了，换成什么好？`;
+  _coachEnsureMe();
+}
+function coachQuickClose() { const el = document.getElementById('coach-quick'); if (el) el.classList.remove('open') }
+// 面板头:现在在做的动作、第几组、重量、刚才的感受、用时(和发给教练的实时状态同一份)
+function _coachQuickHeadHtml() {
+  const t = _coachTodayState(_cqFocus), name = _cqFocus || t.current?.name || '';
+  const ex = (t.exercises || []).find(e => e.name === name) || null;
+  const bits = [];
+  if (ex) {
+    bits.push(ex.done ? '已做完' : `第 ${Math.min(ex.setsDone + 1, ex.sets)} / ${ex.sets} 组`);
+    if (ex.kg != null) bits.push(`${ex.kg} kg`); else if (ex.kgSuggested) bits.push(`建议 ${ex.kgSuggested} kg`);
+    if (ex.feel) bits.push(`刚才：${ex.feel}`);
+  }
+  const status = t.status + (t.elapsedMin != null && t.status === '训练中' ? ` · 用时 ${t.elapsedMin} 分` : '');
+  return skinTpl('coachQuickHead', { t, ex, name, bits, status }, () => `<div class="sheet-eyebrow">[ 陪练 ] ${_esc(status)}</div><div class="sheet-title">${_esc(name || t.type || '今天')}</div>${bits.length ? `<span class="note-line cq-state">${_esc(bits.join(' · '))}</span>` : ''}`);
+}
+function _coachQuickLogHtml(streaming) {
+  const msgs = _coachQuickState(_coachLoad()).msgs;
+  return skinTpl('coachQuickLog', { msgs, streaming }, () => (msgs.length ? msgs.map(m => m.role === 'assistant'
+    ? `<div class="cq-msg co"><span class="who">[ 教练 ]${m.at ? ' ' + _coachHM(m.at) : ''}</span><div class="co-text">${_coachMd(m.text)}</div>${m.action ? _coachActHtml(m.action) : ''}${m.mem ? _coachMemNoteHtml(m.mem) : ''}${m.meta ? _coachCostLine(m.meta) : ''}</div>`
+    : `<div class="cq-msg me"><span class="co-text">${_esc(m.text)}</span></div>`).join('')
+    : `<div class="note-line">练到一半有问题直接问：下一组多重、哪里不对劲、想换个动作。教练看得到你做到第几组；让它换动作、改重量、开计时，它会直接改，不合适点「撤销」。</div>`)
+    + (streaming ? `<div class="cq-msg co"><span class="who">[ 教练 ]</span><div class="co-text" id="cq-stream"><span class="co-meta">想一下…</span></div></div>` : ''));
+}
+function _coachQuickPaint(streaming) {
+  const el = document.getElementById('coach-quick');
+  if (!el || !el.classList.contains('open')) return;
+  const h = document.getElementById('cq-head'), lg = document.getElementById('cq-log');
+  if (h) h.innerHTML = _coachQuickHeadHtml();
+  if (lg) { lg.innerHTML = _coachQuickLogHtml(streaming); const last = lg.lastElementChild; if (last && typeof last.scrollIntoView === 'function') last.scrollIntoView({ block: 'nearest' }) }
+  const go = document.getElementById('cq-go');
+  if (go) { go.disabled = _cqBusy; go.textContent = _cqBusy ? '…' : '发送' }
+  el.querySelectorAll('.cq-sugg .chip').forEach(b => { b.disabled = _cqBusy });
+}
+async function coachQuickSend(preset) {
+  if (_cqBusy) return;
+  const ta = document.getElementById('cq-text');
+  const text = String(preset || (ta && ta.value) || '').trim();
+  if (!text) { if (ta) ta.focus(); return }
+  _cqBusy = true;
+  const st = _coachLoad(), q = _coachQuickState(st);
+  if (!q.ctx) q.ctx = buildCoachContext({ catalog: 'names', logDays: 14, live: false });
+  q.msgs.push({ role: 'user', text, at: Date.now() });
+  q.msgs = q.msgs.slice(-COACH_QUICK_MAX);
+  _coachSave(st);
+  if (ta && !preset) ta.value = '';
+  _coachQuickPaint(true);
+  const res = await _coachStream('/api/quick', { messages: _coachHist(q.msgs, COACH_QUICK_SEND), context: q.ctx, live: buildCoachLive(_cqFocus), gate: [..._coachGated()] },
+    t => { const s = document.getElementById('cq-stream'); if (s) s.innerHTML = _coachMd(t) });
+  const reply = res.text ? _coachReplyMsg(res) : null;
+  const st2 = _coachLoad(), q2 = _coachQuickState(st2);
+  if (reply) q2.msgs.push(reply);
+  else { q2.msgs.pop(); if (ta && !preset) ta.value = text }
+  _coachSave(st2);
+  _cqBusy = false;
+  _coachQuickPaint();
+  if (res.err) showToast(res.err);
+}
+
+// ══ 对话里直接改今天的训练(小改:换 / 加 / 划掉 / 调组次重量 / 计时 / 身体情况) ══
+// 后端 SSE action {id, message, changes[≤6], dropped[]};前端收到就执行(不用点采纳),对话里显示「已改：… · 撤销」。
+// 执行前再核一遍(动作库 / 门控 / 今天的状态 / 数值范围),核不过的划掉写原因;每次执行留快照,只有最近一次能撤销。
+// 改的永远是这台手机上当前账号的「今天」;私密日、休息日、已打卡的天不动结构(计时、身体情况照样可以)。
+const _TODAY_OPS = ['swap', 'add', 'strike', 'adjust', 'timer', 'limit'];
+function _coachTodayDay() { return S.plan?.days?.find(d => d.date === todayStr()) || null }
+function _coachTodayIdx(day, name, allowDone) { const pd = S.prog[day.date] || {}; return day.exercises.findIndex((e, i) => e.name === name && (allowDone || !pd[i])) }
+// 组进度(运动风格存在本机 fit_spsets,按下标):插入 / 删掉 / 换掉一个动作时跟着挪,免得错位。delta 0 = 这个下标清零
+function _coachSpShift(date, at, delta) {
+  if (typeof _spSetsAll !== 'function') return;
+  const a = _spSetsAll(), d = a[date];
+  if (!d || !d.s) return;
+  const s = {};
+  Object.entries(d.s).forEach(([k, v]) => { k = +k; if (k === at && delta <= 0) return; s[k >= at && delta ? k + delta : k] = v });
+  d.s = s;
+  try { localStorage.setItem(nsKey('fit_spsets'), JSON.stringify(a)) } catch { }
+}
+function _coachProgress(date) {
+  const p = Object.values(S.prog[date] || {}).filter(Boolean).length;
+  const d = typeof _spSetsAll === 'function' ? _spSetsAll()[date] : null;
+  return p * 100 + Object.values((d && d.s) || {}).reduce((a, v) => a + (+v || 0), 0);
+}
+// 核一条小改:合规返回 '',不合规返回原因
+function _coachTodayCheck(c, day) {
+  if (!c || !_TODAY_OPS.includes(c.op)) return '看不懂这条改法';
+  if (c.op === 'timer') return Number.isInteger(c.seconds) && c.seconds >= 5 && c.seconds <= 900 ? '' : '计时长度不对';
+  if (c.op === 'limit') return typeof c.text === 'string' && c.text.trim() && c.text.length <= 80 ? '' : '身体情况写得不对';
+  if (!day) return '今天没有训练计划';
+  if (day.isPrivateDay) return '今天另有安排，不改';
+  if (day.isRest) return '今天是休息日';
+  if (LOG.some(l => l.date === day.date)) return '今天已经打卡了';
+  const gated = _coachGated(), cat = _coachCatalogMap();
+  const ex = String(c.exercise || '').trim(), to = String(c.to || '').trim();
+  const notIn = n => `「${_coachNm(n || '?')}」不在你现在的动作库里`;
+  if (!ex || gated.has(ex)) return notIn(ex);
+  let unit;
+  if (c.op === 'add') {
+    if (!cat.has(ex)) return notIn(ex);
+    if (day.isSwimDay) return '今天是游泳日';
+    if (day.exercises.some(e => e.name === ex)) return '今天已经有这个动作';
+    unit = _coachUnit(cat.get(ex).ex);
+  } else {
+    const i = _coachTodayIdx(day, ex, c.op === 'adjust');
+    if (i < 0) return day.exercises.some(e => e.name === ex) ? `「${ex}」已经做完了` : `今天的计划里没有「${ex}」`;
+    const e = day.exercises[i];
+    unit = e.unit || '次';
+    if (c.op === 'swap') {
+      if (e.isWarmup || (e.isStretch && !isWeightedMove(e.name))) return '热身 / 拉伸不换';
+      if (day.isSwimDay || e.group === 'swimming' || e.swimPhase) return '游泳项目只按阶段换';
+      if (!to || gated.has(to) || !cat.has(to)) return notIn(to);
+      if (to === ex) return '换成的还是同一个动作';
+      if (day.exercises.some(x => x.name === to)) return `今天已经有「${to}」了`;
+      unit = _coachUnit(cat.get(to).ex);
+    }
+    if (c.op === 'adjust') {
+      if (c.sets == null && c.reps == null && c.kg == null) return '没说改成多少';
+      if (c.sets == null && c.reps == null && !needsWeightUI(e)) return `「${ex}」不用上重量`;
+    }
+  }
+  const [lo, hi] = _COACH_REPS[unit] || [1, 600];
+  if (c.sets != null && !(Number.isInteger(c.sets) && c.sets >= 1 && c.sets <= 8)) return `组数 ${c.sets} 不合理`;
+  if (c.reps != null && !(Number.isInteger(c.reps) && c.reps >= lo && c.reps <= hi)) return `${unit === '次' ? '次数' : '时长'} ${c.reps}${unit} 不合理`;
+  if (c.kg != null && !(typeof c.kg === 'number' && c.kg > 0 && c.kg <= 300)) return `重量 ${c.kg} kg 不合理`;
+  return '';
+}
+function _coachTodayTxt(c) {
+  const ex = _coachNm(c.exercise), to = _coachNm(c.to);
+  const unitOf = n => { const d = _coachTodayDay(), e = d && d.exercises.find(x => x.name === n); return e ? e.unit || '次' : _coachUnit(_coachCatalogMap().get(n)?.ex) };
+  const spec = n => _coachSpecTxt(c.sets, c.reps, unitOf(n), c.kg != null && isWeightedMove(n) ? c.kg : null);
+  const sec = n => n >= 60 && n % 60 === 0 ? `${n / 60} 分钟` : `${n} 秒`;
+  switch (c.op) {
+    case 'swap': { const t = spec(c.to); return `${ex} → ${to}${t ? ' ' + t : ''}` }
+    case 'add': { const t = spec(c.exercise); return `加上 ${ex}${t ? ' ' + t : ''}` }
+    case 'strike': return `今天不做 ${ex}`;
+    case 'adjust': return `${ex} 改成 ${spec(c.exercise) || '—'}`;
+    case 'timer': return `计时 ${sec(c.seconds)}${c.text && c.text !== '计时' ? ' · ' + c.text : ''}`;
+    case 'limit': return `身体情况加上「${c.text}」`;
+  }
+  return '?';
+}
+// 执行。返回 {result[], n, snap|null}:result 每条 '' = 改了、否则是没改的原因
+function _coachTodayApply(changes) {
+  const date = todayStr(), day0 = _coachTodayDay();
+  const pick = o => Object.fromEntries(Object.entries(o || {}).filter(([k]) => k.startsWith(date + '-')));
+  const sp0 = typeof _spSetsAll === 'function' ? _spSetsAll()[date] : null;
+  const snap = { date, day: day0 ? JSON.parse(JSON.stringify(day0)) : null, prog: S.prog[date] ? { ...S.prog[date] } : null, w: pick(S.weights), a: pick(S.adj), r: pick(S.exRpe), sp: sp0 ? JSON.parse(JSON.stringify(sp0)) : null, keys: { adj: {}, w: {} }, structural: false };
+  const result = changes.map(() => '');
+  let n = 0;
+  changes.forEach((c, k) => {
+    const day = _coachTodayDay(), bad = _coachTodayCheck(c, day);
+    if (bad) { result[k] = bad; return }
+    n++;
+    if (c.op === 'timer') { startTimer(c.seconds, String(c.text || '计时').slice(0, 20)); snap.timer = String(c.text || '计时').slice(0, 20); return }
+    if (c.op === 'limit') {
+      if (!('limits' in snap)) { snap.limits = S.limits || ''; snap.stale = !!S.planStale }
+      const add = c.text.trim(), cur = (S.limits || '').trim();
+      if (!cur.includes(add)) S.limits = cur ? `${cur}；${add}` : add;
+      if (typeof markPlanStale === 'function') markPlanStale();
+      return;
+    }
+    day._edited = true;
+    const cat = _coachCatalogMap(), ex = String(c.exercise).trim();
+    if (c.op === 'add') {
+      const hit = cat.get(ex), sp = _coachSpec(hit, c, true);
+      const at = _coachInsertEx(day, { name: hit.ex.n, sets: sp.sets, reps: sp.reps, unit: sp.unit, note: hit.ex.note || '', group: hit.g, diff: hit.ex.diff, bi: !!hit.ex.bi, muscle: hit.ex.muscle || [], addedManually: true });
+      _coachSpShift(date, at, 1);
+      if (sp.kg) { S.weights = S.weights || {}; S.weights[date + '-' + at] = sp.kg }
+      snap.structural = true; return;
+    }
+    const i = _coachTodayIdx(day, ex, c.op === 'adjust');
+    if (c.op === 'strike') {
+      const len = day.exercises.length;
+      day.exercises.splice(i, 1);
+      _reindexAfterRemoval(date, i, len);
+      _coachSpShift(date, i, -1);
+      snap.structural = true; return;
+    }
+    if (c.op === 'swap') {
+      const hit = cat.get(String(c.to).trim()), sp = _coachSpec(hit, c, false);
+      _swapInto(date, i, hit.ex, { sets: sp.sets || undefined, reps: sp.reps || undefined, kg: sp.kg || 0 });
+      _coachSpShift(date, i, 0);
+      snap.structural = true; return;
+    }
+    // adjust:和点 −/+ 一样写进当天的调整(S.adj)/重量格;重量是建议值,不走 setWeight(那里会记成新纪录)
+    const e = day.exercises[i];
+    S.adj = S.adj || {}; S.weights = S.weights || {};
+    const keep = (o, key, bag) => { if (!(key in snap.keys[bag])) snap.keys[bag][key] = o[key] === undefined ? null : o[key] };
+    if (c.sets != null) { keep(S.adj, `${date}-${i}-s`, 'adj'); S.adj[`${date}-${i}-s`] = c.sets }
+    if (c.reps != null) { const [lo, hi] = _COACH_REPS[e.unit || '次'] || [1, 600]; keep(S.adj, `${date}-${i}-r`, 'adj'); S.adj[`${date}-${i}-r`] = Math.max(lo, Math.min(hi, c.reps)) }
+    if (c.kg != null && needsWeightUI(e)) { keep(S.weights, `${date}-${i}`, 'w'); S.weights[`${date}-${i}`] = roundWeight(c.kg, e.name) }
+  });
+  if (snap.structural) { try { _spPin = null; _spJust = null } catch { } }   // 运动风格「先做这个」/「做完了」记的是下标,结构变了就作废
+  snap.mark = _coachProgress(date);
+  return { result, n, snap: n ? snap : null };
+}
+// 撤销:回到执行前。结构改过(换 / 加 / 划掉)的,要是之后又练了或已经打卡,就不回滚(免得把进度对到别的动作上)
+function _coachTodayUndo(snap) {
+  const date = snap.date;
+  if (snap.structural || Object.keys(snap.keys.adj).length || Object.keys(snap.keys.w).length) {
+    if (todayStr() !== date) return '已经不是那天了，没撤';
+    if (LOG.some(l => l.date === date)) return '今天已经打卡了，没撤';
+  }
+  if (snap.structural) {
+    if (_coachProgress(date) > snap.mark) return '改完之后又练了，撤销会把进度对错位，没撤。想改回去直接跟教练说';
+    const i = (S.plan?.days || []).findIndex(x => x.date === date);
+    if (i < 0 || !snap.day) return '那天已经不在计划里了';
+    S.plan.days[i] = snap.day;
+    if (snap.prog) S.prog[date] = snap.prog; else delete S.prog[date];
+    [['weights', 'w'], ['adj', 'a'], ['exRpe', 'r']].forEach(([k, sk]) => {
+      S[k] = S[k] || {};
+      Object.keys(S[k]).forEach(x => { if (x.startsWith(date + '-')) delete S[k][x] });
+      Object.assign(S[k], snap[sk] || {});
+    });
+    if (typeof _spSetsAll === 'function') {
+      const a = _spSetsAll();
+      if (snap.sp) a[date] = snap.sp; else delete a[date];
+      try { localStorage.setItem(nsKey('fit_spsets'), JSON.stringify(a)) } catch { }
+    }
+    try { _spPin = null; _spJust = null } catch { }
+  } else {
+    [['adj', 'adj'], ['weights', 'w']].forEach(([k, bag]) => Object.entries(snap.keys[bag]).forEach(([key, v]) => { S[k] = S[k] || {}; if (v == null) delete S[k][key]; else S[k][key] = v }));
+  }
+  if ('limits' in snap) { S.limits = snap.limits; S.planStale = snap.stale }
+  if (snap.timer && typeof _timerKind !== 'undefined' && _timerKind === snap.timer && _timerEndTime > Date.now()) stopTimer();
+  return '';
+}
+function _coachActAfter(a) {
+  const ok = a.changes.filter((c, k) => !a.result[k]).map(_coachTodayTxt), bad = a.changes.map((c, k) => a.result[k] ? `${_coachTodayTxt(c)}(${a.result[k]})` : '').filter(Boolean);
+  if (a.state === 'undone') return '(这些改动她后来点了撤销，今天的训练回到改之前)';
+  return (ok.length ? `(已直接改了今天的训练：${ok.join('；')})` : '') + (bad.length ? `(没改成：${bad.join('；')})` : '');
+}
+// SSE action → 执行 → 存进那条助手消息的记录 {id, date, changes, dropped, result, state, snap}
+function coachTodayAct(j) {
+  if (!j || typeof j !== 'object' || !Array.isArray(j.changes) || !j.changes.length) return null;
+  const changes = j.changes.slice(0, 6).filter(c => c && typeof c === 'object');
+  const { result, n, snap } = _coachTodayApply(changes);
+  const a = { id: String(j.id || ('a' + Date.now())).slice(0, 80), date: todayStr(), changes, dropped: (Array.isArray(j.dropped) ? j.dropped : []).filter(x => typeof x === 'string').slice(0, 6), result, state: n ? 'applied' : 'failed', snap };
+  if (n) {
+    // 只有最近一次能撤销:对话和陪练两边旧的快照都清掉
+    const st = _coachLoad();
+    [...(st.chat || []), ...((st.quick && st.quick.msgs) || [])].forEach(m => { if (m.action) delete m.action.snap });
+    _coachSave(st);
+    saveState();
+    if (typeof flashSaved === 'function') flashSaved();
+    if (typeof uiRenderP5 === 'function' && snap && 'limits' in snap) uiRenderP5();
+    if (typeof uiCurrentTab !== 'undefined' && uiCurrentTab === 'today') render();
+    const bad = result.filter(Boolean).length;
+    showToast(`已改 ${n} 处${bad ? `，${bad} 条没改` : ''} · 可以撤销`);
+  }
+  return a;
+}
+function coachActUndo(btn) {
+  const aid = btn && btn.closest && btn.closest('.co-act')?.dataset.aid;
+  const st = _coachLoad(), all = [...(st.chat || []), ...((st.quick && st.quick.msgs) || [])];
+  const m = all.find(x => x.action && x.action.id === aid);
+  if (!m || m.action.state !== 'applied' || !m.action.snap) return;
+  const why = _coachTodayUndo(m.action.snap);
+  if (why) { m.action.undoErr = why; _coachSave(st); _coachRepaint(); showToast(why); return }
+  m.action.state = 'undone'; delete m.action.snap; delete m.action.undoErr; m.after = _coachActAfter(m.action);
+  _coachSave(st);
+  saveState();
+  if (typeof uiRenderP5 === 'function') uiRenderP5();
+  if (typeof uiCurrentTab !== 'undefined' && uiCurrentTab === 'today') render();
+  _coachRepaint();
+  showToast('已撤销 · 今天的训练回到改之前');
+}
+function _coachRepaint() { _coachShowChat(); if (typeof _coachQuickPaint === 'function') _coachQuickPaint() }
+function _coachActHtml(a) {
+  const okN = a.result.filter(x => !x).length;
+  const rows = a.changes.map((c, k) => {
+    const bad = a.result[k], txt = _coachTodayTxt(c);
+    return `<li class="${bad ? 'bad' : ''}">${bad ? `<s>${_esc(txt)}</s><small class="co-err">${_esc(bad)}，没改</small>` : `<span>${_esc(txt)}</span>${c.why ? `<small>${_esc(c.why)}</small>` : ''}`}</li>`;
+  }).join('');
+  const gated = _coachGated(), drop = (a.dropped || []).filter(n => !gated.has(n));
+  const head = a.state === 'applied' ? `已改 · 今天 · ${okN} 处` : a.state === 'undone' ? '已撤销 · 今天的训练回到改之前' : '没改成';
+  return skinTpl('coachAct', { a, okN, rows, drop, head }, () => `<div class="co-act" data-aid="${_esc(a.id)}"><div class="co-act-h"><span class="dot" aria-hidden="true"></span>${_esc(head)}</div>`
+    + `<ul class="co-act-list">${rows}</ul>`
+    + (drop.length ? `<div class="co-meta">还提到 ${drop.length} 个不在你今天计划或动作库里的：${_esc(drop.join('、'))}</div>` : '')
+    + (a.undoErr ? `<div class="co-meta co-err">${_esc(a.undoErr)}</div>` : '')
+    + (a.state === 'applied' && a.snap ? `<button type="button" class="link-btn u" style="align-self:flex-start" onclick="coachActUndo(this)">撤销</button>` : '')
+    + `</div>`);
+}
+// 记忆变动:一行小字(「已记住：…」)
+function _coachMemNoteHtml(mm) {
+  const parts = [];
+  if (mm.added?.length) parts.push(`已记住：${mm.added.map(t => `「${t}」`).join('')}`);
+  if (mm.removed?.length) parts.push(`已忘掉：${mm.removed.map(t => `「${t}」`).join('')}`);
+  if (mm.blocked) parts.push(`有 ${mm.blocked} 条不适合记，没存`);
+  return skinTpl('coachMemNote', { mm, parts }, () => `<div class="co-memnote">${parts.map(_esc).join(' · ')} · <button type="button" class="link-btn u" onclick="showTab('me')">在「我 → 05」里看</button></div>`);
 }
 
 // ══ 对话里的「提议改计划」卡片 ══

@@ -640,7 +640,7 @@ function uiRenderMePair() {
   const el = document.getElementById('me-pair'); if (!el) return;
   if (!el.dataset.built) {
     el.innerHTML = uiSecLabel('03 — 训练搭子')
-      + `<span class="hint">配对后日历会标出你俩重合的健身房 / 游泳日，能看对方今日状态、互相加油。只分享天数和当日类型。</span>`
+      + `<span class="hint">配对后日历会标出你俩重合的健身房 / 游泳日，能看对方今日状态、互相加油。两人的训练计划、记录、重量和感受互通，AI 教练也会参考；身体数据、备注原文和私密内容不分享。</span>`
       + `<div class="pair-grid"><span class="k">我的配对码</span><code id="my-pair-code" class="pair-code">（请先登录）</code><button type="button" class="btn-line" onclick="copyMyPairCode()">复制</button>`
       + `<label class="k" for="partner-code-input">搭子配对码</label><input id="partner-code-input" class="line-input" type="text" placeholder="粘贴对方的码" autocomplete="off" spellcheck="false"><button type="button" class="btn-line" id="pair-btn" onclick="savePartnerCode()">连接</button></div>`
       + `<div id="pair-status" class="pair-status" style="display:none"></div>`
