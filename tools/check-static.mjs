@@ -69,6 +69,58 @@ if (/private\//.test(sw)) {
 const googleFontUrl = html.match(/href=["'](https:\/\/fonts\.googleapis\.com\/css2\?[^"']+)["']/i)?.[1];
 if (!googleFontUrl) errors.push('index.html: main Google Fonts stylesheet URL not found');
 else if (!sw.includes(`'${googleFontUrl}'`)) errors.push('sw.js: Google Fonts precache URL must exactly match index.html');
+// 两套风格的字体样式表:纸墨是静态 <link>,运动由 <head> 开机脚本按风格插入 —— 每一条都要在 sw.js 预缓存里(离线切风格也有样式)
+{
+  const fontUrls = [...new Set([...html.matchAll(/https:\/\/fonts\.googleapis\.com\/css2\?[^"'\s<>]+/g)].map(m => m[0]))];
+  if (fontUrls.length < 2) errors.push(`index.html: expected the font stylesheets of both skins (paper <link> + sport in the boot script), found ${fontUrls.length}`);
+  for (const u of fontUrls) if (!sw.includes(`'${u}'`)) errors.push(`sw.js: Google Fonts stylesheet ${u} is used by index.html but not pre-cached`);
+}
+// 页面引用的本地样式表 / 脚本都要预缓存(新加文件最容易漏)
+{
+  const local = [...sw.matchAll(/['"](\.\/[A-Za-z0-9_./@-]+)['"]/g)].map(m => m[1]);
+  for (const m of html.matchAll(/<(?:link[^>]*rel=["']stylesheet["'][^>]*href|script[^>]*src)=["']([^"':]+)["']/gi)) {
+    if (!local.includes('./' + m[1].replace(/^\.\//, ''))) errors.push(`sw.js: local asset ${m[1]} is loaded by index.html but not in LOCAL_ASSETS`);
+  }
+}
+// ══ 风格(纸墨 style.css / 运动 skin-sport.css) ═════════════════════
+{
+  const css = f => fs.readFileSync(f, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+  const paper = css('style.css');
+  let sport = '';
+  try { sport = css('skin-sport.css'); } catch { errors.push('skin-sport.css: missing'); }
+  const block = (text, sel) => { const i = text.indexOf(sel + ' {'); if (i < 0) return null; return text.slice(i + sel.length + 2, text.indexOf('}', i)); };
+  const decl = b => new Map([...(b || '').matchAll(/(--[\w-]+)\s*:\s*([^;]+);/g)].map(m => [m[1], m[2].trim()]));
+  const pRoot = decl(block(paper, ':root'));
+  const pDark = decl(block(paper, 'html.dark'));
+  const sLight = decl(block(sport, 'html[data-skin="sport"]'));
+  const sDark = decl(block(sport, 'html.dark[data-skin="sport"]'));
+  const sDarkMq = decl(block(sport, 'html[data-skin="sport"]:not(.light)'));
+  if (!pRoot.size || !pDark.size) errors.push('style.css: paper token blocks not found (selectors changed? update check-static)');
+  if (!sLight.size || !sDark.size || !sDarkMq.size) errors.push('skin-sport.css: sport token blocks not found (light / html.dark / prefers-color-scheme dark)');
+  // style.css 里写死值的 token(别名 var(--…) 会自动跟着走)运动风格都要有自己的值:JS 内联样式、owner 扩展包都在用这些名字
+  for (const [k, v] of pRoot) if (!/^var\(/.test(v) && !sLight.has(k)) errors.push(`skin-sport.css: token ${k} has a paper value but no sport value`);
+  for (const k of pDark.keys()) {
+    if (!sDark.has(k)) errors.push(`skin-sport.css: dark token ${k} missing in html.dark[data-skin="sport"]`);
+    if (!sDarkMq.has(k)) errors.push(`skin-sport.css: dark token ${k} missing in the prefers-color-scheme dark block`);
+  }
+  // 运动风格的每条规则都要以 html[data-skin="sport"] 开头,别漏进纸墨(纸墨里不许出现任何运动的东西,反过来也一样)
+  for (const m of sport.matchAll(/([^{}]+)\{/g)) {
+    const sel = m[1].trim(); if (!sel || sel.startsWith('@') || /^(from|to|[\d.]+%)$/.test(sel)) continue;   // @media / @keyframes 和关键帧本身
+    const parts = []; let depth = 0, cur = '';
+    for (const ch of sel) { if (ch === '(') depth++; if (ch === ')') depth--; if (ch === ',' && !depth) { parts.push(cur); cur = ''; } else cur += ch; }
+    parts.push(cur);
+    for (const one of parts.map(x => x.trim())) {
+      if (!/^html(\.dark|:not\(\.light\))?\[data-skin="sport"\]/.test(one)) errors.push(`skin-sport.css: selector "${one}" must start with html[data-skin="sport"]`);
+    }
+  }
+  // 开机脚本里的底色(iOS 状态栏)要和两套风格的 --paper 一致
+  const tc = html.match(/CF_TC\s*=\s*\{\s*paper:\s*\['(#\w+)',\s*'(#\w+)'\],\s*sport:\s*\['(#\w+)',\s*'(#\w+)'\]/);
+  if (!tc) errors.push('index.html: boot script CF_TC (theme-color per skin) not found');
+  else {
+    const want = [pRoot.get('--paper'), pDark.get('--paper'), sLight.get('--paper'), sDark.get('--paper')];
+    if (tc.slice(1).join() !== want.join()) errors.push(`index.html: CF_TC ${tc.slice(1).join(' ')} must match --paper in style.css / skin-sport.css (${want.join(' ')})`);
+  }
+}
 for (const m of html.matchAll(/href=["'](https:\/\/cdn\.jsdelivr\.net\/npm\/[^"']+\.css)["']/gi)) {
   if (!sw.includes(`'${m[1]}'`)) errors.push(`sw.js: CDN stylesheet ${m[1]} is loaded by index.html but not pre-cached`);
 }

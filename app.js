@@ -24,6 +24,7 @@ function applyTheme(theme) {
     } else {
         html.classList.remove('dark', 'light');
     }
+    if (typeof cfThemeColor === 'function') cfThemeColor();   // iOS 状态栏颜色跟风格 + 深浅(index.html 开机脚本)
     updateThemeBtn(theme);
 }
 
@@ -61,13 +62,16 @@ function updateThemeBtn(theme){
 
 // ══ State Persistence ════════════════════════════════════
 function saveState(){
-ls(K.settings,{goal:S.goal,level:S.level,days:S.days,dur:S.dur,equip:S.equip,focus:S.focus,limits:S.limits,volumeMultiplier:S.volumeMultiplier,restDur:S.restDur,swimLevel:S.swimLevel,weightLevel:S.weightLevel,periodMode:S.periodMode,displayName:S.displayName,sealChar:S.sealChar,cycleEnabled:S.cycleEnabled,cycleDay:S.cycleDay,cycleLength:S.cycleLength,cycleSetAt:S.cycleSetAt||null,vacuumDays:S.vacuumDays,partnerDays:S.partnerDays,partnerUid:S.partnerUid,autoVolumeAdjust:S.autoVolumeAdjust,userExcluded:S.userExcluded,userExcludeReasons:S.userExcludeReasons,cheer:S.cheer,aiWeights:S.aiWeights,planStale:!!S.planStale});
+ls(K.settings,{goal:S.goal,level:S.level,days:S.days,dur:S.dur,equip:S.equip,focus:S.focus,limits:S.limits,volumeMultiplier:S.volumeMultiplier,restDur:S.restDur,swimLevel:S.swimLevel,weightLevel:S.weightLevel,periodMode:S.periodMode,displayName:S.displayName,sealChar:S.sealChar,cycleEnabled:S.cycleEnabled,cycleDay:S.cycleDay,cycleLength:S.cycleLength,cycleSetAt:S.cycleSetAt||null,vacuumDays:S.vacuumDays,partnerDays:S.partnerDays,partnerUid:S.partnerUid,autoVolumeAdjust:S.autoVolumeAdjust,userExcluded:S.userExcluded,userExcludeReasons:S.userExcludeReasons,cheer:S.cheer,aiWeights:S.aiWeights,planStale:!!S.planStale,skin:S.skin});
 if(S.plan)ls(K.plan,{plan:S.plan,prog:S.prog,adj:S.adj,weights:S.weights,exRpe:S.exRpe,poolLounger:S.poolLounger,flexProg:S.flexProg,unlockedDates:S.unlockedDates});
 localStorage.setItem(nsKey('fit_selDate'), S.selDate || '');
 }
 function loadState(){
 const s=lg(K.settings);
 if(s)Object.assign(S,s);
+// 风格(skin.js):有存档但没这个字段 = 老用户,一直在用纸墨,别偷偷换;没有存档(新用户)就沿用开机脚本定的
+if(s)S.skin=(s.skin==='sport'||s.skin==='paper')?s.skin:'paper';
+if(S.skin&&typeof skinApply==='function')skinApply(S.skin);
 // 迁移：旧目标名「女性线条」→「女性曲线」。改名前存档/云端的 S.goal 可能仍是旧名，
 // 与现版本 hasGoal('女性曲线') 匹配不上 → 会错误回退到练上身的方案。
 if(S.goal&&S.goal.includes('女性线条')){S.goal=S.goal.replace(/女性线条/g,'女性曲线');saveState();}
@@ -182,7 +186,7 @@ const m=x.date.slice(0,7);
 if(m!==lastMonth&&_logShowAll){lastMonth=m;const[y,mo]=m.split('-');html+=`<div class="log-month">${y} · ${String(parseInt(mo)).padStart(2,'0')}</div>`;}
 const logIdx=LOG.indexOf(x);
 const open=_logOpen===x.date;
-html+=`<button type="button" class="log-row" aria-expanded="${open}" onclick="toggleLogRow('${x.date}')"><span><span class="lw">${_escHtml(x.workout||'训练')}</span><span class="lt">${x.date.slice(5).replace('-','/')} · ${x.duration||'?'} min · ${x.exerciseCount||0} 个动作${x.mood?' · '+_escHtml(x.mood):''}</span></span><span class="lr">${x.rpe?'RPE '+x.rpe:'—'}</span></button>`;
+html+=skinTpl('logRow',{x,open},()=>`<button type="button" class="log-row" aria-expanded="${open}" onclick="toggleLogRow('${x.date}')"><span><span class="lw">${_escHtml(x.workout||'训练')}</span><span class="lt">${x.date.slice(5).replace('-','/')} · ${x.duration||'?'} min · ${x.exerciseCount||0} 个动作${x.mood?' · '+_escHtml(x.mood):''}</span></span><span class="lr">${x.rpe?'RPE '+x.rpe:'—'}</span></button>`);
 if(open){
 html+=`<div class="log-detail"><div class="jentry-chips">${x.exercises?x.exercises.map(e=>`<span class="jchip${e.done===false?' undone':''}">${e.name}${e.weight?` ${e.weight}kg`:''}</span>`).join(''):''}</div>`
 +(x.note?`<div class="jentry-note">"${_escHtml(x.note)}"</div>`:'')
@@ -343,14 +347,14 @@ function renderBodyPanel(){
   };
   const charts=BODY_FIELDS.map(spark).join('');
   const vac=(()=>{const d=S.vacuumDays||[],t=todayStr();let st=0;for(let i=0;i<400;i++){const ds=addDays(t,-i);if(d.includes(ds))st++;else if(i>0)break;}const dn=d.includes(t);
-    return `<div style="display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:12px;align-items:center;border-top:1px dashed var(--line);padding-top:8px"><span><span style="display:block">真空吸收腰打卡</span><span class="foot-note">连续 ${st} 天 · 累计 ${d.length} 次</span></span><button type="button" class="btn-line" onclick="logVacuum()"${dn?' aria-disabled="true" style="opacity:.5"':''}>${dn?'今日已打 ✓':'今日打卡'}</button></div>`;})();
-  const hist=BODY_LOG.length?`<details class="fold"><summary>历史记录（${BODY_LOG.length}）</summary><div>${[...BODY_LOG].reverse().slice(0,40).map(x=>`<div style="display:grid;grid-template-columns:auto minmax(0,1fr) auto;column-gap:8px;align-items:center;border-bottom:1px dashed var(--line)" class="note-line"><span>${x.date}</span><span class="faint" style="text-align:right">${BODY_FIELDS.filter(f=>x[f.k]!=null).map(f=>(f.k==='weight'?x.weight+'kg':L(f.k).slice(0,2)+x[f.k])).join(' · ')}</span><button type="button" class="link-btn accent" style="text-align:center" onclick="delBody('${x.date}')" aria-label="删除 ${x.date} 的记录">删除</button></div>`).join('')}</div></details>`:'';
+    return skinTpl('bodyVac',{st,n:d.length,dn},()=>`<div style="display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:12px;align-items:center;border-top:1px dashed var(--line);padding-top:8px"><span><span style="display:block">真空吸收腰打卡</span><span class="foot-note">连续 ${st} 天 · 累计 ${d.length} 次</span></span><button type="button" class="btn-line" onclick="logVacuum()"${dn?' aria-disabled="true" style="opacity:.5"':''}>${dn?'今日已打 ✓':'今日打卡'}</button></div>`);})();
+  const hist=BODY_LOG.length?skinTpl('bodyHist',{L},()=>`<details class="fold"><summary>历史记录（${BODY_LOG.length}）</summary><div>${[...BODY_LOG].reverse().slice(0,40).map(x=>`<div style="display:grid;grid-template-columns:auto minmax(0,1fr) auto;column-gap:8px;align-items:center;border-bottom:1px dashed var(--line)" class="note-line"><span>${x.date}</span><span class="faint" style="text-align:right">${BODY_FIELDS.filter(f=>x[f.k]!=null).map(f=>(f.k==='weight'?x.weight+'kg':L(f.k).slice(0,2)+x[f.k])).join(' · ')}</span><button type="button" class="link-btn accent" style="text-align:center" onclick="delBody('${x.date}')" aria-label="删除 ${x.date} 的记录">删除</button></div>`).join('')}</div></details>`):'';
   const title=_bodyLbl('panel_title','身体记录');
-  return `<div class="panel" id="body-panel"><p class="panel-title">${title} · 体型才是真正的进度</p>
+  return skinTpl('bodyPanel',{title,core,more,vac,ratios,whrNote,charts,hist},()=>`<div class="panel" id="body-panel"><p class="panel-title">${title} · 体型才是真正的进度</p>
 <div class="body-grid">${core}</div>
 <details class="fold"><summary>更多围度（胸 / 胯宽 / 下腹 / 大腿根 / 小腿 / 脚踝）</summary><div class="body-grid">${more}</div><div class="foot-note">每项都有量法提示（长按 / 悬停标签）。位置固定住，数字才有意义。</div></details>
 <button type="button" class="btn-outline" style="min-height:48px;font-size:14px" onclick="logBody()">保存今日数据</button>${vac}
-${ratios?`<div class="kv wide">${ratios}</div>${whrNote}`:''}${charts}${hist}</div>`;
+${ratios?`<div class="kv wide">${ratios}</div>${whrNote}`:''}${charts}${hist}</div>`);
 }
 
 // ══ 曲线焦点面板(2026-08-27) ═══════════════════════════════
@@ -371,8 +375,8 @@ function renderCurvePanel(){
   const hint=total===0
     ? '还没有打卡数据，练几次之后这里就会告诉你哪个点在掉队。'
     : `最弱的一条是<b style="color:var(--accent);font-weight:400">${weak.name}</b>(${weak.sets}/${weak.target} 组)。${(typeof _ownerSession==='function'&&_ownerSession())?'下次生成计划时我会往这边加,你也可以':'可以'}直接在计划里手动添加动作补上。`; // 自动补弱(_appendWeakFocus)只对 owner 开,别给别人许兑现不了的承诺
-  return `<div class="panel" id="curve-panel"><p class="panel-title">曲线焦点 · 近 4 周练了多少 vs 尺寸往哪走</p>
-${rows}<div class="hint quote-rule">${hint}</div></div>`;
+  return skinTpl('logCurve',{st,hint},()=>`<div class="panel" id="curve-panel"><p class="panel-title">曲线焦点 · 近 4 周练了多少 vs 尺寸往哪走</p>
+${rows}<div class="hint quote-rule">${hint}</div></div>`);
 }
 
 // ══ Stats ════════════════════════════════════════════════
@@ -458,7 +462,7 @@ const maxDist=distEntries[0]?.[1]||1;
 
 const ascRow=(k,bar,v)=>`<div style="display:grid;grid-template-columns:76px minmax(0,1fr) auto;column-gap:8px;align-items:baseline" class="note-line"><span class="faint">${k}</span><span class="ascii" style="line-height:1.6;overflow:hidden">${bar}</span><span>${v}</span></div>`;
 
-const top=`<div class="bignums">
+const top=skinTpl('logTop',{monthLogs,weekPct,weekDone,weekTotal,streak,weeks,maxW,monthPR,avgRpe},()=>`<div class="bignums">
 <div><span class="bignum">${monthLogs.length}</span><span class="biglbl">本月次数</span></div>
 <div><span class="bignum">${weekPct}<small>%</small></span><span class="biglbl">本周完成率 · ${weekDone}/${weekTotal}</span></div>
 <div><span class="bignum">${streak}</span><span class="biglbl">连续打卡天数</span></div>
@@ -475,16 +479,16 @@ ${weeks.map(x=>ascRow(x.w,_asciiBar(x.sets/maxW,10),`${String(x.sets).padStart(2
 <span class="k">平均 RPE</span><span>${avgRpe}</span>
 <span class="k">新纪录</span><span>${monthPR}</span></div>
 <div class="ascii" style="line-height:1.4"><span class="k">本周 </span>${_asciiBar(weekPct/100,16)} ${weekPct}%</div>
-</div>`;
+</div>`);
 
-const heat=`<div class="panel" id="heat-panel"><p class="panel-title">近 12 周 · 有打卡的天</p><div class="heat" aria-label="近 12 周训练热图，■ 表示当天有打卡">${heatRows}</div><div class="foot-note">■ 练了　· 没练　□ 今天。看某天的详情，在上面的日志里点开。</div></div>`;
+const heat=skinTpl('logHeat',{tStr,start,gridStart,logDates},()=>`<div class="panel" id="heat-panel"><p class="panel-title">近 12 周 · 有打卡的天</p><div class="heat" aria-label="近 12 周训练热图，■ 表示当天有打卡">${heatRows}</div><div class="foot-note">■ 练了　· 没练　□ 今天。看某天的详情，在上面的日志里点开。</div></div>`);
 
-const distHtml=distEntries.length?`<div class="panel" id="dist-panel"><p class="panel-title">肌群训练量 · 近 60 天</p>${distEntries.map(([g,c])=>ascRow(_GRP_NAMES[g]||g,_asciiBar(c/maxDist,12),c)).join('')}</div>`:'';
+const distHtml=distEntries.length?skinTpl('logDist',{distEntries,maxDist},()=>`<div class="panel" id="dist-panel"><p class="panel-title">肌群训练量 · 近 60 天</p>${distEntries.map(([g,c])=>ascRow(_GRP_NAMES[g]||g,_asciiBar(c/maxDist,12),c)).join('')}</div>`):'';
 
 const wtHtml=(()=>{
 const wtEx=Object.entries(W_HIST).filter(([,h])=>h.length>=2).sort((a,b)=>b[1].length-a[1].length).slice(0,6);
 if(!wtEx.length)return '';
-return `<div class="panel" id="wt-panel"><p class="panel-title">重量进步</p>
+return skinTpl('logWt',{wtEx},()=>`<div class="panel" id="wt-panel"><p class="panel-title">重量进步</p>
   ${wtEx.map(([name,hist])=>{
     const max=Math.max(...hist.map(h=>h.weight));
     const min=Math.min(...hist.map(h=>h.weight));
@@ -502,12 +506,12 @@ return `<div class="panel" id="wt-panel"><p class="panel-title">重量进步</p>
       <div class="foot-note" style="display:flex;justify-content:space-between"><span>${recent[0]?.date?.slice(5)||''}</span><span>${last}kg</span></div>
     </div>`;
   }).join('')}
-</div>`;
+</div>`);
 })();
 
-const prHtml=PR_LIST.length?`<div class="panel" id="pr-panel"><p class="panel-title">个人纪录</p>
+const prHtml=PR_LIST.length?skinTpl('logPr',{list:PR_LIST.slice(0,10)},()=>`<div class="panel" id="pr-panel"><p class="panel-title">个人纪录</p>
   ${PR_LIST.slice(0,10).map(pr=>`<div style="display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:8px;align-items:baseline;border-bottom:1px dashed var(--line);padding:6px 0"><span><span style="display:block">${pr.exercise}</span><span class="foot-note">${pr.date}</span></span><span class="note-line"><span class="faint" style="text-decoration:line-through">${pr.prev}kg</span> → <span class="accent">${pr.weight}kg</span></span></div>`).join('')}
-</div>`:'';
+</div>`):'';
 
 const achHtml=(kind)=>{
 const isGym=kind==='gym', L=isGym?GYM_LOG:SWIM_LOG, MS=isGym?GYM_MILESTONES:SWIM_MILESTONES;
@@ -524,10 +528,10 @@ const badges=MS.map((ms,idx)=>{
   return `<button type="button" class="ach-badge-card${on?' on':''}" onclick="openAchievementModal('${kind}', ${idx})" aria-label="${ms.title}${on?' 已解锁':' 未解锁'}">${svg}<span class="an">${ms.title}</span><span class="ad">${on&&matched?matched.date.slice(5):`${count}/${ms.count}`}</span></button>`;
 }).join('');
 const nm=isGym?'力量':'游泳';
-return `<div class="panel" id="ach-${kind}"><p class="panel-title">${nm}成就</p>
+return skinTpl('logAch',{kind,nm,count,thisM,totalMin,nextMs,badges},()=>`<div class="panel" id="ach-${kind}"><p class="panel-title">${nm}成就</p>
 <div class="kv wide"><span class="k">总${nm}次数</span><span>${count}</span><span class="k">本月${nm}</span><span>${thisM.length}</span><span class="k">总${nm}分钟</span><span>${totalMin}</span></div>
 ${nextMs?`<div class="ascii" style="line-height:1.4"><span class="k">下一个 · ${nextMs.title} </span>\n${_asciiBar(count/nextMs.count,16)} ${count}/${nextMs.count}</div>`:'<div class="note-line olive">所有成就已解锁！</div>'}
-<p class="sub-label">${nm}勋章墙</p><div class="ach-wall">${badges}</div></div>`;
+<p class="sub-label">${nm}勋章墙</p><div class="ach-wall">${badges}</div></div>`);
 };
 
 // 日志列表(#journal)夹在「本月」和后面的明细之间:innerHTML 重画前先把它拿出来,画完放回去
@@ -1089,6 +1093,12 @@ function openShareModal(logEntry) {
     if (container) {
         container.innerHTML = `<img src="${imgUrl}" alt="打卡卡片预览" />`;
     }
+    // 第一次画时网络字体可能还没到(canvas 不等字体):到了再画一遍
+    if (typeof skinCanvasRedraw === 'function') skinCanvasRedraw(() => {
+        const m = document.getElementById('share-modal'), img = container && container.querySelector('img');
+        if (!m || !m.classList.contains('open') || _currentShareDate !== logEntry.date || !img) return;
+        _currentShareImgUrl = drawShareCard(logEntry); img.src = _currentShareImgUrl;
+    });
     
     const modal = document.getElementById('share-modal');
     if (modal) modal.classList.add('open');
@@ -1164,6 +1174,12 @@ function toggleAchShareCard() {
         _currentAchImgUrl = imgUrl;
         
         container.innerHTML = `<img src="${imgUrl}" alt="成就卡片" />`;
+        const _t = _currentAchType, _i = _currentAchIdx;
+        if (typeof skinCanvasRedraw === 'function') skinCanvasRedraw(() => {   // 字体到了再画一遍(同上)
+            const img = container.querySelector('img');
+            if (!_achShareMode || _t !== _currentAchType || _i !== _currentAchIdx || !img) return;
+            _currentAchImgUrl = drawAchievementShareCard(_t, _i); img.src = _currentAchImgUrl;
+        });
         container.style.display = 'flex';
         btn.textContent = '下载勋章卡';
         _achShareMode = true;
@@ -1275,11 +1291,15 @@ function getAchievementBadgeSvg(ms, isUnlocked) {
     `;
 }
 
+// 分享卡片按风格画:运动的在 skin-sport.js(SKIN_TPL.sport.achCard / shareCard),纸墨的是下面 _draw…Paper
 function drawAchievementShareCard(type, idx) {
+    return typeof skinTpl === 'function' ? skinTpl('achCard', { type, idx }, c => _drawAchievementShareCardPaper(c.type, c.idx)) : _drawAchievementShareCardPaper(type, idx);
+}
+function _drawAchievementShareCardPaper(type, idx) {
     const canvas = document.createElement('canvas');
     canvas.width = 600;
     canvas.height = 850;
-    const ctx = canvas.getContext('2d');
+    const ctx = typeof skinCanvas === 'function' ? skinCanvas(canvas.getContext('2d')) : canvas.getContext('2d');   // 字体跟风格走(skin.js)
     
     // 1. Background
     ctx.fillStyle = '#f5f4ef';
@@ -1589,10 +1609,13 @@ function drawAchievementShareCard(type, idx) {
 }
 
 function drawShareCard(logEntry) {
+    return typeof skinTpl === 'function' ? skinTpl('shareCard', logEntry, _drawShareCardPaper) : _drawShareCardPaper(logEntry);
+}
+function _drawShareCardPaper(logEntry) {
     const canvas = document.createElement('canvas');
     canvas.width = 600;
     canvas.height = 850;
-    const ctx = canvas.getContext('2d');
+    const ctx = typeof skinCanvas === 'function' ? skinCanvas(canvas.getContext('2d')) : canvas.getContext('2d');   // 字体跟风格走(skin.js)
     
     // 1. Background (warm beige paper texture style)
     ctx.fillStyle = '#f5f4ef';

@@ -12,6 +12,37 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="theme-color" content="#f5f2eb" media="(prefers-color-scheme: light)">
     <meta name="theme-color" content="#151412" media="(prefers-color-scheme: dark)">
+    <!-- 开机:CSS 生效前定好风格(data-skin)和深浅,免得先闪一下纸墨。说明见 skin.js 文件头。
+         本机缓存 fit_skin 没有时:有旧记录 = 老用户 → 纸墨;什么都没有 = 新用户 → 运动。
+         运动风格的字体只在用到时加载(纸墨那条在下面一直加载);两条都在 sw.js 预缓存里,check-static 会对。
+         CF_TC 是两套风格的底色(浅/深),要和 style.css / skin-sport.css 里的 --paper 一致,check-static 会对。 -->
+    <script>
+        (function () {
+            var d = document.documentElement, k = 'paper', t = '';
+            try {
+                var ls = window.localStorage; k = ls.getItem('fit_skin');
+                if (k !== 'sport' && k !== 'paper') { k = 'sport'; for (var i = 0; i < ls.length; i++) if (/(^|__)fit_(s1|p1|log1)$/.test(ls.key(i))) { k = 'paper'; break; } }
+                t = ls.getItem('fit_theme') || '';
+            } catch (e) { k = 'paper'; }
+            d.setAttribute('data-skin', k);
+            if (t === 'dark' || t === 'light') d.classList.add(t);
+            var FONTS = { sport: 'https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700;800&family=Noto+Sans+SC:wght@400..900&display=swap' };
+            window.CF_TC = { paper: ['#f5f2eb', '#151412'], sport: ['#f2f2ee', '#0d0d0d'] };
+            window.cfSkinFonts = function (s) {
+                var u = FONTS[s]; if (!u || document.querySelector('link[data-skin-fonts="' + s + '"]')) return;
+                if (document.readyState === 'loading' && !document.body) { document.write('<link rel="stylesheet" data-skin-fonts="' + s + '" href="' + u + '">'); return; }   // 开机:和静态 <link> 一样阻塞首屏,不闪字体
+                var l = document.createElement('link'); l.rel = 'stylesheet'; l.href = u; l.setAttribute('data-skin-fonts', s); document.head.appendChild(l);
+            };
+            // iOS 状态栏颜色:跟风格 + 深浅。跟随系统时浅/深两条 meta 各给各的,手动选了就两条都给同一个
+            window.cfThemeColor = function () {
+                var c = CF_TC[d.getAttribute('data-skin')] || CF_TC.paper, f = d.classList.contains('dark') ? 1 : d.classList.contains('light') ? 0 : -1;
+                var m = document.querySelectorAll('meta[name="theme-color"]');
+                for (var i = 0; i < m.length; i++) m[i].setAttribute('content', c[f < 0 ? (/dark/.test(m[i].getAttribute('media') || '') ? 1 : 0) : f]);
+            };
+            if (k === 'sport') cfSkinFonts('sport');
+            cfThemeColor();
+        })();
+    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
@@ -19,6 +50,7 @@
         rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
     <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="skin-sport.css">
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
@@ -66,8 +98,14 @@
             <section class="panel-tab" id="me" role="tabpanel" aria-labelledby="tab-me" hidden>
                 <div id="me-content"></div>
                 <div class="version-foot">
-                    <button type="button" id="app-version" class="link-btn" onclick="toggleChangelog()" aria-expanded="false" aria-controls="changelog-box">Cici健身计划 v3.1.0 (build 155) · 更新日志 ▾</button>
+                    <button type="button" id="app-version" class="link-btn" onclick="toggleChangelog()" aria-expanded="false" aria-controls="changelog-box">Cici健身计划 v3.2.0 (build 156) · 更新日志 ▾</button>
                     <div id="changelog-box" style="display:none">
+                        <p class="cl-h">v3.2.0 · 2026-10-28</p>
+                        <ul>
+                            <li>新增「运动」界面风格：无衬线大字、白卡片、荧光绿重点。新手设置第一步和「我 → 外观」里都能切换，原来的「纸墨」原样保留。新装默认运动，已经在用的保持纸墨。</li>
+                            <li>运动风格的今天页：「下一项」大卡片写着组 × 次和重量，做完一组点一下，自动开始组间倒计时，可以加 15 秒或跳过；顶上的圆环显示主项做完几个。</li>
+                            <li>「做到第几组」只记在这台手机上；换手机只丢组数，「做完没有」照常同步。</li>
+                        </ul>
                         <p class="cl-h">v3.1.0 · 2026-10-28</p>
                         <ul>
                             <li>AI 教练进到各页（已开通才有）：今天顶上每天一段「教练的话」；换动作选了原因，教练按原因挑替代；打卡后教练马上看这次的记录，身体不适可以一键加进「身体情况」。</li>
@@ -218,6 +256,8 @@
     <!-- Developer Testing Console -->
     <script src="dev.js" onerror="console.log('Running in production mode (dev.js not loaded)')"></script>
 
+    <script src="skin.js"></script>
+    <script src="skin-sport.js"></script>
     <script src="ui.js"></script>
     <script src="core.js"></script>
     <script src="app.js"></script>

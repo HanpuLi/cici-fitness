@@ -1,6 +1,6 @@
 // ══ System Version ═════════════════════════════════════════
 const APP_VERSION = 'v3.1.0';
-const APP_BUILD = 155;               // = sw.js 的 CACHE 编号 = index.html 页脚 build(check-static 会查,三处一起改)
+const APP_BUILD = 156;               // = sw.js 的 CACHE 编号 = index.html 页脚 build(check-static 会查,三处一起改)
 const APP_BUILD_DATE = '2026-10-28';
 window.APP_VERSION = APP_VERSION;
 window.APP_BUILD = APP_BUILD;
@@ -2619,6 +2619,10 @@ function render() {
 
   let h = _todayNotices(sel, today);
   if (_xMode && _ownerSession()) h += _xPlanTop(today);
+  if (typeof skinHas === 'function' && skinHas('todayBody')) {
+    // 运动风格:今天页正文整块换成卡片版式(skin-sport.js「10 今天」);功能、数据、调用的函数和下面纸墨那段一一对应
+    h += SKIN_TPL.sport.todayBody({ sel, today, planDays, tip });
+  } else {
   if (typeof coachTodayNoteHtml === 'function') h += coachTodayNoteHtml(sel ? sel.date : today);
 
   if (sel && !sel.isRest) {
@@ -2701,7 +2705,9 @@ function render() {
   if (_xMode && _ownerSession() && hasGoal('女性曲线')) {
     h += (_xp() && _xp().curveTipHtml) || '';
   }
+  }   // 纸墨正文结束
   mainEl.innerHTML = h;
+  if (typeof skinAfterRender === 'function') skinAfterRender('today');
 
   if ('setAppBadge' in navigator) {
     const todayPlan = S.plan?.days.find(d => d.date === today);
@@ -3035,6 +3041,7 @@ function _notifyRestDone() {
 
 let _timerEndTime = 0;
 let _timerFired = false;
+let _timerKind = '', _timerTotal = 0;   // 这次计时是什么(原始标签)/ 总秒数:运动风格今天页的组间倒计时读它们
 let _multiTimerQueue = [];
 let _multiTimerIdx = 0;
 
@@ -3091,7 +3098,8 @@ document.addEventListener('visibilitychange', () => {
   }
 });
 
-function startTimer(seconds, label = "休息中") {
+// opts(只有运动风格的「+15 s」在用):{ quiet: 不放开始音, total: 进度条按这个总秒数算 }
+function startTimer(seconds, label = "休息中", opts) {
   clearInterval(_timerInterval);
   _releaseWakeLock();
   _requestWakeLock();
@@ -3102,6 +3110,7 @@ function startTimer(seconds, label = "休息中") {
   const prog = document.getElementById('timer-progress');
   if (!bar) return;
 
+  _timerKind = label;
   if (_xMode && _ownerSession() && label === '组间休息') {
     const cue = _xPick('rest_cues');
     if (cue) label = cue;
@@ -3117,9 +3126,10 @@ function startTimer(seconds, label = "休息中") {
   bar.classList.add('show');
   unlockAudio();
   _ensureNotifyPermission();
-  playRestStartSound();
+  if (!(opts && opts.quiet)) playRestStartSound();
 
-  const total = seconds;
+  const total = (opts && opts.total) || seconds;
+  _timerTotal = total;
   const endTime = Date.now() + seconds * 1000;
   _timerEndTime = endTime;
   _timerFired = false;
@@ -3239,10 +3249,13 @@ function updateRpeModalLabels() {
 let _pickedRpe = null;
 function _rpeEyebrow(day, text) {
   const el = document.getElementById('rpe-eyebrow'); if (!el) return;
-  if (text) { el.textContent = text; return; }
-  if (!day) { el.textContent = '打卡'; return; }
-  const p = S.prog[day.date] || {}, c = Object.keys(p).filter(k => p[k]).length;
-  el.textContent = `打卡 · ${day.workoutType} · ${c}/${day.exercises.length}`;
+  // 运动风格:完成数挪进标题下面的数字块(skin-sport.js 60 区)
+  skinTpl('rpeEyebrow', { el, day, text }, () => {
+    if (text) { el.textContent = text; return; }
+    if (!day) { el.textContent = '打卡'; return; }
+    const p = S.prog[day.date] || {}, c = Object.keys(p).filter(k => p[k]).length;
+    el.textContent = `打卡 · ${day.workoutType} · ${c}/${day.exercises.length}`;
+  });
 }
 function pickRPE(n) {
   _pickedRpe = n;
@@ -3549,10 +3562,10 @@ function _renderSwapSheet() {
   const modal = _swapModalEl(), c = _swapCtx || {};
   const diffLabel = ['', '★', '★★', '★★★'];
   if (c.byName) {
-    modal.innerHTML = `<div class="ex-modal-card" onclick="event.stopPropagation()"><div class="ex-modal-hdr"><div><div class="sheet-eyebrow">永久排除</div><div class="sheet-title">${_escHtml(c.byName)}</div></div><button class="ex-modal-close" onclick="uiCloseOverlay('swap-modal')">关闭</button></div>`
+    modal.innerHTML = skinTpl('swapSheetByName', { name: c.byName, reason: _swapReason }, () => `<div class="ex-modal-card" onclick="event.stopPropagation()"><div class="ex-modal-hdr"><div><div class="sheet-eyebrow">永久排除</div><div class="sheet-title">${_escHtml(c.byName)}</div></div><button class="ex-modal-close" onclick="uiCloseOverlay('swap-modal')">关闭</button></div>`
       + `<span class="sub-label">为什么（选一个，记在排除清单里）</span>${uiChips('', 'swapReason', SWAP_REASONS, v => v === _swapReason)}`
       + `<p class="sheet-desc">后面的计划、换动作、热身和收尾都会避开它；今天和以后的安排里有它的都会删掉。想恢复去「计划 → 07」。</p>`
-      + `<button class="btn-line accent" onclick="excludeFromSheet()">✕ 永久排除</button><button class="btn-line" onclick="uiCloseOverlay('swap-modal')">取消</button></div>`;
+      + `<button class="btn-line accent" onclick="excludeFromSheet()">✕ 永久排除</button><button class="btn-line" onclick="uiCloseOverlay('swap-modal')">取消</button></div>`);
     return;
   }
   const sel = S.plan.days.find(d => d.date === c.date), ex = sel && sel.exercises[c.ei];
@@ -3567,7 +3580,8 @@ function _renderSwapSheet() {
     const last = W_HIST[alt.n] ? W_HIST[alt.n][W_HIST[alt.n].length - 1].weight : null;
     return `<button type="button" class="swap-option" onclick="doSwap('${c.date}',${c.ei},${idx})"><span><span class="so-n">${alt.n}</span><span class="so-s">${ex.sets}×${reps}${unit}${last ? ` · 上次 ${last} kg` : ''} · ${diffLabel[alt.diff || 1]}</span></span>${alt.note ? `<span class="so-note">${alt.note}</span>` : ''}</button>`;
   };
-  modal.innerHTML = `<div class="ex-modal-card" onclick="event.stopPropagation()">`
+  // 运动风格换结构(skin-sport.js 60 区);ctx 给它同一份数据,点了调的函数和纸墨一样
+  modal.innerHTML = skinTpl('swapSheet', { date: c.date, ei: c.ei, sel, ex, alts, pos, canSwap, aiOn, reason: _swapReason, showAll: _swapShowAll }, () => `<div class="ex-modal-card" onclick="event.stopPropagation()">`
     + `<div class="ex-modal-hdr"><div><div class="sheet-eyebrow">${canSwap ? '换掉' : '划掉'}${canSwap && pos ? ` · ${String(pos).padStart(2, '0')}` : ''}</div><div class="sheet-title">${_escHtml(ex.name)}</div></div><button class="ex-modal-close" onclick="uiCloseOverlay('swap-modal')">关闭</button></div>`
     + uiChips('', 'swapReason', SWAP_REASONS, v => v === _swapReason)
     + (canSwap && aiOn && typeof coachSwapHtml === 'function' ? coachSwapHtml(c.date, c.ei) : '')
@@ -3577,7 +3591,7 @@ function _renderSwapSheet() {
       : `<p class="sheet-desc">热身 / 拉伸不换，可以只今天划掉，或者永久排除。</p>`)
     + `<div class="btn-row" style="border-top:1px solid var(--line);padding-top:12px"><button class="btn-line" onclick="strikeToday('${c.date}',${c.ei})">只今天划掉</button><button class="btn-line accent" onclick="excludeFromSheet()">✕ 永久排除</button></div>`
     + (aiOn ? `<button type="button" class="link-btn u" onclick="uiCloseOverlay('swap-modal');coachAskAbout('${_q(ex.name)}','换')">问教练怎么换</button>` : '')
-    + `<button class="btn-line" onclick="uiCloseOverlay('swap-modal')">关闭</button></div>`;
+    + `<button class="btn-line" onclick="uiCloseOverlay('swap-modal')">关闭</button></div>`);
 }
 function excludeFromSheet() {
   const c = _swapCtx || {};
@@ -4822,14 +4836,15 @@ function renderGuided() {
     mainBtn = `<button class="btn-primary" onclick="wmStartCountdown()">▶ 开始 ${sideLbl}${reps} ${ex.unit}</button>`;
     altBtn = `<button class="btn-line" onclick="wmDoneSet()">不计时，直接${doneLbl.replace(' → 休息', '')}</button>`;
   }
-  card.innerHTML = `<div class="wm-top"><span class="sheet-eyebrow">引导训练 · 动作 ${_wmIdx + 1}/${list.length}</span><button class="ex-modal-close" onclick="wmClose()" aria-label="关闭引导训练">关闭</button></div>
+  // 运动风格:荧光绿焦点卡(skin-sport.js 60 区);id(wm-weight / wm-cd / wm-cd-bar)和点了调的函数不变
+  card.innerHTML = skinTpl('guided', { date, idx: _wmIdx, set: _wmSet, side: _wmSide, list, ex, simple, sets, reps, needW, lastW, e1rm, curW, dispName, dispNote, timed, running, sideLbl }, () => `<div class="wm-top"><span class="sheet-eyebrow">引导训练 · 动作 ${_wmIdx + 1}/${list.length}</span><button class="ex-modal-close" onclick="wmClose()" aria-label="关闭引导训练">关闭</button></div>
   <h2 class="wm-name">${dispName}</h2>
   <p class="tag">${(ex.muscle || []).join(' · ') || (ex.isWarmup ? '热身' : ex.isStretch ? '拉伸' : '')}</p>
   <div class="wm-set">${simple ? `${reps} ${ex.unit}` : `第 <b>${_wmSet}</b> / ${sets} 组 · 目标 ${reps} ${ex.unit}${ex.bi ? '/每侧' : ''}`}</div>
   ${needW ? `<div class="wm-weight"><label for="wm-weight">重量</label><input id="wm-weight" type="number" inputmode="decimal" step="0.5" value="${curW || ''}" placeholder="${lastW ? lastW.weight : ''}"><span>kg${lastW ? ' · 上次 ' + lastW.weight : ''}${e1rm ? ' · 1RM≈' + e1rm : ''}</span></div>` : ''}
   ${dispNote ? `<div class="exnote">${dispNote}</div>` : ''}
   ${cdBlock}<div class="wm-nav"><button class="btn-line" onclick="wmNav(-1)" aria-label="上一个动作">↑</button>${mainBtn}<button class="btn-line" onclick="wmNav(1)" aria-label="下一个动作">↓</button></div>${altBtn}
-  <button class="btn-line" onclick="wmFinish()">结束训练并打卡</button>`;
+  <button class="btn-line" onclick="wmFinish()">结束训练并打卡</button>`);
   const wEl = document.getElementById('wm-weight');
   if (wEl) wEl.addEventListener('change', () => { const v = parseFloat(wEl.value); if (isFinite(v) && v > 0) setWeight(date, _wmIdx, v); });
 }
@@ -4881,7 +4896,7 @@ function renderExDetailContent() {
   const mistakes = altActive ? [] : (info?.mistakes || []);
   
   document.getElementById('ex-modal-title').textContent = dispName;
-  document.getElementById('ex-modal-muscles').innerHTML = muscles.map(m => `<span class="jchip">${m}</span>`).join(' · ') + (typeof renderMuscleDiagram === 'function' ? renderMuscleDiagram(muscles, dispName) : '');
+  document.getElementById('ex-modal-muscles').innerHTML = skinTpl('exMuscles', { muscles, dispName }, () => muscles.map(m => `<span class="jchip">${m}</span>`).join(' · ') + (typeof renderMuscleDiagram === 'function' ? renderMuscleDiagram(muscles, dispName) : ''));
   
   const _e1rm = typeof estimate1RM === 'function' ? estimate1RM(name) : null;
   const _strEl = document.getElementById('ex-modal-strength');
@@ -4902,7 +4917,7 @@ function renderExDetailContent() {
         ${_djump('https://keep.com/', 'Keep', '打开 Keep app（Keep 无关键词搜索链接，需自行搜索）')}
       </div>`;
       const _str = _e1rm ? `<div class="kv wide" style="margin-top:4px"><span class="k">预计 1RM</span><span>≈ ${_e1rm} kg <span class="faint">（基于你的历史）</span></span><span class="k">目标重量</span><span>力量 5 次≈${weightForReps(_e1rm, 5)} · 增肌 10 次≈${weightForReps(_e1rm, 10)} · 塑形 15 次≈${weightForReps(_e1rm, 15)} kg</span></div>` : '';
-      _strEl.innerHTML = _demo + _str;
+      _strEl.innerHTML = skinTpl('exStrength', { name, gif: _gif, e1rm: _e1rm, dq: _dq }, () => _demo + _str);
     }
   }
   
@@ -4910,10 +4925,10 @@ function renderExDetailContent() {
   // 徒手但可加负荷的动作:把"怎么上重量"顶在提示第一条(反馈①:有配重框就必须写清怎么加)
   const _howW = (!altActive && typeof WEIGHT_HOW !== 'undefined' && WEIGHT_HOW[name]) ? [WEIGHT_HOW[name]] : [];
   const _allTips = _howW.concat(tips);
-  document.getElementById('ex-modal-tips').innerHTML = _allTips.length ? _allTips.map((t, i) => (i < _howW.length
+  document.getElementById('ex-modal-tips').innerHTML = skinTpl('exTips', { how: _howW, tips }, () => _allTips.length ? _allTips.map((t, i) => (i < _howW.length
     ? `<div class="ex-tip how"><span class="sub-label" style="color:inherit">[ 怎么上重量 ]</span> ${t}</div>`
-    : `<div class="ex-tip">${t}</div>`)).join('') : '';
-  document.getElementById('ex-modal-mistakes').innerHTML = mistakes.length ? `<p class="sec-label" style="color:var(--accent);margin-top:4px">常见错误</p>` + mistakes.map(m => `<div class="ex-tip mistake">${m}</div>`).join('') : '';
+    : `<div class="ex-tip">${t}</div>`)).join('') : '');
+  document.getElementById('ex-modal-mistakes').innerHTML = skinTpl('exMistakes', mistakes, () => mistakes.length ? `<p class="sec-label" style="color:var(--accent);margin-top:4px">常见错误</p>` + mistakes.map(m => `<div class="ex-tip mistake">${m}</div>`).join('') : '');
 
   // 替换 / 划掉放在顶部(体检 #22:原来在卡片最底下,要滚过整页说明才够得着)
   const actEl = document.getElementById('ex-modal-actions');
@@ -4923,11 +4938,11 @@ function renderExDetailContent() {
     const ex = day && ei !== null && ei !== undefined ? day.exercises[ei] : null;
     if (ex && ex.name === name && !isLocked(day)) {
       const canSwap = !(ex.isWarmup || (ex.isStretch && !isWeightedMove(ex.name)));
-      actEl.innerHTML = canSwap
+      actEl.innerHTML = skinTpl('exActions', { d, ei, name, canSwap }, () => canSwap
         ? `<button class="btn-line" onclick="closeExDetail();swapExercise('${d}', ${ei})">换 / 划掉</button><button class="btn-line accent" onclick="closeExDetail();openSwapSheet('${d}', ${ei})">✕ 划掉 / 永久排除</button>`
-        : `<button class="btn-line accent full" onclick="closeExDetail();openSwapSheet('${d}', ${ei})">✕ 划掉 / 永久排除</button>`;
+        : `<button class="btn-line accent full" onclick="closeExDetail();openSwapSheet('${d}', ${ei})">✕ 划掉 / 永久排除</button>`);
     } else {
-      actEl.innerHTML = `<button class="btn-line accent full" onclick="closeExDetail();openExcludeByName('${_q(name)}')">✕ 永久排除这个动作（以后的计划都避开）</button>`;
+      actEl.innerHTML = skinTpl('exActions', { name, byName: true }, () => `<button class="btn-line accent full" onclick="closeExDetail();openExcludeByName('${_q(name)}')">✕ 永久排除这个动作（以后的计划都避开）</button>`);
     }
   }
 }
@@ -4968,11 +4983,11 @@ function showHistoryDetail(dateStr) {
   const d = new Date(dateStr + 'T12:00:00');
   const dayName = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'][d.getDay()];
   const dateFmt = `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日 ${dayName}`;
-  const head = `<div class="hist-detail-header"><span class="hist-detail-date">${dateFmt}</span><button class="ex-modal-close" onclick="closeHistModal()">关闭</button></div>`;
+  const head = skinTpl('histHead', { d, dayName }, () => `<div class="hist-detail-header"><span class="hist-detail-date">${dateFmt}</span><button class="ex-modal-close" onclick="closeHistModal()">关闭</button></div>`);
   if (!entries.length) { content.innerHTML = head + `<div class="hist-empty">该日暂无训练记录</div>`; modal.classList.add('open'); return }
   let html = head;
   entries.forEach(entry => {
-    html += `<div class="hist-detail-meta"><span class="hist-detail-chip type">${_escHtml(entry.workout || '训练')}</span><span class="hist-detail-chip dur">${entry.duration || '?'} min</span>${entry.rpe ? `<span class="hist-detail-chip rpe">RPE ${entry.rpe}/10</span>` : ''}${entry.mood ? `<span class="hist-detail-chip mood">${entry.mood}</span>` : ''}</div>`;
+    html += skinTpl('histMeta', { entry }, () => `<div class="hist-detail-meta"><span class="hist-detail-chip type">${_escHtml(entry.workout || '训练')}</span><span class="hist-detail-chip dur">${entry.duration || '?'} min</span>${entry.rpe ? `<span class="hist-detail-chip rpe">RPE ${entry.rpe}/10</span>` : ''}${entry.mood ? `<span class="hist-detail-chip mood">${entry.mood}</span>` : ''}</div>`);
     if (entry.exercises && entry.exercises.length) {
       html += `<div class="hist-detail-exercises">`;
       entry.exercises.forEach(ex => { html += `<div class="hist-ex-row${ex.done === false ? ' hist-ex-undone' : ''}"><button type="button" class="hist-ex-name" ${_detailAttrs(ex.name)}>${ex.name}</button><span class="hist-ex-detail"><span>${ex.sets || '?'}×${ex.reps || '?'}${ex.unit || '次'}</span>${ex.weight ? `<span class="hist-ex-weight">${ex.weight} kg</span>` : ''}</span></div>` });
@@ -5156,7 +5171,7 @@ function renderMuscleDiagram(muscles, exName = '') {
     : isShoulder ? ['肩部孤立发力要领 · Deltoid Alignment', '解剖发力', '沉肩锁定斜方肌，让大臂带动手臂向上提起。避免借力甩动，顶峰稍作停顿感应侧束/前束。']
     : isSwim ? ['水中动力发力要领 · Hydrodynamics Stroke', '水中发力', '高肘抱水-推进连贯，核心绷紧保持体表流线型以降低水阻。打腿由髋部发力传导至脚尖。']
     : ['目标孤立发力 · Target Isolation', '解剖发力', '建立意念-肌肉连接（Mind-Muscle Connection），在动作顶峰保持有意识的孤立张力。'];
-  const posePattern = `<p class="sec-label">${POSE[0]}</p><div class="ex-tip"><span class="sub-label">[ ${POSE[1]} ]</span> ${POSE[2]}</div>`;
+  const posePattern = skinTpl('exPose', POSE, () => `<p class="sec-label">${POSE[0]}</p><div class="ex-tip"><span class="sub-label">[ ${POSE[1]} ]</span> ${POSE[2]}</div>`);
 
   const imgSection = imgInfo ? `
     <div style="display:flex;justify-content:center;align-items:center;gap:12px;background:#fff;padding:12px;border:1px solid var(--line)">
@@ -5201,7 +5216,7 @@ function openAddExerciseModal(date) {
   const allGroups = Object.keys(DB);
   const otherGroups = allGroups.filter(g => !targetGroups.includes(g));
 
-  modal.innerHTML = `<div class="ex-modal-card" onclick="event.stopPropagation()">
+  modal.innerHTML = skinTpl('addExSheet', { date, sel, targetGroups, otherGroups, grpNames }, () => `<div class="ex-modal-card" onclick="event.stopPropagation()">
     <div class="ex-modal-hdr"><div><div class="sheet-eyebrow">加一个动作</div><div class="sheet-title">${fmtDate(date)} · ${_escHtml(sel.workoutType || '')}</div></div>
       <button class="ex-modal-close" onclick="uiCloseOverlay('add-ex-modal')">关闭</button></div>
     <span class="sub-label">今天的目标肌群</span>
@@ -5215,7 +5230,7 @@ function openAddExerciseModal(date) {
       </div>
     </details>
     <div id="add-ex-list"><div class="note-line">点上面的肌群看可选动作</div></div>
-  </div>`;
+  </div>`);
 
   modal.classList.add('open');
   if (targetGroups.length) renderAddExList(targetGroups[0]);
@@ -5241,7 +5256,7 @@ function renderAddExList(groupKey) {
 
   const diffLabel = ['', '★', '★★', '★★★'];
   document.querySelectorAll('#add-ex-modal .chip[data-g]').forEach(b => { const on = b.dataset.g === groupKey; b.classList.toggle('on', on); b.setAttribute('aria-pressed', String(on)); });
-  listEl.innerHTML = available.map((ex, idx) => `<button type="button" class="swap-option" onclick="doAddExercise('${groupKey}', ${idx})"><span><span class="so-n">${ex.n}</span><span class="so-s">${diffLabel[ex.diff || 1]}</span></span>${ex.note ? `<span class="so-note">${ex.note}</span>` : ''}</button>`).join('');
+  listEl.innerHTML = skinTpl('addExList', { groupKey, available }, () => available.map((ex, idx) => `<button type="button" class="swap-option" onclick="doAddExercise('${groupKey}', ${idx})"><span><span class="so-n">${ex.n}</span><span class="so-s">${diffLabel[ex.diff || 1]}</span></span>${ex.note ? `<span class="so-note">${ex.note}</span>` : ''}</button>`).join(''));
   window._currentAddExPool = available;
 }
 window.renderAddExList = renderAddExList;

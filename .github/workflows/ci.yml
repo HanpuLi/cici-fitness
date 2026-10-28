@@ -26,6 +26,8 @@ jobs:
           node-version: "22"
       - name: JavaScript syntax
         run: |
+          node --check skin.js
+          node --check skin-sport.js
           node --check ui.js
           node --check core.js
           node --check app.js

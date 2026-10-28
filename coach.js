@@ -197,13 +197,13 @@ function coachModelLabel() {
 }
 function _coachAccessCard(el, info) {
   const mis = info.status === 'mismatch';
-  el.innerHTML = `<div class="psec co-card" id="co-access" style="border-bottom:0"><div class="sec-label">[ AI 教练 ] ${mis ? '用不了' : '邀请制'}</div>`
+  el.innerHTML = skinTpl('coachAccess', { mis }, () => `<div class="psec co-card" id="co-access" style="border-bottom:0"><div class="sec-label">[ AI 教练 ] ${mis ? '用不了' : '邀请制'}</div>`
     + (mis ? `<div class="prose" style="font-size:17px">这个邮箱已经绑定了另一个账号，AI 教练用不了<span class="accent">.</span></div><div class="hint" style="font-size:15px">换回第一次用的登录方式试试。</div>`
       : `<div class="prose" style="font-size:17px">AI 教练每次调用都要花钱，现在只对受邀的朋友开放<span class="accent">.</span></div>`
       + `<div class="hint" style="font-size:15px">有邀请码的话填在下面；没有也没关系，计划、打卡、统计、换动作这些照常能用。</div>`
       + `<input id="co-code" class="line-input code" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="16" placeholder="邀请码 · ABCDE-FGHJK" aria-label="邀请码" onkeydown="if(event.key==='Enter')coachRedeem()">`
       + `<button class="btn-primary" id="co-code-go" onclick="coachRedeem()">开通</button><span class="foot-note">邀请码用一次就作废，两周内有效。</span>`)
-    + `</div>`;
+    + `</div>`);
 }
 async function _coachCheckAccess() {
   try {
@@ -279,8 +279,8 @@ async function renderCoach() {
   _coachEnsureComposer();
   const u = _coachUser();
   if (!u) {
-    el.innerHTML = `<div class="psec co-card co-empty" style="border-bottom:0"><div class="sec-label">[ AI 教练 ] 未登录</div><div class="prose" style="font-size:17px">登录后就能用 AI 教练：复盘、排计划、认器械、随时问。</div>
-      <button class="btn-outline" onclick="openLoginModal()">去「我」登录</button></div>`;
+    el.innerHTML = skinTpl('coachOut', null, () => `<div class="psec co-card co-empty" style="border-bottom:0"><div class="sec-label">[ AI 教练 ] 未登录</div><div class="prose" style="font-size:17px">登录后就能用 AI 教练：复盘、排计划、认器械、随时问。</div>
+      <button class="btn-outline" onclick="openLoginModal()">去「我」登录</button></div>`);
     if (typeof uiUpdateComposer === 'function') uiUpdateComposer();
     return;
   }
@@ -290,7 +290,7 @@ async function renderCoach() {
     if (typeof uiUpdateComposer === 'function') uiUpdateComposer();
     return _coachCheckAccess();
   }
-  el.innerHTML = `
+  el.innerHTML = skinTpl('coachMain', null, () => `
   <div class="co-card co-entry" id="co-vision">
     <label class="row-btn" style="border-bottom:0"><span><span class="rk">拍器械认动作</span><span class="rv">在健身房拍一张器械，告诉你用它能做动作库里的哪些动作，可以直接加到今天</span></span><span class="ra">→</span><input type="file" accept="image/*" capture="environment" onchange="coachVision(this)" aria-label="拍器械认动作"></label>
     <div id="co-vision-body"></div>
@@ -299,7 +299,7 @@ async function renderCoach() {
     <div class="sec-head"><span class="sec-label">对话</span><button class="link-btn" onclick="coachNewChat()">新对话</button></div>
     <div id="co-chat-log" class="co-chat-log" aria-live="polite"></div>
     <div class="co-foot">对话只存在这台手机上 · <span id="co-status" class="co-meta">连接中…</span></div>
-  </div>`;
+  </div>`);
   _coachShowChat();
   if (typeof uiUpdateComposer === 'function') uiUpdateComposer();
   try {
@@ -324,7 +324,7 @@ async function renderCoach() {
 function coachMeSectionHtml() {
   const a = coachAccess();
   if (a !== 'on') {
-    return `<button type="button" class="row-btn" onclick="showTab('coach')"><span class="mono" style="font-size:14px">${a === 'none' ? '邀请制 · 有邀请码去「教练」页填' : '登录后可用'}</span><span class="ra">→</span></button>`;
+    return skinTpl('meAIOff', a, () => `<button type="button" class="row-btn" onclick="showTab('coach')"><span class="mono" style="font-size:14px">${a === 'none' ? '邀请制 · 有邀请码去「教练」页填' : '登录后可用'}</span><span class="ra">→</span></button>`);
   }
   const me = window._coachMe;
   if (!me) { coachProbeAccess(); return `<span class="note-line">读取中…</span>`; }
@@ -332,13 +332,13 @@ function coachMeSectionHtml() {
   const models = [['', '自动', '按任务定'], ...(me.models || [])];
   const efforts = me.efforts || [];
   const effCur = o.effort || 'medium';
-  return `<span class="sub-label">模型</span><div data-group="model" role="radiogroup" aria-label="模型">${models.map(([k, n, note]) => {
+  return skinTpl('meAIOn', { me, o, models, efforts, effCur }, () => `<span class="sub-label">模型</span><div data-group="model" role="radiogroup" aria-label="模型">${models.map(([k, n, note]) => {
       const on = (o.model || '') === k;
       return `<button type="button" class="model-row" role="radio" aria-checked="${on}" data-v="${_esc(k)}"><span>${on ? '(•)' : '( )'}</span><span>${_esc(n)}</span><span class="note">${_esc(note || '')}</span></button>`;
     }).join('')}</div>`
     + `<span class="sub-label" style="margin-top:4px">${o.model ? '思考深度' : '思考深度 · 选「自动」时按任务定'}</span>`
     + `<div style="opacity:${o.model ? 1 : .4}">${uiSeg('co-effort', 'effort', efforts.map(([k, n]) => [k, n]), effCur, { label: '思考深度', disabled: o.model ? {} : Object.fromEntries(efforts.map(([k]) => [k, true])) })}</div>`
-    + `<div class="kv"><span class="k">本月</span><span>已用 $${Number(me.cycle || 0).toFixed(2)}</span><span class="k">今天</span><span>$${Number(me.today || 0).toFixed(2)}${me.daily_cap ? ` / 上限 $${Number(me.daily_cap).toFixed(2)}` : ''}</span><span class="k">额度</span><span>每天有上限；每月 17 号重置</span></div>`;
+    + `<div class="kv"><span class="k">本月</span><span>已用 $${Number(me.cycle || 0).toFixed(2)}</span><span class="k">今天</span><span>$${Number(me.today || 0).toFixed(2)}${me.daily_cap ? ` / 上限 $${Number(me.daily_cap).toFixed(2)}` : ''}</span><span class="k">额度</span><span>每天有上限；每月 17 号重置</span></div>`);
 }
 function coachSetModel(k) {
   const st = _coachLoad(), o = st.opts || {};
@@ -366,11 +366,12 @@ function coachRenderReview() {
   const a = coachAccess();
   if (a !== 'on') {
     // 白名单外 / 未登录:收成一行灰字
-    el.innerHTML = `<button type="button" class="row-btn" style="opacity:.6" onclick="showTab('coach')"><span><span class="rk sub-label">[ 复盘 ] ${a === 'none' ? 'AI 教练是邀请制' : '登录后可用'}</span><span class="rv">每周看最近练得怎么样，给出可以一键采纳的调整</span></span><span class="ra">→</span></button>`;
+    el.innerHTML = skinTpl('logReviewLocked', { a }, () => `<button type="button" class="row-btn" style="opacity:.6" onclick="showTab('coach')"><span><span class="rk sub-label">[ 复盘 ] ${a === 'none' ? 'AI 教练是邀请制' : '登录后可用'}</span><span class="rv">每周看最近练得怎么样，给出可以一键采纳的调整</span></span><span class="ra">→</span></button>`);
     return;
   }
-  if (!document.getElementById('co-review')) {
-    el.innerHTML = `<div class="review co-card" id="co-review"><div class="sec-label" id="co-review-head">[ 复盘 ] 每周</div><div id="co-review-body"></div><button class="btn-outline" id="co-review-go" onclick="coachReview()">生成复盘</button></div>`;
+  const box = document.getElementById('co-review');
+  if (!box || (box.dataset.skin || 'paper') !== uiSkin()) {   // 换过风格(运动的容器带 data-skin="sport"):整块按现在的风格重建
+    el.innerHTML = skinTpl('logReviewBox', {}, () => `<div class="review co-card" id="co-review"><div class="sec-label" id="co-review-head">[ 复盘 ] 每周</div><div id="co-review-body"></div><button class="btn-outline" id="co-review-go" onclick="coachReview()">生成复盘</button></div>`);
   }
   const st = _coachLoad();
   _coachShowReview(st.review || null);
@@ -428,7 +429,7 @@ function _coachShowReview(rv) {
   const el = document.getElementById('co-review-body');
   if (!el) return;
   const head = document.getElementById('co-review-head'), go = document.getElementById('co-review-go');
-  if (!rv) { el.innerHTML = `<div class="hint">看最近几周练得怎么样，给出下周可以一键采纳的调整。</div>`; if (head) head.textContent = '[ 复盘 ] 每周'; if (go) go.textContent = '生成复盘'; return; }
+  if (!rv) { el.innerHTML = skinTpl('logReviewEmpty', {}, () => `<div class="hint">看最近几周练得怎么样，给出下周可以一键采纳的调整。</div>`); if (head) head.textContent = '[ 复盘 ] 每周'; if (go) go.textContent = '生成复盘'; return; }
   if (head) head.textContent = _coachReviewHead(rv);
   if (go && !go.disabled) go.textContent = '重新生成复盘';
   const li = arr => (arr || []).map(x => `<li>${_esc(x)}</li>`).join('');
@@ -438,13 +439,13 @@ function _coachShowReview(rv) {
     return `<button type="button" class="adj-row co-adj${done ? ' done' : ''}" role="checkbox" aria-checked="true" data-i="${i}"${done ? ' aria-disabled="true"' : ` onclick="uiToggleBox(this);_coachAdjCount()"`}>${uiBoxSq()}<span><span class="what">${_esc(_ADJ_LABEL[a.type] || a.type)} · ${_esc(_adjText(a))}${done ? ' <span class="olive">已采纳</span>' : ''}</span><span class="why">${_esc(a.reason)}</span></span></button>`;
   }).join('');
   const left = (rv.adjustments || []).length - applied.length;
-  el.innerHTML = `<div class="co-rv"><div class="rv-h">${_esc(rv.headline)}<span class="accent">.</span></div>
+  el.innerHTML = skinTpl('logReview', { rv, adj, left, applied }, () => `<div class="co-rv"><div class="rv-h">${_esc(rv.headline)}<span class="accent">.</span></div>
     ${_coachMd(rv.summary)}
     ${rv.wins?.length ? `<div class="co-rv-t">做得好</div><ul>${li(rv.wins)}</ul>` : ''}
     ${rv.issues?.length ? `<div class="co-rv-t">要注意</div><ul>${li(rv.issues)}</ul>` : ''}
     ${adj ? `<div class="sub-label" style="margin-top:4px">建议调整 · 勾选后一键采纳</div><div id="co-adj-list">${adj}</div>
       ${left > 0 ? `<button class="btn-primary" id="co-adopt" onclick="coachApplyReview()">采纳勾选的 ${left} 条</button>` : `<div class="note-line olive">✓ 已采纳 ${applied.length} 条</div>`}` : ''}
-    ${_coachCostLine(rv)}</div>`;
+    ${_coachCostLine(rv)}</div>`);
 }
 // 不合规的建议(越界数值、动作库外/本账号不可排的动作)直接不显示；采纳时 coachApplyReview 还会再核一遍
 function _coachCleanAdj(list) {
@@ -686,7 +687,7 @@ function coachTodayNoteHtml(date) {
   if ((date && date !== today) || coachAccess() !== 'on') return '';
   const n = _coachLoad().note;
   if (n && n.date === today && n.text) {
-    return `<div class="coach-note" id="co-note"><div class="sec-label">[ 教练 ] Note · ${_coachHM(n.at)}</div><div class="prose">${_esc(n.text)}</div><button type="button" class="link-btn u" style="align-self:flex-start" onclick="showTab('coach')">接着问 →</button></div>`;
+    return skinTpl('coachNote', n, n => `<div class="coach-note" id="co-note"><div class="sec-label">[ 教练 ] Note · ${_coachHM(n.at)}</div><div class="prose">${_esc(n.text)}</div><button type="button" class="link-btn u" style="align-self:flex-start" onclick="showTab('coach')">接着问 →</button></div>`);
   }
   setTimeout(_coachNoteMaybeFetch, 0);
   return '';
@@ -733,14 +734,17 @@ function coachSwapHtml() {
   return x ? `<div id="swap-ai" class="swap-ai" aria-live="polite">${_coachSwapInner(x)}</div>` : '';
 }
 function _coachSwapInner(x) {
-  const head = `<div class="sheet-eyebrow" style="margin-top:4px">[ AI 推荐 ]</div>`;
-  if (!_swapReason) return head + `<p class="note-line">选上面一个原因，教练按原因挑最多 3 个替代。</p>`;
-  const r = _swapAI.get(x.key);
-  if (!r || r.state === 'loading') return head + `<p class="note-line" role="status">教练在挑…</p>`;
-  if (r.state === 'err') return head + `<p class="note-line co-err">AI 推荐没拿到：${_esc(r.error)}</p><button type="button" class="link-btn u" style="align-self:flex-start" onclick="coachSwapRetry()">再试一次</button>`;
-  const drop = r.dropped && r.dropped.length ? `<span class="co-meta">已去掉 ${r.dropped.length} 个不在你动作库里的</span>` : '';
-  if (!r.options.length) return head + `<p class="note-line">教练这次没挑出你现在能做的替代，用下面按规则的。</p>` + drop;
-  return head + `<div>${r.options.map((o, k) => `<button type="button" class="swap-option" onclick="coachSwapPick(${k})"><span><span class="so-n">${_esc(o.name)}</span><span class="so-s">${_esc(_coachSpecTxt(o.sets, o.reps, o.unit, o.kg))}</span></span>${o.why ? `<span class="so-note">${_esc(o.why)}</span>` : ''}</button>`).join('')}</div>` + drop + _coachCostLine(r);
+  // 运动风格换结构(skin-sport.js 60 区):ctx 是原因和这次的结果
+  return skinTpl('swapAI', { reason: _swapReason, r: _swapReason ? _swapAI.get(x.key) : null }, () => {
+    const head = `<div class="sheet-eyebrow" style="margin-top:4px">[ AI 推荐 ]</div>`;
+    if (!_swapReason) return head + `<p class="note-line">选上面一个原因，教练按原因挑最多 3 个替代。</p>`;
+    const r = _swapAI.get(x.key);
+    if (!r || r.state === 'loading') return head + `<p class="note-line" role="status">教练在挑…</p>`;
+    if (r.state === 'err') return head + `<p class="note-line co-err">AI 推荐没拿到：${_esc(r.error)}</p><button type="button" class="link-btn u" style="align-self:flex-start" onclick="coachSwapRetry()">再试一次</button>`;
+    const drop = r.dropped && r.dropped.length ? `<span class="co-meta">已去掉 ${r.dropped.length} 个不在你动作库里的</span>` : '';
+    if (!r.options.length) return head + `<p class="note-line">教练这次没挑出你现在能做的替代，用下面按规则的。</p>` + drop;
+    return head + `<div>${r.options.map((o, k) => `<button type="button" class="swap-option" onclick="coachSwapPick(${k})"><span><span class="so-n">${_esc(o.name)}</span><span class="so-s">${_esc(_coachSpecTxt(o.sets, o.reps, o.unit, o.kg))}</span></span>${o.why ? `<span class="so-note">${_esc(o.why)}</span>` : ''}</button>`).join('')}</div>` + drop + _coachCostLine(r);
+  });
 }
 function _coachSwapPaint() {
   const el = document.getElementById('swap-ai'), x = _coachSwapCtx();
@@ -840,7 +844,8 @@ function coachFeedbackHtml(date) {
   if (coachAccess() !== 'on') return '';
   const fb = (_coachLoad().feedback || {})[date];
   if (!fb) return '';
-  const open = `<div class="co-fb" id="co-fb-${_esc(date)}" aria-live="polite"><span class="sec-label">[ 教练 ]${fb.at && fb.state === 'ok' ? ' ' + _coachHM(fb.at) : ''}</span>`;
+  const open = skinHas('coachFbOpen') ? SKIN_TPL.sport.coachFbOpen(date, fb)   // 运动风格换个卡片头(skin-sport.js)
+    : `<div class="co-fb" id="co-fb-${_esc(date)}" aria-live="polite"><span class="sec-label">[ 教练 ]${fb.at && fb.state === 'ok' ? ' ' + _coachHM(fb.at) : ''}</span>`;
   if (fb.state === 'loading') return open + `<span class="note-line" role="status">在看这次的记录…</span></div>`;
   if (fb.state === 'err') return open + `<span class="note-line co-err">这次的反馈没拿到：${_esc(fb.error)}</span><button type="button" class="link-btn u" style="align-self:flex-start" data-date="${_esc(date)}" onclick="coachFeedbackRetry(this.dataset.date)">再试一次</button></div>`;
   const next = fb.next && fb.next.length ? `<span class="sub-label">下次</span><ul class="co-fb-next">${fb.next.map(a => `<li><span class="what">${_esc(a.exercise)} · ${_esc(a.change)}</span>${a.why ? `<span class="why">${_esc(a.why)}</span>` : ''}</li>`).join('')}</ul>` : '';
@@ -875,11 +880,11 @@ function _coachShowChat(streaming) {
   const el = document.getElementById('co-chat-log');
   if (!el) return;
   const chat = _coachLoad().chat || [];
-  el.innerHTML = chat.length ? chat.map(m => m.role === 'assistant'
+  el.innerHTML = skinTpl('coachChat', { chat, streaming }, () => chat.length ? chat.map(m => m.role === 'assistant'
     ? `<div class="co-msg assistant"><span class="who">[ 教练 ]${m.at ? ' ' + _coachHM(m.at) : ''}</span><div class="co-text">${_coachMd(m.text)}</div>${m.proposal ? _coachPropHtml(m.proposal) : ''}${m.meta ? _coachCostLine(m.meta) : ''}</div>`
     : `<div class="co-msg user"><span class="who">你${m.at ? ' · ' + _coachHM(m.at) : ''}</span>${m.img ? '<span class="co-meta">[ 图片 ]</span>' : ''}<span class="co-text">${_esc(m.text).replace(/\n/g, '<br>')}</span></div>`).join('')
     + (streaming ? `<div class="co-msg assistant"><span class="who">[ 教练 ]</span><div class="co-text" id="co-stream"><span class="co-meta">思考中…</span></div></div>` : '')
-    : '<div class="note-line" style="padding:12px 0">比如：「我深蹲总是膝盖往里扣怎么办」「这周只能练两次，怎么安排」「今天很累还要练吗」</div>';
+    : '<div class="note-line" style="padding:12px 0">比如：「我深蹲总是膝盖往里扣怎么办」「这周只能练两次，怎么安排」「今天很累还要练吗」</div>');
   if (streaming || chat.length) { const last = el.lastElementChild; if (last && typeof last.scrollIntoView === 'function' && typeof uiCurrentTab !== 'undefined' && uiCurrentTab === 'coach') last.scrollIntoView({ block: 'end' }); }
 }
 async function coachAttach(input) {
@@ -1119,10 +1124,10 @@ function _coachPropHtml(p) {
   else if (p.state === 'applied') foot = `<div class="co-prop-st olive">✓ 已写进计划${okN < p.changes.length ? ` · ${p.changes.length - okN} 条没改` : ''}</div>` + (p.snap ? `<button type="button" class="link-btn u" style="align-self:flex-start" onclick="coachPropAct(this,'undo')">撤销，回到采纳前</button>` : '');
   else if (p.state === 'rejected') foot = `<div class="co-prop-st faint">— 没改。计划照旧。</div>`;
   else if (p.state === 'undone') foot = `<div class="co-prop-st faint">已撤销 · 计划回到采纳前</div>`;
-  return `<div class="co-prop" data-pid="${_esc(p.id)}"><div class="co-prop-h"><span class="dot" aria-hidden="true"></span>提议 · ${okN} 处改动</div>`
+  return skinTpl('coachProp', { p, open, okN, rows, drop }, () => `<div class="co-prop" data-pid="${_esc(p.id)}"><div class="co-prop-h"><span class="dot" aria-hidden="true"></span>提议 · ${okN} 处改动</div>`
     + `<div class="co-prop-list">${rows}</div>`
     + (drop.length ? `<div class="co-meta">还提到 ${drop.length} 个不在你动作库里的动作，已去掉：${_esc(drop.join('、'))}</div>` : '')
-    + foot + `</div>`;
+    + foot + `</div>`);
 }
 function _coachPropApply(p) {
   const snap = { days: {}, st: {}, set: {}, aiW: {}, stale: !!S.planStale };

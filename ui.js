@@ -44,9 +44,9 @@ function uiStepper(group, label, val, unit, min, max) {
 }
 // 开关行:「自动调整训练量 …… [ 开 ]」
 function uiToggle(key, label, hint, on, plain, id) {
-  return `<button type="button" class="toggle-row${plain ? ' plain' : ''}" role="switch" aria-checked="${!!on}" data-toggle="${key}"${id ? ` id="${id}"` : ''}><span><span class="tl">${uiEsc(label)}</span>${hint ? `<span class="th">${uiEsc(hint)}</span>` : ''}</span><span class="tv">${on ? '[ 开 ]' : '[ 关 ]'}</span></button>`;
+  return `<button type="button" class="toggle-row${plain ? ' plain' : ''}" role="switch" aria-checked="${!!on}" data-toggle="${key}"${id ? ` id="${id}"` : ''}><span><span class="tl">${uiEsc(label)}</span>${hint ? `<span class="th">${uiEsc(hint)}</span>` : ''}</span>${typeof skinTpl === 'function' ? skinTpl('toggleTv', !!on, o => `<span class="tv">${o ? '[ 开 ]' : '[ 关 ]'}</span>`) : `<span class="tv">${on ? '[ 开 ]' : '[ 关 ]'}</span>`}</button>`;
 }
-function uiSecLabel(text) { return `<div class="sec-label">${uiEsc(text)}</div>`; }
+function uiSecLabel(text) { return typeof skinTpl === 'function' ? skinTpl('secLabel', text, t => `<div class="sec-label">${uiEsc(t)}</div>`) : `<div class="sec-label">${uiEsc(text)}</div>`; }
 
 // ══ 弹窗管理:所有 .ex-modal-overlay 统一 aria / 焦点 / Esc ═════════════════
 // 不管是哪条路径打开的(静态弹窗、动态创建的、dev 控制台、扩展包),只要是 .ex-modal-overlay
@@ -212,6 +212,7 @@ function uiUpdateMasthead() {
     else if (uiCurrentTab === 'me') t = 'Settings';
   } catch (e) { }
   eb.textContent = t;
+  if (typeof skinMasthead === 'function') skinMasthead();   // 运动风格:刊头右边的进度环 / 小胶囊(skin-sport.js);纸墨什么也不做
 }
 function uiNotice(text) { _todayNotice = text || ''; if (uiCurrentTab === 'today' && typeof render === 'function') render(); }
 
@@ -261,6 +262,7 @@ function uiSetOption(group, v) {
       try { localStorage.setItem('fit_theme', v); } catch (e) { }
       if (typeof applyTheme === 'function') applyTheme(v);
       return uiRenderMeLook();
+    case 'skin': if (typeof skinSet === 'function') skinSet(v); return;   // 风格(纸墨 / 运动):skin.js
     case 'genScope': _uiGen.scope = v; return uiRenderP8();
     case 'genMethod':
       if (v === 'ai' && !(typeof coachAccess === 'function' && coachAccess() === 'on')) return;
@@ -371,8 +373,8 @@ function uiRenderPlanSummary() {
   } else {
     kv = `<div class="note-line">还没有计划 · 设好下面几项后到「08」生成。</div>`;
   }
-  el.innerHTML = `<div class="plan-sum"><div class="note-line"><span class="faint">当前 →</span> ${uiEsc(uiPlanSummaryLine())}<span class="saved-dot" id="saved-dot" aria-hidden="true"></span></div>${kv}
-  <nav class="sec-index" aria-label="计划分节">${UI_PLAN_INDEX.map(([id, t]) => `<a href="#${id}" data-act="scrollTo" data-target="${id}">${t}</a>`).join('')}</nav></div>`;
+  el.innerHTML = skinTpl('planSummary', { kv }, () => `<div class="plan-sum"><div class="note-line"><span class="faint">当前 →</span> ${uiEsc(uiPlanSummaryLine())}<span class="saved-dot" id="saved-dot" aria-hidden="true"></span></div>${kv}
+  <nav class="sec-index" aria-label="计划分节">${UI_PLAN_INDEX.map(([id, t]) => `<a href="#${id}" data-act="scrollTo" data-target="${id}">${t}</a>`).join('')}</nav></div>`);
 }
 function uiRenderPlanPage() {
   const host = document.getElementById('plan-sections'); if (!host || typeof S === 'undefined') return;
@@ -419,14 +421,14 @@ const UI_TECNO = [
 function uiRenderP3() {
   const el = document.getElementById('p3'); if (!el) return;
   const pool = S.equip.includes('泳池');
-  el.innerHTML = uiSecLabel('03 — 器械 · 可多选') + _uiEquipHtml('g-')
+  el.innerHTML = skinTpl('planSec', '03 — 器械 · 可多选', uiSecLabel) + _uiEquipHtml('g-')
     + `<div id="swim-settings" style="display:${pool ? 'flex' : 'none'};flex-direction:column;gap:8px;margin-top:4px"><span class="sub-label">游泳水平 · 和健身等级分开调</span>${_uiSwimSegHtml('g-')}</div>`
-    + `<button type="button" class="link-btn" data-toggle="tecno" aria-expanded="${_uiPlan.tecno}" aria-controls="tecno-table">Tecnogym 器械对照表 ${_uiPlan.tecno ? '▾' : '▸'}</button>`
+    + skinTpl('planTecnoBtn', _uiPlan.tecno, () => `<button type="button" class="link-btn" data-toggle="tecno" aria-expanded="${_uiPlan.tecno}" aria-controls="tecno-table">Tecnogym 器械对照表 ${_uiPlan.tecno ? '▾' : '▸'}</button>`)
     + `<div class="tecno" id="tecno-table"${_uiPlan.tecno ? '' : ' hidden'}>${UI_TECNO.map(([h, rows]) => `<div class="tg"><span class="th2">${h}</span>${rows.map(([en, zh]) => `<span class="tr"><span>${en}</span><span>${zh}</span></span>`).join('')}</div>`).join('')}<span class="faint">选「健身房全套」就已覆盖 Plurima / Selection / Biostrength / Excite / Skill 全系列。</span></div>`;
 }
 function uiRenderP4() {
   const el = document.getElementById('p4'); if (!el) return;
-  el.innerHTML = uiSecLabel('04 — 重点部位 · 可多选') + _uiFocusHtml('g-') + `<span class="foot-note">「均衡全身」= 没有偏好，和其他部位互斥。</span>`;
+  el.innerHTML = skinTpl('planSec', '04 — 重点部位 · 可多选', uiSecLabel) + _uiFocusHtml('g-') + `<span class="foot-note">「均衡全身」= 没有偏好，和其他部位互斥。</span>`;
 }
 // 05:textarea 只建一次(重画会丢输入焦点),之后只更新下面那行说明
 function uiLimitsHint() {
@@ -441,11 +443,12 @@ function uiLimitsHint() {
 function uiRenderP5() {
   const el = document.getElementById('p5'); if (!el) return;
   if (!el.dataset.built) {
-    el.innerHTML = uiSecLabel('05 — 身体情况 · 限制或注意')
+    el.innerHTML = skinTpl('planSec', '05 — 身体情况 · 限制或注意', uiSecLabel)
       + `<textarea id="limits" class="line-area" rows="2" aria-label="身体情况" placeholder="例如：膝盖不适、肩伤、避免跳跃"></textarea><div id="limits-hint" class="note-line"></div>`;
-    el.dataset.built = '1';
+    el.dataset.built = '1'; el._sk = uiSkin();
     el.querySelector('#limits').addEventListener('input', e => { S.limits = e.target.value; if (typeof saveState === 'function') saveState(); if (typeof markPlanStale === 'function') markPlanStale(); uiUpdateLimitsHint(); });
   }
+  if (el._sk !== uiSkin()) { el._sk = uiSkin(); el.firstElementChild.outerHTML = skinTpl('planSec', '05 — 身体情况 · 限制或注意', uiSecLabel); }   // 换了风格:标题按当前风格重画
   const ta = el.querySelector('#limits');
   if (ta && document.activeElement !== ta) ta.value = S.limits || '';
   uiUpdateLimitsHint();
@@ -465,14 +468,15 @@ function uiRenderP6() {
     + uiToggle('period', '经期模式', '游泳日换成陆地训练，力量日降负重、避开高腹压动作', !!S.periodMode, false, 'period-switch')
     + uiStepper('cycleDay', '今天是', S.cycleDay || 1, `/ ${len} 天`, 1, len) + uiStepper('cycleLen', '周期长度', len, '天', 20, 40)
     + `<button type="button" class="btn-line" onclick="cyclePeriodStart()">今天来月经了 · 周期归到第 1 天</button>`
-    + _uiPhaseHtml()
+    + skinTpl('planPhase', null, () => _uiPhaseHtml())
     + `<span class="foot-note">仅供参考，以身体感受为准；训练量仍会随每次打卡的 RPE 微调。</span></div>`;
 }
 function uiRenderP7() {
   const el = document.getElementById('p7'); if (!el) return;
-  if (!el.querySelector('#excluded-list')) {
-    el.innerHTML = `<div class="sec-label" id="excluded-head">07 — 已排除的动作 / 器械</div><div id="excluded-list"></div>`
-      + `<span class="foot-note">在「今天」点动作的「换 / 划掉 → 永久排除」加进来。排计划、换动作、热身和收尾都会避开。</span>`;
+  if (!el.querySelector('#excluded-list') || el._sk !== uiSkin()) {   // 换了风格也重建(列表由 renderExcludedList 随后填)
+    el._sk = uiSkin();
+    el.innerHTML = skinTpl('planP7', null, () => `<div class="sec-label" id="excluded-head">07 — 已排除的动作 / 器械</div><div id="excluded-list"></div>`
+      + `<span class="foot-note">在「今天」点动作的「换 / 划掉 → 永久排除」加进来。排计划、换动作、热身和收尾都会避开。</span>`);
   }
 }
 function uiAiOn() { return typeof coachAccess === 'function' && coachAccess() === 'on'; }
@@ -515,10 +519,10 @@ function uiRenderPlanCal(visibleDays, sel, today, isCurrentView, viewStart, view
   const ov = (typeof partnerOverlap === 'function') ? partnerOverlap() : null;
   const coDows = ov ? new Set([...ov.gym, ...ov.swim]) : null;
   const dows = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'];
-  let h = `<div class="cal-nav"><button type="button" class="link-btn" onclick="calPrev()" aria-label="上两周">‹ 上两周</button>`
+  let h = skinTpl('planCalNav', { visibleDays, isCurrentView, viewStart, viewEnd, coDows }, () => `<div class="cal-nav"><button type="button" class="link-btn" onclick="calPrev()" aria-label="上两周">‹ 上两周</button>`
     + `<span class="cal-nav-label">${viewStart.slice(5).replace('-', '/')} — ${viewEnd.slice(5).replace('-', '/')}</span>`
     + (!isCurrentView ? `<button type="button" class="link-btn" onclick="calGoToday()">回到今天</button>` : '')
-    + `<button type="button" class="link-btn" onclick="calNext()" ${isCurrentView ? 'disabled' : ''} aria-label="下两周" style="text-align:right">下两周 ›</button></div>`;
+    + `<button type="button" class="link-btn" onclick="calNext()" ${isCurrentView ? 'disabled' : ''} aria-label="下两周" style="text-align:right">下两周 ›</button></div>`);
   h += `<div class="cal-scroll"><div class="daygrid" id="cal-grid" role="grid" aria-label="两周日历">`;
   visibleDays.forEach(d => {
     const isPlan = d._src === 'plan', isLog = d._src === 'log', isNone = d._src === 'empty';
@@ -586,14 +590,14 @@ function uiRenderMeAcct() {
   const head = `<div class="id-line"><span class="seal" id="user-seal">${uiEsc(seal)}</span><h2 id="user-name">${uiEsc(name ? `${name}的计划` : '我的健身计划')}</h2></div>`;
   if (u) {
     const how = (u.providerData || []).some(p => p && p.providerId === 'google.com') ? 'Google 账号' : '邮箱账号';
-    el.innerHTML = uiSecLabel('01 — 账号') + head
+    el.innerHTML = skinTpl('meAcct', { u, how, gName, name, seal }, () => uiSecLabel('01 — 账号') + head
       + `<div class="kv-form"><label class="k" for="me-name">显示名</label><input id="me-name" class="line-input" value="${uiEsc(S.displayName || '')}" placeholder="${uiEsc(gName || '起个名字')}" autocomplete="nickname" onchange="uiSaveProfile()">`
       + `<label class="k" for="me-seal">印章字</label><input id="me-seal" class="line-input" value="${uiEsc(S.sealChar || '')}" placeholder="留空取名字首字" maxlength="2" onchange="uiSaveProfile()">`
       + `<span class="k">登录</span><span class="v">${how} · ${uiEsc(u.email || '已登录')}</span>`
       + `<span class="k">同步</span><span class="v"><span id="sync-pill" class="auth-pill-sync ok">云端已同步</span></span></div>`
-      + `<button type="button" class="btn-line" style="align-self:flex-start" onclick="signOutUser()">登出</button>`;
+      + `<button type="button" class="btn-line" style="align-self:flex-start" onclick="signOutUser()">登出</button>`);
   } else {
-    el.innerHTML = uiSecLabel('01 — 账号') + head
+    el.innerHTML = skinTpl('meAcct', { u: null, gName, name, seal }, () => uiSecLabel('01 — 账号') + head
       + `<span class="hint">不登录也能用，数据只存在这台手机上；登录后多设备同步，也能用搭子和 AI 教练。</span>`
       + `<div class="kv-form"><label class="k" for="me-name">显示名</label><input id="me-name" class="line-input" value="${uiEsc(S.displayName || '')}" placeholder="起个名字" autocomplete="nickname" onchange="uiSaveProfile()">`
       + `<label class="k" for="me-seal">印章字</label><input id="me-seal" class="line-input" value="${uiEsc(S.sealChar || '')}" placeholder="留空取名字首字" maxlength="2" onchange="uiSaveProfile()"></div>`
@@ -601,7 +605,7 @@ function uiRenderMeAcct() {
       + `<input id="login-pass" class="line-input" type="password" autocomplete="current-password" placeholder="密码（至少 6 位）" aria-label="密码" onkeydown="if(event.key==='Enter')signInEmail()">`
       + `<div id="login-msg" class="note-line" role="alert" style="color:var(--accent);min-height:0"></div>`
       + `<div class="btn-row"><button type="button" class="btn-primary" style="min-height:48px;font-size:14px" onclick="signInEmail()">登录</button><button type="button" class="btn-outline" style="min-height:48px;font-size:14px" onclick="signUpEmail()">注册</button></div>`
-      + `<button type="button" class="btn-line" style="color:var(--muted)" onclick="signInGoogle()">用 Google 登录（限 Safari）</button>`;
+      + `<button type="button" class="btn-line" style="color:var(--muted)" onclick="signInGoogle()">用 Google 登录（限 Safari）</button>`);
   }
 }
 function uiSaveProfile() {
@@ -616,7 +620,11 @@ function uiSaveProfile() {
 function uiRenderMeLook() {
   const el = document.getElementById('me-look'); if (!el) return;
   let cur = 'system'; try { cur = localStorage.getItem('fit_theme') || 'system'; } catch (e) { }
-  el.innerHTML = uiSecLabel('02 — 外观') + uiSeg('theme-seg', 'theme', [['system', '跟随系统'], ['light', '浅色'], ['dark', '深色']], cur, { label: '外观' });
+  const a = document.activeElement, refocus = a && el.contains(a) && a.closest('[data-group]') ? [a.closest('[data-group]').dataset.group, a.dataset.v] : null;
+  el.innerHTML = uiSecLabel('02 — 外观')
+    + (typeof skinSegHtml === 'function' ? `<span class="sub-label">风格</span>` + skinSegHtml() : '')
+    + `<span class="sub-label">深浅</span>` + uiSeg('theme-seg', 'theme', [['system', '跟随系统'], ['light', '浅色'], ['dark', '深色']], cur, { label: '深浅' });
+  if (refocus) { const b = el.querySelector(`[data-group="${refocus[0]}"] [data-v="${refocus[1]}"]`); if (b) try { b.focus({ preventScroll: true }); } catch (e) { } }   // 重画后键盘焦点留在刚点的那格
 }
 function uiRenderMePair() {
   const el = document.getElementById('me-pair'); if (!el) return;
@@ -652,12 +660,12 @@ function uiRenderMeAI() {
 function uiRenderMeData() {
   const el = document.getElementById('me-data'); if (!el) return;
   const row = (k, v, attrs) => `<button type="button" class="row-btn kv3" ${attrs}><span class="rk">${k}</span><span class="rv">${v}</span><span class="ra">→</span></button>`;
-  el.innerHTML = uiSecLabel('06 — 数据')
+  el.innerHTML = skinTpl('meData', null, () => uiSecLabel('06 — 数据')
     + row('备份 JSON', '下载全部数据', 'onclick="exportJSON()"')
     + `<label class="row-btn kv3"><span class="rk">导入</span><span class="rv">从备份 JSON 恢复</span><span class="ra">→</span><input type="file" accept=".json,application/json" onchange="importJSON(this)" aria-label="从备份 JSON 恢复"></label>`
     + row('导出 CSV', '打卡记录表格', 'onclick="exportCSV()"')
     + row('恢复快照', '从自动快照里挑一份回滚', 'onclick="showSnapshotRestore()"')
-    + row('AI 分析导出', '复制一份给别的 AI 看', 'onclick="exportForAI()"');
+    + row('AI 分析导出', '复制一份给别的 AI 看', 'onclick="exportForAI()"'));
 }
 let _uiWipe = 0, _uiWipeTimer = null;
 function uiRenderMeWipe() {
@@ -701,6 +709,7 @@ function uiOobeCheck() {
 }
 function uiOpenOobe(auto) {
   _oobe.open = true; _oobe.auto = !!auto; _oobe.step = 0;
+  if (auto && typeof skinNewUserDefault === 'function') skinNewUserDefault();   // 新用户默认「运动」;已有风格的不动
   const el = document.getElementById('oobe'); if (!el) return;
   const a = document.activeElement; _oobe.ret = (a && a !== document.body) ? a : null;
   el.hidden = false;
@@ -751,11 +760,12 @@ function uiRenderOobe() {
   const limitsFocused = keepLimits && document.activeElement === keepLimits;
   let body = '';
   if (s === 0) {
-    body = `<div class="prose" style="font-size:18px;line-height:1.7">一分钟，定四件事：练什么、多久练一次、手边有什么器械、身体有没有要注意的。</div>`
+    body = skinTpl('oobe0', null, () => `<div class="prose" style="font-size:18px;line-height:1.7">一分钟，定四件事：练什么、多久练一次、手边有什么器械、身体有没有要注意的。</div>`
       + `<div class="hint" style="font-size:15px">这里的每个开关，之后都在「计划」页里，一模一样，随时能改。</div>`
+      + (typeof skinPickHtml === 'function' ? skinPickHtml() : '')
       + `<div style="border-top:1px solid var(--line)">`
       + `<label class="row-btn"><span><span class="rk">从备份恢复</span><span class="rv">选之前导出的 JSON，直接回到原来的计划和记录</span></span><span class="ra">→</span><input type="file" accept=".json,application/json" onchange="uiOobeImport(this)" aria-label="从备份恢复"></label>`
-      + `<button type="button" class="row-btn" onclick="uiOobeLogin()"><span><span class="rk">已有账号，登录同步</span><span class="rv">云端有数据就直接拉下来，不用再设一遍</span></span><span class="ra">→</span></button></div>`;
+      + `<button type="button" class="row-btn" onclick="uiOobeLogin()"><span><span class="rk">已有账号，登录同步</span><span class="rv">云端有数据就直接拉下来，不用再设一遍</span></span><span class="ra">→</span></button></div>`);
   } else if (s === 1) {
     body = _uiP1Html('ob-') + `<span class="sub-label" style="margin-top:6px">重点部位 · 可多选，不确定就「均衡全身」</span>` + _uiFocusHtml('ob-');
   } else if (s === 2) {
@@ -774,20 +784,20 @@ function uiRenderOobe() {
     const rows = [['目标', (S.goal || '').split('+').join(' + ')], ['部位', (S.focus || []).join(' · ')], ['强度', `难度${S.level} · 重量${wl}`],
       ['每周', `${S.days} 天 × ${S.dur} min`], ['器械', (S.equip || []).join(' + ') || '无器材'], ['周期', S.cycleEnabled !== false ? `开 · 今天第 ${S.cycleDay || 1} 天` : '关']];
     if ((S.limits || '').trim()) rows.push(['注意', S.limits.trim()]);
-    body = `<div class="kv" style="font-size:14px;line-height:1.9">${rows.map(([k, v]) => `<span class="k">${k}</span><span>${uiEsc(v)}</span>`).join('')}</div>`
+    body = skinTpl('oobe5', rows, () => `<div class="kv" style="font-size:14px;line-height:1.9">${rows.map(([k, v]) => `<span class="k">${k}</span><span>${uiEsc(v)}</span>`).join('')}</div>`
       + `<div style="border-top:1px solid var(--line);padding-top:12px;display:flex;flex-direction:column;gap:8px" class="hint">`
       + `<span><span class="sub-label">[ 装到主屏幕 ]</span> Safari 底部分享 → 添加到主屏幕。离线也能打开，计时提醒更稳。</span>`
-      + `<span><span class="sub-label">[ 同步 ]</span> 不登录也能用，数据只在这台手机上；想换手机不丢，去「我」登录。</span></div>`;
+      + `<span><span class="sub-label">[ 同步 ]</span> 不登录也能用，数据只在这台手机上；想换手机不丢，去「我」登录。</span></div>`);
   }
   const first = !S.plan;
   const nextLabel = s === 0 ? '开始' : s === 5 ? (first ? '生成第一周计划' : '完成') : '下一步';
-  el.innerHTML = `<div class="oobe-head"><div class="oobe-top"><span>新手设置 · ${s <= 0 ? '欢迎' : `0${s} / 05`}</span>`
+  el.innerHTML = skinTpl('oobeFrame', { s, first, nextLabel, body }, () => `<div class="oobe-head"><div class="oobe-top"><span>新手设置 · ${s <= 0 ? '欢迎' : `0${s} / 05`}</span>`
     + `<button type="button" class="link-btn" onclick="uiOobeSkip()">${first ? '跳过，用默认' : '关闭'}</button></div>`
     + `<div class="oobe-bar" aria-hidden="true">${'■'.repeat(s) + '□'.repeat(5 - s)}</div>`
     + `<h2 class="oobe-title" id="oobe-title">${UI_OOBE_TITLES[s]}<span class="mh-dot">.</span></h2></div>`
     + `<div class="oobe-body">${body}</div>`
     + `<div class="oobe-foot"><button type="button" class="btn-line" onclick="uiOobeBack()" style="visibility:${s > 0 ? 'visible' : 'hidden'}">上一步</button>`
-    + `<button type="button" class="btn-primary" onclick="uiOobeNext()">${nextLabel}</button></div>`;
+    + `<button type="button" class="btn-primary" onclick="uiOobeNext()">${nextLabel}</button></div>`);
   const ta = document.getElementById('ob-limits');
   if (ta) {
     ta.value = S.limits || '';
