@@ -1038,9 +1038,10 @@ html[data-skin="sport"] #composer .co-pending .link-btn { padding: 0 14px; borde
 html[data-skin="sport"] #co-chat-log .sp-prop-no { display: flex; align-items: center; gap: 8px; min-height: 48px; }
 html[data-skin="sport"] #co-chat-log .sp-prop-no .sp-prop-st { flex: 1; min-width: 0; }
 html[data-skin="sport"] #co-chat-log .sp-prop-no .link-btn { flex: none; min-height: 44px; padding: 0 12px; color: var(--ink); font-family: var(--sp-sans); font-size: 14px; font-weight: 700; letter-spacing: 0; }
-/* iOS 键盘弹出时布局视口变矮,固定的底栏会贴在键盘上沿、输入条叠在它上面:打字时把底栏藏起来,输入条贴底 */
-html[data-skin="sport"] body.has-composer:has(#co-chat-text:focus) .tabbar { display: none; }
-html[data-skin="sport"] body.has-composer:has(#co-chat-text:focus) #composer { bottom: env(safe-area-inset-bottom); }
+/* iOS 键盘弹出时布局视口变矮,固定的底栏会贴在键盘上沿、输入条叠在它上面:打字时把底栏藏起来,输入条贴底。
+   用输入条整体的 :focus-within,不只看文本框:点「发送」时焦点从文本框挪到按钮上,只看文本框的话按下那一刻输入条往上跳,这一下就点空了 */
+html[data-skin="sport"] body.has-composer:has(#composer:focus-within) .tabbar { display: none; }
+html[data-skin="sport"] body.has-composer:has(#composer:focus-within) #composer { bottom: env(safe-area-inset-bottom); }
 /* —— 40 教练 · 写在这行上面 —— */
 
 /* ══ 50 我 + 新手设置 ═════════════════════════════════════════════════ */
