@@ -115,19 +115,62 @@ function _coachRememberAccess(status) {
   else st.access = status;
   _coachSave(st);
 }
+// 当前账号能不能用 AI:'out' 未登录 / 'none' 邀请制没开通 / 'on' 可用(登录了且没被拒过;第一次用时后台核一次)
+function coachAccess() {
+  if (!_coachUser()) return 'out';
+  const st = _coachLoad();
+  if (st.access && _COACH_LOCKED.has(st.access)) return 'none';
+  return 'on';
+}
+// 登录后后台查一次 /api/me(不花钱):定下能不能用、取模型列表和花费,再刷新各页的 AI 入口
+let _coachProbeUid = null;
+async function coachProbeAccess(force) {
+  const u = _coachUser();
+  if (!u) { window._coachMe = null; _coachProbeUid = null; _coachRefreshEntries(); return; }
+  if (!force && _coachProbeUid === u.uid) return;
+  _coachProbeUid = u.uid;
+  try {
+    const me = await _coachFetch('/api/me');
+    window._coachMe = me;
+    _coachRememberAccess('allowed');
+  } catch (e) {
+    if (_COACH_LOCKED.has(e.status)) _coachRememberAccess(e.status);
+    else _coachProbeUid = null;   // 连不上:下次再试
+  }
+  _coachRefreshEntries();
+}
+// 复盘(记录)、AI 排(计划 08)、我·05、今天页「问教练」、输入条:跟着权限一起刷新
+function _coachRefreshEntries(skipCoach) {
+  if (typeof uiRenderP8 === 'function') uiRenderP8();
+  if (typeof uiRenderMeAI === 'function') uiRenderMeAI();
+  coachRenderReview();
+  if (typeof uiUpdateComposer === 'function') uiUpdateComposer();
+  if (typeof uiUpdateMasthead === 'function') uiUpdateMasthead();
+  if (!skipCoach && typeof uiCurrentTab !== 'undefined' && uiCurrentTab === 'coach') renderCoach();
+}
+function coachModelLabel() {
+  if (coachAccess() !== 'on') return 'AI';
+  const o = _coachLoad().opts || {};
+  if (!o.model) return 'Auto';
+  const m = (window._coachMe?.models || []).find(x => x[0] === o.model);
+  return m ? m[1] : o.model;
+}
 function _coachAccessCard(el, info) {
-  const body = info.status === 'mismatch'
-    ? `<p class="co-sub">这个邮箱已经绑定了另一个账号，AI 教练用不了。换回第一次用的登录方式试试。</p>`
-    : `<p class="co-sub">AI 教练每次调用都要花钱，现在只对受邀的朋友开放。有邀请码的话填在下面；没有也没关系，计划、打卡、统计、换动作这些照常能用。</p>
-    <div class="co-row"><input id="co-code" class="co-code" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="16" placeholder="邀请码，如 ABCDE-FGHJK" onkeydown="if(event.key==='Enter')coachRedeem()">
-      <button class="co-btn" id="co-code-go" onclick="coachRedeem()">开通</button></div>`;
-  el.innerHTML = `<div class="co-card" id="co-access"><div class="co-h"><i class="ti ti-lock"></i> ${info.status === 'mismatch' ? 'AI 教练用不了' : 'AI 教练是邀请制'}</div>${body}</div>`;
+  const mis = info.status === 'mismatch';
+  el.innerHTML = `<div class="psec co-card" id="co-access" style="border-bottom:0"><div class="sec-label">[ AI 教练 ] ${mis ? '用不了' : '邀请制'}</div>`
+    + (mis ? `<div class="prose" style="font-size:17px">这个邮箱已经绑定了另一个账号，AI 教练用不了<span class="accent">.</span></div><div class="hint" style="font-size:15px">换回第一次用的登录方式试试。</div>`
+      : `<div class="prose" style="font-size:17px">AI 教练每次调用都要花钱，现在只对受邀的朋友开放<span class="accent">.</span></div>`
+      + `<div class="hint" style="font-size:15px">有邀请码的话填在下面；没有也没关系，计划、打卡、统计、换动作这些照常能用。</div>`
+      + `<input id="co-code" class="line-input code" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="16" placeholder="邀请码 · ABCDE-FGHJK" aria-label="邀请码" onkeydown="if(event.key==='Enter')coachRedeem()">`
+      + `<button class="btn-primary" id="co-code-go" onclick="coachRedeem()">开通</button><span class="foot-note">邀请码用一次就作废，两周内有效。</span>`)
+    + `</div>`;
 }
 async function _coachCheckAccess() {
   try {
-    await _coachFetch('/api/me');
+    const me = await _coachFetch('/api/me');
+    window._coachMe = me;
     _coachRememberAccess('allowed');
-    renderCoach();
+    _coachRefreshEntries();
   } catch (e) {
     if (!_COACH_LOCKED.has(e.status)) return;  // 连不上就先留着上次的卡
     _coachRememberAccess(e.status);
@@ -144,7 +187,7 @@ async function coachRedeem() {
     const r = await _coachFetch('/api/redeem', { code });
     _coachRememberAccess('allowed');
     showToast(r.name ? `开通了，${r.name}` : '开通了');
-    renderCoach();
+    await coachProbeAccess(true);
   } catch (e) {
     if (btn) { btn.disabled = false; btn.textContent = '开通' }
     showToast(e.message);
@@ -158,7 +201,7 @@ function _coachCostLine(r) {
   if (!r || r.cost == null) return '';
   const m = (window._coachMe?.models || []).find(x => x[0] === r.model);
   const e = (window._coachMe?.efforts || []).find(x => x[0] === r.effort);
-  return `<div class="co-meta">${_esc(m ? m[1] : r.model || '')}${e ? ' · 思考' + _esc(e[1]) : ''} · $${Number(r.cost).toFixed(3)}</div>`;
+  return `<div class="co-meta">${_esc(m ? m[1] : r.model || '')}${e ? ' · 思考深度 ' + _esc(e[1]) : ''} · $${Number(r.cost).toFixed(3)}</div>`;
 }
 
 // 照片压到长边 1280、JPEG，避免上传原图
@@ -179,81 +222,96 @@ function _coachImage(file, max = 1280) {
 }
 
 // ── 页面 ──
+// 教练页 = 对话为主;拍器械认动作是顶上的入口行;复盘在「记录」,AI 排在「计划 → 08」,模型和思考深度在「我 → 05」
+const _CAM_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h3l2-3h6l2 3h3v12H4z"/><circle cx="12" cy="13" r="3.5"/></svg>';
+function _coachEnsureComposer() {
+  const c = document.getElementById('composer');
+  if (!c || c.dataset.built) return;
+  c.innerHTML = `<div id="co-chat-img"></div><div class="composer-row">`
+    + `<label class="icon-btn" title="发图片" aria-label="发图片">${_CAM_SVG}<input type="file" accept="image/*" onchange="coachAttach(this)"></label>`
+    + `<textarea id="co-chat-text" rows="1" placeholder="问点什么…" aria-label="问教练" onkeydown="if(event.key==='Enter'&&!event.shiftKey&&!event.isComposing){event.preventDefault();coachSend()}"></textarea>`
+    + `<button type="button" class="send" id="co-chat-go" onclick="coachSend()">发送</button></div>`;
+  c.dataset.built = '1';
+}
 async function renderCoach() {
   const el = document.getElementById('coach-content');
   if (!el) return;
+  _coachEnsureComposer();
   const u = _coachUser();
   if (!u) {
-    el.innerHTML = `<div class="co-card co-empty"><i class="ti ti-sparkles"></i><p>登录后就能用 AI 教练：复盘、排计划、认器械、随时问。</p>
-      <button class="co-btn" onclick="openLoginModal()">登录</button></div>`;
+    el.innerHTML = `<div class="psec co-card co-empty" style="border-bottom:0"><div class="sec-label">[ AI 教练 ] 未登录</div><div class="prose" style="font-size:17px">登录后就能用 AI 教练：复盘、排计划、认器械、随时问。</div>
+      <button class="btn-outline" onclick="openLoginModal()">去「我」登录</button></div>`;
+    if (typeof uiUpdateComposer === 'function') uiUpdateComposer();
     return;
   }
   const st = _coachLoad();
-  if (st.access) {
+  if (st.access && _COACH_LOCKED.has(st.access)) {
     _coachAccessCard(el, { status: st.access });
+    if (typeof uiUpdateComposer === 'function') uiUpdateComposer();
     return _coachCheckAccess();
   }
   el.innerHTML = `
-  <div class="co-top">
-    <span id="co-status" class="co-meta">连接中…</span>
-    <span class="co-sel"><select id="co-model" aria-label="模型" onchange="coachSaveOpts()"></select><select id="co-effort" aria-label="思考深度" onchange="coachSaveOpts()"></select></span>
-  </div>
-  <div class="co-card" id="co-review">
-    <div class="co-h"><i class="ti ti-report-analytics"></i> 每周复盘</div>
-    <p class="co-sub">看最近几周练得怎么样，给出下周可以一键采纳的调整。</p>
-    <div id="co-review-body"></div>
-    <button class="co-btn" id="co-review-go" onclick="coachReview()">生成复盘</button>
-  </div>
-  <div class="co-card" id="co-plan">
-    <div class="co-h"><i class="ti ti-calendar-event"></i> AI 排计划</div>
-    <p class="co-sub">按你的目标、器械和最近的状态，从动作库里排。先预览，满意再采纳；已完成的天和锁定的天不动。</p>
-    <textarea id="co-plan-req" rows="2" placeholder="有特别要求可以写，比如：这周膝盖不舒服 / 周三只有 30 分钟 / 多练背"></textarea>
-    <div class="co-row"><select id="co-plan-span"><option value="7">接下来 7 天</option><option value="14">接下来 14 天</option></select>
-      <button class="co-btn" id="co-plan-go" onclick="coachPlan()">排计划</button></div>
-    <div id="co-plan-body"></div>
-  </div>
-  <div class="co-card" id="co-vision">
-    <div class="co-h"><i class="ti ti-camera"></i> 拍器械认动作</div>
-    <p class="co-sub">在健身房拍一张器械，告诉你用它能做动作库里的哪些动作，可以直接加到今天。</p>
-    <label class="co-btn co-file">拍照 / 选图<input type="file" accept="image/*" capture="environment" onchange="coachVision(this)"></label>
+  <div class="co-card co-entry" id="co-vision">
+    <label class="row-btn" style="border-bottom:0"><span><span class="rk">拍器械认动作</span><span class="rv">在健身房拍一张器械，告诉你用它能做动作库里的哪些动作，可以直接加到今天</span></span><span class="ra">→</span><input type="file" accept="image/*" capture="environment" onchange="coachVision(this)" aria-label="拍器械认动作"></label>
     <div id="co-vision-body"></div>
   </div>
   <div class="co-card" id="co-chat">
-    <div class="co-h"><i class="ti ti-message-circle"></i> 问教练 <button class="co-link" onclick="coachNewChat()">新对话</button></div>
-    <div id="co-chat-log" class="co-chat-log"></div>
-    <div id="co-chat-img"></div>
-    <div class="co-row co-chat-in">
-      <label class="co-icon" title="发图片"><i class="ti ti-photo"></i><input type="file" accept="image/*" onchange="coachAttach(this)"></label>
-      <textarea id="co-chat-text" rows="1" placeholder="问点什么…" onkeydown="if(event.key==='Enter'&&!event.shiftKey&&!event.isComposing){event.preventDefault();coachSend()}"></textarea>
-      <button class="co-btn" id="co-chat-go" onclick="coachSend()">发送</button>
-    </div>
+    <div class="sec-head"><span class="sec-label">对话</span><button class="link-btn" onclick="coachNewChat()">新对话</button></div>
+    <div id="co-chat-log" class="co-chat-log" aria-live="polite"></div>
+    <div class="co-foot">对话只存在这台手机上 · <span id="co-status" class="co-meta">连接中…</span></div>
   </div>`;
-  if (st.review) _coachShowReview(st.review);
-  if (st.planDraft) _coachShowPlan(st.planDraft);
   _coachShowChat();
+  if (typeof uiUpdateComposer === 'function') uiUpdateComposer();
   try {
     const me = await _coachFetch('/api/me');
     window._coachMe = me;
-    const o = st.opts || {};
-    document.getElementById('co-model').innerHTML = `<option value="">模型·自动</option>` + me.models.map(([k, n, note]) => `<option value="${k}"${o.model === k ? ' selected' : ''}>${_esc(n)}·${_esc(note)}</option>`).join('');
-    document.getElementById('co-effort').innerHTML = me.efforts.map(([k, n]) => `<option value="${k}"${(o.effort || 'medium') === k ? ' selected' : ''}>思考·${_esc(n)}</option>`).join('');
-    document.getElementById('co-effort').disabled = !o.model;
-    document.getElementById('co-status').textContent = `今天 $${me.today.toFixed(2)} · 本月 $${me.cycle.toFixed(2)}`;
+    _coachRememberAccess('allowed');
+    const s = document.getElementById('co-status');
+    if (s) s.textContent = `今天 $${me.today.toFixed(2)} · 本月 $${me.cycle.toFixed(2)}`;
+    _coachRefreshEntries(true);   // 确认能用了:复盘、AI 排、我·05、输入条一起亮起来
   } catch (e) {
     if (_COACH_LOCKED.has(e.status)) {
       _coachRememberAccess(e.status);
-      return _coachAccessCard(el, e.info);
+      _coachAccessCard(el, e.info);
+      _coachRefreshEntries(true);
+      return;
     }
     const s = document.getElementById('co-status');
     if (s) { s.textContent = e.message; s.classList.add('co-err') }
   }
 }
-function coachSaveOpts() {
-  const st = _coachLoad(), m = document.getElementById('co-model').value;
-  st.opts = m ? { model: m, effort: document.getElementById('co-effort').value } : {};
-  document.getElementById('co-effort').disabled = !m;
-  _coachSave(st);
+// 我 → 05:模型单选 + 思考深度四段 + 花费
+function coachMeSectionHtml() {
+  const a = coachAccess();
+  if (a !== 'on') {
+    return `<button type="button" class="row-btn" onclick="showTab('coach')"><span class="mono" style="font-size:14px">${a === 'none' ? '邀请制 · 有邀请码去「教练」页填' : '登录后可用'}</span><span class="ra">→</span></button>`;
+  }
+  const me = window._coachMe;
+  if (!me) { coachProbeAccess(); return `<span class="note-line">读取中…</span>`; }
+  const o = _coachLoad().opts || {};
+  const models = [['', '自动', '按任务定'], ...(me.models || [])];
+  const efforts = me.efforts || [];
+  const effCur = o.effort || 'medium';
+  return `<span class="sub-label">模型</span><div data-group="model" role="radiogroup" aria-label="模型">${models.map(([k, n, note]) => {
+      const on = (o.model || '') === k;
+      return `<button type="button" class="model-row" role="radio" aria-checked="${on}" data-v="${_esc(k)}"><span>${on ? '(•)' : '( )'}</span><span>${_esc(n)}</span><span class="note">${_esc(note || '')}</span></button>`;
+    }).join('')}</div>`
+    + `<span class="sub-label" style="margin-top:4px">${o.model ? '思考深度' : '思考深度 · 选「自动」时按任务定'}</span>`
+    + `<div style="opacity:${o.model ? 1 : .4}">${uiSeg('co-effort', 'effort', efforts.map(([k, n]) => [k, n]), effCur, { label: '思考深度', disabled: o.model ? {} : Object.fromEntries(efforts.map(([k]) => [k, true])) })}</div>`
+    + `<div class="kv"><span class="k">本月</span><span>已用 $${Number(me.cycle || 0).toFixed(2)}</span><span class="k">今天</span><span>$${Number(me.today || 0).toFixed(2)}${me.daily_cap ? ` / 上限 $${Number(me.daily_cap).toFixed(2)}` : ''}</span><span class="k">额度</span><span>每天有上限；每月 17 号重置</span></div>`;
 }
+function coachSetModel(k) {
+  const st = _coachLoad(), o = st.opts || {};
+  st.opts = k ? { model: k, effort: o.effort || 'medium' } : {};
+  _coachSave(st);
+  if (typeof uiUpdateMasthead === 'function') uiUpdateMasthead();
+}
+function coachSetEffort(k) {
+  const st = _coachLoad();
+  if (!st.opts || !st.opts.model) return;   // 自动模式下思考深度由任务定
+  st.opts.effort = k; _coachSave(st);
+}
+function coachSaveOpts() { }   // 旧下拉框的回调(控件已搬到「我 → 05」),保留空壳
 function _coachBusy(id, on, label) {
   const b = document.getElementById(id);
   if (!b) return;
@@ -261,7 +319,22 @@ function _coachBusy(id, on, label) {
   else { b.textContent = b.dataset.t || b.textContent; b.disabled = false }
 }
 
-// ── 复盘 ──
+// ── 复盘(在「记录」页顶部) ──
+function coachRenderReview() {
+  const el = document.getElementById('log-review');
+  if (!el) return;
+  const a = coachAccess();
+  if (a !== 'on') {
+    // 白名单外 / 未登录:收成一行灰字
+    el.innerHTML = `<button type="button" class="row-btn" style="opacity:.6" onclick="showTab('coach')"><span><span class="rk sub-label">[ 复盘 ] ${a === 'none' ? 'AI 教练是邀请制' : '登录后可用'}</span><span class="rv">每周看最近练得怎么样，给出可以一键采纳的调整</span></span><span class="ra">→</span></button>`;
+    return;
+  }
+  if (!document.getElementById('co-review')) {
+    el.innerHTML = `<div class="review co-card" id="co-review"><div class="sec-label" id="co-review-head">[ 复盘 ] 每周</div><div id="co-review-body"></div><button class="btn-outline" id="co-review-go" onclick="coachReview()">生成复盘</button></div>`;
+  }
+  const st = _coachLoad();
+  _coachShowReview(st.review || null);
+}
 async function coachReview() {
   _coachBusy('co-review-go', true, '复盘中…（约半分钟）');
   try {
@@ -269,7 +342,7 @@ async function coachReview() {
     const st = _coachLoad();
     st.review = { ...r.data, adjustments: _coachCleanAdj(r.data.adjustments), at: todayStr(), model: r.model, effort: r.effort, cost: r.cost, applied: [] };
     _coachSave(st);
-    _coachShowReview(st.review);
+    coachRenderReview();   // 复盘在「记录」页顶部;从别处触发时也先把容器建好
   } catch (e) { showToast(e.message) }
   _coachBusy('co-review-go', false);
 }
@@ -284,21 +357,31 @@ function _adjText(a) {
     default: return '用 AI 重排接下来的计划';
   }
 }
+function _coachAdjCount() {
+  const n = document.querySelectorAll('#co-adj-list .adj-row[aria-checked="true"]:not([aria-disabled="true"])').length;
+  const b = document.getElementById('co-adopt');
+  if (b) { b.textContent = `采纳勾选的 ${n} 条`; b.disabled = !n; }
+}
 function _coachShowReview(rv) {
   const el = document.getElementById('co-review-body');
   if (!el) return;
+  const head = document.getElementById('co-review-head'), go = document.getElementById('co-review-go');
+  if (!rv) { el.innerHTML = `<div class="hint">看最近几周练得怎么样，给出下周可以一键采纳的调整。</div>`; if (head) head.textContent = '[ 复盘 ] 每周'; if (go) go.textContent = '生成复盘'; return; }
+  if (head) head.textContent = `[ 复盘 ] ${rv.at || ''}`;
+  if (go && !go.disabled) go.textContent = '重新生成复盘';
   const li = arr => (arr || []).map(x => `<li>${_esc(x)}</li>`).join('');
+  const applied = rv.applied || [];
   const adj = (rv.adjustments || []).map((a, i) => {
-    const done = (rv.applied || []).includes(i);
-    return `<label class="co-adj${done ? ' done' : ''}"><input type="checkbox" data-i="${i}" ${done ? 'disabled checked' : 'checked'}>
-      <span><b>${_esc(_ADJ_LABEL[a.type] || a.type)}</b> ${_esc(_adjText(a))}<small>${_esc(a.reason)}</small></span></label>`;
+    const done = applied.includes(i);
+    return `<button type="button" class="adj-row co-adj${done ? ' done' : ''}" role="checkbox" aria-checked="true" data-i="${i}"${done ? ' aria-disabled="true"' : ` onclick="uiToggleBox(this);_coachAdjCount()"`}>${uiBoxSq()}<span><span class="what">${_esc(_ADJ_LABEL[a.type] || a.type)} · ${_esc(_adjText(a))}${done ? ' <span class="olive">已采纳</span>' : ''}</span><span class="why">${_esc(a.reason)}</span></span></button>`;
   }).join('');
-  el.innerHTML = `<div class="co-rv"><div class="co-rv-h">${_esc(rv.headline)}</div><div class="co-meta">${_esc(rv.at)}</div>
+  const left = (rv.adjustments || []).length - applied.length;
+  el.innerHTML = `<div class="co-rv"><div class="rv-h">${_esc(rv.headline)}<span class="accent">.</span></div>
     ${_coachMd(rv.summary)}
     ${rv.wins?.length ? `<div class="co-rv-t">做得好</div><ul>${li(rv.wins)}</ul>` : ''}
     ${rv.issues?.length ? `<div class="co-rv-t">要注意</div><ul>${li(rv.issues)}</ul>` : ''}
-    ${adj ? `<div class="co-rv-t">建议调整</div><div id="co-adj-list">${adj}</div>
-      ${(rv.applied || []).length < rv.adjustments.length ? `<button class="co-btn co-btn-sage" onclick="coachApplyReview()">采纳勾选的</button>` : ''}` : ''}
+    ${adj ? `<div class="sub-label" style="margin-top:4px">建议调整 · 勾选后一键采纳</div><div id="co-adj-list">${adj}</div>
+      ${left > 0 ? `<button class="btn-primary" id="co-adopt" onclick="coachApplyReview()">采纳勾选的 ${left} 条</button>` : `<div class="note-line olive">✓ 已采纳 ${applied.length} 条</div>`}` : ''}
     ${_coachCostLine(rv)}</div>`;
 }
 // 不合规的建议(越界数值、动作库外/本账号不可排的动作)直接不显示；采纳时 coachApplyReview 还会再核一遍
@@ -315,7 +398,7 @@ function _coachCleanAdj(list) {
 function coachApplyReview() {
   const st = _coachLoad(), rv = st.review;
   if (!rv) return;
-  const picks = [...document.querySelectorAll('#co-adj-list input:checked:not(:disabled)')].map(x => +x.dataset.i);
+  const picks = [...document.querySelectorAll('#co-adj-list .adj-row[aria-checked="true"]:not([aria-disabled="true"])')].map(x => +x.dataset.i);
   if (!picks.length) return showToast('没有勾选');
   const cat = _coachCatalogMap();
   let regen = false, replan = false;
@@ -351,15 +434,19 @@ function coachApplyReview() {
   _coachSave(st);
   saveState();
   if (typeof applySettingsToUI === 'function') applySettingsToUI();
-  // 改了天数/时长/训练量/排除 → 用原有生成器重排未来(保留过去、今天已打卡、锁定的天)
-  if (regen && S.plan) { genPlan(true); showTab('coach', document.getElementById('tab-coach')) }
+  // 改了天数/时长/训练量/排除 → 用原有生成器重排未来(保留过去、今天已打卡、锁定的天);留在「记录」页
+  if (regen && S.plan) { _genStay = true; genPlan(true); }
   else render();
   _coachShowReview(rv);
   showToast(`已采纳 ${done.length} 条`);
-  if (replan) { document.getElementById('co-plan')?.scrollIntoView({ behavior: 'smooth' }); coachPlan() }
+  if (replan) {
+    if (typeof _uiGen !== 'undefined') _uiGen.method = 'ai';
+    showTab('plan');
+    setTimeout(() => { document.getElementById('p8')?.scrollIntoView({ behavior: 'smooth' }); coachPlan(); }, 50);
+  }
 }
 
-// ── 排计划 ──
+// ── 排计划(在「计划 → 08」选 AI 排) ──
 function _coachPlanDates(span) {
   const today = todayStr(), out = [];
   for (let i = 0; i < span; i++) {
@@ -374,7 +461,7 @@ function _coachPlanDates(span) {
 async function coachPlan() {
   const dates = _coachPlanDates(+(document.getElementById('co-plan-span')?.value || 7));
   if (!dates.length) return showToast('接下来这几天都已完成或锁定');
-  _coachBusy('co-plan-go', true, '排计划中…（约一分钟）');
+  _coachBusy('gen-btn', true, '排计划中…（约一分钟）');
   try {
     const r = await _coachFetch('/api/plan', {
       context: buildCoachContext({ catalog: 'full' }), dates,
@@ -385,7 +472,7 @@ async function coachPlan() {
     const st = _coachLoad(); st.planDraft = draft; _coachSave(st);
     _coachShowPlan(draft);
   } catch (e) { showToast(e.message) }
-  _coachBusy('co-plan-go', false);
+  _coachBusy('gen-btn', false);
 }
 // AI 给的计划只当草稿：名字必须在当前账号可排的动作库里，单位/分组/说明都以库为准
 function _coachValidatePlan(data, dates) {
@@ -418,13 +505,14 @@ function _coachShowPlan(dr) {
   const el = document.getElementById('co-plan-body');
   if (!el) return;
   if (!dr || !dr.days?.length) { el.innerHTML = ''; return }
-  el.innerHTML = `<div class="co-rv">${_coachMd(dr.rationale)}
+  el.innerHTML = `<div class="co-rv" style="border-top:1px solid var(--line);padding-top:12px"><div class="sec-label">[ AI 排 ] 预览 · ${_esc(dr.at || '')}</div>${_coachMd(dr.rationale)}
     ${dr.dropped?.length ? `<div class="co-meta co-err">已去掉 ${dr.dropped.length} 个不在你动作库里的：${_esc(dr.dropped.join('、'))}</div>` : ''}
     ${dr.days.map(d => `<div class="co-day"><div class="co-day-h">${_esc(fmtDate(d.date))} · ${_esc(d.workoutType)}</div>
-      ${d.isRest ? '' : `<div class="co-day-ex">${d.exercises.map(e => `<span onclick="showExDetail('${_esc(e.name).replace(/'/g, '&#39;')}')">${_esc(e.name)} <small>${e.sets}×${e.reps}${_esc(e.unit)}</small></span>`).join('')}</div>`}</div>`).join('')}
-    <div class="co-row"><button class="co-btn co-btn-sage" onclick="coachApplyPlan()">采纳这份计划</button><button class="co-link" onclick="coachDropPlan()">不要了</button></div>
+      ${d.isRest ? '' : `<div class="co-day-ex">${d.exercises.map(e => `<button type="button" data-act="detail" data-name="${_esc(e.name)}">${_esc(e.name)} <small>${e.sets}×${e.reps}${_esc(e.unit)}</small></button>`).join('')}</div>`}</div>`).join('')}
+    <div class="btn-row"><button class="btn-primary" style="min-height:44px;font-size:14px" onclick="coachApplyPlan()">采纳这份计划</button><button class="btn-line" onclick="coachDropPlan()">不要了</button></div>
     ${_coachCostLine(dr)}</div>`;
 }
+function coachShowPlanDraft() { const st = _coachLoad(); _coachShowPlan(st.planDraft || null); }
 function coachDropPlan() { const st = _coachLoad(); delete st.planDraft; _coachSave(st); _coachShowPlan(null) }
 function coachApplyPlan() {
   const st = _coachLoad(), dr = st.planDraft;
@@ -450,7 +538,8 @@ function coachApplyPlan() {
   delete st.planDraft; _coachSave(st);
   saveState(); render();
   showToast(`已采纳 ${days.length} 天`);
-  showTab('today', document.querySelector('.tab'));
+  showTab('today');
+  if (typeof uiNotice === 'function') uiNotice(`AI 排的 ${days.length} 天已经写进计划`);
 }
 
 // ── 拍器械 ──
@@ -461,7 +550,7 @@ async function coachVision(input) {
   const el = document.getElementById('co-vision-body');
   let img;
   try { img = await _coachImage(f) } catch (e) { return showToast(e.message) }
-  el.innerHTML = `<img class="co-thumb" src="${img}"><div class="co-meta">识别中…</div>`;
+  el.innerHTML = `<div style="padding:8px 0;display:flex;flex-direction:column;gap:8px"><img class="co-thumb" src="${img}" alt="刚拍的器械"><div class="co-meta">识别中…</div></div>`;
   try {
     const r = await _coachFetch('/api/vision', { image: img, context: buildCoachContext({ catalog: 'full', logDays: 14 }), ..._coachOpts('vision') });
     const cat = _coachCatalogMap(), d = r.data;
@@ -469,11 +558,11 @@ async function coachVision(input) {
     const today = S.plan?.days?.find(x => x.date === todayStr());
     const canAdd = today && !today.isRest && !today.isPrivateDay && !isLocked(today);
     window._coachVisionList = list.map(e => e.name);
-    el.innerHTML = `<img class="co-thumb" src="${img}"><div class="co-rv"><div class="co-rv-h">${_esc(d.equipment)}</div>${_coachMd(d.note)}
-      ${list.map((e, i) => `<div class="co-vx"><span onclick="showExDetail(window._coachVisionList[${i}])"><b>${_esc(e.name)}</b><small>${_esc(e.why)}</small></span>
-        ${canAdd ? `<button class="co-link" onclick="coachAddToday(${i},this)">加到今天</button>` : ''}</div>`).join('') || '<p class="co-meta">动作库里没有对应的动作。</p>'}
-      ${_coachCostLine(r)}</div>`;
-  } catch (e) { el.innerHTML = `<div class="co-meta co-err">${_esc(e.message)}</div>` }
+    el.innerHTML = `<div style="padding:8px 0 12px;display:flex;flex-direction:column;gap:8px"><img class="co-thumb" src="${img}" alt="刚拍的器械"><div class="co-rv"><div class="co-rv-h">${_esc(d.equipment)}</div>${_coachMd(d.note)}
+      ${list.map((e, i) => `<div class="co-vx"><button type="button" onclick="showExDetail(window._coachVisionList[${i}])"><span>${_esc(e.name)}</span><small>${_esc(e.why)}</small></button>
+        ${canAdd ? `<button class="btn-line" onclick="coachAddToday(${i},this)">加到今天</button>` : ''}</div>`).join('') || '<p class="co-meta">动作库里没有对应的动作。</p>'}
+      ${_coachCostLine(r)}</div></div>`;
+  } catch (e) { el.innerHTML = `<div class="co-meta co-err" style="padding:8px 0">${_esc(e.message)}</div>` }
 }
 function coachAddToday(i, btn) {
   const name = window._coachVisionList?.[i], hit = name && _coachCatalogMap().get(name);
@@ -505,21 +594,44 @@ function coachNewChat() {
   if (st.chat?.length && !confirm('开始新对话？之前的对话会清掉。')) return;
   st.chat = []; delete st.chatCtx; _coachSave(st); _coachShowChat();
 }
+function _coachHM(t) { if (!t) return ''; const d = new Date(t); return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; }
 function _coachShowChat(streaming) {
   const el = document.getElementById('co-chat-log');
   if (!el) return;
   const chat = _coachLoad().chat || [];
-  el.innerHTML = chat.length ? chat.map(m => `<div class="co-msg ${m.role}">${m.img ? '<div class="co-meta">[图片]</div>' : ''}${m.role === 'assistant' ? _coachMd(m.text) : _esc(m.text).replace(/\n/g, '<br>')}${m.meta ? _coachCostLine(m.meta) : ''}</div>`).join('')
-    + (streaming ? `<div class="co-msg assistant" id="co-stream"><span class="co-meta">思考中…</span></div>` : '')
-    : '<div class="co-meta">比如：「我深蹲总是膝盖往里扣怎么办」「这周只能练两次，怎么安排」「今天很累还要练吗」</div>';
-  el.scrollTop = el.scrollHeight;
+  el.innerHTML = chat.length ? chat.map(m => m.role === 'assistant'
+    ? `<div class="co-msg assistant"><span class="who">[ 教练 ]${m.at ? ' ' + _coachHM(m.at) : ''}</span><div class="co-text">${_coachMd(m.text)}</div>${m.meta ? _coachCostLine(m.meta) : ''}</div>`
+    : `<div class="co-msg user"><span class="who">你${m.at ? ' · ' + _coachHM(m.at) : ''}</span>${m.img ? '<span class="co-meta">[ 图片 ]</span>' : ''}<span class="co-text">${_esc(m.text).replace(/\n/g, '<br>')}</span></div>`).join('')
+    + (streaming ? `<div class="co-msg assistant"><span class="who">[ 教练 ]</span><div class="co-text" id="co-stream"><span class="co-meta">思考中…</span></div></div>` : '')
+    : '<div class="note-line" style="padding:12px 0">比如：「我深蹲总是膝盖往里扣怎么办」「这周只能练两次，怎么安排」「今天很累还要练吗」</div>';
+  if (streaming || chat.length) { const last = el.lastElementChild; if (last && typeof last.scrollIntoView === 'function' && typeof uiCurrentTab !== 'undefined' && uiCurrentTab === 'coach') last.scrollIntoView({ block: 'end' }); }
 }
 async function coachAttach(input) {
   const f = input.files && input.files[0];
   input.value = '';
   if (!f) return;
   try { _coachPendingImg = await _coachImage(f, 1024) } catch (e) { return showToast(e.message) }
-  document.getElementById('co-chat-img').innerHTML = `<div class="co-pending"><img src="${_coachPendingImg}"><button class="co-link" onclick="_coachPendingImg=null;this.parentNode.remove()">移除</button></div>`;
+  document.getElementById('co-chat-img').innerHTML = `<div class="co-pending"><img src="${_coachPendingImg}" alt="待发送的图片"><button class="link-btn" onclick="_coachPendingImg=null;this.parentNode.remove()">移除</button></div>`;
+}
+// 今天页的教练便签:最近两天里教练的最后一条回复(没有就不显示)
+function coachTodayNoteHtml() {
+  if (coachAccess() !== 'on') return '';
+  const chat = _coachLoad().chat || [];
+  const m = [...chat].reverse().find(x => x.role === 'assistant' && x.at);
+  if (!m || Date.now() - m.at > 2 * 86400000) return '';
+  const plain = String(m.text || '').replace(/\*\*/g, '').replace(/\s+/g, ' ').trim();
+  const t = plain.length > 120 ? plain.slice(0, 118) + '…' : plain;
+  return `<div class="coach-note"><div class="sec-label">[ 教练 ] Note · ${_coachHM(m.at)}</div><div class="prose">${_esc(t)}</div><button class="link-btn u" style="align-self:flex-start" onclick="showTab('coach')">接着问 →</button></div>`;
+}
+// 今天页「问教练」/ 换动作面板「问教练怎么换」:跳到教练页,输入框里先填好开头
+function coachAskAbout(name, kind) {
+  showTab('coach');
+  setTimeout(() => {
+    const ta = document.getElementById('co-chat-text');
+    if (!ta) return;
+    ta.value = kind === '换' ? `「${name}」今天做不了，换成什么好？` : `关于「${name}」：`;
+    try { ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); } catch (e) { }
+  }, 60);
 }
 async function coachSend() {
   const ta = document.getElementById('co-chat-text');
@@ -530,7 +642,7 @@ async function coachSend() {
   // 数据快照在对话开头拍一次，整段对话沿用(后端放进第一条消息，缓存命中省钱)；要用最新数据就点「新对话」
   if (!st.chat.length || !st.chatCtx) st.chatCtx = buildCoachContext({ catalog: 'names', logDays: 28 });
   const img = _coachPendingImg;
-  st.chat.push({ role: 'user', text: text || '(看图)', img: !!img });
+  st.chat.push({ role: 'user', text: text || '(看图)', img: !!img, at: Date.now() });
   st.chat = st.chat.slice(-COACH_CHAT_MAX);
   _coachSave(st);
   ta.value = ''; _coachPendingImg = null; document.getElementById('co-chat-img').innerHTML = '';
@@ -553,7 +665,7 @@ async function coachSend() {
         const ev = (block.match(/^event: (.*)$/m) || [])[1], data = (block.match(/^data: (.*)$/m) || [])[1];
         if (!data) continue;
         const j = JSON.parse(data);
-        if (ev === 'delta') { acc += j.t; const s = document.getElementById('co-stream'); if (s) { s.innerHTML = _coachMd(acc); s.parentNode.scrollTop = s.parentNode.scrollHeight } }
+        if (ev === 'delta') { acc += j.t; const s = document.getElementById('co-stream'); if (s) { s.innerHTML = _coachMd(acc); } }
         else if (ev === 'done') { acc = j.text || acc; meta = { model: j.model, effort: j.effort, cost: j.cost } }
         else if (ev === 'error') err = j.error;
       }
@@ -561,7 +673,7 @@ async function coachSend() {
   } catch (e) { err = e.message }
   const st2 = _coachLoad();
   st2.chat = st2.chat || [];
-  if (acc) st2.chat.push({ role: 'assistant', text: acc, meta });
+  if (acc) st2.chat.push({ role: 'assistant', text: acc, meta, at: Date.now() });
   else st2.chat.pop(); // 失败就撤回刚才那条，免得历史里两条用户消息连在一起
   _coachSave(st2);
   if (!acc) ta.value = text;

@@ -1,4 +1,4 @@
-const CACHE = 'cici-fitness-v153';   // 数字要和 core.js 的 APP_BUILD、index.html 页脚的 build 一致(check-static 会查)
+const CACHE = 'cici-fitness-v154';   // 数字要和 core.js 的 APP_BUILD、index.html 页脚的 build 一致(check-static 会查)
 // 动作演示 GIF:单独一个缓存,只留最近 GIF_MAX 张。来源锁在固定 commit(见 core.js GIF_BASE),内容不会变,
 // 所以缓存优先、跨版本保留;以前走 SWR 进主缓存,看过的每张都存着,越积越多
 const GIF_CACHE = 'cici-fitness-gif-v1';
@@ -7,7 +7,7 @@ const GIF_PREFIX = '/gh/hasaneyldrm/exercises-dataset@';
 
 // ── Local assets: always pre-cached on install ──
 const LOCAL_ASSETS = [
-  './index.html', './core.js', './app.js', './coach.js', './style.css',
+  './index.html', './ui.js', './core.js', './app.js', './coach.js', './style.css',
   './manifest.json', './icon.svg', './dev.js'
 ];
 
@@ -18,9 +18,8 @@ const CDN_ASSETS = [
   'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js',
   'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js',
   // Google Fonts CSS —— 必须和 index.html 里实际加载的那条一字不差(以前写的是旧字体,预缓存白做;check-static 会查)
-  'https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400..800;1,400..600&family=DM+Mono:wght@300;400&family=Noto+Serif+SC:wght@300;400;600;700&family=Outfit:wght@300;400;500;600;700&display=swap',
-  // 霞鹜文楷 + Tabler Icons CSS(jsDelivr,运行时走 SWR;这里预缓存一份,离线首开也有样式)
-  'https://cdn.jsdelivr.net/npm/lxgw-wenkai-webfont@1.7.0/style.css',
+  'https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&family=EB+Garamond:ital,wght@0,400..600;1,400..600&family=Noto+Serif+SC:wght@400;600&display=swap',
+  // Tabler Icons CSS(jsDelivr,运行时走 SWR;这里预缓存一份,离线首开也有样式)。ui-v3 起不再加载霞鹜文楷
   'https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css'
 ];
 

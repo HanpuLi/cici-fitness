@@ -6,7 +6,7 @@ Live app: https://hanpuli.github.io/cici-fitness/
 
 ## Architecture
 
-- **Static client:** `index.html`, `core.js`, `app.js`, `style.css` and local assets.
+- **Static client:** `index.html`, `ui.js` (shared controls, dialogs, navigation, Plan / Me pages, first-run setup), `core.js`, `app.js`, `coach.js`, `style.css` and local assets.
 - **Offline support:** `sw.js` pre-caches the application shell and runtime data.
 - **Local persistence:** application state and recovery snapshots use browser storage, namespaced to the signed-in user where appropriate.
 - **Optional cloud sync:** Firebase Authentication + Firestore.
@@ -26,8 +26,10 @@ python3 -m http.server 8000
 Run the same static checks as CI:
 
 ```sh
+node --check ui.js
 node --check core.js
 node --check app.js
+node --check coach.js
 node --check dev.js
 node --check sw.js
 node tools/check-static.mjs

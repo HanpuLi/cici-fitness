@@ -43,6 +43,7 @@ function toggleTheme(){
 }
 
 function updateThemeBtn(theme){
+    if (typeof uiRenderMeLook === 'function') uiRenderMeLook();   // 外观改到「我 → 02」三段选择
     const btn = document.getElementById('theme-btn');
     if (!btn) return;
     const current = theme || localStorage.getItem('fit_theme') || 'system';
@@ -99,60 +100,11 @@ if(S.plan && typeof autoAlignPlan==='function') autoAlignPlan();
 _initialLoad = false;
 }
 function applySettingsToUI(){
+// 设置的控件都在「计划」页和新手设置里,由 ui.js 按 S 现画;这里只负责触发重画和旁边几样状态
 document.body.classList.toggle('theme-curve', hasGoal('女性曲线'));
-document.querySelectorAll('#g-goal .chip').forEach(b=>b.classList.toggle('on',hasGoal(b.dataset.v)));
-document.querySelectorAll('#g-level .chip').forEach(b=>b.classList.toggle('on',b.dataset.v===S.level));
-document.querySelectorAll('#g-weight-level .chip').forEach(b=>b.classList.toggle('on',b.dataset.v===(S.weightLevel||'初级')));
-document.getElementById('sl-days').value=S.days;
-document.getElementById('v-days').textContent=S.days+'天';
-document.getElementById('sl-dur').value=S.dur;
-document.getElementById('v-dur').textContent=S.dur+'分钟';
-document.querySelectorAll('#g-equip .chip').forEach(b=>b.classList.toggle('on',S.equip.includes(b.dataset.v)));
-document.querySelectorAll('#g-focus .chip').forEach(b=>{
-    b.classList.remove('disabled');
-    b.style.opacity = 1;
-    b.style.pointerEvents = 'auto';
-    b.classList.toggle('on',S.focus.includes(b.dataset.v));
-});
-
-const goalInfo = document.getElementById('goal-info');
-if (goalInfo) {
-    if (hasGoal('翘臀美背')) {
-        goalInfo.innerHTML = "臀推顶端挤压优先；美背日强化背阔与体态（圆肩改善）；收腰靠真空吸而非减脂；避免直立划船/耸肩。";
-        goalInfo.style.display = "block";
-    } else if (hasGoal('女性曲线')) {
-        goalInfo.innerHTML = "极致沙漏：臀大+胯宽+腿丰满同步堆围度，腰只靠真空吸/平板维持，绝不做负重侧屈/转体。大腿要练腘绳/内收/衔接，不只堆股四。上肢几乎不动以免变宽。吃够蛋白(1.6-2g/kg)+轻微热量盈余才能喂大下半身。";
-        goalInfo.style.display = "block";
-    } else {
-        goalInfo.style.display = "none";
-    }
-}
-document.getElementById('limits').value=S.limits||'';
-document.querySelectorAll('#g-rest .chip').forEach(b=>b.classList.toggle('on',+b.dataset.v===(S.restDur??45)));
-document.querySelectorAll('#g-swim-level .chip').forEach(b=>b.classList.toggle('on',b.dataset.v===(S.swimLevel||'入门')));
-document.querySelectorAll('#g-partner-days .chip').forEach(b=>b.classList.toggle('on',+b.dataset.v===(+S.partnerDays||0)));
-if(typeof updatePartnerOverlap==='function')updatePartnerOverlap();
-if(typeof renderExcludedList==='function')renderExcludedList();
-const autoVolSwUI=document.getElementById('auto-vol-switch');
-if(autoVolSwUI) autoVolSwUI.checked = S.autoVolumeAdjust !== false;
-if(typeof updatePairUI==='function')updatePairUI();
-const swimPanel=document.getElementById('swim-settings');
-if(swimPanel) swimPanel.style.display=S.equip.includes('泳池')?'block':'none';
-const periodSwitch=document.getElementById('period-switch');
-if(periodSwitch) periodSwitch.checked=!!S.periodMode;
-const periodRow=document.getElementById('period-toggle-row');
-if(periodRow) periodRow.classList.toggle('active',!!S.periodMode);
-const cyEn=document.getElementById('cycle-enable-switch');
-if(cyEn) cyEn.checked=S.cycleEnabled!==false;
-const cyBlock=document.getElementById('cycle-block');
-if(cyBlock) cyBlock.style.display=(S.cycleEnabled!==false)?'':'none';
-const slCy=document.getElementById('sl-cycle'); if(slCy) slCy.value=S.cycleDay||1;
-const cyLen=document.getElementById('cycle-len'); if(cyLen) cyLen.value=S.cycleLength||28;
-if(typeof updateCycleUI==='function') updateCycleUI();
-updateSwimBreakdown();
-
-const rBtn = document.getElementById('recal-btn');
-if(rBtn) rBtn.style.display = S.plan ? 'block' : 'none';
+if(typeof uiRenderPlanPage==='function')uiRenderPlanPage();
+if(typeof uiRenderMe==='function')uiRenderMe();
+if(typeof _oobe!=='undefined'&&_oobe.open&&typeof uiRenderOobe==='function')uiRenderOobe();
 updateStaleBar();
 }
 // 设置改了会影响排课的项(目标/水平/天数/时长/器材/重点/限制/游泳水平),计划不会自己变 →
@@ -168,106 +120,74 @@ const bar=document.getElementById('stale-bar');
 if(bar)bar.style.display=(S.plan&&S.planStale)?'':'none';
 }
 
-function updateCycleUI(){
-  const day=S.cycleDay||1, len=S.cycleLength||28;
-  const v=document.getElementById('v-cycle'); if(v) v.textContent='第'+day+'天';
-  const box=document.getElementById('cycle-phase');
-  if(box && typeof cyclePhase==='function'){
-    const p=cyclePhase(day,len);
-    const nudge=(p.key==='menstrual'&&!S.periodMode)?` <a href="#" onclick="event.preventDefault();document.getElementById('period-switch').click()" style="color:var(--terra)">一键开经期模式</a>`:'';
-    box.innerHTML='<b>'+p.name+'</b>（第'+day+'/'+len+'天）<br>'+p.advice+nudge;
-  }
-}
+function updateCycleUI(){ if(typeof uiRenderP6==='function')uiRenderP6(); }
 function updateSwimBreakdown(){
 const el=document.getElementById('swim-breakdown');
 if(!el) return;
-const hasPool=S.equip.includes('泳池');
-if(!hasPool){el.style.display='none';return;}
-el.style.display='block';
-const sp=SWIM_SPLIT[S.days]||{gym:Math.max(2,S.days-1),swim:1};
-const rest=7-S.days;
-if(S.periodMode){
-el.innerHTML=`${sp.gym}天力量（降负重） + ${sp.swim}天陆地替代${rest>0?` + ${rest}天休息`:''}`;
-}else{
-el.innerHTML=`${sp.gym}天力量 + ${sp.swim}天游泳${rest>0?` + ${rest}天休息`:''}`;
-}
+const t=(typeof uiSwimLine==='function')?uiSwimLine():'';
+if(!t){el.style.display='none';return;}
+el.style.display='';
+el.innerHTML=`<span class="faint">每周拆分 →</span> ${t}`;
 }
 
+// ── 搭子重合日(按周几;两边都用同一套每周排法模板,不用读对方的计划)──
+// v15x 某次提交连同日历标记一起误删了 partnerOverlap,设置页的「重合」一直不显示;按原实现补回来。
+const GYM_PATTERNS={2:[1,0,0,1,0,0,0],3:[1,0,1,0,1,0,0],4:[1,1,0,1,1,0,0],5:[1,1,1,0,1,1,0],6:[1,1,1,1,1,1,0],7:[1,1,1,1,1,1,1]};
+function weekdayPlanTypes(days,hasPool){
+days=+days;
+if(hasPool===undefined)hasPool=S.equip.includes('泳池');
+if(hasPool){const sp=SWIM_SPLIT[days]||{gym:Math.max(2,days-1),swim:1};return (COMBO_PATTERNS[sp.gym+'+'+sp.swim]||COMBO_PATTERNS['3+2']).map(c=>c==='G'?1:c==='S'?2:0);}
+return GYM_PATTERNS[days]||GYM_PATTERNS[3];
+}
+function partnerOverlap(){
+const pp=(typeof _partnerProfile!=='undefined')?_partnerProfile:null;
+const pd=(pp&&pp.days)?+pp.days:+S.partnerDays;
+if(!pd||pd<2||pd>7)return null;
+const myPool=S.equip.includes('泳池');
+const theirPool=pp?!!pp.hasPool:myPool;
+const mine=weekdayPlanTypes(S.days,myPool),theirs=weekdayPlanTypes(pd,theirPool);
+const gym=[],swim=[];
+for(let d=0;d<7;d++){if(mine[d]===1&&theirs[d]===1)gym.push(d);if(mine[d]===2&&theirs[d]===2)swim.push(d);}
+return {gym,swim};
+}
 function updatePartnerOverlap(){
 const el=document.getElementById('partner-overlap');
 if(!el)return;
-const ov=(typeof partnerOverlap==='function')?partnerOverlap():null;
+const ov=partnerOverlap();
 if(!ov){el.style.display='none';return;}
-el.style.display='block';
+el.style.display='';
 const g=ov.gym.map(d=>DN[d]).join('、'),s=ov.swim.map(d=>DN[d]).join('、');
-if(!g&&!s){el.innerHTML='你俩这周没有重合的训练日，换个天数试试';return;}
-el.innerHTML=`重合：${g?'健身房 '+g:''}${g&&s?' · ':''}${s?'游泳 '+s:''} 📦 这些天一起收拾`;
+if(!g&&!s){el.innerHTML='<span class="faint">重合 →</span> 你俩这周没有重合的训练日，换个天数试试';return;}
+el.innerHTML=`<span class="faint">重合 →</span> ${g?'健身房 '+g:''}${g&&s?' · ':''}${s?'游泳 '+s:''}，这些天一起收拾`;
 }
 
-// ══ Tabs ═════════════════════════════════════════════════
-function showTab(id,btn){
-document.querySelectorAll('.panel-tab').forEach(p=>p.classList.remove('active'));
-document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
-document.getElementById(id).classList.add('active');
-btn.classList.add('active');
-btn.scrollIntoView({behavior:'smooth',inline:'center',block:'nearest'});
-if(id==='journal')renderLog();
-if(id==='stats-tab')renderStats();
-if(id==='coach'&&typeof renderCoach==='function')renderCoach();
-}
+// ══ Tabs ═══ showTab 在 ui.js(底部导航、页签 aria、刊头) ══
 
 // ══ Journal / Log — Git-style timeline ═══════════════════
 function toggleLogHistory(){_logShowAll=!_logShowAll;renderLog()}
 
+let _logOpen=null; // 展开的那条(日期)
+function toggleLogRow(date){ _logOpen=_logOpen===date?null:date; renderLog(); }
 function renderLog(){
 const btn=document.getElementById('jrnl-toggle');
-if(btn)btn.textContent=_logShowAll?'只看近14天':`显示全部(${LOG.length})`;
+if(btn)btn.textContent=_logShowAll?'只看近 14 天':`显示全部（${LOG.length}）`;
 const el=document.getElementById('log-list');
 if(!el)return;
 const cut=new Date();cut.setDate(cut.getDate()-14);const cutStr=(typeof dateStr==='function')?dateStr(cut):cut.toISOString().split('T')[0];
-const entries=_logShowAll?LOG:LOG.filter(x=>x.date>=cutStr);
-if(!entries.length){el.innerHTML='<div class="empty"><i class="ti ti-barbell" style="font-size:32px;opacity:.2"></i><p>完成训练后自动记录</p></div>';return}
-// Group by month for git-style headers
-const byMonth={};
-entries.forEach(x=>{const m=x.date.slice(0,7);if(!byMonth[m])byMonth[m]=[];byMonth[m].push(x)});
-let html='';
-Object.entries(byMonth).forEach(([month,items])=>{
-const[y,m]=month.split('-');
-html+=`<div class="tl-month">${y}年${parseInt(m)}月</div><div class="tl-wrap">`;
-items.forEach((x,i)=>{
-const isLast=i===items.length-1;
+const entries=(_logShowAll?LOG:LOG.filter(x=>x.date>=cutStr)).slice().sort((a,b)=>b.date.localeCompare(a.date));
+if(!entries.length){el.innerHTML=`<div class="note-line" style="padding:12px 0">${LOG.length?'近 14 天没有打卡，点上面「显示全部」看更早的。':'— 完成训练后自动记在这里。'}</div>`;return}
+let html='',lastMonth='';
+entries.forEach(x=>{
+const m=x.date.slice(0,7);
+if(m!==lastMonth&&_logShowAll){lastMonth=m;const[y,mo]=m.split('-');html+=`<div class="log-month">${y} · ${String(parseInt(mo)).padStart(2,'0')}</div>`;}
 const logIdx=LOG.indexOf(x);
-const mood=x.mood||'一般';
-html+=`
-<div class="tl-item">
-  <div class="tl-left">
-    <div class="tl-dot" style="font-size:10px;font-weight:600">${mood.slice(0,2)}</div>
-    ${isLast&&Object.keys(byMonth)[Object.keys(byMonth).length-1]===month?'':'<div class="tl-line"></div>'}
-  </div>
-  <div class="tl-card">
-    <div class="tl-card-hdr">
-      <div>
-        <span class="tl-date">${x.date}</span>
-        <span class="tl-type">${x.workout}</span>
-      </div>
-      <div style="display:flex;gap:6px;align-items:center">
-        <span class="jchip">${x.duration||'?'}分钟</span>
-      </div>
-    </div>
-    <div class="tl-chips">
-      <span class="jchip done-c">${x.exerciseCount||0}个动作完成</span>
-      ${x.exercises?x.exercises.slice(0,4).map(e=>`<span class="jchip${e.done===false?' undone':''}">${e.name}${e.weight?` ${e.weight}kg`:''}</span>`).join('')+((x.exercises.length>4)?`<span class="jchip" style="opacity:.5">+${x.exercises.length-4}个</span>`:''):''}
-    </div>
-    ${x.note?`<div class="jentry-note">"${_escHtml(x.note)}"</div>`:''}
-    <div class="log-actions" style="margin-top:10px;border-top:1px solid var(--border);padding-top:8px">
-      <button class="log-act-btn" onclick="editLog(${logIdx})">编辑</button>
-      <button class="log-act-btn" style="color:var(--sage)" onclick="shareWorkoutFromIndex(${logIdx})">分享</button>
-      <button class="log-act-btn del" onclick="delLog(${logIdx})">删除</button>
-    </div>
-  </div>
-</div>`;
-});
-html+='</div>';
+const open=_logOpen===x.date;
+html+=`<button type="button" class="log-row" aria-expanded="${open}" onclick="toggleLogRow('${x.date}')"><span><span class="lw">${_escHtml(x.workout||'训练')}</span><span class="lt">${x.date.slice(5).replace('-','/')} · ${x.duration||'?'} min · ${x.exerciseCount||0} 个动作${x.mood?' · '+_escHtml(x.mood):''}</span></span><span class="lr">${x.rpe?'RPE '+x.rpe:'—'}</span></button>`;
+if(open){
+html+=`<div class="log-detail"><div class="jentry-chips">${x.exercises?x.exercises.map(e=>`<span class="jchip${e.done===false?' undone':''}">${e.name}${e.weight?` ${e.weight}kg`:''}</span>`).join(''):''}</div>`
++(x.note?`<div class="jentry-note">"${_escHtml(x.note)}"</div>`:'')
++`<div class="log-actions"><button class="btn-line" onclick="showHistoryDetail('${x.date}')">详情</button><button class="btn-line" onclick="editLog(${logIdx})">编辑</button><button class="btn-line" onclick="shareWorkoutFromIndex(${logIdx})">分享</button><button class="btn-line accent" onclick="delLog(${logIdx})">删除</button></div></div>`;
+}
 });
 el.innerHTML=html;
 }
@@ -296,8 +216,9 @@ if(typeof render === 'function') render();
 if(typeof renderStats === 'function') renderStats();
 }
 
-async function clearAllData() {
-if(confirm('警告：确定要清空所有计划、打卡记录和统计数据吗？此操作不可恢复！（包括云端数据）')){
+// force=true:「我 → 07」已经点过两次确认,不再弹 confirm;直接调用(不带参数)仍弹 confirm
+async function clearAllData(force) {
+if(force===true||confirm('警告：确定要清空所有计划、打卡记录和统计数据吗？此操作不可恢复！（包括云端数据）')){
     // 1. Stop realtime sync so cloud data doesn't flood back
     if(_unsub){_unsub();_unsub=null}
     // 2. Delete cloud data if logged in
@@ -327,7 +248,7 @@ function logVacuum(){
   const t=todayStr(); if(!S.vacuumDays)S.vacuumDays=[];
   if(S.vacuumDays.includes(t)){if(typeof showToast==='function')showToast('今天已打卡');return;}
   S.vacuumDays.push(t); if(S.vacuumDays.length>400)S.vacuumDays=S.vacuumDays.slice(-400);
-  saveState(); if(typeof showToast==='function')showToast('真空吸已打卡 ✓'); if(typeof renderStats==='function')renderStats();
+  saveState(); if(typeof showToast==='function')showToast('真空吸已打卡'); if(typeof renderStats==='function')renderStats();
 }
 // ══ 围度字段(2026-08-27 扩到 10 项) ═════════════════════
 // core:true 的 4 项常显,其余收在"更多围度"里。better = 往哪个方向走算好。
@@ -374,11 +295,9 @@ function _bodyLbl(k,fallback){
   return fallback;
 }
 function renderBodyPanel(){
-  const IN='width:100%;padding:6px 8px;margin-top:3px;border:1px solid var(--border);border-radius:6px;background:var(--surface2);color:var(--ink);font-size:14px;box-sizing:border-box';
   const latest=BODY_LOG.length?BODY_LOG[BODY_LOG.length-1]:{};
   const L=k=>_bodyLbl(k,(BODY_FIELDS.find(f=>f.k===k)||{}).lbl||k);
-  const val=k=>{for(let i=BODY_LOG.length-1;i>=0;i--){if(BODY_LOG[i][k]!=null)return BODY_LOG[i][k]}return null};
-  const fld=f=>`<label style="font-size:11px;color:var(--ink3)" title="${f.tip}">${L(f.k)}<span style="opacity:.6"> ${f.u}</span><input id="b-${f.k}" type="number" inputmode="decimal" step="0.1" value="${latest[f.k]!=null?latest[f.k]:''}" style="${IN}"></label>`;
+  const fld=f=>`<label title="${f.tip}">${L(f.k)} <span class="faint">${f.u}</span><input id="b-${f.k}" type="number" inputmode="decimal" step="0.1" value="${latest[f.k]!=null?latest[f.k]:''}" aria-label="${L(f.k)}（${f.u}）"></label>`;
   const core=BODY_FIELDS.filter(f=>f.core).map(fld).join('');
   const more=BODY_FIELDS.filter(f=>!f.core).map(fld).join('');
 
@@ -386,8 +305,8 @@ function renderBodyPanel(){
   const ratio=(label,cur,fmt,delta,better,note)=>{
     if(cur==null)return '';
     const good=delta==null?null:(better==='down'?delta<0:delta>0);
-    const col=good===true?'var(--sage)':good===false?'var(--terra)':'var(--ink3)';
-    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 10px;background:var(--surface2);border-radius:8px;margin-bottom:6px"><span style="font-size:12px">${label}${note?`<span style="font-size:10px;color:var(--ink3)"> · ${note}</span>`:''}</span><b style="font-size:15px;color:var(--terra)">${fmt(cur)}${delta!=null?`<span style="font-size:11px;color:${col};margin-left:6px">${delta>0?'+':''}${fmt(delta)}</span>`:''}</b></div>`;
+    const col=good===true?'var(--olive)':good===false?'var(--accent)':'var(--faint)';
+    return `<span class="k">${label}</span><span>${fmt(cur)}${delta!=null?` <span style="color:${col}">${delta>0?'+':''}${fmt(delta)}</span>`:''}${note?` <span class="faint">· ${note}</span>`:''}</span>`;
   };
   const pair=(a,b,f)=>{ // 取首尾两次都量全的记录,算比例的变化
     const pts=BODY_LOG.filter(x=>x[a]!=null&&(b==null||x[b]!=null));
@@ -402,35 +321,36 @@ function renderBodyPanel(){
   const [hw,hwD]=pair('hipw',null,x=>x.hipw);
   const r2=v=>Math.round(v*100)/100, r1=v=>Math.round(v*10)/10;
   let ratios=[
-    ratio('腰臀比 WHR',whr,r2,whrD,'down','目标 0.70,越低越沙漏'),
-    ratio('臀腰差',hwd,r1,hwdD,'up','cm,越大轮廓越明显'),
+    ratio('腰臀比',whr,r2,whrD,'down','目标 0.70，越低越沙漏'),
+    ratio('臀腰差',hwd,r1,hwdD,'up','cm，越大轮廓越明显'),
     ratio('胸腰差',bwd,r1,bwdD,'up','cm'),
-    ratio('大腿/腰',tw,r2,twD,'up','大腿相对腰的丰满度'),
-    ratio('胯宽',hw,r1,hwD,'up','cm,臀中肌撑出来的横向宽度'),
+    ratio('大腿 / 腰',tw,r2,twD,'up','大腿相对腰的丰满度'),
+    ratio('胯宽',hw,r1,hwD,'up','cm，臀中肌撑出来的横向宽度'),
   ].filter(Boolean).join('');
+  let whrNote='';
   if(whr!=null){
     const gap=Math.round((whr-0.70)*100)/100;
-    ratios+=`<div style="font-size:11px;color:var(--ink3);margin:2px 0 10px">${gap<=0?'WHR 已经到 0.70 以下了 —— 沙漏线成立,继续保持。':`离 0.70 还差 ${gap} —— 走臀围往上、腰围往下两头夹,别靠掉秤。`}</div>`;
+    whrNote=`<div class="foot-note">${gap<=0?'WHR 已经到 0.70 以下了，沙漏线成立，继续保持。':`离 0.70 还差 ${gap}，走臀围往上、腰围往下两头夹，别靠掉秤。`}</div>`;
   }
-
   const spark=f=>{
     const pts=BODY_LOG.filter(x=>x[f.k]!=null);
     if(pts.length<2)return '';
     const vals=pts.map(x=>x[f.k]),mn=Math.min(...vals),mx=Math.max(...vals),rg=mx-mn||1;
     const last=vals[vals.length-1],delta=Math.round((last-vals[0])*10)/10;
     const good=f.better==='down'?delta<0:f.better==='up'?delta>0:null;
-    const col=good===true?'var(--sage)':good===false?'var(--terra)':'var(--ink3)';
-    return `<div style="margin-bottom:12px"><div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="font-size:12px;font-weight:600">${L(f.k)}</span><span style="font-size:11px;font-weight:600;color:${col}">${delta>0?'+':''}${delta}${f.u} · 现 ${last}${f.u}</span></div><div style="display:flex;gap:2px;height:24px;align-items:flex-end">${pts.slice(-14).map(p=>{const h=(p[f.k]-mn)/rg*70+30;return `<div style="flex:1;background:var(--terra);opacity:.7;border-radius:2px 2px 0 0;height:${h}%" title="${p.date}: ${p[f.k]}${f.u}"></div>`}).join('')}</div></div>`;
+    const col=good===true?'var(--olive)':good===false?'var(--accent)':'var(--faint)';
+    return `<div style="display:flex;flex-direction:column;gap:4px"><div class="note-line" style="display:flex;justify-content:space-between"><span>${L(f.k)}</span><span style="color:${col}">${delta>0?'+':''}${delta}${f.u} · 现 ${last}${f.u}</span></div><div class="spark">${pts.slice(-14).map(p=>`<i style="height:${(p[f.k]-mn)/rg*70+30}%" title="${p.date}: ${p[f.k]}${f.u}"></i>`).join('')}</div></div>`;
   };
   const charts=BODY_FIELDS.map(spark).join('');
-  const vac=(()=>{const d=S.vacuumDays||[],t=todayStr();let st=0;for(let i=0;i<400;i++){const ds=addDays(t,-i);if(d.includes(ds))st++;else if(i>0)break;}const dn=d.includes(t);return `<div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px;padding:8px 10px;background:var(--surface2);border-radius:8px"><div><div style="font-size:12px;font-weight:600">真空吸收腰打卡</div><div style="font-size:10px;color:var(--ink3)">连续 ${st} 天 · 累计 ${d.length} 次</div></div><button onclick="logVacuum()" class="exp-btn" style="font-size:12px;padding:6px 12px${dn?';opacity:.5':''}">${dn?'今日已打 ✓':'今日打卡'}</button></div>`;})();
-  const hist=BODY_LOG.length?`<details style="margin-top:6px"><summary style="font-size:11px;color:var(--ink3);cursor:pointer">历史记录 (${BODY_LOG.length})</summary><div style="margin-top:6px">${[...BODY_LOG].reverse().slice(0,40).map(x=>`<div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;padding:4px 0;border-bottom:1px solid var(--border)"><span>${x.date}</span><span style="color:var(--ink3);flex:1;text-align:right;margin-right:8px">${BODY_FIELDS.filter(f=>x[f.k]!=null).map(f=>(f.k==='weight'?x.weight+'kg':L(f.k).slice(0,2)+x[f.k])).join(' · ')}</span><span onclick="delBody('${x.date}')" style="color:var(--terra);cursor:pointer;padding:0 4px">✕</span></div>`).join('')}</div></details>`:'';
-  const title=_bodyLbl('panel_title','身体记录 📏');
-  return `<div class="panel"><p class="panel-title">${title} <span style="font-size:11px;color:var(--ink3);font-weight:400"> 体型才是真正的进度</span></p>
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">${core}</div>
-<details style="margin-top:8px"><summary style="font-size:11px;color:var(--ink3);cursor:pointer">更多围度(胸/胯宽/下腹/大腿根/小腿/脚踝)</summary><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px">${more}</div><div style="font-size:10px;color:var(--ink3);margin-top:6px">每项都有量法提示(长按/悬停标签)。位置固定住,数字才有意义。</div></details>
-<button onclick="logBody()" class="exp-btn" style="width:100%;margin-top:10px">保存今日数据</button>${vac}
-${ratios?`<div style="margin-top:12px">${ratios}</div>`:''}${charts}${hist}</div>`;
+  const vac=(()=>{const d=S.vacuumDays||[],t=todayStr();let st=0;for(let i=0;i<400;i++){const ds=addDays(t,-i);if(d.includes(ds))st++;else if(i>0)break;}const dn=d.includes(t);
+    return `<div style="display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:12px;align-items:center;border-top:1px dashed var(--line);padding-top:8px"><span><span style="display:block">真空吸收腰打卡</span><span class="foot-note">连续 ${st} 天 · 累计 ${d.length} 次</span></span><button type="button" class="btn-line" onclick="logVacuum()"${dn?' aria-disabled="true" style="opacity:.5"':''}>${dn?'今日已打 ✓':'今日打卡'}</button></div>`;})();
+  const hist=BODY_LOG.length?`<details class="fold"><summary>历史记录（${BODY_LOG.length}）</summary><div>${[...BODY_LOG].reverse().slice(0,40).map(x=>`<div style="display:grid;grid-template-columns:auto minmax(0,1fr) auto;column-gap:8px;align-items:center;border-bottom:1px dashed var(--line)" class="note-line"><span>${x.date}</span><span class="faint" style="text-align:right">${BODY_FIELDS.filter(f=>x[f.k]!=null).map(f=>(f.k==='weight'?x.weight+'kg':L(f.k).slice(0,2)+x[f.k])).join(' · ')}</span><button type="button" class="link-btn accent" style="text-align:center" onclick="delBody('${x.date}')" aria-label="删除 ${x.date} 的记录">删除</button></div>`).join('')}</div></details>`:'';
+  const title=_bodyLbl('panel_title','身体记录');
+  return `<div class="panel" id="body-panel"><p class="panel-title">${title} · 体型才是真正的进度</p>
+<div class="body-grid">${core}</div>
+<details class="fold"><summary>更多围度（胸 / 胯宽 / 下腹 / 大腿根 / 小腿 / 脚踝）</summary><div class="body-grid">${more}</div><div class="foot-note">每项都有量法提示（长按 / 悬停标签）。位置固定住，数字才有意义。</div></details>
+<button type="button" class="btn-outline" style="min-height:48px;font-size:14px" onclick="logBody()">保存今日数据</button>${vac}
+${ratios?`<div class="kv wide">${ratios}</div>${whrNote}`:''}${charts}${hist}</div>`;
 }
 
 // ══ 曲线焦点面板(2026-08-27) ═══════════════════════════════
@@ -443,27 +363,22 @@ function renderCurvePanel(){
   const total=st.reduce((a,f)=>a+f.sets,0);
   const weak=[...st].sort((a,b)=>a.pct-b.pct)[0];
   const rows=st.map(f=>{
-    const col=f.pct>=100?'var(--sage)':f.pct>=60?'var(--terra)':'var(--ink3)';
     const good=f.trend==null?null:(f.dir==='up'?f.trend>0:f.dir==='down'?f.trend<0:null);
-    const tcol=good===true?'var(--sage)':good===false?'var(--terra)':'var(--ink3)';
-    const trend=f.trend!=null
-      ? `<span style="font-size:11px;color:${tcol};white-space:nowrap">${f.trend>0?'+':''}${f.trend}cm</span>`
-      : (f.metric?`<span style="font-size:10px;color:var(--ink3);white-space:nowrap">没量</span>`:'');
-    return `<div style="margin-bottom:10px">
-<div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px">
-<span style="font-size:12px;font-weight:600">${f.name}</span>
-<span style="font-size:11px;color:var(--ink3)">${f.sets}/${f.target} 组 ${trend}</span></div>
-<div class="progress-bar" style="margin-top:4px"><div class="progress-fill" style="width:${f.pct}%;background:${col}"></div></div>
-<div style="font-size:10px;color:var(--ink3);margin-top:3px">${f.why}</div></div>`;
+    const tcol=good===true?'var(--olive)':good===false?'var(--accent)':'var(--faint)';
+    const trend=f.trend!=null?` <span style="color:${tcol}">${f.trend>0?'+':''}${f.trend}cm</span>`:(f.metric?' <span class="faint">没量</span>':'');
+    return `<div style="display:flex;flex-direction:column;gap:2px"><div class="note-line" style="display:flex;justify-content:space-between;gap:8px;color:var(--ink)"><span>${f.name}</span><span class="faint">${f.sets}/${f.target} 组${trend}</span></div><div class="ascii" style="line-height:1.3">${_asciiBar(f.pct/100,16)} <span class="faint">${f.pct}%</span></div><div class="foot-note">${f.why}</div></div>`;
   }).join('');
   const hint=total===0
-    ? '还没有打卡数据 —— 练几次之后这里就会告诉你哪个点在掉队。'
-    : `最弱的一条是<b style="color:var(--terra)">${weak.name}</b>(${weak.sets}/${weak.target} 组)。${(typeof _ownerSession==='function'&&_ownerSession())?'下次生成计划时我会往这边加,你也可以':'可以'}直接在计划里手动添加动作补上。`; // 自动补弱(_appendWeakFocus)只对 owner 开,别给别人许兑现不了的承诺
-  return `<div class="panel"><p class="panel-title">曲线焦点 <span style="font-size:11px;color:var(--ink3);font-weight:400"> 近 4 周 · 练了多少 vs 尺寸往哪走</span></p>
-${rows}<div style="font-size:11px;color:var(--ink2);margin-top:8px;padding:8px 10px;background:var(--surface2);border-radius:8px">${hint}</div></div>`;
+    ? '还没有打卡数据，练几次之后这里就会告诉你哪个点在掉队。'
+    : `最弱的一条是<b style="color:var(--accent);font-weight:400">${weak.name}</b>(${weak.sets}/${weak.target} 组)。${(typeof _ownerSession==='function'&&_ownerSession())?'下次生成计划时我会往这边加,你也可以':'可以'}直接在计划里手动添加动作补上。`; // 自动补弱(_appendWeakFocus)只对 owner 开,别给别人许兑现不了的承诺
+  return `<div class="panel" id="curve-panel"><p class="panel-title">曲线焦点 · 近 4 周练了多少 vs 尺寸往哪走</p>
+${rows}<div class="hint quote-rule">${hint}</div></div>`;
 }
 
 // ══ Stats ════════════════════════════════════════════════
+function _asciiBar(frac,width){ const w=width||10, n=Math.max(0,Math.min(w,Math.round((frac||0)*w))); return '█'.repeat(n)+'░'.repeat(w-n); }
+const _GRP_NAMES={chest:'胸',shoulder:'肩',back:'背',biceps:'二头',triceps:'三头',quads:'股四头',hamglutes:'臀腿',glutemed:'臀中肌',calves:'小腿',core:'核心',cardio:'有氧',warmup:'热身',stretch:'拉伸',posture:'仪态',swim_upper:'游泳(上肢)',swim_lower:'游泳(下肢)',swim_core:'游泳(核心)',swim_cardio:'游泳(心肺)'};
+function _isoWeekOf(ds){ return (typeof _uiIsoWeek==='function')?_uiIsoWeek(ds):0; }
 function renderStats(){
 const el=document.getElementById('stats-content');
 if(!el)return;
@@ -486,96 +401,90 @@ const weekDays=S.plan?S.plan.days.filter(d=>!d.isRest&&d.date>=t7str&&d.date<=tS
 const weekDone=weekDays.filter(d=>LOG.some(l=>l.date===d.date)).length; // 与"本月训练天/连续天数"口径一致:以已打卡(LOG)为准,而非勾满即算
 const weekTotal=weekDays.length;
 const weekPct=weekTotal?Math.round(weekDone/weekTotal*100):0;
+const monthPR=PR_LIST.filter(p=>p.date&&p.date.startsWith(thisMonth)).length;
+const rpeLogs=monthLogs.filter(l=>l.rpe);
+const avgRpe=rpeLogs.length?Math.round(rpeLogs.reduce((s,l)=>s+l.rpe,0)/rpeLogs.length*10)/10:'—';
 
-// 12-week heatmap
-const heatCells=[];
-for(let i=83;i>=0;i--){
-const ds=addDays(tStr,-i);
-const d=new Date(ds+'T12:00:00');
-heatCells.push({ds,active:logDates.has(ds),day:d.getDay()});
+// 训练量 · 近四周(按自然周,数完成了的组)
+const weeks=[];
+for(let w=3;w>=0;w--){
+  const end=addDays(tStr,-7*w), start=addDays(end,-6);
+  const ls=LOG.filter(l=>l.date>=start&&l.date<=end);
+  const sets=ls.reduce((s,l)=>s+(l.exercises||[]).filter(e=>e.done!==false).reduce((a,e)=>a+(+e.sets||1),0),0);
+  weeks.push({w:'W'+String(_isoWeekOf(end)).padStart(2,'0'),sets,n:ls.length});
 }
-const heatHtml=heatCells.map(c=>{
-const isToday=c.ds===tStr;
-return`<div class="heat-cell${c.active?' heat-on':''}${isToday?' heat-today':''}" title="${c.ds}" ${c.active?`onclick="showHistoryDetail('${c.ds}')"`:''} ></div>`;
-}).join('');
+const maxW=Math.max(1,...weeks.map(x=>x.sets));
 
-// Muscle distribution with bar
+// 12-week heat(只看不点:格子做不到 44px;当天详情从日志进)
+const DOW=['MO','TU','WE','TH','FR','SA','SU'];
+const start=addDays(tStr,-83);
+const startDow=(new Date(start+'T12:00:00').getDay()+6)%7;
+const gridStart=addDays(start,-startDow);
+const heatRows=DOW.map((lbl,r)=>{
+  let line=`<span class="faint">${lbl}</span> `;
+  for(let c=0;c<13;c++){
+    const ds=addDays(gridStart,c*7+r);
+    if(ds>tStr||ds<start){line+='  ';continue;}
+    line+=ds===tStr?`<span class="td">${logDates.has(ds)?'■':'□'}</span> `:logDates.has(ds)?`<span class="on">■</span> `:`<span class="off">·</span> `;
+  }
+  return line;
+}).join('\n');
+
+// Muscle distribution
 const dist={};
 LOG.filter(l=>l.date>=addDays(tStr,-60)).forEach(l=>{ // 近60「天」(原 slice(-60) 是最近60「条」)
 if(l.exercises)l.exercises.forEach(ex=>{
-let found = false;
 for(const[grp,exs]of Object.entries(DB)){
 const foundEx = exs.find(e=>e.n===ex.name);
 if(foundEx){
 if(grp==='swimming'){
-const muscles=foundEx.muscle||[];
-muscles.forEach(m=>{
+(foundEx.muscle||[]).forEach(m=>{
 if(m==='上肢') dist['swim_upper']=(dist['swim_upper']||0)+1;
 else if(m==='下肢') dist['swim_lower']=(dist['swim_lower']||0)+1;
 else if(m==='核心') dist['swim_core']=(dist['swim_core']||0)+1;
 else if(m==='心肺') dist['swim_cardio']=(dist['swim_cardio']||0)+1;
-else if(m==='全身'){
-dist['swim_upper']=(dist['swim_upper']||0)+1;
-dist['swim_lower']=(dist['swim_lower']||0)+1;
-dist['swim_core']=(dist['swim_core']||0)+1;
-dist['swim_cardio']=(dist['swim_cardio']||0)+1;
-}
+else if(m==='全身'){['swim_upper','swim_lower','swim_core','swim_cardio'].forEach(k=>dist[k]=(dist[k]||0)+1);}
 });
 } else if(grp!=='warmup'&&grp!=='stretch'){
 dist[grp]=(dist[grp]||0)+1;
 }
-found = true;
 break;
 }
 }
 });
 });
-const grpNames={chest:'胸',shoulder:'肩',back:'背',biceps:'二头',triceps:'三头',quads:'股四头',hamglutes:'臀腿',glutemed:'臀中肌',calves:'小腿',core:'核心',cardio:'有氧',warmup:'热身',stretch:'拉伸',posture:'仪态',swim_upper:'游泳(上肢)',swim_lower:'游泳(下肢)',swim_core:'游泳(核心)',swim_cardio:'游泳(心肺)'};
 const distEntries=Object.entries(dist).sort((a,b)=>b[1]-a[1]);
 const maxDist=distEntries[0]?.[1]||1;
 
-el.innerHTML=`
-<div class="streak-box"><div class="streak-num">${streak}</div><div class="streak-lbl">连续打卡天数</div></div>
-${typeof renderBodyPanel==='function'?renderBodyPanel():''}
-${typeof renderCurvePanel==='function'?renderCurvePanel():''}
-<div class="panel">
-  <p class="panel-title" style="margin-bottom:.75rem">近12周训练热图</p>
-  <div class="heat-grid">${heatHtml}</div>
-  <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--ink3);margin-top:6px"><span>12周前</span><span>今天</span></div>
+const ascRow=(k,bar,v)=>`<div style="display:grid;grid-template-columns:76px minmax(0,1fr) auto;column-gap:8px;align-items:baseline" class="note-line"><span class="faint">${k}</span><span class="ascii" style="line-height:1.6;overflow:hidden">${bar}</span><span>${v}</span></div>`;
+
+const top=`<div class="bignums">
+<div><span class="bignum">${monthLogs.length}</span><span class="biglbl">本月次数</span></div>
+<div><span class="bignum">${weekPct}<small>%</small></span><span class="biglbl">本周完成率 · ${weekDone}/${weekTotal}</span></div>
+<div><span class="bignum">${streak}</span><span class="biglbl">连续打卡天数</span></div>
 </div>
-<div class="panel">
-  <p class="panel-title">本周完成率</p>
-  <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px"><span>${weekDone}/${weekTotal} 天</span><b style="color:var(--terra)">${weekPct}%</b></div>
-  <div class="progress-bar"><div class="progress-fill" style="width:${weekPct}%"></div></div>
+<div class="panel" id="vol-panel"><p class="panel-title">训练量 · 近四周</p>
+${weeks.map(x=>ascRow(x.w,_asciiBar(x.sets/maxW,10),`${String(x.sets).padStart(2,' ')} 组`)).join('')}
 </div>
-<div class="panel">
-  <p class="panel-title">本月</p>
-  <div class="stats">
-    <div class="stat"><div class="stat-val">${monthLogs.length}</div><div class="stat-lbl">训练天</div></div>
-    <div class="stat"><div class="stat-val">${monthLogs.reduce((s,l)=>s+(l.exerciseCount||0),0)}</div><div class="stat-lbl">完成动作</div></div>
-    <div class="stat"><div class="stat-val">${monthLogs.reduce((s,l)=>s+(l.duration||0),0)}</div><div class="stat-lbl">总分钟</div></div>
-  </div>
-  <div class="stats" style="margin-top:8px">
-    <div class="stat"><div class="stat-val">${monthLogs.filter(l=>l.exercises&&l.exercises.some(e=>e.unit!=='分钟')).length}</div><div class="stat-lbl">力量训练</div></div>
-    <div class="stat"><div class="stat-val">${monthLogs.reduce((s,l)=>s+(l.exercises?l.exercises.filter(e=>e.unit==='分钟').reduce((a,e)=>a+e.reps,0):0),0)}</div><div class="stat-lbl">有氧分钟</div></div>
-    <div class="stat"><div class="stat-val">${monthLogs.filter(l=>l.rpe).length?Math.round(monthLogs.filter(l=>l.rpe).reduce((s,l)=>s+l.rpe,0)/monthLogs.filter(l=>l.rpe).length*10)/10:'—'}</div><div class="stat-lbl">平均RPE</div></div>
-  </div>
-</div>
-${distEntries.length?`
-<div class="panel">
-  <p class="panel-title">肌群训练量（近60天）</p>
-  ${distEntries.map(([g,c])=>`
-    <div class="dist-row">
-      <span style="min-width:52px">${grpNames[g]||g}</span>
-      <div class="dist-bar-wrap"><div class="dist-bar-fill" style="width:${Math.round(c/maxDist*100)}%"></div></div>
-      <span class="dist-val">${c}</span>
-    </div>`).join('')}
-</div>`:''}
-${(()=>{
+<div class="panel" id="month-panel"><p class="panel-title">本月</p>
+<div class="kv wide"><span class="k">训练天</span><span>${monthLogs.length}</span>
+<span class="k">完成动作</span><span>${monthLogs.reduce((s,l)=>s+(l.exerciseCount||0),0)}</span>
+<span class="k">总分钟</span><span>${monthLogs.reduce((s,l)=>s+(l.duration||0),0)}</span>
+<span class="k">力量训练</span><span>${monthLogs.filter(l=>l.exercises&&l.exercises.some(e=>e.unit!=='分钟')).length} 次</span>
+<span class="k">有氧分钟</span><span>${monthLogs.reduce((s,l)=>s+(l.exercises?l.exercises.filter(e=>e.unit==='分钟').reduce((a,e)=>a+e.reps,0):0),0)}</span>
+<span class="k">平均 RPE</span><span>${avgRpe}</span>
+<span class="k">新纪录</span><span>${monthPR}</span></div>
+<div class="ascii" style="line-height:1.4"><span class="k">本周 </span>${_asciiBar(weekPct/100,16)} ${weekPct}%</div>
+</div>`;
+
+const heat=`<div class="panel" id="heat-panel"><p class="panel-title">近 12 周 · 有打卡的天</p><div class="heat" aria-label="近 12 周训练热图，■ 表示当天有打卡">${heatRows}</div><div class="foot-note">■ 练了　· 没练　□ 今天。看某天的详情，在上面的日志里点开。</div></div>`;
+
+const distHtml=distEntries.length?`<div class="panel" id="dist-panel"><p class="panel-title">肌群训练量 · 近 60 天</p>${distEntries.map(([g,c])=>ascRow(_GRP_NAMES[g]||g,_asciiBar(c/maxDist,12),c)).join('')}</div>`:'';
+
+const wtHtml=(()=>{
 const wtEx=Object.entries(W_HIST).filter(([,h])=>h.length>=2).sort((a,b)=>b[1].length-a[1].length).slice(0,6);
 if(!wtEx.length)return '';
-return `<div class="panel">
-  <p class="panel-title">重量进步</p>
+return `<div class="panel" id="wt-panel"><p class="panel-title">重量进步</p>
   ${wtEx.map(([name,hist])=>{
     const max=Math.max(...hist.map(h=>h.weight));
     const min=Math.min(...hist.map(h=>h.weight));
@@ -586,124 +495,50 @@ return `<div class="panel">
     const recent=hist.slice(-12);
     const asst=typeof isAssistedMove==='function'&&isAssistedMove(name); // 助力器械:数字往下走才是进步
     const good=asst?delta<0:delta>0, bad=asst?delta>0:delta<0;
-    return `<div style="margin-bottom:14px">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
-        <span style="font-size:12px;font-weight:600">${name}${(()=>{const rm=(typeof estimate1RM==='function')?estimate1RM(name):null;return rm?` <span style="font-size:10px;font-weight:400;color:var(--ink3)">1RM≈${rm}kg</span>`:'';})()}</span>
-        <span style="font-size:11px;font-weight:600;color:${good?'var(--sage)':bad?'var(--terra)':'var(--ink3)'}">${asst?'助力 ':''}${delta>0?'+':''}${delta}kg</span>
-      </div>
-      <div style="display:flex;gap:2px;height:28px;align-items:flex-end">
-        ${recent.map(h=>{
-          const pct=range>0?((h.weight-min)/range*70+30):50;
-          return `<div style="flex:1;background:var(--terra);border-radius:2px 2px 0 0;height:${pct}%;opacity:.7" title="${h.date}: ${h.weight}kg"></div>`;
-        }).join('')}
-      </div>
-      <div style="display:flex;justify-content:space-between;font-size:9px;color:var(--ink3);margin-top:2px">
-        <span>${recent[0]?.date?.slice(5)||''}</span>
-        <span>${last}kg</span>
-      </div>
+    const rm=(typeof estimate1RM==='function')?estimate1RM(name):null;
+    return `<div style="display:flex;flex-direction:column;gap:4px">
+      <div class="note-line" style="display:flex;justify-content:space-between;gap:8px;color:var(--ink)"><span>${name}${rm?` <span class="faint">1RM≈${rm}kg</span>`:''}</span><span style="color:${good?'var(--olive)':bad?'var(--accent)':'var(--faint)'}">${asst?'助力 ':''}${delta>0?'+':''}${delta}kg</span></div>
+      <div class="spark" style="height:28px">${recent.map(h=>`<i style="height:${range>0?((h.weight-min)/range*70+30):50}%" title="${h.date}: ${h.weight}kg"></i>`).join('')}</div>
+      <div class="foot-note" style="display:flex;justify-content:space-between"><span>${recent[0]?.date?.slice(5)||''}</span><span>${last}kg</span></div>
     </div>`;
   }).join('')}
 </div>`;
-})()}
-${PR_LIST.length?`
-<div class="panel">
-  <p class="panel-title">\ud83c\udfc6 个人纪录</p>
-  ${PR_LIST.slice(0,10).map(pr=>`
-    <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border);font-size:12px">
-      <div>
-        <span style="font-weight:600">${pr.exercise}</span>
-        <span style="color:var(--ink3);margin-left:6px">${pr.date}</span>
-      </div>
-      <div>
-        <span style="color:var(--ink3);text-decoration:line-through;margin-right:4px">${pr.prev}kg</span>
-        <span style="font-weight:700;color:var(--terra)">${pr.weight}kg</span>
-      </div>
-    </div>
-  `).join('')}
-</div>`:''}
-${(()=>{
-if(!GYM_LOG||!GYM_LOG.count) return '';
-const gymCount=GYM_LOG.count;
-const gymLogs=LOG.filter(l=>!l.isSwimDay);
-const thisMonthGym=gymLogs.filter(l=>l.date.startsWith(thisMonth));
-const totalGymMin=gymLogs.reduce((s,l)=>s+(l.duration||0),0);
-const nextMs=GYM_MILESTONES.find(m=>m.count>gymCount);
-const badgesHtml = GYM_MILESTONES.map((ms, idx) => {
-    const isUnlocked = gymCount >= ms.count;
-    const matchedLog = (GYM_LOG.milestones || []).find(m => m.count === ms.count);
-    const badgeSvg = typeof getAchievementBadgeSvg === 'function' ? getAchievementBadgeSvg(ms, isUnlocked) : '';
-    return `
-    <div class="ach-badge-card" onclick="openAchievementModal('gym', ${idx})" style="flex: 1 1 20%; min-width: 65px; text-align: center; cursor: pointer; padding: 6px; border-radius: var(--radius-sm); border: 1px solid ${isUnlocked?'var(--border2)':'transparent'}; background: ${isUnlocked?'var(--surface)':'none'}; transition: all 0.2s ease;">
-        <div style="margin-bottom: 4px;">${badgeSvg}</div>
-        <div style="font-size: 10px; font-weight: 600; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${ms.title}">${ms.title}</div>
-        <div style="font-size: 9px; color: var(--ink3);">${isUnlocked && matchedLog ? matchedLog.date.slice(5) : `${gymCount}/${ms.count}`}</div>
-    </div>
-    `;
-}).join('');
+})();
 
-return `<div class="panel">
-  <p class="panel-title">力量成就</p>
-  <div class="stats">
-    <div class="stat"><div class="stat-val">${gymCount}</div><div class="stat-lbl">总力量次数</div></div>
-    <div class="stat"><div class="stat-val">${thisMonthGym.length}</div><div class="stat-lbl">本月力量</div></div>
-    <div class="stat"><div class="stat-val">${totalGymMin}</div><div class="stat-lbl">总力量分钟</div></div>
-  </div>
-  ${nextMs?`<div style="margin-top:12px;padding:8px 12px;background:var(--surface2);border-radius:8px;font-size:12px">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
-      <span>下一成就: ${nextMs.title}</span>
-      <span style="font-weight:600;color:var(--terra)">${gymCount}/${nextMs.count}</span>
-    </div>
-    <div class="progress-bar"><div class="progress-fill" style="width:${Math.round(gymCount/nextMs.count*100)}%"></div></div>
-  </div>`:'<div style="margin-top:12px;text-align:center;font-size:12px;color:var(--sage)">所有成就已解锁！</div>'}
-  
-  <p class="panel-title" style="font-size: 11px; color: var(--ink3); margin-top: 16px; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;">力量勋章墙</p>
-  <div style="display: flex; flex-wrap: wrap; gap: 8px; justify-content: start;">
-    ${badgesHtml}
-  </div>
-</div>`;
-})()}
-${(()=>{
-if(!SWIM_LOG||!SWIM_LOG.count) return '';
-const swimCount=SWIM_LOG.count;
-const swimLogs=LOG.filter(l=>l.isSwimDay);
-const thisMonthSwim=swimLogs.filter(l=>l.date.startsWith(thisMonth));
-const totalSwimMin=swimLogs.reduce((s,l)=>s+(l.duration||0),0);
-const nextMs=SWIM_MILESTONES.find(m=>m.count>swimCount);
-const badgesHtml = SWIM_MILESTONES.map((ms, idx) => {
-    const isUnlocked = swimCount >= ms.count;
-    const matchedLog = (SWIM_LOG.milestones || []).find(m => m.count === ms.count);
-    const badgeSvg = typeof getAchievementBadgeSvg === 'function' ? getAchievementBadgeSvg(ms, isUnlocked) : '';
-    return `
-    <div class="ach-badge-card" onclick="openAchievementModal('swim', ${idx})" style="flex: 1 1 20%; min-width: 65px; text-align: center; cursor: pointer; padding: 6px; border-radius: var(--radius-sm); border: 1px solid ${isUnlocked?'var(--border2)':'transparent'}; background: ${isUnlocked?'var(--surface)':'none'}; transition: all 0.2s ease;">
-        <div style="margin-bottom: 4px;">${badgeSvg}</div>
-        <div style="font-size: 10px; font-weight: 600; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${ms.title}">${ms.title}</div>
-        <div style="font-size: 9px; color: var(--ink3);">${isUnlocked && matchedLog ? matchedLog.date.slice(5) : `${swimCount}/${ms.count}`}</div>
-    </div>
-    `;
-}).join('');
+const prHtml=PR_LIST.length?`<div class="panel" id="pr-panel"><p class="panel-title">个人纪录</p>
+  ${PR_LIST.slice(0,10).map(pr=>`<div style="display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:8px;align-items:baseline;border-bottom:1px dashed var(--line);padding:6px 0"><span><span style="display:block">${pr.exercise}</span><span class="foot-note">${pr.date}</span></span><span class="note-line"><span class="faint" style="text-decoration:line-through">${pr.prev}kg</span> → <span class="accent">${pr.weight}kg</span></span></div>`).join('')}
+</div>`:'';
 
-return `<div class="panel">
-  <p class="panel-title">游泳成就</p>
-  <div class="stats">
-    <div class="stat"><div class="stat-val">${swimCount}</div><div class="stat-lbl">总游泳次数</div></div>
-    <div class="stat"><div class="stat-val">${thisMonthSwim.length}</div><div class="stat-lbl">本月游泳</div></div>
-    <div class="stat"><div class="stat-val">${totalSwimMin}</div><div class="stat-lbl">总游泳分钟</div></div>
-  </div>
-  ${nextMs?`<div style="margin-top:12px;padding:8px 12px;background:var(--surface2);border-radius:8px;font-size:12px">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
-      <span>下一成就: ${nextMs.title}</span>
-      <span style="font-weight:600;color:var(--terra)">${swimCount}/${nextMs.count}</span>
-    </div>
-    <div class="progress-bar"><div class="progress-fill" style="width:${Math.round(swimCount/nextMs.count*100)}%"></div></div>
-  </div>`:'<div style="margin-top:12px;text-align:center;font-size:12px;color:var(--sage)">所有成就已解锁！</div>'}
-  
-  <p class="panel-title" style="font-size: 11px; color: var(--ink3); margin-top: 16px; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;">游泳勋章墙</p>
-  <div style="display: flex; flex-wrap: wrap; gap: 8px; justify-content: start;">
-    ${badgesHtml}
-  </div>
-</div>`;
-})()}
-`;
+const achHtml=(kind)=>{
+const isGym=kind==='gym', L=isGym?GYM_LOG:SWIM_LOG, MS=isGym?GYM_MILESTONES:SWIM_MILESTONES;
+if(!L||!L.count) return '';
+const count=L.count;
+const logs=LOG.filter(l=>isGym?!l.isSwimDay:l.isSwimDay);
+const thisM=logs.filter(l=>l.date.startsWith(thisMonth));
+const totalMin=logs.reduce((s,l)=>s+(l.duration||0),0);
+const nextMs=MS.find(m=>m.count>count);
+const badges=MS.map((ms,idx)=>{
+  const on=count>=ms.count;
+  const matched=(L.milestones||[]).find(m=>m.count===ms.count);
+  const svg=typeof getAchievementBadgeSvg==='function'?getAchievementBadgeSvg(ms,on):'';
+  return `<button type="button" class="ach-badge-card${on?' on':''}" onclick="openAchievementModal('${kind}', ${idx})" aria-label="${ms.title}${on?' 已解锁':' 未解锁'}">${svg}<span class="an">${ms.title}</span><span class="ad">${on&&matched?matched.date.slice(5):`${count}/${ms.count}`}</span></button>`;
+}).join('');
+const nm=isGym?'力量':'游泳';
+return `<div class="panel" id="ach-${kind}"><p class="panel-title">${nm}成就</p>
+<div class="kv wide"><span class="k">总${nm}次数</span><span>${count}</span><span class="k">本月${nm}</span><span>${thisM.length}</span><span class="k">总${nm}分钟</span><span>${totalMin}</span></div>
+${nextMs?`<div class="ascii" style="line-height:1.4"><span class="k">下一个 · ${nextMs.title} </span>\n${_asciiBar(count/nextMs.count,16)} ${count}/${nextMs.count}</div>`:'<div class="note-line olive">所有成就已解锁！</div>'}
+<p class="sub-label">${nm}勋章墙</p><div class="ach-wall">${badges}</div></div>`;
+};
+
+// 日志列表(#journal)夹在「本月」和后面的明细之间:innerHTML 重画前先把它拿出来,画完放回去
+const journal=document.getElementById('journal');
+el.innerHTML=top+`<div id="journal-slot"></div>`+heat+distHtml+wtHtml+prHtml
+  +(typeof renderBodyPanel==='function'?renderBodyPanel():'')
+  +(typeof renderCurvePanel==='function'?renderCurvePanel():'')
+  +achHtml('gym')+achHtml('swim');
+const slot=document.getElementById('journal-slot');
+if(journal&&slot)slot.replaceWith(journal);
+if(typeof uiUpdateMasthead==='function')uiUpdateMasthead();
 }
 
 // ══ Export / Import ══════════════════════════════════════
@@ -805,12 +640,12 @@ if(!ring.length){alert('还没有本地快照(用一阵子后每天会自动存�
 const rows=ring.slice().reverse().map((s,ri)=>{
 const idx=ring.length-1-ri;
 const tag=/predrop/.test(s.reason)?' · 异常拦截存档':(s.reason==='pre-restore'?' · 恢复前':'');
-return `<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid rgba(128,128,128,.15)"><div><b>${s.d}</b> <span style="opacity:.6;font-size:12px">${s.vol||0} 条${tag}</span></div><button class="exp-btn" onclick="doRestoreSnapshot(${idx})">恢复</button></div>`;
+return `<div style="display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:10px;align-items:center;border-bottom:1px dashed var(--line);padding:4px 0"><span><span style="display:block" class="mono">${s.d}</span><span class="foot-note">${s.vol||0} 条${tag}</span></span><button type="button" class="btn-line" onclick="doRestoreSnapshot(${idx})">恢复</button></div>`;
 }).join('');
-const m=document.createElement('div');m.id='snap-restore-modal';
-m.style.cssText='position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;padding:16px';
-m.innerHTML=`<div style="background:var(--card,#fff);color:var(--ink,#222);border-radius:14px;padding:18px;max-width:420px;width:100%;max-height:82vh;overflow:auto"><div style="font-size:16px;font-weight:700;margin-bottom:4px">🕘 恢复本地快照</div><div style="font-size:12px;opacity:.65;margin-bottom:12px">每天自动存档 + 检测到数据异常时自动拦截存档。恢复会先把"当前"也存一份,可再切回。</div>${rows}<button class="exp-btn" style="width:100%;margin-top:14px" onclick="document.getElementById('snap-restore-modal').remove()">关闭</button></div>`;
-document.body.appendChild(m);
+let m=document.getElementById('snap-restore-modal');
+if(!m){m=document.createElement('div');m.id='snap-restore-modal';m.className='ex-modal-overlay';m.onclick=e=>{if(e.target===m)m.classList.remove('open')};document.body.appendChild(m);}
+m.innerHTML=`<div class="ex-modal-card" onclick="event.stopPropagation()"><div class="ex-modal-hdr"><div><div class="sheet-eyebrow">数据</div><h3 class="ex-modal-title">恢复本地快照</h3></div><button class="ex-modal-close" onclick="uiCloseOverlay('snap-restore-modal')">关闭</button></div><p class="sheet-desc">每天自动存档，检测到数据异常时也会自动拦截存档。恢复前会先把「当前」也存一份，可以再切回来。</p><div>${rows}</div><button type="button" class="btn-line" onclick="uiCloseOverlay('snap-restore-modal')">关闭</button></div>`;
+m.classList.add('open');
 }
 function doRestoreSnapshot(idx){
 if(!confirm('恢复到这份快照?当前数据会先自动存一份(可再切回),然后刷新。'))return;
@@ -831,13 +666,14 @@ _toastTimer=setTimeout(()=>el.classList.remove('show'), dur || 3500);
 const CLOUD_KEYS=Object.values(K);
 let _db=null,_user=null,_pushTimer=null,_pushing=false,_unsub=null;
 let _localDirty=false; // When true, local changes are pending push — block cloud-to-local sync
+let _cloudFirstSnap=false; // 这次登录后是否已经收到过第一份云端快照
 
 function initFirebase(){
 try{
 if(!firebase.apps.length)firebase.initializeApp(firebaseConfig);
 _db=firebase.firestore();
 firebase.auth().onAuthStateChanged(handleAuth);
-}catch(e){console.warn('Firebase init failed:',e);renderAuthBtn()}
+}catch(e){console.warn('Firebase init failed:',e);renderAuthBtn();if(typeof _authKnown!=='undefined'){_authKnown=true;if(typeof render==='function')render();}}
 }
 
 function handleAuth(user){
@@ -861,6 +697,12 @@ if(user){setupRealtimeSync();showToast('已连接');pushProfile();subscribePartn
 else{if(_unsub){_unsub();_unsub=null}if(_partnerUnsub){_partnerUnsub();_partnerUnsub=null}_partnerProfile=null;}
 if(typeof updatePairUI==='function')updatePairUI();
 if(typeof xpOnAuthChange==='function')xpOnAuthChange();
+if(typeof _authKnown!=='undefined')_authKnown=true;
+if(typeof coachProbeAccess==='function')coachProbeAccess();
+if(typeof uiRenderMe==='function')uiRenderMe();
+if(typeof uiRenderP8==='function')uiRenderP8();
+if(typeof uiUpdateComposer==='function')uiUpdateComposer();
+if(typeof render==='function')render();   // 登录状态定了:没计划没数据时这里才弹新手设置
 }
 
 // ── 未登录(本地模式)攒的数据 → 登录后并进账号 ──
@@ -916,21 +758,16 @@ window.updateProfileUI = function() {
     const seal = (S.sealChar && S.sealChar.trim()) ? S.sealChar.trim() : ((name && name.charAt(0).toUpperCase()) || '健');
     const titleEl = document.getElementById('doc-title');
     if (titleEl) titleEl.textContent = name ? `${name}健身计划` : '我的健身计划';
+    // 名字和印章现在放在「我 → 01 账号」页头
     const nameEl = document.getElementById('user-name');
-    if (nameEl) { nameEl.textContent = name ? `${name}的计划` : '我的健身计划'; nameEl.style.cursor = 'pointer'; nameEl.title = '点击修改显示名 / 印章'; nameEl.onclick = editProfileName; }
+    if (nameEl) nameEl.textContent = name ? `${name}的计划` : '我的健身计划';
     const sealEl = document.getElementById('user-seal');
-    if (sealEl) { sealEl.textContent = seal; sealEl.style.cursor = 'pointer'; sealEl.title = '点击修改显示名 / 印章'; sealEl.onclick = editProfileName; }
+    if (sealEl) sealEl.textContent = seal;
 };
+// 旧入口(点刊头印章改名)已经换成「我 → 01」里的两个输入框;保留函数,调用时跳过去并聚焦
 window.editProfileName = function() {
-    const cur = (S.displayName && S.displayName.trim()) ? S.displayName.trim() : ((_user && _user.displayName) ? _user.displayName.split(' ')[0] : '');
-    const n = prompt('显示名（用于标题与"…的计划"）：', cur);
-    if (n === null) return; // cancelled
-    S.displayName = n.trim() || null; // empty restores Google/default name
-    const sc = prompt('印章字（建议1-2字，留空自动取名字首字）：', (S.sealChar || ''));
-    if (sc !== null) S.sealChar = sc.trim() || null;
-    if (typeof saveState === 'function') saveState();
-    updateProfileUI();
-    if (typeof showToast === 'function') showToast('已更新显示名');
+    if (typeof showTab === 'function') showTab('me');
+    setTimeout(() => { const n = document.getElementById('me-name'); if (n) { n.scrollIntoView({ block: 'center' }); try { n.focus(); } catch (e) {} } }, 50);
 };
 
 function signInGoogle(){
@@ -940,8 +777,9 @@ function signOutUser(){
 if(confirm('确定退出登录？'))firebase.auth().signOut();
 }
 // ── 邮箱/密码登录:纯API无跳转,主屏幕PWA里也能登(绕开Google OAuth在iOS PWA的sessionStorage死结)──
-function openLoginModal(){const m=document.getElementById('login-modal');if(m){const g=document.getElementById('login-msg');if(g)g.textContent='';m.classList.add('open');}}
-function closeLoginModal(){const m=document.getElementById('login-modal');if(m)m.classList.remove('open');}
+// 登录表单内嵌在「我 → 01 账号」:openLoginModal 保留名字,改成跳过去并聚焦邮箱
+function openLoginModal(){if(typeof showTab==='function')showTab('me');setTimeout(()=>{const g=document.getElementById('login-msg');if(g)g.textContent='';const e=document.getElementById('login-email');if(e){e.scrollIntoView({block:'center'});try{e.focus()}catch(x){}}},50);}
+function closeLoginModal(){const g=document.getElementById('login-msg');if(g)g.textContent='';}
 function _loginMsg(t){const e=document.getElementById('login-msg');if(e)e.textContent=t;}
 function _authErr(e){const c=(e&&e.code)||'';
 if(c==='auth/wrong-password'||c==='auth/invalid-credential')return '邮箱或密码错误';
@@ -967,14 +805,18 @@ firebase.auth().createUserWithEmailAndPassword(em,pw).then(()=>closeLoginModal()
 }
 
 function renderAuthBtn(){
-const el=document.getElementById('auth-btn');if(!el)return;
-if(_user){
-const name=_user.displayName?_user.displayName.split(' ')[0]:'已登录';
-const photo=_user.photoURL?`<img src="${_user.photoURL}" class="auth-avatar" alt="">`:`<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:4px"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>`;
-el.innerHTML=`<div class="auth-pill-left">${photo}<span style="font-size:12px">${name}</span></div><div class="auth-pill-sync" id="sync-pill">✓</div><button class="auth-pill-signout" onclick="signOutUser()">退出</button>`;
-}else{
-el.innerHTML=`<button class="auth-sign-in" onclick="openLoginModal()"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:6px"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>登录同步</button>`;
+if(typeof uiRenderMeAcct==='function')uiRenderMeAcct();
+_syncPill();
 }
+// 同步状态:写在「我 → 01」的「同步」一行(#sync-pill)
+let _syncState={ok:true,at:null};
+function _syncPill(ok,at){
+if(ok!==undefined)_syncState={ok,at:at||_syncState.at};
+const pill=document.getElementById('sync-pill');if(!pill)return;
+const t=_syncState.at?` · ${String(_syncState.at.getHours()).padStart(2,'0')}:${String(_syncState.at.getMinutes()).padStart(2,'0')}`:'';
+pill.textContent=_syncState.ok?`云端已同步${t}`:'没同步上，稍后自动重试';
+pill.className='auth-pill-sync '+(_syncState.ok?'ok':'err');
+pill.style.color=_syncState.ok?'':'var(--accent)';
 }
 
 function setupRealtimeSync(){
@@ -985,11 +827,16 @@ const _justImported=(()=>{try{return sessionStorage.getItem('_justImported')==='
 if(_justImported){_localDirty=true;try{sessionStorage.removeItem('_justImported')}catch(e){}}
 const _pendingFromLastRun=_dirtyFlagSet(); // 上次关 app 前还有没推上去的改动
 if(_pendingFromLastRun)_localDirty=true;
+_cloudFirstSnap=false;
 _unsub=_db.collection('users').doc(_user.uid).onSnapshot(doc=>{
+// 新手设置要等第一份云端快照回来再决定弹不弹(换新设备登录时本机是空的,别在云端数据到之前先让人从头设一遍)
+const _first=!_cloudFirstSnap;
+if(_first){_cloudFirstSnap=true;if(!doc.exists&&typeof render==='function')setTimeout(render,0);}
 if(!doc.exists)return;
 // If local changes are pending push, do NOT let cloud overwrite them
 if(_localDirty){
     console.log('[sync] skipped cloud→local: local changes pending push');
+    if(_first&&typeof render==='function')setTimeout(render,0);
     return;
 }
 const cd=doc.data();
@@ -999,7 +846,7 @@ const cloudVol=_dataVolume(k=>cd[K[k]]);
 if(localVol>=15 && cloudVol < localVol*0.6){
   saveSnapshot('predrop-blocked');
   _localDirty=true; clearTimeout(_pushTimer); _pushTimer=setTimeout(pushToCloud,0);
-  showToast('⚠ 云端数据异常偏少，已保留本机数据'); return;
+  showToast('云端数据异常偏少，已保留本机数据'); return;
 }
 let changed=false;
 Object.entries(cd).forEach(([k,v])=>{
@@ -1009,6 +856,7 @@ const cv=JSON.stringify(v);
 if(lv!==cv){try{localStorage.setItem(nk,cv);changed=true}catch{}}
 });
 if(changed){loadState();renderLog();showToast('已从云端同步');saveSnapshot('post-sync')}
+else if(_first&&typeof render==='function')render();   // 第一份快照没带来变化:也重画一次,让新手设置按最新状态判断
 },e=>console.warn('Sync error:',e));
 // Initial push — send local data up first so cloud has latest(刚导入过则立即推,尽量缩短被旧快照覆盖的窗口)
 setTimeout(()=>pushToCloud(),(_justImported||_pendingFromLastRun)?0:1000);
@@ -1038,8 +886,7 @@ async function pushToCloud(){
 if(!_db||!_user||_pushing)return;
 if(typeof _mockSyncFail !== 'undefined' && _mockSyncFail) {
     console.log('[sync] simulated push failure (offline)');
-    const pill=document.getElementById('sync-pill');
-    if(pill){pill.textContent='X';pill.className='auth-pill-sync err'}
+    _syncPill(false);
     clearTimeout(_pushTimer); _pushTimer=setTimeout(pushToCloud,5000); // keep dirty + retry
     return;
 }
@@ -1051,13 +898,11 @@ try{
 await _db.collection('users').doc(_user.uid).set(data,{merge:true});
 // Only stop blocking cloud→local if no newer change arrived during the await; else keep dirty + reschedule.
 if(_dirtyId===sentId){ _localDirty=false; _dirtyFlag(false); } else { clearTimeout(_pushTimer); _pushTimer=setTimeout(pushToCloud,2000); }
-const pill=document.getElementById('sync-pill');
-if(pill){pill.textContent='✓';pill.className='auth-pill-sync ok'}
+_syncPill(true,new Date());
 }catch(e){
 console.warn('Push failed:',e);
 // Keep _localDirty=true so the snapshot listener can't overwrite the unpushed change; retry with backoff.
-const pill=document.getElementById('sync-pill');
-if(pill){pill.textContent='X';pill.className='auth-pill-sync err'}
+_syncPill(false);
 clearTimeout(_pushTimer); _pushTimer=setTimeout(pushToCloud,5000);
 }
 _pushing=false;
@@ -1149,194 +994,81 @@ window.savePartnerCode=function(){
 window.unpairPartner=function(){
   S.partnerUid=null; saveState(); pushProfile(); subscribePartner(); updatePairUI(); showToast('已解除配对');
 };
-window.sendCheer=function(emoji){
+window.sendCheer=function(word){
   if(!partnerUid()){ showToast('先和搭子配对'); return; }
-  S.cheer={ date:todayStr(), emoji:emoji||'💪' };
+  // 字段名沿用 emoji(搭子那边的旧版本读这个键),内容改成文字
+  S.cheer={ date:todayStr(), emoji:(typeof word==='string'&&word)?word:'加油' };
   saveState(); pushProfile(); updatePairUI(); if(typeof render==='function')render();
-  showToast('已给搭子加油 '+(emoji||'💪'));
+  showToast('已给搭子加油');
 };
-function _pairActionLink(label){
-  const a=document.createElement('a');
-  a.href='#';
-  a.textContent=label;
-  a.addEventListener('click',e=>{e.preventDefault();unpairPartner();});
-  return a;
-}
 function updatePairUI(){
   const me=document.getElementById('my-pair-code');
   if(me) me.textContent=_user?_user.uid:'（请先登录）';
   const inp=document.getElementById('partner-code-input');
   if(inp&&document.activeElement!==inp) inp.value=partnerUid()||'';
+  const pu=partnerUid();
+  const btn=document.getElementById('pair-btn');
+  if(btn){ btn.textContent=pu?'断开':'连接'; btn.onclick=pu?unpairPartner:savePartnerCode; }
   const pdRow=document.getElementById('partner-days-row');
-  if(pdRow) pdRow.style.display=partnerUid()?'none':'block'; // paired → manual day-count hidden
+  if(pdRow) pdRow.style.display=pu?'none':'flex'; // paired → manual day-count hidden
+  const cheerRow=document.getElementById('pair-cheer');
+  if(cheerRow){
+    cheerRow.style.display=(pu&&_partnerProfile)?'':'none';
+    const cb=document.getElementById('cheer-btn');
+    if(cb){ const sent=S.cheer&&S.cheer.date===todayStr(); cb.textContent=sent?'今天已加油':'给搭子加油'; cb.disabled=!!sent; }
+  }
   const status=document.getElementById('pair-status');
   if(status){
-    const pu=partnerUid();
     status.replaceChildren();
     if(!pu){ status.style.display='none'; }
     else{
       status.style.display='block';
       if(_partnerProfile){
         const c=_partnerProfile.cheer;
-        const cheerEmoji=(c&&c.date===todayStr())?String(c.emoji||''):'';
+        const cheered=!!(c&&c.date===todayStr());
         const nameEl=document.createElement('b');
         nameEl.textContent=String(_partnerProfile.name||'搭子');
-        status.append(document.createTextNode('已连接 '),nameEl);
+        const ok=document.createElement('span'); ok.className='olive'; ok.textContent='已连接 ';
+        status.append(ok,nameEl);
         status.append(document.createTextNode(
-          ` · 今日：${String(_partnerProfile.todayType||'—')}${_partnerProfile.todayDone?' ✓':''}${cheerEmoji?` · TA今天给你 ${cheerEmoji}`:''} · `
+          ` · 今天：${String(_partnerProfile.todayType||'—')}${_partnerProfile.todayDone?'（已练完）':''}${cheered?' · TA 今天给你加油了':''}`
         ));
-        status.append(_pairActionLink('解除'));
       }else{
-        status.append(
-          document.createTextNode('已保存配对码，等对方也填上你的配对码即可连接 · '),
-          _pairActionLink('取消')
-        );
+        status.append(document.createTextNode('已保存配对码，等对方也填上你的配对码就能连上。'));
       }
     }
   }
 }
 
 // ══ UI Bindings ══════════════════════════════════════════
+// 计划页 / 新手设置 / 我 的控件统一在 ui.js 里分发(data-group / data-step / data-toggle)
 function flashSaved(){
   const dot=document.getElementById('saved-dot');
   if(dot){dot.classList.add('show');setTimeout(()=>dot.classList.remove('show'),1200);}
 }
 
-function single(id,key,stale){
-const el=document.getElementById(id);if(!el)return;
-el.addEventListener('click',e=>{
-const b=e.target.closest('.chip');if(!b)return;
-document.querySelectorAll('#'+id+' .chip').forEach(c=>c.classList.remove('on'));
-b.classList.add('on');S[key]=b.dataset.v;saveState();
-flashSaved();
-if(stale)markPlanStale();
-});
-}
-function multi(id,key,stale){
-const el=document.getElementById(id);if(!el)return;
-el.addEventListener('click',e=>{
-const b=e.target.closest('.chip');if(!b)return;
-b.classList.toggle('on');
-const v=b.dataset.v;
-S[key]=S[key].includes(v)?S[key].filter(x=>x!==v):[...S[key],v];
-saveState();
-flashSaved();
-if(stale)markPlanStale();
-});
-}
-// goal chip: plain toggle; 女性曲线 won't deselect once active
-(function(){
-  const el = document.getElementById('g-goal');
-  if (!el) return;
-  el.addEventListener('click', e => {
-    const b = e.target.closest('.chip');
-    if (!b) return;
-    if (b.dataset.v === '女性曲线' && hasGoal('女性曲线')) return;
-    applyGoalToggle(b.dataset.v);
-    saveState();
-    applySettingsToUI();
-    flashSaved();
-    markPlanStale();
-  });
-})();
-single('g-level','level',true);
-single('g-weight-level','weightLevel');
-{const _gwl=document.getElementById('g-weight-level');if(_gwl)_gwl.addEventListener('click',()=>{if(typeof render==='function')render();});}
-multi('g-equip','equip',true);multi('g-focus','focus',true);
-(function(){
-const el=document.getElementById('g-rest');if(!el)return;
-el.addEventListener('click',e=>{
-const b=e.target.closest('.chip');if(!b)return;
-document.querySelectorAll('#g-rest .chip').forEach(c=>c.classList.remove('on'));
-b.classList.add('on');S.restDur=+b.dataset.v;saveState();
-flashSaved();
-});
-})();
-// Swim level selector
-(function(){
-const el=document.getElementById('g-swim-level');if(!el)return;
-el.addEventListener('click',e=>{
-const b=e.target.closest('.chip');if(!b)return;
-document.querySelectorAll('#g-swim-level .chip').forEach(c=>c.classList.remove('on'));
-b.classList.add('on');S.swimLevel=b.dataset.v;saveState();
-flashSaved();
-markPlanStale();
-})})();
-
-// 搭子 weekly day-count selector (drives the calendar overlap markers)
-(function(){
-const el=document.getElementById('g-partner-days');if(!el)return;
-el.addEventListener('click',e=>{
-const b=e.target.closest('.chip');if(!b)return;
-document.querySelectorAll('#g-partner-days .chip').forEach(c=>c.classList.remove('on'));
-b.classList.add('on');S.partnerDays=+b.dataset.v||0;saveState();
-flashSaved();
-updatePartnerOverlap();
-if(S.plan&&typeof render==='function')render();
-})})();
-
-// Period mode toggle
-const periodSwitch=document.getElementById('period-switch');
-if(periodSwitch) periodSwitch.addEventListener('change',function(){
-S.periodMode=this.checked;
-const row=document.getElementById('period-toggle-row');
-if(row) row.classList.toggle('active',S.periodMode);
-saveState();
-flashSaved();
-updateSwimBreakdown();
-if(S.plan){genPlan(true);render();}
-});
-
-// Show/hide swim settings when 泳池 equipment is toggled
-const _origEquipEl=document.getElementById('g-equip');
-if(_origEquipEl){
-_origEquipEl.addEventListener('click',()=>{
-const swimPanel=document.getElementById('swim-settings');
-if(swimPanel) swimPanel.style.display=S.equip.includes('泳池')?'block':'none';
-updateSwimBreakdown();
-});
-}
-document.getElementById('sl-days').addEventListener('input',e=>{S.days=+e.target.value;document.getElementById('v-days').textContent=S.days+'天';saveState();updateSwimBreakdown();markPlanStale()});
-document.getElementById('sl-dur').addEventListener('input',e=>{S.dur=+e.target.value;document.getElementById('v-dur').textContent=S.dur+'分钟';saveState();markPlanStale()});
-document.getElementById('limits').addEventListener('input',e=>{S.limits=e.target.value;saveState();markPlanStale()});
-// Cycle controls (manual slider; whole block hidden when 「生理期/周期功能」 is off)
-const cyEnSw=document.getElementById('cycle-enable-switch');
-if(cyEnSw) cyEnSw.addEventListener('change',function(){S.cycleEnabled=this.checked;let ch=false;if(!this.checked&&S.periodMode){S.periodMode=false;ch=true;}saveState();applySettingsToUI();flashSaved();if(ch&&S.plan){genPlan(true);render();}});
-// 提示音开关(勾=开;localStorage 持久;打开时试放一声)
-const sndSw=document.getElementById('sound-enable-switch');
-if(sndSw){ sndSw.checked = (typeof _soundMuted==='function') ? !_soundMuted() : true; sndSw.addEventListener('change',function(){ try{localStorage.setItem('soundMuted', this.checked?'0':'1');}catch(e){} if(this.checked){try{playExerciseDoneSound();}catch(e){}} if(typeof flashSaved==='function')flashSaved(); }); }
-// 系统通知开关
-const notifSw=document.getElementById('notif-enable-switch');
-if(notifSw){ notifSw.checked = (typeof _notifMuted==='function') ? !_notifMuted() : true; notifSw.addEventListener('change',function(){ try{localStorage.setItem('notifMuted', this.checked?'0':'1');}catch(e){} if(this.checked&&'Notification'in window&&Notification.permission==='default'){try{Notification.requestPermission();}catch(e){}} if(typeof flashSaved==='function')flashSaved(); }); }
-// 自动调整训练量开关
-const autoVolSw=document.getElementById('auto-vol-switch');
-if(autoVolSw){ autoVolSw.checked = S.autoVolumeAdjust !== false; autoVolSw.addEventListener('change',function(){ S.autoVolumeAdjust = this.checked; saveState(); if(typeof flashSaved==='function')flashSaved(); }); }
-
 window.toggleChangelog=function(){
-const el=document.getElementById('changelog-box');
-if(el) el.style.display=(el.style.display==='none'?'block':'none');
+const el=document.getElementById('changelog-box'), btn=document.getElementById('app-version');
+if(!el)return;
+const open=el.style.display==='none';
+el.style.display=open?'block':'none';
+if(btn){btn.setAttribute('aria-expanded',String(open));btn.textContent=btn.textContent.replace(/[▾▴]$/,open?'▴':'▾');}
 };
 
 window.renderExcludedList=function(){
-const panel=document.getElementById('excluded-panel');
+if(typeof uiRenderP7==='function')uiRenderP7();
 const list=document.getElementById('excluded-list');
-if(!panel||!list) return;
+const head=document.getElementById('excluded-head');
+if(!list) return;
 const arr=S.userExcluded||[];
-if(!arr.length){ panel.style.display='none'; return; }
-panel.style.display='block';
+if(head)head.textContent=`07 — 已排除的动作 / 器械 · ${arr.length}`;
+if(!arr.length){ list.innerHTML='<span class="note-line" style="color:var(--faint)">— 没有排除的动作。</span>'; return; }
 list.innerHTML=arr.map(name=>{
 const reason=S.userExcludeReasons&&S.userExcludeReasons[name]?S.userExcludeReasons[name]:'用户手动排除';
-return `<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 10px;background:var(--surface2);border-radius:6px;font-size:12px">
-<div><b style="color:var(--ink)">${name}</b> <span style="font-size:10px;color:var(--ink3)">(${_escHtml(reason)})</span></div>
-<button class="exp-btn" style="padding:2px 8px;font-size:10px" onclick="restoreUserExercise('${name}')">恢复</button>
-</div>`;
+return `<div class="ex-list-row"><span><span class="n">${_escHtml(name)}</span><span class="why">${_escHtml(reason)}</span></span><button type="button" class="btn-line" data-act="restore" data-name="${_escHtml(name)}" aria-label="恢复 ${_escHtml(name)}">恢复</button></div>`;
 }).join('');
 };
-const slCycle=document.getElementById('sl-cycle');
-if(slCycle) slCycle.addEventListener('input',e=>{S.cycleDay=+e.target.value;updateCycleUI();saveState();});
-const cyLenEl=document.getElementById('cycle-len');
-if(cyLenEl) cyLenEl.addEventListener('input',e=>{S.cycleLength=Math.max(20,Math.min(40,+e.target.value||28));updateCycleUI();saveState();});
-window.cyclePeriodStart=function(){S.cycleDay=1;saveState();applySettingsToUI();flashSaved();if(typeof showToast==='function')showToast('已记录：周期第1天');};
+window.cyclePeriodStart=function(){S.cycleDay=1;saveState();applySettingsToUI();flashSaved();if(typeof showToast==='function')showToast('已记录：周期第 1 天');};
 
 // ══ Share Card Generator ════════════════════════════════
 let _currentShareImgUrl = null;
@@ -1355,7 +1087,7 @@ function openShareModal(logEntry) {
     
     const container = document.getElementById('share-card-preview-container');
     if (container) {
-        container.innerHTML = `<img src="${imgUrl}" style="max-width:100%; max-height:450px; border-radius:4px; display:block;" alt="打卡卡片预览" />`;
+        container.innerHTML = `<img src="${imgUrl}" alt="打卡卡片预览" />`;
     }
     
     const modal = document.getElementById('share-modal');
@@ -1413,7 +1145,6 @@ function openAchievementModal(type, index) {
     document.getElementById('ach-modal-share-container').style.display = 'none';
     const actionBtn = document.getElementById('ach-action-btn');
     actionBtn.textContent = '生成成就卡片';
-    actionBtn.style.background = 'var(--sage)';
     
     // Open Modal
     document.getElementById('achievement-modal').classList.add('open');
@@ -1432,10 +1163,9 @@ function toggleAchShareCard() {
         const imgUrl = drawAchievementShareCard(_currentAchType, _currentAchIdx);
         _currentAchImgUrl = imgUrl;
         
-        container.innerHTML = `<img src="${imgUrl}" style="width:100%; border-radius:var(--radius); display:block;" alt="成就卡片" />`;
+        container.innerHTML = `<img src="${imgUrl}" alt="成就卡片" />`;
         container.style.display = 'flex';
         btn.textContent = '下载勋章卡';
-        btn.style.background = 'var(--terra)';
         _achShareMode = true;
     } else {
         // Download the share card
@@ -1833,7 +1563,7 @@ function drawAchievementShareCard(type, idx) {
 
     ctx.textAlign = 'center';
     ctx.fillStyle = isUnlocked ? '#3e7d52' : '#9b948a';
-    ctx.font = 'bold 13px "Outfit", system-ui, sans-serif';
+    ctx.font = 'bold 13px "EB Garamond", "Noto Serif SC", Georgia, serif';
     ctx.fillText(isUnlocked ? `已解锁 · ${dateStr}` : `尚未解锁 (${userLog.count}/${ms.count})`, 300, 520);
     
     ctx.fillStyle = '#2c2825';
@@ -1841,7 +1571,7 @@ function drawAchievementShareCard(type, idx) {
     ctx.fillText(ms.title, 300, 580);
     
     ctx.fillStyle = '#6b6560';
-    ctx.font = 'normal 15px "Outfit", system-ui, sans-serif';
+    ctx.font = 'normal 15px "EB Garamond", "Noto Serif SC", Georgia, serif';
     ctx.fillText(ms.desc, 300, 630);
     
     ctx.strokeStyle = '#d5cec2';
@@ -1852,7 +1582,7 @@ function drawAchievementShareCard(type, idx) {
     ctx.stroke();
     
     ctx.fillStyle = '#9b948a';
-    ctx.font = 'normal 12px "Outfit", system-ui, sans-serif';
+    ctx.font = 'normal 12px "EB Garamond", "Noto Serif SC", Georgia, serif';
     ctx.fillText('CICI FITNESS · 极简专业健身助理', 300, 720);
     
     return canvas.toDataURL('image/png');
@@ -1885,7 +1615,7 @@ function drawShareCard(logEntry) {
     
     // 4. Subtitle (DM Mono / Outfit style)
     ctx.fillStyle = '#8c8070';
-    ctx.font = 'normal 13px "DM Mono", "Outfit", sans-serif';
+    ctx.font = 'normal 13px "Courier Prime", ui-monospace, monospace';
     ctx.fillText(fmtDate(logEntry.date), 300, 108);
     
     // 5. Divider
@@ -1906,11 +1636,11 @@ function drawShareCard(logEntry) {
     stats.forEach((st, idx) => {
         const x = 40 + idx * colWidth + colWidth / 2;
         ctx.fillStyle = '#8c8070';
-        ctx.font = 'normal 12px "Outfit", system-ui, sans-serif';
+        ctx.font = 'normal 12px "EB Garamond", "Noto Serif SC", Georgia, serif';
         ctx.fillText(st.label, x, 168);
         
         ctx.fillStyle = '#2c2825';
-        ctx.font = 'bold 18px "Outfit", system-ui, sans-serif';
+        ctx.font = 'bold 18px "EB Garamond", "Noto Serif SC", Georgia, serif';
         ctx.fillText(st.val, x, 198);
     });
     
@@ -1939,7 +1669,7 @@ function drawShareCard(logEntry) {
         
         // Detail
         ctx.fillStyle = '#8c8070';
-        ctx.font = 'normal 13px "DM Mono", "Outfit", monospace';
+        ctx.font = 'normal 13px "Courier Prime", ui-monospace, monospace';
         ctx.textAlign = 'right';
         const wtStr = ex.weight ? `${ex.weight}kg ` : '';
         ctx.fillText(`${wtStr}${ex.sets}组 × ${ex.reps}${ex.unit || '次'}`, 550, y);
@@ -1949,7 +1679,7 @@ function drawShareCard(logEntry) {
     
     if (exList.length > limit) {
         ctx.fillStyle = '#8c8070';
-        ctx.font = 'italic 12px "Outfit", system-ui, sans-serif';
+        ctx.font = 'italic 12px "EB Garamond", "Noto Serif SC", Georgia, serif';
         ctx.fillText(`... 还有其他 ${exList.length - limit} 个动作已打卡`, 50, y);
         y += 36;
     }
@@ -2011,7 +1741,7 @@ function drawShareCard(logEntry) {
     
     // 13. App Branding
     ctx.fillStyle = '#b4b0a7';
-    ctx.font = 'normal 10px "DM Mono", "Outfit", monospace';
+    ctx.font = 'normal 10px "Courier Prime", ui-monospace, monospace';
     ctx.fillText('CICI FITNESS APP', 300, 792);
     
     // 14. Red Calligraphic Seal (Stamp)
@@ -2026,7 +1756,7 @@ function drawShareCard(logEntry) {
     ctx.stroke();
     // Inner calligraphic text
     ctx.fillStyle = 'rgba(198, 88, 56, 0.75)';
-    ctx.font = 'bold 9px "Cormorant Garamond", Georgia, serif';
+    ctx.font = 'bold 9px "EB Garamond", Georgia, serif';
     const _sealName = (S.sealChar && S.sealChar.trim()) ? S.sealChar.trim() : (S.displayName && S.displayName.trim()) ? S.displayName.trim() : (_user && _user.displayName) ? _user.displayName.split(' ')[0] : '健身';
     ctx.fillText(_sealName, 0, -2);
     ctx.font = 'bold 8px "Noto Serif SC", Georgia, serif';
@@ -2046,6 +1776,7 @@ function triggerDevClick() {
 
 // ══ Init ═════════════════════════════════════════════════
 loadState();
+if(typeof showTab==='function')showTab('today');
 renderAuthBtn(); // show login button immediately, don't wait for Firebase
 initFirebase();
 

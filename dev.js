@@ -169,7 +169,7 @@
 
                         <p class="sec" style="font-weight: 600; font-size: 13px; color: var(--ink);">Service Worker / 缓存</p>
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px;">
-                            <button class="btn-dev dev-danger" style="grid-column:1/-1" onclick="forceSwUpdate()">⚡ 注销SW + 清缓存 + 重载</button>
+                            <button class="btn-dev dev-danger" style="grid-column:1/-1" onclick="forceSwUpdate()">注销 SW + 清缓存 + 重载</button>
                             <button class="btn-dev" onclick="checkSwVersion()">查当前SW版本</button>
                             <button class="btn-dev" onclick="skipSwWaiting()">激活等待中的SW</button>
                         </div>
@@ -205,8 +205,8 @@
                 </div>
 
                 <div style="border-top: 1px solid var(--border); padding-top: 8px; display: flex; justify-content: space-between; align-items: center;">
-                    <span style="font-size: 10px; color: var(--ink3);">快捷键: Cmd/Ctrl+Shift+D 切换</span>
-                    <button class="btn-dev dev-danger" style="padding: 4px 8px; font-size: 10px;" onclick="lockDevConsole()">锁定开发者模式</button>
+                    <span style="font-size: 11px; color: var(--ink3);">快捷键: Cmd/Ctrl+Shift+D 切换</span>
+                    <button class="btn-dev dev-danger" onclick="lockDevConsole()">锁定开发者模式</button>
                 </div>
             </div>
         `;
@@ -252,7 +252,7 @@
     };
 
     window.lockDevConsole = function() {
-        if (confirm('确定锁定开发者模式吗？锁定后浮标和快捷菜单将隐藏，需要重新在首页标题点击 7 次解锁。')) {
+        if (confirm('确定锁定开发者模式吗？锁定后浮标和快捷菜单将隐藏，需要重新在刊头日期行连点 7 次解锁。')) {
             originalRemoveItem.call(localStorage, 'fit_dev_unlocked');
             originalRemoveItem.call(localStorage, '__dev_active__');
             location.reload();

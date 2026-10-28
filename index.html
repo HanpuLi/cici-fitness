@@ -1,23 +1,22 @@
 <!DOCTYPE html>
-<html lang="zh">
+<html lang="zh-CN">
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport"
-        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title id="doc-title">我的健身计划</title>
     <link rel="manifest" href="manifest.json">
     <link rel="icon" href="icon.svg" type="image/svg+xml">
     <link rel="apple-touch-icon" href="icon.png">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="theme-color" content="#6b5344">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="theme-color" content="#f5f2eb" media="(prefers-color-scheme: light)">
+    <meta name="theme-color" content="#151412" media="(prefers-color-scheme: dark)">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
-        href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400..800;1,400..600&family=DM+Mono:wght@300;400&family=Noto+Serif+SC:wght@300;400;600;700&family=Outfit:wght@300;400;500;600;700&display=swap"
+        href="https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&family=EB+Garamond:ital,wght@0,400..600;1,400..600&family=Noto+Serif+SC:wght@400;600&display=swap"
         rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lxgw-wenkai-webfont@1.7.0/style.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
     <link rel="stylesheet" href="style.css">
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -25,541 +24,195 @@
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 </head>
 
-<body ontouchstart="">
-    <header class="masthead">
-        <div class="masthead-seal" id="user-seal">健</div>
-        <div class="masthead-titles">
-            <h1 id="user-name">我的健身计划</h1>
-            <p class="masthead-sub" id="masthead-sub" style="cursor: default; user-select: none;"
-                onclick="triggerDevClick()">FITNESS & WELLNESS</p>
-        </div>
-        <div class="masthead-right" style="display:flex;align-items:center;gap:8px">
-            <button class="theme-toggle" id="theme-btn" onclick="toggleTheme()" title="切换模式"></button>
-            <div id="auth-btn" class="auth-btn"></div>
-        </div>
-    </header>
+<body>
+    <div id="app">
+        <header class="masthead">
+            <!-- 日期行连点 7 下解锁开发者控制台(隐藏入口) -->
+            <div class="mh-row" id="masthead-sub" onclick="triggerDevClick()"><span id="mh-date"></span><span id="mh-eyebrow"></span></div>
+            <h1 class="mh-title"><span id="mh-headline">今天</span><span class="mh-dot" aria-hidden="true">.</span></h1>
+        </header>
 
-    <div id="universal-timer" class="timer-bar">
+        <main class="wrap" id="pages">
+            <!-- 今天 -->
+            <section class="panel-tab active" id="today" role="tabpanel" aria-labelledby="tab-today">
+                <div id="main"></div>
+            </section>
+
+            <!-- 计划 -->
+            <section class="panel-tab" id="plan" role="tabpanel" aria-labelledby="tab-plan" hidden>
+                <div class="stale-bar stale-sticky" id="stale-bar" style="display:none"><span>训练设置改过了，计划还是按旧设置排的</span><button class="regen-btn" onclick="applyStaleSettings()">按新设置重排</button></div>
+                <div id="plan-cal"></div>
+                <div id="plan-summary"></div>
+                <div id="plan-sections"></div>
+            </section>
+
+            <!-- 记录 -->
+            <section class="panel-tab" id="log" role="tabpanel" aria-labelledby="tab-log" hidden>
+                <div id="log-review"></div>
+                <div id="stats-content"></div>
+                <div class="psec" id="journal">
+                    <div class="sec-head"><span class="sec-label">日志</span><button class="link-btn" id="jrnl-toggle" onclick="toggleLogHistory()">显示全部</button></div>
+                    <div id="log-list"></div>
+                </div>
+                <div id="stats-more"></div>
+            </section>
+
+            <!-- 教练 -->
+            <section class="panel-tab" id="coach" role="tabpanel" aria-labelledby="tab-coach" hidden>
+                <div id="coach-content"></div>
+            </section>
+
+            <!-- 我 -->
+            <section class="panel-tab" id="me" role="tabpanel" aria-labelledby="tab-me" hidden>
+                <div id="me-content"></div>
+                <div class="version-foot">
+                    <button type="button" id="app-version" class="link-btn" onclick="toggleChangelog()" aria-expanded="false" aria-controls="changelog-box">Cici健身计划 v3.0.0 (build 154) · 更新日志 ▾</button>
+                    <div id="changelog-box" style="display:none">
+                        <p class="cl-h">v3.0.0 · 2026-10-28</p>
+                        <ul>
+                            <li>五页导航：今天 / 计划 / 记录 / 教练 / 我，导航固定在底部。</li>
+                            <li>旧「设置」全部搬进「计划」和「我」，一项没删；滑块换成 −/+ 步进器。</li>
+                            <li>新手设置五步，和「计划」是同一套开关；「我」里可以重走。</li>
+                            <li>勾选框统一成自绘方框，点击区 44px，键盘空格可切换。</li>
+                            <li>换动作面板：只今天划掉 / 永久排除分开；动作详情的替换和划掉移到顶部。</li>
+                            <li>复盘搬到「记录」顶部，AI 排计划搬到「计划 → 08」，模型和思考深度搬到「我」。</li>
+                            <li>弹窗统一用 Esc 关闭；可以双指缩放；最小字号 11px。</li>
+                        </ul>
+                        <p class="cl-h">v2.1.0 · 2026-08-04</p>
+                        <ul>
+                            <li>训练量与下调控制：提前结束训练可自主勾选是否下调剩余训练量，设置中可开关默认下调。</li>
+                            <li>全局休息与后台恢复：逐动作快捷开启组间休息计时；sessionStorage 状态恢复，切回前台自动接续。</li>
+                            <li>动作划掉与排除：动作和详情里都能划掉 / 永久排除，设置中随时恢复，AI 分析导出带上排除清单。</li>
+                            <li>灵活动作库与加练：「+ 手动添加动作」优先按当日肌群筛选；能换的动作都可一键替换。</li>
+                            <li>开源解剖图：接入 wger 人体解剖 SVG，标出主发力和辅助肌群。</li>
+                            <li>水疗恢复模块：游泳日按总时长配比游泳与桑拿 / Hot Tub / 热躺椅时间，支持 7 段冷热交替引导。</li>
+                            <li>系统通知与提示音分开开关。</li>
+                            <li>离线预载图标字体与解剖图。</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- 教练输入条(只在教练页、已开通时显示) -->
+        <div id="composer" class="composer" hidden></div>
+
+        <!-- 底部导航:当前页一个绛红点 -->
+        <nav class="tabbar" role="tablist" aria-label="主要页面">
+            <button class="tab active" id="tab-today" data-tab="today" role="tab" aria-selected="true" aria-controls="today" onclick="showTab('today',this)"><span class="tab-dot" aria-hidden="true"></span>今天</button>
+            <button class="tab" id="tab-plan" data-tab="plan" role="tab" aria-selected="false" aria-controls="plan" onclick="showTab('plan',this)"><span class="tab-dot" aria-hidden="true"></span>计划</button>
+            <button class="tab" id="tab-log" data-tab="log" role="tab" aria-selected="false" aria-controls="log" onclick="showTab('log',this)"><span class="tab-dot" aria-hidden="true"></span>记录</button>
+            <button class="tab" id="tab-coach" data-tab="coach" role="tab" aria-selected="false" aria-controls="coach" onclick="showTab('coach',this)"><span class="tab-dot" aria-hidden="true"></span>教练</button>
+            <button class="tab" id="tab-me" data-tab="me" role="tab" aria-selected="false" aria-controls="me" onclick="showTab('me',this)"><span class="tab-dot" aria-hidden="true"></span>我</button>
+        </nav>
+    </div>
+
+    <div id="universal-timer" class="timer-bar" aria-live="polite">
         <div class="timer-progress" id="timer-progress"></div>
         <div class="timer-content">
             <div class="timer-left">
-                <i class="ti ti-clock"></i>
-                <span id="timer-time"
-                    style="font-family:var(--font-mono);font-size:18px;font-weight:700;letter-spacing:1px;margin-left:4px">00:00</span>
-                <span id="timer-label" style="font-size:11px;opacity:0.8;margin-left:8px;font-weight:500"></span>
+                <span id="timer-time" class="timer-time">00:00</span>
+                <span id="timer-label" class="timer-label"></span>
             </div>
-            <div class="timer-right">
-                <button class="timer-btn" onclick="stopTimer()"><i class="ti ti-x"></i> 结束</button>
-            </div>
+            <button class="timer-btn" onclick="stopTimer()">结束</button>
         </div>
     </div>
 
-    <div class="wrap">
-        <div class="tabs-wrap">
-            <div class="tabs">
-                <button class="tab active" onclick="showTab('today',this)">今日训练</button>
-                <button class="tab" onclick="showTab('settings',this)">设置</button>
-                <button class="tab" onclick="showTab('journal',this)">日志</button>
-                <button class="tab" onclick="showTab('stats-tab',this)">统计</button>
-                <button class="tab" id="tab-coach" onclick="showTab('coach',this)">AI 教练</button>
-            </div>
-        </div>
+    <div class="sync-toast" id="sync-toast" role="status" aria-live="polite"></div>
 
-        <!-- Tab: Today -->
-        <div class="panel-tab active" id="today">
-            <div id="main">
-                <div class="empty">
-                    <i class="ti ti-barbell"></i>
-                    <p>切换到「设置」标签，调整参数后点击生成计划</p>
-                </div>
-            </div>
-        </div>
-
-        <!-- Tab: Settings -->
-        <div class="panel-tab" id="settings">
-            <div class="stale-bar stale-sticky" id="stale-bar" style="display:none"><span>训练设置改过了，计划还是按旧设置排的</span><button class="regen-btn" onclick="applyStaleSettings()">按新设置重排</button></div>
-            <div class="panel">
-                <p class="panel-title">训练设置 <span class="saved-dot" id="saved-dot"></span></p>
-
-                <p class="sec">训练目标 <span style="font-size:11px;color:var(--ink3);font-weight:400">（可多选）</span></p>
-                <div class="chips" id="g-goal">
-                    <button class="chip" data-v="女性薄肌">女性薄肌</button>
-                    <button class="chip" data-v="臀腿塑形">臀腿塑形</button>
-                    <button class="chip" data-v="翘臀美背">翘臀美背</button>
-                    <button class="chip" data-v="女性曲线">女性曲线</button>
-                </div>
-                <div id="goal-info"
-                    style="font-size:11px;color:var(--ink3);margin:-4px 0 8px;padding:4px 8px;background:var(--surface2);border-radius:6px">
-                </div>
-
-                <p class="sec">当前水平</p>
-                <div class="chips" id="g-level">
-                    <button class="chip on" data-v="初级">初级</button>
-                    <button class="chip" data-v="中级">中级</button>
-                    <button class="chip" data-v="高级">高级</button>
-                </div>
-                <p class="sec">重量强度 <span style="font-size:11px;color:var(--ink3);font-weight:400">（只影响建议重量，与动作难度分开）</span></p>
-                <div class="chips" id="g-weight-level">
-                    <button class="chip on" data-v="初级">轻</button>
-                    <button class="chip" data-v="中级">中</button>
-                    <button class="chip" data-v="高级">重</button>
-                </div>
-                <p class="sec">每周训练天数</p>
-                <div class="srow">
-                    <input type="range" id="sl-days" min="2" max="7" step="1" value="3">
-                    <span class="sval" id="v-days">3天</span>
-                </div>
-                <div id="swim-breakdown"
-                    style="display:none;font-size:11px;color:var(--ink3);margin:-4px 0 8px;padding:4px 8px;background:var(--surface2);border-radius:6px">
-                </div>
-                <p class="sec">每次时长</p>
-                <div class="srow">
-                    <input type="range" id="sl-dur" min="20" max="90" step="5" value="60">
-                    <span class="sval" id="v-dur">60分钟</span>
-                </div>
-                <p class="sec">器材</p>
-                <div class="chips" id="g-equip">
-                    <button class="chip" data-v="无器材">无器材</button>
-                    <button class="chip" data-v="弹力带">弹力带</button>
-                    <button class="chip" data-v="壶铃">壶铃</button>
-                    <button class="chip" data-v="哑铃">哑铃</button>
-                    <button class="chip on" data-v="健身房全套">健身房全套</button>
-                    <button class="chip" data-v="泳池">泳池</button>
-                </div>
-                <div class="tecnogym-ref" style="margin:8px 0 4px">
-                    <details>
-                        <summary style="font-size:11px;color:var(--ink3);cursor:pointer;user-select:none">Tecnogym
-                            设备对照表（点击展开）</summary>
-                        <div
-                            style="font-size:11px;color:var(--ink3);margin-top:8px;line-height:1.8;padding:8px 12px;background:var(--surface2);border-radius:8px">
-                            <p style="font-weight:600;margin:0 0 4px;color:var(--ink2)">力量器械 (Plurima / Selection /
-                                Biostrength)</p>
-                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:2px 12px">
-                                <span>Chest Press → 坐姿推胸机</span>
-                                <span>Shoulder Press → 器械推举</span>
-                                <span>Pectoral → 器械夹胸</span>
-                                <span>Reverse Fly → 反向飞鸟机</span>
-                                <span>Lat Machine → 高位下拉</span>
-                                <span>Low Row → 坐姿划船</span>
-                                <span>Upper Back → 器械上背划船</span>
-                                <span>Leg Press → 倒蹬机</span>
-                                <span>Leg Extension → 腿屈伸</span>
-                                <span>Leg Curl → 腿弯举/坐姿腿弯举</span>
-                                <span>Adductor → 器械内收机</span>
-                                <span>Abductor → 器械外展机</span>
-                                <span>Arm Curl → 器械弯举</span>
-                                <span>Arm Extension → 器械三头下压</span>
-                                <span>Delts Machine → 坐姿侧平举机</span>
-                                <span>Multi Hip → 绳索后踢腿</span>
-                                <span>Abdominal → 坐姿卷腹机</span>
-                                <span>Lower Back → 山羊挺身</span>
-                            </div>
-                            <p style="font-weight:600;margin:10px 0 4px;color:var(--ink2)">有氧器械 (Excite / Skill)</p>
-                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:2px 12px">
-                                <span>Excite Run → 跑步机慢跑</span>
-                                <span>Skillmill → 弧形跑步机</span>
-                                <span>Synchro/Vario → 椭圆机</span>
-                                <span>Excite Bike → 骑行机</span>
-                                <span>Skillbike → 动感单车</span>
-                                <span>Excite Climb → 攀爬机</span>
-                                <span>Skillrow → 划船机</span>
-                                <span>Excite Top → 上肢功率车</span>
-                            </div>
-                            <p style="font-weight:600;margin:10px 0 4px;color:var(--ink2)">自由重量 & 配件</p>
-                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:2px 12px">
-                                <span>Dumbbells → 哑铃动作</span>
-                                <span>Kettlebells → 壶铃动作</span>
-                                <span>Bench → 卧推凳动作</span>
-                                <span>Bands → 弹力带动作</span>
-                            </div>
-                            <p style="margin:8px 0 0;font-size:10px;opacity:.7">选择「健身房全套」已覆盖 Tecnogym Plurima /
-                                Selection / Biostrength / Excite / Skill 全系列</p>
-                        </div>
-                    </details>
-                </div>
-                <div id="swim-settings" style="display:none">
-                    <p class="sec">游泳水平</p>
-                    <div class="chips" id="g-swim-level">
-                        <button class="chip on" data-v="入门">入门（水性+蛙泳基础）</button>
-                        <button class="chip" data-v="进阶">进阶（蛙泳巩固+耐力）</button>
-                        <button class="chip" data-v="挑战">挑战（+自由泳入门）</button>
-                    </div>
-                    <p style="font-size:11px;color:var(--ink3);margin-top:4px">游泳等级独立于健身等级，可单独调节进度</p>
-                </div>
-                <div id="partner-settings" style="margin-top:6px">
-                    <p class="sec">搭子同步 📦</p>
-                    <p style="font-size:11px;color:var(--ink3);margin:-2px 0 6px">和搭子配对后，日历会自动标出你俩重合的健身房 / 游泳日（方便一起收拾），还能看对方今日状态、互相加油。只分享天数和当日类型，私密内容永不外传。</p>
-                    <div class="pair-box">
-                        <div class="pair-row">
-                            <span class="pair-lbl">我的配对码</span>
-                            <code id="my-pair-code" class="pair-code">（请先登录）</code>
-                            <button type="button" class="exp-btn pair-btn" onclick="copyMyPairCode()">复制</button>
-                        </div>
-                        <div class="pair-row">
-                            <span class="pair-lbl">搭子配对码</span>
-                            <input id="partner-code-input" class="pair-input" type="text" placeholder="粘贴对方的配对码" autocomplete="off" spellcheck="false">
-                            <button type="button" class="exp-btn pair-btn" onclick="savePartnerCode()">连接</button>
-                        </div>
-                        <div id="pair-status" class="pair-status" style="display:none"></div>
-                    </div>
-                    <div id="partner-days-row" style="margin-top:8px">
-                        <p style="font-size:11px;color:var(--ink3);margin:0 0 4px">还没配对？也可手动填搭子每周练几天，先看重合日：</p>
-                        <div class="chips" id="g-partner-days">
-                            <button class="chip on" data-v="0">关闭</button>
-                            <button class="chip" data-v="2">2天</button>
-                            <button class="chip" data-v="3">3天</button>
-                            <button class="chip" data-v="4">4天</button>
-                            <button class="chip" data-v="5">5天</button>
-                            <button class="chip" data-v="6">6天</button>
-                            <button class="chip" data-v="7">7天</button>
-                        </div>
-                    </div>
-                    <div id="partner-overlap"
-                        style="display:none;font-size:11px;color:var(--ink3);margin:6px 0 0;padding:4px 8px;background:var(--surface2);border-radius:6px">
-                    </div>
-                </div>
-                <div class="period-toggle-row" id="sound-enable-row" style="margin: 15px 0;">
-                    <div class="period-toggle-info">
-                        <div>
-                            <span class="period-toggle-label">提示音</span>
-                            <span class="period-toggle-hint">休息结束/打勾/完成的音效，健身房或深夜可关</span>
-                        </div>
-                    </div>
-                    <label class="switch" for="sound-enable-switch">
-                        <input type="checkbox" id="sound-enable-switch">
-                        <span class="switch-slider"></span>
-                    </label>
-                </div>
-                <div class="period-toggle-row" id="notif-enable-row" style="margin: 15px 0;">
-                    <div class="period-toggle-info">
-                        <div>
-                            <span class="period-toggle-label">系统通知</span>
-                            <span class="period-toggle-hint">休息结束弹出锁屏/后台通知，关闭后仅声音提醒</span>
-                        </div>
-                    </div>
-                    <label class="switch" for="notif-enable-switch">
-                        <input type="checkbox" id="notif-enable-switch">
-                        <span class="switch-slider"></span>
-                    </label>
-                </div>
-                <div class="period-toggle-row" id="auto-vol-row" style="margin: 15px 0;">
-                    <div class="period-toggle-info">
-                        <div>
-                            <span class="period-toggle-label">自动调整训练量</span>
-                            <span class="period-toggle-hint">开启时系统按疲劳度自动调整；关闭后提前打卡可手动勾选是否下调</span>
-                        </div>
-                    </div>
-                    <label class="switch" for="auto-vol-switch">
-                        <input type="checkbox" id="auto-vol-switch" checked>
-                        <span class="switch-slider"></span>
-                    </label>
-                </div>
-                <div class="period-toggle-row" id="cycle-enable-row" style="margin: 15px 0;">
-                    <div class="period-toggle-info">
-                        <div>
-                            <span class="period-toggle-label">生理期 / 周期功能</span>
-                            <span class="period-toggle-hint">没有生理周期可关闭，下方相关选项会隐藏</span>
-                        </div>
-                    </div>
-                    <label class="switch" for="cycle-enable-switch">
-                        <input type="checkbox" id="cycle-enable-switch">
-                        <span class="switch-slider"></span>
-                    </label>
-                </div>
-                <div id="cycle-block">
-                    <div class="period-toggle-row" id="period-toggle-row" style="margin: 15px 0;">
-                        <div class="period-toggle-info">
-                            <div>
-                                <span class="period-toggle-label">生理期模式</span>
-                                <span class="period-toggle-hint">游泳日替换为陆地训练，力量日降低负重并避免高腹压动作</span>
-                            </div>
-                        </div>
-                        <label class="switch" for="period-switch">
-                            <input type="checkbox" id="period-switch">
-                            <span class="switch-slider"></span>
-                        </label>
-                    </div>
-                    <p class="sec">月经周期（把滑块拖到"今天"在周期里的位置）</p>
-                    <div class="srow">
-                        <input type="range" id="sl-cycle" min="1" max="40" step="1" value="1">
-                        <span class="sval" id="v-cycle">第1天</span>
-                    </div>
-                    <div style="display:flex;gap:8px;align-items:center;margin:-2px 0 8px">
-                        <span style="font-size:11px;color:var(--ink3)">周期长度</span>
-                        <input type="number" id="cycle-len" min="20" max="40" value="28"
-                            style="width:54px;padding:4px 6px;border:1px solid var(--border);border-radius:6px;background:var(--surface2);color:var(--ink);font-size:13px">
-                        <span style="font-size:11px;color:var(--ink3)">天</span>
-                        <button class="exp-btn" style="margin-left:auto;font-size:11px;padding:4px 10px"
-                            onclick="cyclePeriodStart()">今天来月经了</button>
-                    </div>
-                    <div id="cycle-phase"
-                        style="font-size:12px;color:var(--ink2);line-height:1.6;padding:8px 10px;background:var(--surface2);border-radius:8px">
-                    </div>
-                    <p style="font-size:10px;color:var(--ink3);margin:6px 2px 0">仅供参考，以身体感受为准；训练量仍会随你每次打卡的 RPE 自动微调。</p>
-                </div>
-                <p class="sec">重点部位（可多选）</p>
-                <div class="chips" id="g-focus">
-                    <button class="chip on" data-v="均衡全身">均衡全身 (无偏好)</button>
-                    <button class="chip" data-v="上肢">上肢</button>
-                    <button class="chip" data-v="下肢">下肢</button>
-                    <button class="chip" data-v="核心">核心</button>
-                    <button class="chip" data-v="有氧">有氧</button>
-                    <button class="chip" data-v="游泳">游泳</button>
-                    <button class="chip" data-v="柔韧灵活">柔韧·体态</button>
-                    <button class="chip" data-v="上肢紧致">上肢紧致</button>
-                    <button class="chip" data-v="平衡稳定">平衡稳定</button>
-                </div>
-                <p class="sec">限制或注意</p>
-                <textarea id="limits" placeholder="例如：膝盖不适、肩伤、避免跳跃..."></textarea>
-                <p class="sec">组间休息时长</p>
-                <div class="chips" id="g-rest">
-                    <button class="chip" data-v="30">30秒</button>
-                    <button class="chip on" data-v="45">45秒</button>
-                    <button class="chip" data-v="60">60秒</button>
-                    <button class="chip" data-v="90">90秒</button>
-                    <button class="chip" data-v="0">关闭</button>
-                </div>
-                <div style="display:flex;gap:8px">
-                    <button id="gen-btn" onclick="confirmGenPlan()">生成全新计划</button>
-                    <button id="recal-btn" onclick="recalibratePlan()" style="display:none">↺ 重排剩余</button>
-                </div>
-            </div>
-            <div class="panel" id="excluded-panel" style="display:none">
-                <p class="panel-title">已排除的动作/器械</p>
-                <div id="excluded-list" style="display:flex;flex-direction:column;gap:6px"></div>
-            </div>
-
-            <div class="panel">
-                <p class="panel-title">数据管理</p>
-                <div class="export-row">
-                    <button class="exp-btn" onclick="exportForAI()">AI 分析导出</button>
-                    <button class="exp-btn" onclick="exportJSON()">备份 JSON</button>
-                    <button class="exp-btn" onclick="showSnapshotRestore()">🕘 恢复快照</button>
-                    <button class="exp-btn" onclick="exportCSV()">导出 CSV</button>
-                    <label class="exp-btn" style="cursor:pointer">导入<input type="file" accept=".json"
-                            onchange="importJSON(this)" style="display:none"></label>
-                </div>
-                <div style="margin-top:12px;">
-                    <button class="exp-btn" onclick="clearAllData()"
-                        style="width:100%;color:var(--terra);border-color:var(--terra-br)">清空所有数据 (恢复出厂)</button>
-                </div>
-            </div>
-
-            <div style="text-align:center;padding:16px 0 24px">
-                <span id="app-version" style="font-size:11px;color:var(--ink3);cursor:pointer;user-select:none" onclick="toggleChangelog()">
-                    Cici健身计划 v2.1.0 (build 153) · 点击查看完整更新日志 ▾
-                </span>
-                <div id="changelog-box" style="display:none;margin-top:12px;text-align:left;background:var(--surface2);border-radius:10px;padding:14px;font-size:12px;line-height:1.6;color:var(--ink2)">
-                    <div style="font-weight:600;color:var(--ink);margin-bottom:8px;font-size:13px">🎉 v2.1.0 (2026-08-04) 核心架构与功能更新：</div>
-                    <ul style="margin:0;padding-left:18px;display:flex;flex-direction:column;gap:4px">
-                        <li><b>⚡ 训练量与下调控制</b>：提前结束训练支持自主勾选是否下调剩余训练量，设置中可开启/关闭默认下调开关。</li>
-                        <li><b>⏱️ 全局休息与后台恢复</b>：逐动作 RPE 行快捷开启 45s 组间休息计时；增加 <code>sessionStorage</code> 状态恢复，手机切回前台或 iOS 进程重建自动接续。</li>
-                        <li><b>✕ 动作划掉与排除系统</b>：动作卡片及详情弹窗支持醒目红色软胶囊「✕ 划掉/永久排除」，并在设置中随时恢复，AI 分析导出自动带入排除日志。</li>
-                        <li><b>🏋️ 灵活动作库与加练</b>：支持「+ 手动添加动作」，优先按当日肌群筛选库内动作；任何支持换项的动作均可一键替换。</li>
-                        <li><b>🧬 国际开源解剖图图库</b>：接入 wger 官方专业人体解剖矢量 SVG 肌肉图库，直观展示主发力肌群与辅助肌群。</li>
-                        <li><b>♨️ 温泉水疗与恢复模块</b>：游泳日/力量日根据总训练时长智能配比游泳与 Sauna / Hot Tub / 热躺椅恢复时间，支持 7 段冷热交替浴自动引导。</li>
-                        <li><b>🔔 系统通知与音频解耦</b>：Notification 桌面/系统通知与 Web Audio 提示音独立开关。</li>
-                        <li><b>📱 全系统离线 PWA 预载</b>：将 WebFont 图标与全套 wger 矢量解剖图库纳入 Service Worker 离线缓存清单。</li>
-                        <li><b>🛠️ 容错与稳定性提升</b>：全面修复 DOM 容器与运行时异常，提升 iOS 与 Safari 浏览器下的流畅度。</li>
-                    </ul>
-                </div>
-            </div>
-
-        </div>
-
-        <!-- Tab: Journal -->
-        <div class="panel-tab" id="journal">
-            <div class="panel">
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
-                    <p class="panel-title" style="margin:0">训练日志</p>
-                    <button class="exp-btn" id="jrnl-toggle" onclick="toggleLogHistory()">显示全部</button>
-                </div>
-                <div id="log-list">
-                    <div class="empty">
-                        <p>完成训练后自动记录</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Tab: Stats -->
-        <div class="panel-tab" id="stats-tab">
-            <div id="stats-content"></div>
-        </div>
-
-        <!-- Tab: AI 教练(coach.js) -->
-        <div class="panel-tab" id="coach">
-            <div id="coach-content"></div>
-        </div>
-    </div>
-
-    <div class="sync-toast" id="sync-toast"></div>
-
-    <div id="login-modal" class="ex-modal-overlay" onclick="if(event.target===this)closeLoginModal()">
-        <div class="ex-modal-card" onclick="event.stopPropagation()">
-            <h3 style="margin-bottom:6px;font-family:var(--font-display);font-size:20px;color:var(--ink)">登录同步</h3>
-            <p style="margin-bottom:16px;font-size:12px;color:var(--ink3)">主屏幕版用邮箱登录即可；Safari 里也能用 Google</p>
-            <input id="login-email" type="email" autocomplete="username" placeholder="邮箱" style="width:100%;box-sizing:border-box;padding:12px;margin-bottom:10px;border:1px solid rgba(128,128,128,.3);border-radius:10px;font-size:15px;background:var(--surface2);color:var(--ink)">
-            <input id="login-pass" type="password" autocomplete="current-password" placeholder="密码（至少6位）" style="width:100%;box-sizing:border-box;padding:12px;margin-bottom:14px;border:1px solid rgba(128,128,128,.3);border-radius:10px;font-size:15px;background:var(--surface2);color:var(--ink)">
-            <div style="display:flex;gap:10px;margin-bottom:8px">
-                <button onclick="signInEmail()" style="flex:1;padding:13px;border:none;border-radius:12px;background:var(--terra);color:#fff;font-weight:600;font-size:15px">登录</button>
-                <button onclick="signUpEmail()" style="flex:1;padding:13px;border:1px solid var(--terra);border-radius:12px;background:transparent;color:var(--terra);font-weight:600;font-size:15px">注册</button>
-            </div>
-            <div id="login-msg" style="font-size:12px;color:var(--terra);min-height:16px;text-align:center;margin-bottom:8px"></div>
-            <button onclick="signInGoogle()" style="width:100%;padding:11px;border:1px solid rgba(128,128,128,.3);border-radius:12px;background:transparent;color:var(--ink3);font-size:13px">用 Google 登录（限 Safari）</button>
-        </div>
-    </div>
+    <!-- 打卡 -->
     <div id="rpe-modal" class="ex-modal-overlay" onclick="if(event.target===this)closeRpeModal()">
-        <div class="ex-modal-card" style="text-align:center" onclick="event.stopPropagation()">
-            <h3 id="rpe-modal-title"
-                style="margin-bottom:8px;font-family:var(--font-display);font-size:20px;color:var(--ink)">今日疲劳度评估</h3>
-            <p id="rpe-modal-desc" style="margin-bottom:20px;font-size:13px;color:var(--ink3)">选择最接近你今天训练感受的分数</p>
-
-            <div class="rpe-grid">
-                <button class="rpe-btn rpe-low" onclick="submitRPE(1)">
-                    <div class="rpe-val">1</div>
-                    <div class="rpe-lbl">毫无感觉</div>
-                </button>
-                <button class="rpe-btn rpe-low" onclick="submitRPE(2)">
-                    <div class="rpe-val">2</div>
-                    <div class="rpe-lbl">极度轻松</div>
-                </button>
-                <button class="rpe-btn rpe-low" onclick="submitRPE(3)">
-                    <div class="rpe-val">3</div>
-                    <div class="rpe-lbl">轻松</div>
-                </button>
-                <button class="rpe-btn rpe-mid" onclick="submitRPE(4)">
-                    <div class="rpe-val">4</div>
-                    <div class="rpe-lbl">略感疲劳</div>
-                </button>
-                <button class="rpe-btn rpe-mid" onclick="submitRPE(5)">
-                    <div class="rpe-val">5</div>
-                    <div class="rpe-lbl">适中</div>
-                </button>
-                <button class="rpe-btn rpe-mid" onclick="submitRPE(6)">
-                    <div class="rpe-val">6</div>
-                    <div class="rpe-lbl">正常训练</div>
-                </button>
-                <button class="rpe-btn rpe-high" onclick="submitRPE(7)">
-                    <div class="rpe-val">7</div>
-                    <div class="rpe-lbl">偏难</div>
-                </button>
-                <button class="rpe-btn rpe-high" onclick="submitRPE(8)">
-                    <div class="rpe-val">8</div>
-                    <div class="rpe-lbl">困难</div>
-                </button>
-                <button class="rpe-btn rpe-max" onclick="submitRPE(9)">
-                    <div class="rpe-val">9</div>
-                    <div class="rpe-lbl">极限</div>
-                </button>
-                <button class="rpe-btn rpe-max" onclick="submitRPE(10)">
-                    <div class="rpe-val">10</div>
-                    <div class="rpe-lbl">力竭</div>
-                </button>
+        <div class="ex-modal-card" onclick="event.stopPropagation()">
+            <div class="sheet-eyebrow" id="rpe-eyebrow">打卡</div>
+            <h3 id="rpe-modal-title" class="sheet-title">今日疲劳度评估</h3>
+            <p id="rpe-modal-desc" class="sheet-desc">选择最接近你今天训练感受的分数</p>
+            <div class="rpe-grid" role="radiogroup" aria-labelledby="rpe-modal-title">
+                <button type="button" class="rpe-btn" role="radio" aria-checked="false" onclick="pickRPE(1)"><span class="rpe-val">1</span><span class="rpe-lbl">毫无感觉</span></button>
+                <button type="button" class="rpe-btn" role="radio" aria-checked="false" onclick="pickRPE(2)"><span class="rpe-val">2</span><span class="rpe-lbl">极度轻松</span></button>
+                <button type="button" class="rpe-btn" role="radio" aria-checked="false" onclick="pickRPE(3)"><span class="rpe-val">3</span><span class="rpe-lbl">轻松</span></button>
+                <button type="button" class="rpe-btn" role="radio" aria-checked="false" onclick="pickRPE(4)"><span class="rpe-val">4</span><span class="rpe-lbl">略感疲劳</span></button>
+                <button type="button" class="rpe-btn" role="radio" aria-checked="false" onclick="pickRPE(5)"><span class="rpe-val">5</span><span class="rpe-lbl">适中</span></button>
+                <button type="button" class="rpe-btn" role="radio" aria-checked="false" onclick="pickRPE(6)"><span class="rpe-val">6</span><span class="rpe-lbl">正常训练</span></button>
+                <button type="button" class="rpe-btn" role="radio" aria-checked="false" onclick="pickRPE(7)"><span class="rpe-val">7</span><span class="rpe-lbl">偏难</span></button>
+                <button type="button" class="rpe-btn" role="radio" aria-checked="false" onclick="pickRPE(8)"><span class="rpe-val">8</span><span class="rpe-lbl">困难</span></button>
+                <button type="button" class="rpe-btn" role="radio" aria-checked="false" onclick="pickRPE(9)"><span class="rpe-val">9</span><span class="rpe-lbl">极限</span></button>
+                <button type="button" class="rpe-btn" role="radio" aria-checked="false" onclick="pickRPE(10)"><span class="rpe-val">10</span><span class="rpe-lbl">力竭</span></button>
             </div>
-
-            <div id="rpe-extra" style="display:none; margin-top:16px;"></div>
-            <div id="volume-down-row" style="display:none;margin:12px 0;padding:8px 12px;background:var(--surface2);border-radius:8px;text-align:left">
-                <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:var(--ink)">
-                    <input type="checkbox" id="chk-reduce-volume" style="accent-color:var(--terra)">
-                    <span>过于疲劳？勾选下调后续训练量 (10%)</span>
-                </label>
+            <div id="rpe-extra" style="display:none"></div>
+            <div id="volume-down-row" style="display:none">
+                <button type="button" class="boxrow" id="chk-reduce-volume" role="checkbox" aria-checked="false" onclick="uiToggleBox(this)"><span class="box-sq" aria-hidden="true"><svg viewBox="0 0 14 14"><path d="M2.5 7.5l3 3 6-7"/></svg></span><span>提前结束了，下调剩余训练量</span></button>
             </div>
-            <textarea id="rpe-note" class="rpe-note-input" placeholder="有什么想记录的？（选填，如：今天状态不好、卧推加了5kg）"></textarea>
-
-            <button class="btn btn-out" style="width:100%;margin-top:16px;font-size:13px"
-                onclick="submitRPE(6, true)">跳过</button>
+            <textarea id="rpe-note" class="rpe-note-input" aria-label="备注" placeholder="有什么想记录的？（选填，如：今天状态不好、卧推加了5kg）"></textarea>
+            <button type="button" class="btn-primary" id="rpe-submit" onclick="submitPickedRPE()" disabled>完成</button>
+            <button type="button" class="btn-ghost" onclick="submitRPE(6, true)">跳过</button>
         </div>
     </div>
 
-    <!-- Exercise Detail Modal -->
+    <!-- 动作详情:替换 / 划掉放在顶部 -->
     <div id="ex-modal" class="ex-modal-overlay" onclick="closeExDetail()">
         <div class="ex-modal-card" id="ex-modal-card" onclick="event.stopPropagation()">
             <div class="ex-modal-hdr">
                 <h2 id="ex-modal-title" class="ex-modal-title"></h2>
-                <button class="ex-modal-close" onclick="closeExDetail()">&#10005;</button>
+                <button class="ex-modal-close" onclick="closeExDetail()" aria-label="关闭">关闭</button>
             </div>
-            <div id="ex-modal-muscles" class="jentry-chips" style="margin-bottom:1rem"></div>
+            <div id="ex-modal-actions"></div>
+            <div id="ex-modal-muscles" class="jentry-chips"></div>
             <div id="ex-modal-strength"></div>
-            <p style="font-size:11px;font-weight:600;color:var(--ink3);margin-bottom:8px;letter-spacing:.06em">动作要点</p>
+            <p class="sec-label">动作要点</p>
             <div id="ex-modal-steps"></div>
-            <div id="ex-modal-tips" style="margin-top:10px"></div>
+            <div id="ex-modal-tips"></div>
             <div id="ex-modal-mistakes"></div>
         </div>
     </div>
 
-    <!-- Guided Workout Mode -->
-    <div id="workout-modal" class="ex-modal-overlay" onclick="if(event.target===this)wmClose()">
+    <!-- 引导训练 -->
+    <div id="workout-modal" class="ex-modal-overlay sheet-full" onclick="if(event.target===this)wmClose()">
         <div class="ex-modal-card" id="wm-card" onclick="event.stopPropagation()"></div>
     </div>
 
-    <!-- History Detail Modal -->
+    <!-- 历史详情 -->
     <div id="hist-modal" class="ex-modal-overlay" onclick="closeHistModal()">
         <div class="ex-modal-card" onclick="event.stopPropagation()">
             <div id="hist-modal-content"></div>
         </div>
     </div>
 
-    <!-- Share Card Modal -->
+    <!-- 分享卡片 -->
     <div id="share-modal" class="ex-modal-overlay" onclick="if(event.target===this)closeShareModal()">
-        <div class="ex-modal-card" onclick="event.stopPropagation()" style="max-width: 460px; text-align: center;">
-            <div class="ex-modal-hdr" style="margin-bottom: 12px;">
-                <h3 class="ex-modal-title"
-                    style="font-family: var(--font-display); font-size: 18px; color: var(--ink);">分享今日打卡</h3>
-                <button class="ex-modal-close" onclick="closeShareModal()">&#10005;</button>
+        <div class="ex-modal-card" onclick="event.stopPropagation()">
+            <div class="ex-modal-hdr">
+                <h3 class="ex-modal-title">分享今日打卡</h3>
+                <button class="ex-modal-close" onclick="closeShareModal()" aria-label="关闭">关闭</button>
             </div>
-            <div id="share-card-preview-container"
-                style="margin-bottom: 16px; display: flex; justify-content: center; box-shadow: 0 4px 16px rgba(0,0,0,0.1); border-radius: 8px; overflow: hidden; background: var(--surface2); min-height: 200px; align-items: center;">
-                <!-- Preview image will be injected here -->
-            </div>
-            <p style="font-size: 11px; color: var(--ink3); margin-bottom: 16px; line-height: 1.4;">
-                提示：手机端可长按上方图片直接保存或转发分享</p>
-            <div style="display: flex; gap: 10px;">
-                <button id="download-card-btn" class="btn"
-                    style="flex: 1; background: var(--sage); color: #fff; border: none; padding: 12px; border-radius: var(--radius-sm); font-weight: 600;"
-                    onclick="downloadShareCard()">下载分享图</button>
-            </div>
+            <div id="share-card-preview-container" class="share-preview"></div>
+            <p class="sheet-desc">手机上可以长按上面的图片直接保存或转发。</p>
+            <button id="download-card-btn" class="btn-primary" onclick="downloadShareCard()">下载分享图</button>
         </div>
     </div>
 
-    <!-- Achievement Detail Modal -->
+    <!-- 成就详情 -->
     <div id="achievement-modal" class="ex-modal-overlay" onclick="if(event.target===this)closeAchievementModal()">
-        <div class="ex-modal-card" onclick="event.stopPropagation()"
-            style="max-width: 400px; text-align: center; position: relative;">
-            <div class="ex-modal-hdr" style="margin-bottom: 8px; border-bottom: none;">
-                <h3 id="ach-modal-title" class="ex-modal-title"
-                    style="font-size: 18px; color: var(--ink); margin: 0 auto 0 0;">成就详情</h3>
-                <button class="ex-modal-close" onclick="closeAchievementModal()">&#10005;</button>
+        <div class="ex-modal-card" onclick="event.stopPropagation()">
+            <div class="ex-modal-hdr">
+                <h3 id="ach-modal-title" class="ex-modal-title">成就详情</h3>
+                <button class="ex-modal-close" onclick="closeAchievementModal()" aria-label="关闭">关闭</button>
             </div>
-            <div id="ach-modal-badge-container" style="display:flex;justify-content:center;margin: 24px 0 16px 0;">
-                <!-- SVG Badge here -->
-            </div>
-            <h4 id="ach-modal-name"
-                style="font-family: var(--font-display); font-size: 24px; font-weight: 700; color: var(--ink); margin-bottom: 8px;">
-                力量萌新</h4>
-            <p id="ach-modal-status"
-                style="font-size: 12px; font-weight: 600; color: var(--sage); margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px;">
-                已解锁 · 2026-06-01</p>
-            <p id="ach-modal-desc"
-                style="font-size: 14px; color: var(--ink2); line-height: 1.5; margin-bottom: 24px; padding: 0 16px;">
-                完成第一次力量训练！</p>
-
-            <div id="ach-modal-share-container"
-                style="display:none; justify-content:center; box-shadow: 0 4px 20px rgba(0,0,0,0.1); border-radius: var(--radius); overflow: hidden; background: var(--surface2); margin: 16px auto; max-width: 320px; transition: all 0.3s ease;">
-                <!-- Preview image will be injected here -->
-            </div>
-
-            <div style="display: flex; gap: 10px; padding: 0 16px;">
-                <button id="ach-action-btn" class="btn"
-                    style="flex: 1; background: var(--sage); color: #fff; border: none; padding: 12px; border-radius: var(--radius-sm); font-weight: 600; transition: background 0.2s;"
-                    onclick="toggleAchShareCard()">生成成就卡片</button>
-            </div>
+            <div id="ach-modal-badge-container" class="ach-badge-big"></div>
+            <h4 id="ach-modal-name" class="ach-name">力量萌新</h4>
+            <p id="ach-modal-status" class="ach-status">已解锁 · 2026-06-01</p>
+            <p id="ach-modal-desc" class="sheet-desc">完成第一次力量训练！</p>
+            <div id="ach-modal-share-container" class="share-preview" style="display:none"></div>
+            <button id="ach-action-btn" class="btn-primary" onclick="toggleAchShareCard()">生成成就卡片</button>
         </div>
     </div>
+
+    <!-- 新手设置(第一次打开或「我」里重走) -->
+    <div id="oobe" class="oobe" role="dialog" aria-modal="true" aria-labelledby="oobe-title" hidden></div>
 
     <!-- Developer Testing Console -->
     <script src="dev.js" onerror="console.log('Running in production mode (dev.js not loaded)')"></script>
 
+    <script src="ui.js"></script>
     <script src="core.js"></script>
     <script src="app.js"></script>
     <script src="coach.js"></script>

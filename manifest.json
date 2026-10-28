@@ -1,11 +1,11 @@
 {
   "name": "健身计划",
   "short_name": "健身计划",
-  "version": "2.1.0",
+  "version": "3.0.0",
   "start_url": "./index.html",
   "display": "standalone",
-  "background_color": "#f5f4ef",
-  "theme_color": "#6b5344",
+  "background_color": "#f5f2eb",
+  "theme_color": "#f5f2eb",
   "icons": [
     {
       "src": "icon.svg",
