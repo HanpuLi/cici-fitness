@@ -1,8 +1,11 @@
 (function() {
     // ══ Storage Layer & Sandbox Redirect ═════════════════════════
-    const SANDBOX_KEYS = [
-        'fit_s1', 'fit_p1', 'fit_pr1', 'fit_log1', 'fit_adj1', 'fit_wh1', 'fit_pr', 'fit_selDate', 'fit_swim', 'fit_gym_ach'
-    ];
+    // 沙箱要隔离的键 = core.js 的全部数据键(K)+ 选中日期 + 快照环。直接取 K,别手抄:
+    // 手抄漏了 fit_body1 / fit_sub_depth,沙箱里记的身体数据会写进真实数据并同步上云。
+    // dev.js 在 core.js 之前加载,所以按需现取;K 还没定义时用兜底列表。
+    const SANDBOX_FALLBACK = ['fit_s1', 'fit_p1', 'fit_pr1', 'fit_log1', 'fit_adj1', 'fit_wh1', 'fit_pr', 'fit_swim', 'fit_gym_ach', 'fit_body1', 'fit_sub_depth'];
+    const sandboxKeys = () => [...new Set([...(typeof K !== 'undefined' && K ? Object.values(K) : SANDBOX_FALLBACK), 'fit_selDate', 'snap_ring'])];
+    const dataKeys = () => sandboxKeys().filter(k => k !== 'snap_ring');   // 导入/导出用:不含快照环
 
     const originalGetItem = localStorage.getItem;
     const originalSetItem = localStorage.setItem;
@@ -11,7 +14,7 @@
     const isSandboxActive = () => originalGetItem.call(localStorage, '__dev_active__') === '1';
 
     function isSandboxKey(key) {
-        return SANDBOX_KEYS.some(sk => key === sk || key.endsWith('__' + sk));
+        return sandboxKeys().some(sk => key === sk || key.endsWith('__' + sk));
     }
 
     // Proxied localStorage
@@ -263,7 +266,7 @@
         const uid = getUid();
         if (enable) {
             // Activate Sandbox: copy current real state to sandbox keys
-            SANDBOX_KEYS.forEach(k => {
+            sandboxKeys().forEach(k => {
                 const prefixed = uid + '__' + k;
                 const realVal = originalGetItem.call(localStorage, prefixed);
                 if (realVal !== null) {
@@ -274,7 +277,7 @@
             showToast('已进入安全沙箱，您的修改不会影响真实数据');
         } else {
             // Deactivate Sandbox: clean up sandbox keys
-            SANDBOX_KEYS.forEach(k => originalRemoveItem.call(localStorage, '__dev__' + uid + '__' + k));
+            sandboxKeys().forEach(k => originalRemoveItem.call(localStorage, '__dev__' + uid + '__' + k));
             originalRemoveItem.call(localStorage, '__dev_active__');
             showToast('已退出安全沙箱');
         }
@@ -291,7 +294,7 @@
 
         if (type === 'new_user') {
             // New user preset: Clear all plan/log/pr data
-            SANDBOX_KEYS.forEach(k => localStorage.removeItem(k));
+            sandboxKeys().forEach(k => localStorage.removeItem(getUid() + '__' + k)); // 键带账号前缀,裸键删不到东西
             showToast('已加载【新用户】预设！即将刷新...');
             setTimeout(() => location.reload(), 1000);
         } else if (type === 'active_user' || type === 'mixed') {
@@ -725,10 +728,12 @@
 
         rootContainer.innerHTML = '';
         const inspectState = {
-            "S (配置和计划)": window.S,
-            "LOG (训练打卡记录)": window.LOG,
-            "PR_LIST (个人纪录)": window.PR_LIST,
-            "W_HIST (动作负重历史)": window.W_HIST,
+            // S/LOG/… 是 core.js 顶层的 const/let,不挂在 window 上 → 按名字取(window.S 永远是 undefined)
+            "S (配置和计划)": typeof S !== 'undefined' ? S : null,
+            "LOG (训练打卡记录)": typeof LOG !== 'undefined' ? LOG : null,
+            "PR_LIST (个人纪录)": typeof PR_LIST !== 'undefined' ? PR_LIST : null,
+            "W_HIST (动作负重历史)": typeof W_HIST !== 'undefined' ? W_HIST : null,
+            "BODY_LOG (身体数据)": typeof BODY_LOG !== 'undefined' ? BODY_LOG : null,
             "LocalStorage (真实项)": {
                 "fit_theme": originalGetItem.call(localStorage, 'fit_theme'),
                 "fit_dev_unlocked": originalGetItem.call(localStorage, 'fit_dev_unlocked'),
@@ -877,8 +882,8 @@
                 sandbox: isSandboxActive()
             }
         };
-        SANDBOX_KEYS.forEach(key => {
-            const val = localStorage.getItem(key);
+        dataKeys().forEach(key => {
+            const val = localStorage.getItem(getUid() + '__' + key);   // 数据都存在「账号__键」下,裸键读不到
             if (val !== null) {
                 try {
                     exportData[key] = JSON.parse(val);
@@ -942,7 +947,7 @@
             // Count valid keys inside
             let validKeysCount = 0;
             Object.keys(obj).forEach(k => {
-                if (SANDBOX_KEYS.includes(k)) validKeysCount++;
+                if (dataKeys().includes(k)) validKeysCount++;
             });
 
             if (validKeysCount === 0) {
@@ -964,10 +969,10 @@
             let imported = false;
 
             Object.entries(obj).forEach(([k, v]) => {
-                if (SANDBOX_KEYS.includes(k)) {
+                if (dataKeys().includes(k)) {
                     // Check value format - needs to be written as stringified if it's object, else raw
                     const valToWrite = typeof v === 'object' ? JSON.stringify(v) : v;
-                    localStorage.setItem(k, valToWrite);
+                    localStorage.setItem(getUid() + '__' + k, valToWrite);
                     imported = true;
                 }
             });

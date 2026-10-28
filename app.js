@@ -60,7 +60,7 @@ function updateThemeBtn(theme){
 
 // ══ State Persistence ════════════════════════════════════
 function saveState(){
-ls(K.settings,{goal:S.goal,level:S.level,days:S.days,dur:S.dur,equip:S.equip,focus:S.focus,limits:S.limits,volumeMultiplier:S.volumeMultiplier,restDur:S.restDur,swimLevel:S.swimLevel,weightLevel:S.weightLevel,periodMode:S.periodMode,displayName:S.displayName,sealChar:S.sealChar,cycleEnabled:S.cycleEnabled,cycleDay:S.cycleDay,cycleLength:S.cycleLength,vacuumDays:S.vacuumDays,partnerDays:S.partnerDays,partnerUid:S.partnerUid,autoVolumeAdjust:S.autoVolumeAdjust,userExcluded:S.userExcluded,userExcludeReasons:S.userExcludeReasons,cheer:S.cheer,aiWeights:S.aiWeights});
+ls(K.settings,{goal:S.goal,level:S.level,days:S.days,dur:S.dur,equip:S.equip,focus:S.focus,limits:S.limits,volumeMultiplier:S.volumeMultiplier,restDur:S.restDur,swimLevel:S.swimLevel,weightLevel:S.weightLevel,periodMode:S.periodMode,displayName:S.displayName,sealChar:S.sealChar,cycleEnabled:S.cycleEnabled,cycleDay:S.cycleDay,cycleLength:S.cycleLength,vacuumDays:S.vacuumDays,partnerDays:S.partnerDays,partnerUid:S.partnerUid,autoVolumeAdjust:S.autoVolumeAdjust,userExcluded:S.userExcluded,userExcludeReasons:S.userExcludeReasons,cheer:S.cheer,aiWeights:S.aiWeights,planStale:!!S.planStale});
 if(S.plan)ls(K.plan,{plan:S.plan,prog:S.prog,adj:S.adj,weights:S.weights,exRpe:S.exRpe,poolLounger:S.poolLounger,flexProg:S.flexProg,unlockedDates:S.unlockedDates});
 localStorage.setItem(nsKey('fit_selDate'), S.selDate || '');
 }
@@ -153,6 +153,19 @@ updateSwimBreakdown();
 
 const rBtn = document.getElementById('recal-btn');
 if(rBtn) rBtn.style.display = S.plan ? 'block' : 'none';
+updateStaleBar();
+}
+// 设置改了会影响排课的项(目标/水平/天数/时长/器材/重点/限制/游泳水平),计划不会自己变 →
+// 顶部亮一条「按新设置重排」,点了才重排今天之后的天;生成计划后自动收起
+function markPlanStale(){
+if(!S.plan)return;
+const was=!!S.planStale;
+S.planStale=true;saveState();updateStaleBar();
+if(!was&&typeof render==='function')render(); // 今日页顶上也亮出来
+}
+function updateStaleBar(){
+const bar=document.getElementById('stale-bar');
+if(bar)bar.style.display=(S.plan&&S.planStale)?'':'none';
 }
 
 function updateCycleUI(){
@@ -245,7 +258,7 @@ html+=`
       <span class="jchip done-c">${x.exerciseCount||0}个动作完成</span>
       ${x.exercises?x.exercises.slice(0,4).map(e=>`<span class="jchip${e.done===false?' undone':''}">${e.name}${e.weight?` ${e.weight}kg`:''}</span>`).join('')+((x.exercises.length>4)?`<span class="jchip" style="opacity:.5">+${x.exercises.length-4}个</span>`:''):''}
     </div>
-    ${x.note?`<div class="jentry-note">"${x.note}"</div>`:''}
+    ${x.note?`<div class="jentry-note">"${_escHtml(x.note)}"</div>`:''}
     <div class="log-actions" style="margin-top:10px;border-top:1px solid var(--border);padding-top:8px">
       <button class="log-act-btn" onclick="editLog(${logIdx})">编辑</button>
       <button class="log-act-btn" style="color:var(--sage)" onclick="shareWorkoutFromIndex(${logIdx})">分享</button>
@@ -289,6 +302,8 @@ if(confirm('警告：确定要清空所有计划、打卡记录和统计数据�
     if(_unsub){_unsub();_unsub=null}
     // 2. Delete cloud data if logged in
     if(_db && _user){
+        // 搭子能看到的 shared/profile 是子文档,删父文档不会连带删它 → 单独删,否则搭子还看得到旧状态
+        try{ await _db.collection('users').doc(_user.uid).collection('shared').doc('profile').delete(); }catch(e){ console.warn('Shared profile clear failed:',e); }
         try{ await _db.collection('users').doc(_user.uid).delete(); }catch(e){ console.warn('Cloud clear failed:',e); }
     }
     // 3. Clear local (including weight history) using nsKey
@@ -423,6 +438,7 @@ ${ratios?`<div style="margin-top:12px">${ratios}</div>`:''}${charts}${hist}</div
 // 练量够但尺寸不动 = 吃不够或该加重;尺寸动但练量少 = 别的因素,别归功于训练。
 function renderCurvePanel(){
   if(typeof curveFocusStats!=='function')return '';
+  if(!hasGoal('女性曲线'))return ''; // 这些承重点(胯宽/臀峰/细腰…)只对「女性曲线」目标有意义
   const st=curveFocusStats(4);
   const total=st.reduce((a,f)=>a+f.sets,0);
   const weak=[...st].sort((a,b)=>a.pct-b.pct)[0];
@@ -442,7 +458,7 @@ function renderCurvePanel(){
   }).join('');
   const hint=total===0
     ? '还没有打卡数据 —— 练几次之后这里就会告诉你哪个点在掉队。'
-    : `最弱的一条是<b style="color:var(--terra)">${weak.name}</b>(${weak.sets}/${weak.target} 组)。下次生成计划时我会往这边加,你也可以直接在计划里手动添加动作补上。`;
+    : `最弱的一条是<b style="color:var(--terra)">${weak.name}</b>(${weak.sets}/${weak.target} 组)。${(typeof _ownerSession==='function'&&_ownerSession())?'下次生成计划时我会往这边加,你也可以':'可以'}直接在计划里手动添加动作补上。`; // 自动补弱(_appendWeakFocus)只对 owner 开,别给别人许兑现不了的承诺
   return `<div class="panel"><p class="panel-title">曲线焦点 <span style="font-size:11px;color:var(--ink3);font-weight:400"> 近 4 周 · 练了多少 vs 尺寸往哪走</span></p>
 ${rows}<div style="font-size:11px;color:var(--ink2);margin-top:8px;padding:8px 10px;background:var(--surface2);border-radius:8px">${hint}</div></div>`;
 }
@@ -568,10 +584,12 @@ return `<div class="panel">
     const last=hist[hist.length-1].weight;
     const delta=last-first;
     const recent=hist.slice(-12);
+    const asst=typeof isAssistedMove==='function'&&isAssistedMove(name); // 助力器械:数字往下走才是进步
+    const good=asst?delta<0:delta>0, bad=asst?delta>0:delta<0;
     return `<div style="margin-bottom:14px">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
         <span style="font-size:12px;font-weight:600">${name}${(()=>{const rm=(typeof estimate1RM==='function')?estimate1RM(name):null;return rm?` <span style="font-size:10px;font-weight:400;color:var(--ink3)">1RM≈${rm}kg</span>`:'';})()}</span>
-        <span style="font-size:11px;font-weight:600;color:${delta>0?'var(--sage)':delta<0?'var(--terra)':'var(--ink3)'}">${delta>0?'+':''}${delta}kg</span>
+        <span style="font-size:11px;font-weight:600;color:${good?'var(--sage)':bad?'var(--terra)':'var(--ink3)'}">${asst?'助力 ':''}${delta>0?'+':''}${delta}kg</span>
       </div>
       <div style="display:flex;gap:2px;height:28px;align-items:flex-end">
         ${recent.map(h=>{
@@ -839,21 +857,67 @@ if(typeof renderLog === 'function') renderLog();
 if(typeof renderStats === 'function') renderStats();
 applySettingsToUI();
 renderAuthBtn();
-if(user){setupRealtimeSync();showToast('已连接');pushProfile();subscribePartner();}
+if(user){setupRealtimeSync();showToast('已连接');pushProfile();subscribePartner();_checkAnonMerge(user.uid);}
 else{if(_unsub){_unsub();_unsub=null}if(_partnerUnsub){_partnerUnsub();_partnerUnsub=null}_partnerProfile=null;}
 if(typeof updatePairUI==='function')updatePairUI();
 if(typeof xpOnAuthChange==='function')xpOnAuthChange();
 }
 
+// ── 未登录(本地模式)攒的数据 → 登录后并进账号 ──
+// 未登录时数据存在 anon__* 下,登录后读的是 <uid>__*,本机记录看起来就「消失」了。
+// 账号本身(本机 + 云端)还是空的时候问一句要不要搬过来;账号已有数据就不合并(避免两份记录互相覆盖),只提示一下。
+// 搬完删掉 anon__*,免得同一台设备换另一个账号登录时又把同一批记录并进去。
+const _ANON_DATA_KEYS=['fit_p1','fit_log1','fit_wh1','fit_body1','fit_pr','fit_swim','fit_gym_ach'];
+function _hasData(prefix,get){
+  return _ANON_DATA_KEYS.some(k=>{
+    let v=get(prefix+k); if(v==null||v==='')return false;
+    if(typeof v==='string'){try{v=JSON.parse(v)}catch(e){return false}}
+    if(Array.isArray(v))return v.length>0;
+    if(v&&typeof v==='object'){if(typeof v.count==='number')return v.count>0;if(v.plan)return !!(v.plan.days&&v.plan.days.length);return Object.keys(v).length>0;}
+    return !!v;
+  });
+}
+function _anonHasData(){try{return _hasData('anon__',k=>localStorage.getItem(k))}catch(e){return false}}
+function _checkAnonMerge(uid){
+  try{
+    if(!uid||!_db||!_anonHasData()||localStorage.getItem('__anon_merge_asked__'+uid))return;
+    _db.collection('users').doc(uid).get().then(doc=>{
+      if(currentUid()!==uid)return; // 期间换了账号
+      _offerAnonMerge(uid,doc&&doc.exists?doc.data():null);
+    }).catch(e=>console.warn('[anon-merge] 读云端失败,下次登录再问',e)); // 断网时不问(没法确认账号是不是空的)
+  }catch(e){}
+}
+function _offerAnonMerge(uid,cloud){
+  if(!uid||uid==='anon'||!_anonHasData())return false;
+  const localHas=_hasData(uid+'__',k=>localStorage.getItem(k));
+  const cloudHas=!!cloud&&_hasData('',k=>cloud[k]);
+  localStorage.setItem('__anon_merge_asked__'+uid,'1');
+  if(localHas||cloudHas){showToast('这台设备上还有未登录时的记录，退出登录可以看到',5000);return false;}
+  let n=0;try{n=(JSON.parse(localStorage.getItem('anon__fit_log1')||'[]')||[]).length}catch(e){}
+  if(!confirm(`这台设备上有未登录时记下的计划和打卡${n?`（${n} 条打卡记录）`:''}。\n要把它们并进当前账号吗？\n\n选「取消」也不会删，退出登录后仍能看到。`))return false;
+  const keys=[...new Set([...Object.values(K),'fit_selDate'])];
+  keys.forEach(k=>{const v=localStorage.getItem('anon__'+k);if(v!==null)localStorage.setItem(uid+'__'+k,v);});
+  keys.forEach(k=>localStorage.removeItem('anon__'+k));
+  _localDirty=true;_dirtyFlag(true); // 先推本机上云,别让云端那份空文档盖回来
+  loadState();
+  if(typeof saveSnapshot==='function')saveSnapshot('anon-merge');
+  if(typeof renderLog==='function')renderLog();
+  if(typeof renderStats==='function')renderStats();
+  clearTimeout(_pushTimer);_pushTimer=setTimeout(pushToCloud,0);
+  showToast('已把本机记录并进账号');
+  return true;
+}
+
 window.updateProfileUI = function() {
     // Prefer a user-set display name (Chinese-name friendly) over Google's `given family` split.
-    const gName = (_user && _user.displayName) ? _user.displayName.split(' ')[0] : '我的';
+    // 没有名字时别拼成「我的的计划」(旧 PR #5 里修过的)
+    const gName = (_user && _user.displayName) ? _user.displayName.split(' ')[0] : '';
     const name = (S.displayName && S.displayName.trim()) ? S.displayName.trim() : gName;
     const seal = (S.sealChar && S.sealChar.trim()) ? S.sealChar.trim() : ((name && name.charAt(0).toUpperCase()) || '健');
     const titleEl = document.getElementById('doc-title');
-    if (titleEl) titleEl.textContent = `${name}健身计划`;
+    if (titleEl) titleEl.textContent = name ? `${name}健身计划` : '我的健身计划';
     const nameEl = document.getElementById('user-name');
-    if (nameEl) { nameEl.textContent = `${name}的计划`; nameEl.style.cursor = 'pointer'; nameEl.title = '点击修改显示名 / 印章'; nameEl.onclick = editProfileName; }
+    if (nameEl) { nameEl.textContent = name ? `${name}的计划` : '我的健身计划'; nameEl.style.cursor = 'pointer'; nameEl.title = '点击修改显示名 / 印章'; nameEl.onclick = editProfileName; }
     const sealEl = document.getElementById('user-seal');
     if (sealEl) { sealEl.textContent = seal; sealEl.style.cursor = 'pointer'; sealEl.title = '点击修改显示名 / 印章'; sealEl.onclick = editProfileName; }
 };
@@ -1138,16 +1202,17 @@ function flashSaved(){
   if(dot){dot.classList.add('show');setTimeout(()=>dot.classList.remove('show'),1200);}
 }
 
-function single(id,key){
+function single(id,key,stale){
 const el=document.getElementById(id);if(!el)return;
 el.addEventListener('click',e=>{
 const b=e.target.closest('.chip');if(!b)return;
 document.querySelectorAll('#'+id+' .chip').forEach(c=>c.classList.remove('on'));
 b.classList.add('on');S[key]=b.dataset.v;saveState();
 flashSaved();
+if(stale)markPlanStale();
 });
 }
-function multi(id,key){
+function multi(id,key,stale){
 const el=document.getElementById(id);if(!el)return;
 el.addEventListener('click',e=>{
 const b=e.target.closest('.chip');if(!b)return;
@@ -1156,6 +1221,7 @@ const v=b.dataset.v;
 S[key]=S[key].includes(v)?S[key].filter(x=>x!==v):[...S[key],v];
 saveState();
 flashSaved();
+if(stale)markPlanStale();
 });
 }
 // goal chip: plain toggle; 女性曲线 won't deselect once active
@@ -1170,12 +1236,13 @@ flashSaved();
     saveState();
     applySettingsToUI();
     flashSaved();
+    markPlanStale();
   });
 })();
-single('g-level','level');
+single('g-level','level',true);
 single('g-weight-level','weightLevel');
 {const _gwl=document.getElementById('g-weight-level');if(_gwl)_gwl.addEventListener('click',()=>{if(typeof render==='function')render();});}
-multi('g-equip','equip');multi('g-focus','focus');
+multi('g-equip','equip',true);multi('g-focus','focus',true);
 (function(){
 const el=document.getElementById('g-rest');if(!el)return;
 el.addEventListener('click',e=>{
@@ -1193,6 +1260,7 @@ const b=e.target.closest('.chip');if(!b)return;
 document.querySelectorAll('#g-swim-level .chip').forEach(c=>c.classList.remove('on'));
 b.classList.add('on');S.swimLevel=b.dataset.v;saveState();
 flashSaved();
+markPlanStale();
 })})();
 
 // 搭子 weekly day-count selector (drives the calendar overlap markers)
@@ -1228,9 +1296,9 @@ if(swimPanel) swimPanel.style.display=S.equip.includes('泳池')?'block':'none';
 updateSwimBreakdown();
 });
 }
-document.getElementById('sl-days').addEventListener('input',e=>{S.days=+e.target.value;document.getElementById('v-days').textContent=S.days+'天';saveState();updateSwimBreakdown()});
-document.getElementById('sl-dur').addEventListener('input',e=>{S.dur=+e.target.value;document.getElementById('v-dur').textContent=S.dur+'分钟';saveState()});
-document.getElementById('limits').addEventListener('input',e=>{S.limits=e.target.value;saveState()});
+document.getElementById('sl-days').addEventListener('input',e=>{S.days=+e.target.value;document.getElementById('v-days').textContent=S.days+'天';saveState();updateSwimBreakdown();markPlanStale()});
+document.getElementById('sl-dur').addEventListener('input',e=>{S.dur=+e.target.value;document.getElementById('v-dur').textContent=S.dur+'分钟';saveState();markPlanStale()});
+document.getElementById('limits').addEventListener('input',e=>{S.limits=e.target.value;saveState();markPlanStale()});
 // Cycle controls (manual slider; whole block hidden when 「生理期/周期功能」 is off)
 const cyEnSw=document.getElementById('cycle-enable-switch');
 if(cyEnSw) cyEnSw.addEventListener('change',function(){S.cycleEnabled=this.checked;let ch=false;if(!this.checked&&S.periodMode){S.periodMode=false;ch=true;}saveState();applySettingsToUI();flashSaved();if(ch&&S.plan){genPlan(true);render();}});
@@ -1259,7 +1327,7 @@ panel.style.display='block';
 list.innerHTML=arr.map(name=>{
 const reason=S.userExcludeReasons&&S.userExcludeReasons[name]?S.userExcludeReasons[name]:'用户手动排除';
 return `<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 10px;background:var(--surface2);border-radius:6px;font-size:12px">
-<div><b style="color:var(--ink)">${name}</b> <span style="font-size:10px;color:var(--ink3)">(${reason})</span></div>
+<div><b style="color:var(--ink)">${name}</b> <span style="font-size:10px;color:var(--ink3)">(${_escHtml(reason)})</span></div>
 <button class="exp-btn" style="padding:2px 8px;font-size:10px" onclick="restoreUserExercise('${name}')">恢复</button>
 </div>`;
 }).join('');

@@ -1,4 +1,9 @@
-const CACHE = 'cici-fitness-v152';
+const CACHE = 'cici-fitness-v153';   // 数字要和 core.js 的 APP_BUILD、index.html 页脚的 build 一致(check-static 会查)
+// 动作演示 GIF:单独一个缓存,只留最近 GIF_MAX 张。来源锁在固定 commit(见 core.js GIF_BASE),内容不会变,
+// 所以缓存优先、跨版本保留;以前走 SWR 进主缓存,看过的每张都存着,越积越多
+const GIF_CACHE = 'cici-fitness-gif-v1';
+const GIF_MAX = 80;
+const GIF_PREFIX = '/gh/hasaneyldrm/exercises-dataset@';
 
 // ── Local assets: always pre-cached on install ──
 const LOCAL_ASSETS = [
@@ -12,9 +17,10 @@ const CDN_ASSETS = [
   'https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js',
   'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js',
   'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js',
-  // Google Fonts CSS
-  'https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300..700;1,300..700&family=DM+Mono:wght@300;400&family=Noto+Serif+SC:wght@300;400;600;700&family=Outfit:wght@300;400;500;600;700&family=ZCOOL+XiaoWei&display=swap',
-  // Tabler Icons CSS
+  // Google Fonts CSS —— 必须和 index.html 里实际加载的那条一字不差(以前写的是旧字体,预缓存白做;check-static 会查)
+  'https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400..800;1,400..600&family=DM+Mono:wght@300;400&family=Noto+Serif+SC:wght@300;400;600;700&family=Outfit:wght@300;400;500;600;700&display=swap',
+  // 霞鹜文楷 + Tabler Icons CSS(jsDelivr,运行时走 SWR;这里预缓存一份,离线首开也有样式)
+  'https://cdn.jsdelivr.net/npm/lxgw-wenkai-webfont@1.7.0/style.css',
   'https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css'
 ];
 
@@ -48,7 +54,7 @@ self.addEventListener('install', e => e.waitUntil(
 ));
 
 self.addEventListener('activate', e => e.waitUntil(
-  caches.keys().then(ks => Promise.all(ks.filter(k => k !== CACHE).map(k => caches.delete(k))))
+  caches.keys().then(ks => Promise.all(ks.filter(k => k !== CACHE && k !== GIF_CACHE).map(k => caches.delete(k))))
     .then(() => self.clients.claim())
 ));
 
@@ -59,6 +65,19 @@ self.addEventListener('fetch', e => {
   // 认证/账号/数据库流量:绝不拦截、绝不缓存 —— SW 插手会破坏谷歌 OAuth/令牌流程导致登录失败
   const AUTH_HOSTS = ['accounts.google.com', 'apis.google.com', 'identitytoolkit.googleapis.com', 'securetoken.googleapis.com', 'oauth2.googleapis.com', 'firebaseinstallations.googleapis.com', 'firestore.googleapis.com', 'www.googleapis.com', 'node.tail95239f.ts.net'];  // 最后一个是 AI 教练后端
   if (AUTH_HOSTS.some(h => url.hostname === h || url.hostname.endsWith('.' + h)) || url.pathname.startsWith('/__/auth') || url.pathname.startsWith('/__/firebase')) return;
+
+  // ── 动作 GIF:缓存优先 + 只留最近 GIF_MAX 张 ──
+  if (url.hostname === 'cdn.jsdelivr.net' && url.pathname.startsWith(GIF_PREFIX) && url.pathname.endsWith('.gif')) {
+    e.respondWith(
+      caches.open(GIF_CACHE).then(cache =>
+        cache.match(e.request).then(hit => hit || fetch(e.request).then(r => {
+          if (r.ok) cache.put(e.request, r.clone()).then(() => trimCache(GIF_CACHE, GIF_MAX)).catch(() => { });
+          return r;
+        }))
+      )
+    );
+    return;
+  }
 
   // ── Stale-while-revalidate for font files & icon assets ──
   // Serves cached version immediately, updates cache in background
@@ -92,10 +111,19 @@ self.addEventListener('fetch', e => {
   }
 
   // ── Local assets: network-first, fall back to cache ──
+  // 只缓存同源的(本 app 自己的文件);别的跨域 GET 照常走网络,不往缓存里无上限地塞
+  const sameOrigin = url.origin === self.location.origin;
   e.respondWith(
     fetch(e.request).then(r => {
-      if (r.ok) { const c = r.clone(); caches.open(CACHE).then(cache => cache.put(e.request, c)) }
+      if (r.ok && sameOrigin) { const c = r.clone(); caches.open(CACHE).then(cache => cache.put(e.request, c)) }
       return r;
     }).catch(() => caches.match(e.request))
   );
 });
+
+// 按放进去的先后删最旧的,只留 max 条
+async function trimCache(name, max) {
+  const cache = await caches.open(name);
+  const keys = await cache.keys();
+  for (let i = 0; i < keys.length - max; i++) await cache.delete(keys[i]);
+}

@@ -77,6 +77,7 @@
 
         <!-- Tab: Settings -->
         <div class="panel-tab" id="settings">
+            <div class="stale-bar stale-sticky" id="stale-bar" style="display:none"><span>训练设置改过了，计划还是按旧设置排的</span><button class="regen-btn" onclick="applyStaleSettings()">按新设置重排</button></div>
             <div class="panel">
                 <p class="panel-title">训练设置 <span class="saved-dot" id="saved-dot"></span></p>
 
@@ -346,7 +347,7 @@
 
             <div style="text-align:center;padding:16px 0 24px">
                 <span id="app-version" style="font-size:11px;color:var(--ink3);cursor:pointer;user-select:none" onclick="toggleChangelog()">
-                    Cici健身计划 v2.1.0 (build 140) · 点击查看完整更新日志 ▾
+                    Cici健身计划 v2.1.0 (build 153) · 点击查看完整更新日志 ▾
                 </span>
                 <div id="changelog-box" style="display:none;margin-top:12px;text-align:left;background:var(--surface2);border-radius:10px;padding:14px;font-size:12px;line-height:1.6;color:var(--ink2)">
                     <div style="font-weight:600;color:var(--ink);margin-bottom:8px;font-size:13px">🎉 v2.1.0 (2026-08-04) 核心架构与功能更新：</div>

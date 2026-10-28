@@ -268,6 +268,8 @@ body::after {
     max-width: 680px;
     margin: 0 auto;
     padding: 2rem 1rem 1rem;
+    /* 主屏 PWA 用 black-translucent 状态栏:内容从屏幕最顶上开始画,要让出刘海/灵动岛 */
+    padding-top: calc(2rem + env(safe-area-inset-top, 0px));
     display: flex;
     align-items: center;
     gap: 15px;
@@ -1583,6 +1585,7 @@ textarea:focus {
 @media (max-width: 600px) {
     .masthead {
         padding: 1rem .75rem .5rem;
+        padding-top: calc(1rem + env(safe-area-inset-top, 0px));
     }
 
     .wrap {
@@ -3115,6 +3118,7 @@ button, .chip, .adj-btn, .regen-btn, .exrow, .dc, .tab, .act-play-btn {
 .co-link:disabled { color: var(--ink3); }
 .co-row { display: flex; gap: 8px; align-items: center; margin-top: 10px; }
 .co-card textarea { width: 100%; box-sizing: border-box; font: 14px var(--font-ui); color: var(--ink); background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 9px 10px; resize: vertical; }
+.co-code { flex: 1; min-width: 0; font: 15px var(--font-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--ink); background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px; }
 .co-empty { text-align: center; color: var(--ink2); }
 .co-empty i { font-size: 32px; color: var(--terra); }
 .co-file { position: relative; overflow: hidden; }
@@ -3154,4 +3158,28 @@ button, .chip, .adj-btn, .regen-btn, .exrow, .dc, .tab, .act-play-btn {
     .tab { padding: 10px 9px 12px; font-size: 14px; flex: 1 1 auto; }
     .tab::after { left: 8px; right: 8px; }
     .tabs { min-width: 0; }
+}
+
+/* ══ 设置已改、计划还没重排的提示条(设置页吸顶 + 今日页顶部) ══ */
+.stale-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 8px 12px;
+    margin: 0 0 12px;
+    border: 1px solid var(--terra-br);
+    background: linear-gradient(var(--terra-bg), var(--terra-bg)), var(--surface);
+    color: var(--terra);
+    border-radius: var(--radius-sm);
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.4;
+}
+.stale-bar .regen-btn { flex-shrink: 0; }
+.stale-sticky {
+    position: sticky;
+    top: calc(8px + env(safe-area-inset-top, 0px));
+    z-index: 5;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, .08);
 }

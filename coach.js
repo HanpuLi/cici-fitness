@@ -98,8 +98,57 @@ async function _coachFetch(path, body, { stream } = {}) {
   if (stream && r.ok) return r;
   let j = null;
   try { j = await r.json() } catch { }
-  if (!r.ok) throw new Error((j && j.error) || ('AI 教练暂时连不上(' + r.status + ')'));
+  if (!r.ok) {
+    const e = new Error((j && j.error) || ('AI 教练暂时连不上(' + r.status + ')'));
+    e.status = j && j.status; e.info = j || {};
+    throw e;
+  }
   return j;
+}
+
+// ── 没开通的账号：邀请制 ──
+// 后端对不在白名单的已登录账号回 403 + status；上次查到的状态记在本机，下次先画这张卡再后台核一次，免得先闪出整套工具
+const _COACH_LOCKED = new Set(['not_allowed', 'mismatch']);
+function _coachRememberAccess(status) {
+  const st = _coachLoad();
+  if (status === 'allowed') delete st.access;
+  else st.access = status;
+  _coachSave(st);
+}
+function _coachAccessCard(el, info) {
+  const body = info.status === 'mismatch'
+    ? `<p class="co-sub">这个邮箱已经绑定了另一个账号，AI 教练用不了。换回第一次用的登录方式试试。</p>`
+    : `<p class="co-sub">AI 教练每次调用都要花钱，现在只对受邀的朋友开放。有邀请码的话填在下面；没有也没关系，计划、打卡、统计、换动作这些照常能用。</p>
+    <div class="co-row"><input id="co-code" class="co-code" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="16" placeholder="邀请码，如 ABCDE-FGHJK" onkeydown="if(event.key==='Enter')coachRedeem()">
+      <button class="co-btn" id="co-code-go" onclick="coachRedeem()">开通</button></div>`;
+  el.innerHTML = `<div class="co-card" id="co-access"><div class="co-h"><i class="ti ti-lock"></i> ${info.status === 'mismatch' ? 'AI 教练用不了' : 'AI 教练是邀请制'}</div>${body}</div>`;
+}
+async function _coachCheckAccess() {
+  try {
+    await _coachFetch('/api/me');
+    _coachRememberAccess('allowed');
+    renderCoach();
+  } catch (e) {
+    if (!_COACH_LOCKED.has(e.status)) return;  // 连不上就先留着上次的卡
+    _coachRememberAccess(e.status);
+    const el = document.getElementById('coach-content');
+    if (el && document.getElementById('co-access') && e.status === 'mismatch') _coachAccessCard(el, e.info);
+  }
+}
+async function coachRedeem() {
+  const inp = document.getElementById('co-code'), btn = document.getElementById('co-code-go');
+  const code = (inp?.value || '').trim();
+  if (!code) { inp?.focus(); return }
+  if (btn) { btn.disabled = true; btn.textContent = '核对中…' }
+  try {
+    const r = await _coachFetch('/api/redeem', { code });
+    _coachRememberAccess('allowed');
+    showToast(r.name ? `开通了，${r.name}` : '开通了');
+    renderCoach();
+  } catch (e) {
+    if (btn) { btn.disabled = false; btn.textContent = '开通' }
+    showToast(e.message);
+  }
 }
 function _coachOpts(kind) {
   const o = _coachLoad().opts || {};
@@ -140,6 +189,10 @@ async function renderCoach() {
     return;
   }
   const st = _coachLoad();
+  if (st.access) {
+    _coachAccessCard(el, { status: st.access });
+    return _coachCheckAccess();
+  }
   el.innerHTML = `
   <div class="co-top">
     <span id="co-status" class="co-meta">连接中…</span>
@@ -187,6 +240,10 @@ async function renderCoach() {
     document.getElementById('co-effort').disabled = !o.model;
     document.getElementById('co-status').textContent = `今天 $${me.today.toFixed(2)} · 本月 $${me.cycle.toFixed(2)}`;
   } catch (e) {
+    if (_COACH_LOCKED.has(e.status)) {
+      _coachRememberAccess(e.status);
+      return _coachAccessCard(el, e.info);
+    }
     const s = document.getElementById('co-status');
     if (s) { s.textContent = e.message; s.classList.add('co-err') }
   }

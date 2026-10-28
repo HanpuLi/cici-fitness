@@ -65,6 +65,27 @@ for (const ref of sw.matchAll(/['"](\.\/[A-Za-z0-9_./@-]+)['"]/g)) {
 if (/private\//.test(sw)) {
   errors.push('sw.js: must not reference the owner-only private/ bundle');
 }
+// 预缓存的字体 CSS 要和页面实际加载的一字不差(以前写成旧字体,预缓存白做)
+const googleFontUrl = html.match(/href=["'](https:\/\/fonts\.googleapis\.com\/css2\?[^"']+)["']/i)?.[1];
+if (!googleFontUrl) errors.push('index.html: main Google Fonts stylesheet URL not found');
+else if (!sw.includes(`'${googleFontUrl}'`)) errors.push('sw.js: Google Fonts precache URL must exactly match index.html');
+for (const m of html.matchAll(/href=["'](https:\/\/cdn\.jsdelivr\.net\/npm\/[^"']+\.css)["']/gi)) {
+  if (!sw.includes(`'${m[1]}'`)) errors.push(`sw.js: CDN stylesheet ${m[1]} is loaded by index.html but not pre-cached`);
+}
+// 登录/数据库流量绝不能被 SW 拦(拦了谷歌登录会坏)
+for (const authHost of ['identitytoolkit.googleapis.com', 'securetoken.googleapis.com', 'firestore.googleapis.com', 'accounts.google.com']) {
+  if (!sw.includes(`'${authHost}'`)) errors.push(`sw.js: auth/database bypass host missing: ${authHost}`);
+}
+if (!sw.includes("url.pathname.startsWith('/__/auth')") || !sw.includes("url.pathname.startsWith('/__/firebase')")) {
+  errors.push('sw.js: Firebase auth path bypass invariant missing');
+}
+// 三处版本号要一致:sw 缓存名、core.js APP_BUILD、设置页页脚 (build N)
+{
+  const swV = sw.match(/const CACHE = 'cici-fitness-v(\d+)'/)?.[1];
+  const coreV = fs.readFileSync('core.js', 'utf8').match(/const APP_BUILD = (\d+);/)?.[1];
+  const htmlV = html.match(/\(build (\d+)\)/)?.[1];
+  if (!swV || swV !== coreV || swV !== htmlV) errors.push(`version mismatch: sw.js CACHE v${swV}, core.js APP_BUILD ${coreV}, index.html (build ${htmlV}) must be the same number`);
+}
 
 const rules = fs.readFileSync('firestore.rules', 'utf8');
 for (const invariant of [
@@ -79,7 +100,7 @@ const app = fs.readFileSync('app.js', 'utf8');
 if (!app.includes('allowedReaders: pu?[pu]:[]')) {
   errors.push('app.js: shared-profile reader whitelist invariant missing');
 }
-if (/status\.innerHTML\s*=\s*[`'"][^\n]*_partnerProfile/.test(app)) {
+if (/status\.innerHTML\s*=\s*[`'"][^\n]*_partnerProfile/.test(app) || /\.innerHTML\s*=[^\n]*_partnerProfile/.test(app)) {
   errors.push('app.js: partner-controlled profile data must not be rendered through innerHTML');
 }
 if (!app.includes("nameEl.textContent=String(_partnerProfile.name||'搭子')")) {

@@ -1,7 +1,7 @@
 // ══ System Version ═════════════════════════════════════════
 const APP_VERSION = 'v2.1.0';
-const APP_BUILD = 140;
-const APP_BUILD_DATE = '2026-08-04';
+const APP_BUILD = 153;               // = sw.js 的 CACHE 编号 = index.html 页脚 build(check-static 会查,三处一起改)
+const APP_BUILD_DATE = '2026-10-28';
 window.APP_VERSION = APP_VERSION;
 window.APP_BUILD = APP_BUILD;
 window.APP_BUILD_DATE = APP_BUILD_DATE;
@@ -16,6 +16,8 @@ function _ownerSession() { try { const u = typeof firebase !== 'undefined' && fi
 function nsKey(k) { return currentUid() + '__' + k; }
 function lg(k) { try { const v = localStorage.getItem(nsKey(k)); return v ? JSON.parse(v) : null } catch { return null } }
 function ls(k, v) { try { localStorage.setItem(nsKey(k), JSON.stringify(v)); if (typeof schedulePush === 'function') schedulePush() } catch { } }
+// 用户自己输入的文字(打卡备注、排除原因…)拼进 innerHTML 之前先转义
+function _escHtml(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]); }
 
 // One-time migration: copy pre-namespace "bare" keys (fit_s1 …) into the current
 // uid's namespace. Read-only copy — never deletes the bare keys, so it stays a safe
@@ -103,14 +105,14 @@ function isCombinedGoal() { return hasGoal('女性薄肌') && hasGoal('臀腿塑
 
 // ══ Limits ═══════════════════════════════════════════════
 const LIMIT_RULES = [
-  { kw: ['膝', '膝盖', '膝关节'], exclude: ['杠铃深蹲', '颈前杠铃深蹲', '史密斯深蹲', '哈克深蹲', '钟摆深蹲', '高脚杯深蹲', '壶铃高脚杯深蹲', '倒蹬机', '哑铃弓步蹲', '保加利亚分腿蹲', '跳绳', '波比跳', '波比跳热身', '全身动态热身 (开合跳)', '开合跳', '壶铃摆动'] },
+  { kw: ['膝', '膝盖', '膝关节'], exclude: ['杠铃深蹲', '颈前杠铃深蹲', '史密斯深蹲', '哈克深蹲', '钟摆深蹲', '高脚杯深蹲', '壶铃高脚杯深蹲', '倒蹬机', '哑铃弓步蹲', '保加利亚分腿蹲', '跳绳', '波比跳', '波比跳热身', '开合跳热身', '开合跳', '壶铃摆动'] },
   { kw: ['肩', '肩膀', '肩关节'], exclude: ['杠铃推举', '哑铃肩推', '器械推举', '史密斯肩推', '侧平举', '坐姿侧平举机', '绳索侧平举', '杠铃直立划船', '双杠臂屈伸', '自由泳划臂+侧头呼吸', '自由泳完整配合'] },
   { kw: ['腰', '腰椎', '腰背'], exclude: ['传统硬拉', '罗马尼亚硬拉', '俯身划船', '壶铃摆动'] },
   { kw: ['颈', '颈椎'], exclude: ['高位下拉', '杠铃推举'] },
   { kw: ['斜方', '脖子粗', '脖子', '肩颈', '颈肩', '圆肩'], exclude: ['杠铃直立划船'] },
-  { kw: ['跳', '跳跃'], exclude: ['跳绳', '开合跳', '波比跳'] },
+  { kw: ['跳', '跳跃'], exclude: ['跳绳', '开合跳', '波比跳', '开合跳热身', '波比跳热身'] },
   { kw: ['手腕', '腕'], exclude: ['杠铃卧推', '杠铃弯举', '俯卧撑', '腹轮'] },
-  { kw: ['踝', '脚踝'], exclude: ['跳绳', '开合跳', '站姿提踵'] },
+  { kw: ['踝', '脚踝'], exclude: ['跳绳', '开合跳', '站姿提踵', '开合跳热身', '波比跳热身'] },
 ];
 // 仅「女性曲线」目标可见；其他目标在 getExcluded() 中排除（须与 EX_DETAIL「女性曲线专属」同步）
 const CURVE_EXCLUSIVE_EXERCISES = [];
@@ -220,6 +222,26 @@ function needsWeightUI(ex) {
   if (ex.isWarmup) return false;
   if (ex.unit && ex.unit !== '次') return false;
   return isWeightedMove(ex.name);
+}
+// 助力器械:填的是「助力配重」,越重越省力 → 纪录、建议重量、进步图都要反过来看(数字往下走才是进步)
+const ASSISTED_MOVES = new Set(['助力引体向上机', '助力双杠臂屈伸']);
+function isAssistedMove(name) { return ASSISTED_MOVES.has(name); }
+
+// 规矩③:组次以动作本身为准 —— 计时动作优先取它自带的 hold(描述里写明的保持时长),
+// 热身取 warmupSec,都没有才用调用处给的默认。手动添加、替换、划掉补位、经期替代都走这里。
+// 计时只认 u 为 秒/分钟(库里有显式 u:'次' 的动作,不能用 !!ex.u 判)。
+function _repsFor(ex, d = {}) {
+  const u = (ex && ex.u) || '次';
+  if (u === '秒') return ex.hold || ex.warmupSec || d.sec || 30;
+  if (u === '分钟') return d.min || 10;
+  return d.reps || 12;
+}
+// 计划里的动作 ex 换成库里的 alt:单位不变就沿用原来的量(按等级给的秒数/次数),
+// 但 alt 自己写明了保持时长的,以它为准;单位变了按 alt 重新给(秒→次 不能把 30 秒当 30 次)
+function _swapReps(ex, alt) {
+  const nu = alt.u || '次';
+  if (nu === ex.unit && !(nu === '秒' && (alt.hold || alt.warmupSec))) return ex.reps;
+  return _repsFor(alt, { reps: ex.unit === '次' && ex.reps ? ex.reps : 12 });
 }
 
 // ══ 仅 owner 可见的私密项(2026-08-26 反馈⑥) ═══════════════
@@ -360,7 +382,10 @@ const EX_RENAMES = {
   '跪姿俯身挺身': '鸟狗式（bird dog）',
   '宽距深蹲弹震': '相扑深蹲跳（sumo squat jump）',
   '仰卧蝴蝶式静力桥': '蛙式臀桥保持（frog pump hold）',
-  '四足跪姿后踢伸展': '跪姿直腿后踢'
+  '四足跪姿后踢伸展': '跪姿直腿后踢',
+  // 2026-10 体检第 23 条:半角括号+空格的描述式名字 → 直接能搜到的名字('开合跳'已被有氧占用,热身版沿用「…热身」的叫法)
+  '全身动态热身 (开合跳)': '开合跳热身',
+  '腹部拉伸 (眼镜蛇式)': '眼镜蛇式'
 };
 function _migrateExerciseNames() {
   const R = EX_RENAMES, mv = n => (R[n] || n);
@@ -432,6 +457,14 @@ function _purgeGatedFromPlan() {
   if (changed && typeof saveState === 'function') saveState();
 }
 
+// 划掉后的补位:按训练等级先筛难度(初级只要 ≤2 星),再挑和原动作难度最接近的;同分取库里靠前的
+function _pickReplacement(alts, ex) {
+  let pool = alts;
+  if (S.level === '初级') { const easy = pool.filter(a => (a.diff || 1) <= 2); if (easy.length) pool = easy; }
+  const target = ex.diff || (S.level === '高级' ? 3 : S.level === '中级' ? 2 : 1);
+  return pool.slice().sort((a, b) => Math.abs((a.diff || 1) - target) - Math.abs((b.diff || 1) - target))[0];
+}
+
 function excludeUserExercise(date, ei) {
   const sel = S.plan && S.plan.days.find(d => d.date === date);
   if (!sel || !sel.exercises || !sel.exercises[ei]) return;
@@ -462,9 +495,10 @@ function excludeUserExercise(date, ei) {
     alts = DB[group].filter(e => e.n !== name && !used.includes(e.n) && !excluded.has(e.n) && (!e.eq || e.eq.some(q => q === '无器材' || S.equip.includes(q))));
   }
   if (alts.length > 0) {
-    const alt = alts[0];
+    const alt = _pickReplacement(alts, ex);
     _clearExState(date, ei); // 新动作用干净槽位,不继承旧动作的勾选/重量/组数
-    sel.exercises[ei] = { name: alt.n, note: alt.note || '', sets: ex.sets, reps: ex.reps, unit: ex.unit || alt.u || '次', group: ex.group, muscle: alt.muscle || [], diff: alt.diff, isWarmup: false, isStretch: false, bi: !!alt.bi };
+    // 单位/时长按补上来的动作本身给(按次的换成按秒的不能显示成「3×12次」);热身/拉伸标记跟着原位置走
+    sel.exercises[ei] = { name: alt.n, note: alt.note || '', sets: ex.sets, reps: _swapReps(ex, alt), unit: alt.u || '次', group: ex.group, muscle: alt.muscle || [], diff: alt.diff, isWarmup: !!ex.isWarmup, isStretch: !!ex.isStretch, bi: !!alt.bi };
     if (alt.swimPhase) sel.exercises[ei].swimPhase = alt.swimPhase;
     showToast(`已排除「${name}」，自动换为「${alt.n}」`);
   } else {
@@ -489,8 +523,10 @@ function excludeUserExerciseByName(name) {
   S.userExcludeReasons[name] = reason || '用户手动排除';
   
   if (S.plan && S.plan.days) {
+    const today = todayStr();
     S.plan.days.forEach(day => {
-      if (!day.exercises) return;
+      // 只动今天和以后:过去的日子(含已锁定的)是练过的记录,不该被改写、更不该重排下标
+      if (!day.exercises || day.date < today) return;
       // 倒序删除并逐个重排该天的按序号状态,避免打勾/重量错位
       for (let i = day.exercises.length - 1; i >= 0; i--) {
         if (day.exercises[i].name === name) {
@@ -760,7 +796,7 @@ const DB = {
     { n: '蛙泳腿开合训练', eq: ['泳池'], muscle: ['内收肌', '臀', '下肢'], diff: 2, note: '双手扶池边仰卧漂浮，单独做蛙泳腿的外翻→蹬夹→并拢，在水中切水感最强处夹合停顿，专注内收肌主动控制', u: '次', swimPhase: 'tech' },
   ],
   warmup: [
-    { n: '全身动态热身 (开合跳)', eq: ['无器材', '弹力带', '哑铃', '壶铃', '健身房全套'], muscle: ['全身'], diff: 1, note: '落地轻柔，保持呼吸节奏', u: '秒', warmupSec: 45 },
+    { n: '开合跳热身', eq: ['无器材', '弹力带', '哑铃', '壶铃', '健身房全套'], muscle: ['全身'], diff: 1, note: '落地轻柔，保持呼吸节奏', u: '秒', warmupSec: 45 },
     { n: '肩关节环绕', eq: ['无器材', '弹力带', '哑铃', '壶铃', '健身房全套'], muscle: ['上肢'], diff: 1, note: '直臂或屈臂，大幅度画圆，前后各30秒', u: '秒', warmupSec: 60 },
     { n: '扩胸运动', eq: ['无器材', '弹力带', '哑铃', '壶铃', '健身房全套'], muscle: ['上肢'], diff: 1, note: '感受胸肌拉伸，动作连贯不憋气', u: '秒', warmupSec: 30 },
     { n: '徒手深蹲激活', eq: ['无器材', '弹力带', '哑铃', '壶铃', '健身房全套'], muscle: ['下肢'], diff: 1, note: '臀部后坐，膝盖不内扣', u: '秒', warmupSec: 45 },
@@ -799,7 +835,7 @@ const DB = {
     { n: '腘绳肌/体前屈', eq: ['无器材', '弹力带', '哑铃', '壶铃', '健身房全套'], muscle: ['下肢'], diff: 1, note: '坐姿或站姿，双腿伸直，身体慢慢下压', u: '秒' },
     { n: '臀大肌拉伸', eq: ['无器材', '弹力带', '哑铃', '壶铃', '健身房全套'], muscle: ['下肢'], diff: 1, note: '仰卧，一腿架在另一腿膝盖上，双手抱腿拉向胸口', u: '秒', bi: true },
     { n: '髂胫束拉伸', eq: ['无器材', '弹力带', '哑铃', '壶铃', '健身房全套'], muscle: ['下肢'], diff: 1, note: '交叉腿站立，身体向后腿一侧侧倾', u: '秒', bi: true },
-    { n: '腹部拉伸 (眼镜蛇式)', eq: ['无器材', '弹力带', '哑铃', '健身房全套'], muscle: ['核心'], diff: 1, note: '俯卧撑起上半身，骨盆贴地', u: '秒' },
+    { n: '眼镜蛇式', eq: ['无器材', '弹力带', '哑铃', '健身房全套'], muscle: ['核心'], diff: 1, note: '俯卧撑起上半身，骨盆贴地', u: '秒' },
     { n: '鸽子式开髋', eq: ['无器材', '健身房全套'], muscle: ['下肢', '臀', '髋屈肌'], diff: 1, note: '前腿屈膝外旋置于身前、后腿伸直，骨盆摆正下沉开髋，可上身前趴加深', u: '秒', hold: 45, bi: true },
     { n: '90/90髋旋转', eq: ['无器材', '健身房全套'], muscle: ['下肢'], diff: 1, note: '坐姿前后腿各屈90°，上身直立左右倒换，练髋内/外旋灵活度', u: '秒', bi: true },
     { n: '青蛙式开胯', eq: ['无器材', '健身房全套'], muscle: ['下肢'], diff: 1, note: '四足跪姿双膝向两侧打开，臀部缓慢前后移动，开胯拉内收肌，循序渐进', u: '秒' }, { n: '小狗伸展式 (融心式)', eq: ['无器材', '健身房全套'], muscle: ['上肢', '核心'], diff: 1, note: '双膝跪地，双臂向前伸展，胸部贴地，臀部高高翘起指向天花板', u: '秒' },
@@ -1159,7 +1195,7 @@ const SCHEMES = {
   }
 };
 const TIPS = {
-  '女性薄肌': '组间休息45-60秒保持心率。训练后必做拉伸避免肌肉结块。重点强化臀腿和核心线条。',
+  '女性薄肌': '组间休息45-60秒保持心率。训练后做一组拉伸放松。重点强化臀腿和核心线条。',
   '臀腿塑形': '全部精力放在下半身，把视觉重心拉下来。臀推是最优先的动作，直接针对臀大肌。臀中肌侧向训练是改善腰胯比的关键，别跳过。重量选最后两次比较吃力的程度，每周尽量加一点点。蛋白质每公斤体重每天1.6-2克，热量吃够才能长肌肉。',
   '女性薄肌+臀腿塑形': '以臀腿为主战场，上肢仅做维持性训练。下半身每周2-3次，髋铰链和深蹲交替。上肢每周1-2次轻量推拉即可，不追求上肢增量。蛋白质每公斤体重每天1.6-2克，热量吃够才能长肌肉。',
   '翘臀美背': '臀推是提臀峰第一动作，顶端挤压1-2秒。你可以也应该练背，背阔分离感和肩胛下沉能让背显挺、视觉收腰。斜方"厚"多半是圆肩体态：停掉直立划船和耸肩，多做面拉、YTW、靠墙天使，把肩膀沉下去。收腰靠真空吸和卷腹收紧腹横肌，不是减脂。',
@@ -1194,12 +1230,12 @@ function applyGoalToggle(goal) {
   if (goals.length === 0) goals.push('女性薄肌');
   goals.sort((a, b) => ORDER.indexOf(a) - ORDER.indexOf(b));
   S.goal = goals.join('+');
-  if (hasGoal('臀腿塑形') || hasGoal('翘臀美背') || hasGoal('女性曲线')) {
-    S.focus = ['下肢'];
-    ['健身房全套', '弹力带', '无器材'].forEach(x => { if (!S.equip.includes(x)) S.equip.push(x); }); // 臀中肌动作多在弹力带/徒手池
-  } else {
-    S.focus = ['均衡全身'];
-  }
+  // 重点部位跟目标走,但「柔韧·体态 / 上肢紧致 / 平衡稳定」这类附加模块是另外勾的,保留
+  const addons = (S.focus || []).filter(f => ['柔韧灵活', '上肢紧致', '平衡稳定'].includes(f));
+  S.focus = [(hasGoal('臀腿塑形') || hasGoal('翘臀美背') || hasGoal('女性曲线')) ? '下肢' : '均衡全身', ...addons];
+  // 器材是「手上有什么」,不该因为换目标被偷偷加上健身房全套;只在一样都没选时补「无器材」
+  // (徒手动作本来对所有人开放,臀中肌的徒手动作不需要额外勾器材)
+  if (!Array.isArray(S.equip) || !S.equip.length) S.equip = ['无器材'];
 }
 // Menstrual-cycle phase from a user-set "current day" (manual slider — a PWA can't read iOS
 // Health). Returns a phase label + gentle training note. Suggestion only; actual training load
@@ -1457,7 +1493,7 @@ function pickExercises(split, excluded) {
     }
     if (cPool.length) {
       const cEx = cPool[Math.floor(Math.random() * cPool.length)];
-      const cardioNote = (hasGoal('臀腿塑形') || hasGoal('翘臀美背') || hasGoal('女性曲线')) ? '臀腿有氧收尾 — 优先攀爬机/骑行机，保持对下肢的刺激' : '薄肌有氧收尾 — 保持心率120-140，帮助肌肉拉长';
+      const cardioNote = (hasGoal('臀腿塑形') || hasGoal('翘臀美背') || hasGoal('女性曲线')) ? '臀腿有氧收尾 — 优先攀爬机/骑行机，保持对下肢的刺激' : '薄肌有氧收尾 — 保持心率120-140';
       result.push({ name: cEx.n, sets: 1, reps: 15, unit: '分钟', note: cardioNote, group: 'cardio', diff: cEx.diff, muscle: cEx.muscle });
     }
   }
@@ -1525,7 +1561,11 @@ function pickExercises(split, excluded) {
       { name: '上斜方拉伸', sets: 1, reps: 30, unit: '秒', note: '肩颈放松·头侧倒向一侧、同侧手轻扶加深，两侧各30秒放松上斜方' },
       { name: '颈部环绕', sets: 1, reps: 30, unit: '秒', note: '肩颈放松·缓慢画圈转动颈部放松颈肌，切忌快速甩头' },
     ].forEach(n => {
-      if (used.has(n.name)) return; used.add(n.name);
+      // 永久排除/限制同样管这几个(此前写死,做不了面拉的人排除了下次还会出现);库里有器材要求的按器材过滤
+      if (used.has(n.name) || excluded.has(n.name)) return;
+      let dbEx = null; for (const exs of Object.values(DB)) { const f = exs.find(e => e.n === n.name); if (f) { dbEx = f; break } }
+      if (dbEx && dbEx.eq && !dbEx.eq.some(q => q === '无器材' || S.equip.includes(q))) return;
+      used.add(n.name);
       result.push({ name: n.name, sets: n.sets, reps: n.reps, unit: n.unit, note: n.note, group: 'stretch', diff: 1, isStretch: true, bi: false, muscle: ['肩颈'] });
     });
   }
@@ -1751,14 +1791,17 @@ function setWeight(date, ei, val) {
     if (sel && sel.exercises[ei]) {
       const exName = sel.exercises[ei].name;
       const hist = W_HIST[exName];
-      const maxPrev = (hist && hist.length) ? Math.max(...hist.map(h => h.weight)) : 0;
+      const ws = (hist && hist.length) ? hist.map(h => h.weight).filter(w => w > 0) : [];
+      // 助力器械越重越省力:助力配重比以往都小才算新纪录
+      const assisted = isAssistedMove(exName);
+      const maxPrev = ws.length ? (assisted ? Math.min(...ws) : Math.max(...ws)) : 0;
       // Dedupe per (date,exercise): editing the weight field mustn't push a new PR + toast on
       // every keystroke. maxPrev excludes today (W_HIST is written at check-in), so update an
       // existing same-day PR in place, and retract it if the value drops back to/below old best.
       const prIdx = PR_LIST.findIndex(p => p.date === date && p.exercise === exName);
-      if (maxPrev > 0 && val > maxPrev) {
+      if (maxPrev > 0 && (assisted ? val < maxPrev : val > maxPrev)) {
         if (prIdx >= 0) { PR_LIST[prIdx].weight = val; PR_LIST[prIdx].prev = maxPrev; }
-        else { showToast(`${exName} 新纪录！${val}kg`); PR_LIST.unshift({ date, exercise: exName, weight: val, prev: maxPrev }); if (PR_LIST.length > 50) PR_LIST = PR_LIST.slice(0, 50); }
+        else { showToast(assisted ? `${exName} 新纪录！助力降到 ${val}kg` : `${exName} 新纪录！${val}kg`); PR_LIST.unshift({ date, exercise: exName, weight: val, prev: maxPrev }); if (PR_LIST.length > 50) PR_LIST = PR_LIST.slice(0, 50); }
         ls(K.pr, PR_LIST);
       } else if (prIdx >= 0) { PR_LIST.splice(prIdx, 1); ls(K.pr, PR_LIST); }
     }
@@ -1803,6 +1846,8 @@ function getWeightStep(exName) {
 function getDefaultWeight(exName) {
   const n = exName;
   const wl = S.weightLevel || '初级';   // 重量档独立于水平(动作难度),默认保守
+  // 助力器械填的是助力:初学给多一点助力(按器械 kg 刻度的大致起点,照实改成你选的配重片)
+  if (isAssistedMove(n)) return ({ 初级: 30, 中级: 20, 高级: 10 })[wl] || 30;
 
   // ── Equipment detection (name + DB fallback) ──
   const _dbEx = (() => { for (const exs of Object.values(DB)) { const f = exs.find(e => e.n === n); if (f) return f } return null })();
@@ -1874,6 +1919,7 @@ function getDefaultWeight(exName) {
 // Estimated 1RM (Epley) from real W_HIST sets that recorded reps — gives genuine strength
 // guidance to replace the removed fabricated %max. Returns null until there's rep-tagged history.
 function estimate1RM(exName) {
+  if (isAssistedMove(exName)) return null; // 助力配重算不出 1RM
   const h = (W_HIST[exName] || []).filter(x => x.weight > 0 && x.reps > 0);
   if (!h.length) return null;
   let best = 0; h.slice(-12).forEach(x => { const r = Math.min(x.reps, 15); const e = x.weight * (1 + r / 30); if (e > best) best = e; });
@@ -1891,19 +1937,31 @@ function suggestWeight(exName) {
   } else {
     const w = last.weight, rpe = last.rpe || 6;
     const step = getWeightStep(exName);
-    // RPE-based progression
-    if (rpe <= 4) target = roundWeight(w + step * 2, exName); // Too easy → +2 steps
-    else if (rpe <= 6) target = roundWeight(w + step, exName);   // Moderate → +1 step
-    else if (rpe <= 8) target = w;                              // Good → same weight
-    else target = Math.max(step, roundWeight(w - step, exName)); // Hard/max → -1 step
+    if (isAssistedMove(exName)) {
+      // 助力器械反过来:轻松 → 减助力,吃力 → 加助力
+      if (rpe <= 4) target = Math.max(0, roundWeight(w - step * 2, exName));
+      else if (rpe <= 6) target = Math.max(0, roundWeight(w - step, exName));
+      else if (rpe <= 8) target = w;
+      else target = roundWeight(w + step, exName);
+    } else {
+      // RPE-based progression
+      if (rpe <= 4) target = roundWeight(w + step * 2, exName); // Too easy → +2 steps
+      else if (rpe <= 6) target = roundWeight(w + step, exName);   // Moderate → +1 step
+      else if (rpe <= 8) target = w;                              // Good → same weight
+      else target = Math.max(step, roundWeight(w - step, exName)); // Hard/max → -1 step
+    }
   }
   if (S.periodMode) {
     const step = getWeightStep(exName);
-    target = Math.max(step, roundWeight(target * 0.75, exName));
+    // 经期减载:普通动作减重量;助力器械是加助力
+    target = isAssistedMove(exName) ? roundWeight(target * 1.25, exName) : Math.max(step, roundWeight(target * 0.75, exName));
   }
   return target;
 }
 // ══ Swimming Plan Generator ═════════════════════════════
+// 泳日:水中训练约占 65%,其余留给桑拿/热水池恢复。水中动作最少要 25 分钟
+// (热身5 + 技术/主项≥15 + 放松5),所以下限取 25 —— 恢复模块和泳池计划共用这一个公式
+function _swimMinutes(totalMins) { return Math.max(25, Math.round((totalMins || 60) * 0.65)); }
 function pickSwimExercises() {
   const level = S.swimLevel || '入门';
   const excluded = getExcluded();
@@ -1913,7 +1971,7 @@ function pickSwimExercises() {
   
   // Proportional time allocation: ~65% for water drills, 35% reserved for thermal recovery
   const totalMins = S.dur || 60;
-  const swimMins = Math.max(25, Math.round(totalMins * 0.65));
+  const swimMins = _swimMinutes(totalMins);
   const remMins = Math.max(15, swimMins - 10); // reserve 5m warmup + 5m cooldown
   
   const phaseTimes = {
@@ -1980,7 +2038,7 @@ function pickPeriodAlternative() {
   // 2. Core: 2-3 gentle core exercises
   for (let i = corePool.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1));[corePool[i], corePool[j]] = [corePool[j], corePool[i]]; }
   corePool.slice(0, 3).forEach(ex => {
-    exercises.push({ name: ex.n, sets: 3, reps: ex.u === '秒' ? 30 : 12, unit: ex.u || '次', note: ex.note, group: 'core', diff: 1, isWarmup: false, bi: ex.bi || false });
+    exercises.push({ name: ex.n, sets: 3, reps: _repsFor(ex, { sec: 30, reps: 12 }), unit: ex.u || '次', note: ex.note, group: 'core', diff: 1, isWarmup: false, bi: ex.bi || false });
   });
   // 3. Cool-down stretch 5min
   exercises.push({ name: '全身拉伸放松', sets: 1, reps: 5, unit: '分钟', note: '针对下背、髋屈肌和腿后侧进行缓慢拉伸', group: 'cardio', diff: 1, isStretch: true, bi: false });
@@ -2022,7 +2080,7 @@ function pickPrivateForSplit(split, excluded, usedSet) {
   });
   return pool.slice(0, 2).map(ex => {
     usedSet.add(ex.n);
-    return { name: ex.n, sets: 2, reps: ex.u === '秒' ? 45 : 15, unit: ex.u || '次',
+    return { name: ex.n, sets: 2, reps: _repsFor(ex, { sec: 45, min: 15, reps: 15 }), unit: ex.u || '次',
              note: ex.note, diff: ex.diff, bi: !!ex.bi, muscle: ex.muscle || [] };
   });
 }
@@ -2164,6 +2222,7 @@ hasGoal('翘臀美背') ? (GLUTE_BACK_SPLITS[gymPerWeek] || GLUTE_BACK_SPLITS[3]
     ['weights', 'exRpe', 'adj'].forEach(k => { if (S[k]) Object.keys(S[k]).forEach(x => { if (x.startsWith(d.date + '-')) delete S[k][x] }) });
   });
   S.plan = { days, tip: tipText, rest: sch.rest, excludedCount: visibleExcludedCount(excluded) };
+  if (!preserveFuture) S.planStale = false; // 未来的天已按当前设置重排 → 「设置已改」提示可以收起
   // Reset calendar view offset and select today
   _calWeekOffset = 0;
   const todayDay = days.find(d => d.date === today);
@@ -2231,6 +2290,17 @@ function confirmGenPlan() {
       !confirm('生成一份全新的计划？\n今天之后的安排都会换掉（已完成和今天已经开练的不动）。')) return;
   genPlan();
 }
+
+// 设置页改了目标/器材/天数等之后:按新设置重排今天之后还没开练的天(已完成、今天已开练的不动)
+function applyStaleSettings() {
+  if (!S.plan || !S.plan.days || !S.plan.days.length) { genPlan(); return; }
+  const today = todayStr();
+  const touched = S.plan.days.some(d => d.date > today && (d._edited || d._ai));
+  if (touched && !confirm('按新设置重排今天之后的安排？\n你手动改过或 AI 排过的未来几天也会按新设置重排；已完成的、今天已经开练的不动。')) return;
+  genPlan(true);
+  showToast('已按新设置重排后面的计划');
+}
+window.applyStaleSettings = applyStaleSettings;
 
 function recalibratePlan() {
   if (!S.plan) return;
@@ -2514,7 +2584,7 @@ function render() {
   const todayInView = visibleDays.some(d => d.date === today);
   const isCurrentView = todayInView;
 
-  let h = `<div class="plan-header"><p class="panel-title" style="margin:0">训练计划${excludedCount ? `<span class="warn-tag">已过滤${excludedCount}个受限动作</span>` : ''}</p><button class="regen-btn" onclick="confirmGenPlan()">重新生成</button></div>
+  let h = (S.planStale ? `<div class="stale-bar"><span>训练设置改过了，计划还是按旧设置排的</span><button class="regen-btn" onclick="applyStaleSettings()">按新设置重排</button></div>` : '') + `<div class="plan-header"><p class="panel-title" style="margin:0">训练计划${excludedCount ? `<span class="warn-tag">已过滤${excludedCount}个受限动作</span>` : ''}</p><button class="regen-btn" onclick="confirmGenPlan()">重新生成</button></div>
 <div class="stats">
 <div class="stat"><div class="stat-val">${workoutDays.length}</div><div class="stat-lbl">计划天</div></div>
 <div class="stat"><div class="stat-val">${doneDays.length}/${workoutDays.length}</div><div class="stat-lbl">已完成</div></div>
@@ -2587,7 +2657,7 @@ ${locked && !d.isRest ? '<i class="ti ti-lock" style="font-size:9px;color:var(--
         });
         h += `</div>`;
       } else { h += `<div class="hist-empty">该日训练详情不可用</div>` }
-      if (lg && lg.note) h += `<div class="hist-note">"${lg.note}"</div>`;
+      if (lg && lg.note) h += `<div class="hist-note">"${_escHtml(lg.note)}"</div>`;
     } else {
       const locked = isLocked(sel);
       const _isSwimDay = !!sel.isSwimDay;
@@ -2623,7 +2693,7 @@ ${ex.weight ? `<div class="wt-hint" style="margin-top:2px;display:block">${ex.we
           });
           h += `</div>`;
         } else { h += `<div class="hist-empty">该日训练详情不可用</div>` }
-        if (lg.note) h += `<div class="hist-note" style="margin-top:12px;padding:10px 14px;background:var(--surface2);border-radius:8px;font-size:12px;font-style:italic;color:var(--ink2)">"${lg.note}"</div>`;
+        if (lg.note) h += `<div class="hist-note" style="margin-top:12px;padding:10px 14px;background:var(--surface2);border-radius:8px;font-size:12px;font-style:italic;color:var(--ink2)">"${_escHtml(lg.note)}"</div>`;
         h += typeof renderRecoveryModule === 'function' ? renderRecoveryModule(sel) : '';
       } else {
         const pd = S.prog[sel.date] || {};
@@ -3441,6 +3511,8 @@ function submitRPE(rpe, isSkip = false) {
     }
 
     // Save weight history per exercise
+    // 同一天再次打卡(重算/改完再打一次)会走到这:先删掉这一天已有的重量记录再写,否则同一天记两条,1RM 估算和进步图都被带偏
+    Object.keys(W_HIST).forEach(n => { W_HIST[n] = W_HIST[n].filter(h => h.date !== date); if (!W_HIST[n].length) delete W_HIST[n]; });
     day.exercises.forEach((ex, i) => {
       const w = _effWeight(date, i, ex); // 没手动改则回退建议值,保证照做也进历史
       if (w && w > 0 && needsWeightUI(ex) && S.prog[date] && S.prog[date][i]) { // only record weight for exercises actually completed
@@ -3545,7 +3617,8 @@ function swapExercise(date, ei) {
   const sel = S.plan.days.find(d => d.date === date);
   if (!sel) return;
   const ex = sel.exercises[ei];
-  if (ex.isWarmup || ex.isStretch) { showToast('热身/拉伸不支持替换'); return }
+  // 拉伸块里能上重量的(翘臀美背肩颈模块的面拉、俯卧YTW)也能换;纯拉伸/热身不换
+  if (ex.isWarmup || (ex.isStretch && !isWeightedMove(ex.name))) { showToast('热身/拉伸不支持替换'); return }
   // Swimming exercises: only swap within same phase
   const isSwimEx = ex.group === 'swimming' || ex.swimPhase;
   if (isSwimEx) {
@@ -3607,9 +3680,9 @@ function doSwap(date, ei, altIdx) {
   if (sel) sel._edited = true;
   const ex = sel.exercises[ei];
   const newUnit = alt.u || '次';
-  // Keep reps when the unit is unchanged (e.g. swim 分钟↔分钟, gym 次↔次); the old code
-  // forced 分钟→reps:1, collapsing every swapped swim drill to 1 minute.
-  const newReps = (newUnit === ex.unit) ? ex.reps : (newUnit === '秒' ? 30 : newUnit === '分钟' ? 10 : (ex.reps || 12));
+  // 单位不变沿用原来的量(swim 分钟↔分钟、gym 次↔次;旧代码把 分钟 一律压成 1);
+  // 新动作写明了 hold 的以 hold 为准(规矩③)
+  const newReps = _swapReps(ex, alt);
   // Carry muscle/group/diff/swimPhase so render tags, the swim-phase grouping, and a
   // second swap's swim-detection don't break.
   sel.exercises[ei] = { name: alt.n, note: alt.note || '', sets: ex.sets, reps: newReps, unit: newUnit, group: ex.group, muscle: alt.muscle || [], diff: alt.diff, isWarmup: false, isStretch: false, bi: !!alt.bi };
@@ -3627,7 +3700,10 @@ function adj(date, ei, f, delta) {
   if (day) day._edited = true;
   const ex = day.exercises[ei];
   const base = f === 's' ? ex.sets : ex.reps;
-  S.adj[k] = Math.max(1, (S.adj[k] ?? base) + delta);
+  // 按秒计的动作一次调 5 秒(30→45 不用点 15 下),最少 5 秒;其余一次 1
+  const secStep = f === 'r' && ex.unit === '秒';
+  const step = secStep ? 5 : 1, min = secStep ? 5 : 1;
+  S.adj[k] = Math.max(min, (S.adj[k] ?? base) + delta * step);
   saveState(); render();
 }
 
@@ -3775,6 +3851,9 @@ const EX_DETAIL = {
   // === 体态 / 盆底 补充（肩胛后缩 / 收下巴 / 凯格尔）===
   '肩胛后缩保持': { muscles: ['菱形肌', '中斜方肌'], steps: ['坐/站直，胸口微挺', '双侧肩胛骨向脊柱中线收拢、同时向下沉', '保持(别耸肩)，再缓慢放松'], tips: ['想象把肩胛骨放进后裤兜', '可双手持弹力带辅助'], mistakes: ['耸肩', '靠挺腰代偿'] },
   '收下巴': { muscles: ['颈深屈肌'], steps: ['坐/站直、目视前方', '轻轻把下巴向后收(做双下巴)、后脑勺微向后上', '保持几秒、肩放松，重复'], tips: ['改善头前伸/乌龟颈、拉长颈线', '力度很轻、不是低头'], mistakes: ['变成低头', '耸肩'] },
+  '头顶书本走姿（poise walk）': { muscles: ['颈深屈肌', '竖脊肌', '核心'], steps: ['站直，把一本不太重的平装书平放在头顶正中', '下巴微收、头顶向上延伸，肩胛下沉、两肩放松', '沿直线慢走，步子比平时小一点，脚跟先着地再过渡到前脚掌', '走到头转身再走回来，全程让书保持水平不掉'], tips: ['书掉了多半是头在往前探或身体上下起伏，放慢再来', '眼睛平视前方，不要低头看脚', '先原地顶着书站稳 10 秒再开始走'], mistakes: ['为了稳住书耸肩、脖子僵住', '挺腰塌背、肋骨外翻', '低头看书或看地面'] },
+  '猫步走（catwalk）': { muscles: ['臀中肌', '核心', '小腿'], steps: ['在地上找一条直线(地板缝或贴一条胶带)', '每一步前脚落在线上，脚尖略朝前外，前脚掌先着地', '骨盆随步子自然左右送，上身保持稳定、肩膀不跟着晃', '目视前方，双臂自然摆动，一步一步匀速走'], tips: ['靠支撑腿的臀中肌稳住骨盆，骨盆的摆动是走出来的，不要刻意扭', '先赤脚或穿平底鞋练熟，再换带跟的鞋'], mistakes: ['腿交叉过线导致绊脚、膝盖内扣', '上身左右大幅扭动', '低头看线'] },
+  '靠墙站立体态检查（wall posture check）': { muscles: ['竖脊肌', '中下斜方肌', '颈深屈肌', '核心'], steps: ['背靠墙站，脚跟离墙约一拳', '后脑勺、上背、臀部贴墙，小腿肚尽量贴墙', '手伸到腰后：腰和墙之间大约留一掌厚，多了就轻轻收腹让骨盆微微后倾', '肩胛下沉、下巴微收，正常呼吸，记住这个位置', '慢慢离开墙，带着这个姿势走几步'], tips: ['后脑勺贴不上墙说明头往前探，先用收下巴把头带回来，别仰头去贴', '每天固定一个时间做一次(比如刷牙后)，容易养成习惯'], mistakes: ['为了让腰贴墙过度收腹、骨盆后倾太多', '仰头让后脑勺贴墙', '耸肩、手臂用力往墙上压'] },
   '凯格尔盆底收缩': { muscles: ['骨盆底肌'], steps: ['任意姿势、放松呼吸', '像憋尿/止住排气一样收紧盆底肌', '保持5-10秒后完全放松，重复约10次(整套约2分钟，按屏幕计时)'], tips: ['和"盆底放松呼吸"配合——既要会收也要会放', '别夹臀、收腹或屏气代偿'], mistakes: ['用臀/腹/大腿代偿', '只收不放松'] },
   // === 脚踝灵活 / 小腿（少练小腿，重灵活）===
   '脚踝绕环': { muscles: ['踝'], steps: ['坐或站、抬起一只脚', '脚踝带动脚掌缓慢画大圈', '顺/逆时针各转后换脚'], tips: ['幅度尽量大、速度慢', '走路/运动前后都该常做'], mistakes: ['只动脚趾不动踝', '转太快'] },
@@ -4509,7 +4588,7 @@ const EX_DETAIL = {
     tips: ['公认的"高强度"燃脂动作，能快速提升心率', '如果是新手，可以去掉俯卧撑，以及把双腿"跳"向后改为"走"向后以降低难度'],
     mistakes: ['在平板支撑阶段腰部严重塌陷', '落地没有缓冲，脚砸地面']
   },
-  '全身动态热身 (开合跳)': {
+  '开合跳热身': {
     muscles: ['全身'],
     steps: ['双脚并拢站立，双手自然下垂', '跳起时双脚向外张开，同时双手从身体两侧上举并在头顶击掌', '再次跳起，双脚合拢，双手收回身体两侧', '保持轻快的节奏，均匀呼吸'],
     tips: ['落地时保持膝盖微屈，前脚掌先着地，起到缓冲作用', '核心收紧，保持上半身挺直'],
@@ -4599,7 +4678,7 @@ const EX_DETAIL = {
     tips: ['重心尽量放在后方那条腿的脚外侧', '可以通过扶墙增加稳定性'],
     mistakes: ['身体前倾，失去了侧面的拉伸力']
   },
-  '腹部拉伸 (眼镜蛇式)': {
+  '眼镜蛇式': {
     muscles: ['腹直肌'],
     steps: ['俯卧在垫子上，双腿并拢伸直，脚背贴地', '双手放在胸部两侧的地板上，手指朝前', '吸气，双臂慢慢用力推起上半身，直到双臂伸直或微屈', '头微仰看向天花板，骨盆尽量保持贴在地面'],
     tips: ['收紧臀部可以有效保护下背部', '如果腰椎感觉压迫，可以将手肘撑地（人面狮身式）代替'],
@@ -4726,19 +4805,61 @@ const EX_DETAIL = {
 
 // ══ Guided workout mode (逐个动作引导 + 组间自动计时) ══════
 let _wmDate = null, _wmIdx = 0, _wmSet = 1;
-function _wmIsSimple(ex) { return ex.isWarmup || (ex.isStretch && !isWeightedMove(ex.name)) || ex.group === 'cardio' || ex.unit !== '次'; }
+let _wmSide = 0, _wmCd = null;   // 计时动作:双侧动作现在做到第几侧;倒计时 {idx,end,total,timer}
+function _wmIsTimed(ex) { return !!ex && (ex.unit === '秒' || ex.unit === '分钟'); }
+// 「简单」= 只做一轮:热身、纯拉伸、有氧、游泳。按秒计的主项(平板支撑 3×30秒)照样分组 + 组间休息
+function _wmIsSimple(ex) { return ex.isWarmup || (ex.isStretch && !isWeightedMove(ex.name)) || ex.group === 'cardio' || ex.group === 'swimming' || !!ex.swimPhase || (ex.unit !== '次' && ex.unit !== '秒'); }
+function _wmFmt(sec) { sec = Math.max(0, Math.ceil(sec)); return String(Math.floor(sec / 60)).padStart(2, '0') + ':' + String(sec % 60).padStart(2, '0'); }
+function _wmStopCd() {
+  if (!_wmCd) return;
+  clearInterval(_wmCd.timer); _wmCd = null;
+  try { _releaseWakeLock(); } catch (e) {}
+}
+// 计时动作:主按钮「开始 N 秒」→ 卡片里倒计时 → 到点响一声,自动进入下一组/下一侧/下一个动作
+function wmStartCountdown() {
+  const day = S.plan && S.plan.days.find(d => d.date === _wmDate); if (!day) return;
+  const ex = day.exercises[_wmIdx]; if (!_wmIsTimed(ex)) return;
+  const reps = getAdj(_wmDate, _wmIdx, 'r', ex.reps);
+  const total = Math.max(1, ex.unit === '分钟' ? reps * 60 : reps);
+  if (typeof stopTimer === 'function') stopTimer();   // 组间休息还没跑完就开练了 → 收起休息计时
+  try { unlockAudio(); } catch (e) {}
+  _wmStopCd();
+  _wmCd = { idx: _wmIdx, end: Date.now() + total * 1000, total, timer: null };
+  try { _requestWakeLock(); } catch (e) {}
+  renderGuided();
+  _wmCd.timer = setInterval(_wmTick, 250);
+  _wmTick();
+}
+function _wmTick() {
+  if (!_wmCd) return;
+  const left = (_wmCd.end - Date.now()) / 1000;
+  const el = document.getElementById('wm-cd'); if (el) el.textContent = _wmFmt(left);
+  const bar = document.getElementById('wm-cd-bar'); if (bar) bar.style.width = Math.min(100, Math.max(0, (1 - left / _wmCd.total) * 100)) + '%';
+  if (left <= 0) _wmCdDone();
+}
+function _wmCdDone() {
+  const day = S.plan && S.plan.days.find(d => d.date === _wmDate);
+  const ex = day && day.exercises[_wmIdx];
+  _wmStopCd();
+  try { playDing(); } catch (e) {}
+  try { if ('vibrate' in navigator) navigator.vibrate([150, 80, 150]); } catch (e) {}
+  if (ex && ex.bi && _wmSide === 0) { _wmSide = 1; renderGuided(); return; }   // 双侧动作:换另一侧,等你准备好再点开始
+  wmDoneSet();
+}
+function wmCancelCountdown() { _wmStopCd(); renderGuided(); }
 function startGuided(date) {
   const day = S.plan && S.plan.days.find(d => d.date === date);
   if (!day || !day.exercises || !day.exercises.length) { if (typeof showToast === 'function') showToast('今天没有可做的动作'); return; }
   _wmDate = date;
   const s = day.exercises.findIndex((ex, i) => !(S.prog[date] && S.prog[date][i]));
-  _wmIdx = s < 0 ? 0 : s; _wmSet = 1;
+  _wmIdx = s < 0 ? 0 : s; _wmSet = 1; _wmSide = 0; _wmStopCd();
   const m = document.getElementById('workout-modal'); if (m) m.classList.add('open');
   
   if (_xMode && _ownerSession()) _xGuidedStart(() => renderGuided());
   else renderGuided();
 }
 function wmClose() {
+    _wmStopCd(); _wmSide = 0;
     const m = document.getElementById('workout-modal');
     if (m) m.classList.remove('open');
     if (typeof stopTimer === 'function') stopTimer();
@@ -4762,18 +4883,33 @@ function renderGuided() {
       dispNote = _xDec(alt.steps[0]) || ex.note;
     } catch(e) {}
   }
+  // 主按钮:按次的「完成这组」;按秒/分钟的先给「开始 N 秒」,倒计时中换成「提前完成」
+  const BTN = 'flex:1;background:var(--terra);color:#fff;border:none;padding:14px;border-radius:var(--radius-sm);font-weight:600;font-size:15px';
+  const doneLbl = simple ? '完成 ✓' : (_wmSet < sets ? '完成这组 → 休息' : '完成最后一组 ✓');
+  const timed = _wmIsTimed(ex), running = timed && _wmCd && _wmCd.idx === _wmIdx;
+  const sideLbl = ex.bi ? (_wmSide ? '另一侧 ' : '第一侧 ') : '';
+  let mainBtn = `<button class="btn" style="${BTN}" onclick="wmDoneSet()">${doneLbl}</button>`, cdBlock = '', altBtn = '';
+  if (running) {
+    cdBlock = `<div style="text-align:center;margin:0 0 12px"><div style="font-size:12px;color:var(--ink3)">${sideLbl}</div><div id="wm-cd" style="font-family:var(--font-mono);font-size:44px;font-weight:700;color:var(--terra);letter-spacing:2px">${_wmFmt((_wmCd.end - Date.now()) / 1000)}</div><div class="progress-bar" style="margin-top:6px"><div class="progress-fill" id="wm-cd-bar" style="width:0%;transition:none"></div></div></div>`;
+    mainBtn = `<button class="btn" style="${BTN}" onclick="_wmCdDone()">提前完成 ✓</button>`;
+    altBtn = `<button class="btn btn-out" style="width:100%;font-size:12px;margin-bottom:8px" onclick="wmCancelCountdown()">取消计时</button>`;
+  } else if (timed) {
+    mainBtn = `<button class="btn" style="${BTN}" onclick="wmStartCountdown()">▶ 开始 ${sideLbl}${reps} ${ex.unit}</button>`;
+    altBtn = `<button class="btn btn-out" style="width:100%;font-size:12px;margin-bottom:8px" onclick="wmDoneSet()">不计时，直接${doneLbl.replace(' → 休息', '')}</button>`;
+  }
   card.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><span style="font-size:11px;color:var(--ink3)">动作 ${_wmIdx + 1}/${list.length}</span><button class="ex-modal-close" onclick="wmClose()">&#10005;</button></div>
   <h2 style="font-family:var(--font-display);font-size:22px;margin:0 0 2px">${dispName}</h2>
   <p style="font-size:12px;color:var(--ink3);margin:0 0 12px">${(ex.muscle || []).join(' · ') || (ex.isWarmup ? '热身' : ex.isStretch ? '拉伸' : '')}</p>
   <div style="font-size:16px;margin-bottom:12px">${simple ? `${reps} ${ex.unit}` : `第 <b style="color:var(--terra);font-size:20px">${_wmSet}</b> / ${sets} 组 · 目标 ${reps} ${ex.unit}${ex.bi ? '/每侧' : ''}`}</div>
   ${needW ? `<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px"><span style="font-size:12px">重量</span><input id="wm-weight" type="number" inputmode="decimal" step="0.5" value="${curW || ''}" placeholder="${lastW ? lastW.weight : ''}" style="width:96px;padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--surface2);color:var(--ink);font-size:17px"><span style="font-size:11px;color:var(--ink3)">kg${lastW ? ' · 上次' + lastW.weight : ''}${e1rm ? ' · 1RM≈' + e1rm : ''}</span></div>` : ''}
   <div style="font-size:12px;color:var(--ink2);background:var(--surface2);border-radius:8px;padding:8px 10px;margin-bottom:16px;line-height:1.55">${dispNote || ''}</div>
-  <div style="display:flex;gap:8px;margin-bottom:8px"><button class="btn btn-out" style="padding:12px 14px" onclick="wmNav(-1)">↑</button><button class="btn" style="flex:1;background:var(--terra);color:#fff;border:none;padding:14px;border-radius:var(--radius-sm);font-weight:600;font-size:15px" onclick="wmDoneSet()">${simple ? '完成 ✓' : (_wmSet < sets ? '完成这组 → 休息' : '完成最后一组 ✓')}</button><button class="btn btn-out" style="padding:12px 14px" onclick="wmNav(1)">↓</button></div>
+  ${cdBlock}<div style="display:flex;gap:8px;margin-bottom:8px"><button class="btn btn-out" style="padding:12px 14px" onclick="wmNav(-1)">↑</button>${mainBtn}<button class="btn btn-out" style="padding:12px 14px" onclick="wmNav(1)">↓</button></div>${altBtn}
   <button class="btn btn-out" style="width:100%;font-size:13px" onclick="wmFinish()">结束训练并打卡</button>`;
   const wEl = document.getElementById('wm-weight');
   if (wEl) wEl.addEventListener('change', () => { const v = parseFloat(wEl.value); if (isFinite(v) && v > 0) setWeight(date, _wmIdx, v); });
 }
 function wmDoneSet() {
+  _wmStopCd(); _wmSide = 0;
   const date = _wmDate, day = S.plan && S.plan.days.find(d => d.date === date); if (!day) return;
   const ex = day.exercises[_wmIdx], simple = _wmIsSimple(ex), sets = simple ? 1 : getAdj(date, _wmIdx, 's', ex.sets);
   if (!simple && _wmSet < sets) {
@@ -4787,14 +4923,15 @@ function wmDoneSet() {
   if (_wmIdx >= day.exercises.length) { wmClose(); render(); endWorkoutEarly(date); return; }
   renderGuided();
 }
-function wmNav(dir) { const day = S.plan && S.plan.days.find(d => d.date === _wmDate); if (!day) return; _wmIdx = Math.max(0, Math.min(day.exercises.length - 1, _wmIdx + dir)); _wmSet = 1; renderGuided(); }
+function wmNav(dir) { _wmStopCd(); _wmSide = 0; const day = S.plan && S.plan.days.find(d => d.date === _wmDate); if (!day) return; _wmIdx = Math.max(0, Math.min(day.exercises.length - 1, _wmIdx + dir)); _wmSet = 1; renderGuided(); }
 function wmFinish() { wmClose(); render(); endWorkoutEarly(_wmDate); }
 
 let _currentExDetailName = '';
 
 
 // ══ 动作演示 GIF(hasaneyldrm/exercises-dataset,GIF素材 © Gym Visual;走 jsDelivr 热链有CORS可缓存/离线) ══
-const GIF_BASE = 'https://cdn.jsdelivr.net/gh/hasaneyldrm/exercises-dataset@main/';
+// 锁定到固定 commit(2026-07-16 的 main):@main 不锁版本,对方一挪目录图就全挂;固定 commit 在 jsDelivr 上是 immutable 缓存
+const GIF_BASE = 'https://cdn.jsdelivr.net/gh/hasaneyldrm/exercises-dataset@7455efae41b330c265e7cd4b78dfa848e7ce5ebd/';
 const EXERCISE_GIF = {"杠铃卧推": "videos/0025-EIeI8Vf.gif", "哑铃卧推": "videos/0289-SpYC0Kp.gif", "上斜哑铃卧推": "videos/0314-ns0SIbU.gif", "下斜杠铃卧推": "videos/0033-GrO65fd.gif", "史密斯卧推": "videos/0748-trqKQv2.gif", "坐姿推胸机": "videos/0577-T0yTjgW.gif", "器械夹胸": "videos/0596-v3xmPAR.gif", "绳索夹胸": "videos/0188-xLYSdtg.gif", "绳索下斜夹胸": "videos/0158-7saC5zz.gif", "哑铃仰卧屈臂上拉": "videos/0288-vi8EhoE.gif", "上斜哑铃飞鸟": "videos/0319-ESOd5Pl.gif", "俯卧撑": "videos/0662-I4hDWkc.gif", "杠铃推举": "videos/0091-kTbSH9h.gif", "哑铃肩推": "videos/0405-znQUdHY.gif", "器械推举": "videos/0603-67n3r98.gif", "史密斯肩推": "videos/0766-903mzG8.gif", "侧平举": "videos/0334-DsgkuIt.gif", "坐姿侧平举机": "videos/0584-dRTfGZT.gif", "绳索侧平举": "videos/0178-goJ6ezq.gif", "哑铃前平举": "videos/0310-3eGE2JC.gif", "绳索前平举": "videos/0162-u2X71Np.gif", "杠铃直立划船": "videos/0120-UDlhcO8.gif", "俯身飞鸟": "videos/0383-EAs3xL9.gif", "反向飞鸟机": "videos/0602-myfUsKf.gif", "面拉": "videos/0203-wqNPGCg.gif", "引体向上": "videos/0652-lBDjFxJ.gif", "助力引体向上机": "videos/0017-kiJ4Z2K.gif", "高位下拉": "videos/0150-eYnzaCm.gif", "坐姿划船": "videos/0861-fUBheHs.gif", "T把划船": "videos/0606-aaXr7ld.gif", "杠铃斜板划船": "videos/0049-dmgMp3n.gif", "哑铃单臂划船": "videos/0292-C0MA9bC.gif", "器械上背划船": "videos/0581-nZZZy9m.gif", "俯身划船": "videos/0293-BJ0Hz5L.gif", "绳索直臂下压": "videos/0238-x69MAlq.gif", "山羊挺身": "videos/0489-zhMwOwE.gif", "杠铃弯举": "videos/0031-25GPyDY.gif", "哑铃弯举": "videos/0294-NbVPDMW.gif", "牧师椅杠铃弯举": "videos/0070-qOgPVf6.gif", "器械弯举": "videos/0575-q6y3OhV.gif", "集中弯举": "videos/0297-gvsWLQw.gif", "斜板哑铃弯举": "videos/0318-ae9UoXQ.gif", "锤式弯举": "videos/0313-slDvUAU.gif", "绳索弯举": "videos/0868-G08RZcQ.gif", "绳索过头弯举": "videos/1636-wDUqY2u.gif", "绳索下压": "videos/0201-3ZflifB.gif", "器械三头下压": "videos/0607-Ser9eQp.gif", "绳索过头臂屈伸": "videos/0194-2IxROQ1.gif", "哑铃臂屈伸": "videos/0430-PdmaD0N.gif", "俯身单臂哑铃臂屈伸": "videos/0333-W6PxUkg.gif", "双杠臂屈伸": "videos/0251-9WTm7dq.gif", "助力双杠臂屈伸": "videos/0019-J60bN17.gif", "窄距杠铃卧推": "videos/0030-J6Dx1Mu.gif", "仰卧臂屈伸": "videos/0351-mpKZGWz.gif", "杠铃深蹲": "videos/0043-qXTaZnJ.gif", "颈前杠铃深蹲": "videos/0042-zG0zs85.gif", "史密斯深蹲": "videos/0770-jFtipLl.gif", "倒蹬机": "videos/0739-10Z2DXU.gif", "哈克深蹲": "videos/0743-Qa55kX1.gif", "腿屈伸": "videos/0585-my33uHU.gif", "保加利亚分腿蹲": "videos/0410-qx4fgX7.gif", "哑铃弓步蹲": "videos/0336-RRWFUcw.gif", "高脚杯深蹲": "videos/1760-yn8yg1r.gif", "壶铃高脚杯深蹲": "videos/0534-ZA8b5hc.gif", "哥萨克深蹲": "videos/3643-GWoKnIm.gif", "器械外展机": "videos/0597-CHpahtl.gif", "罗马尼亚硬拉": "videos/0085-wQ2c4XD.gif", "传统硬拉": "videos/0032-ila4NZS.gif", "臀推": "videos/1409-qKBpF7I.gif", "史密斯臀推": "videos/0756-CqhoytW.gif", "腿弯举": "videos/0586-17lJ1kr.gif", "坐姿腿弯举": "videos/0599-Zg3XY7P.gif", "绳索后踢腿": "videos/0228-Kpajagk.gif", "器械内收机": "videos/0598-oHsrypV.gif", "壶铃摆动": "videos/0549-UHJlbu3.gif", "臀桥": "videos/3013-u0cNiij.gif", "站姿提踵": "videos/1373-bJYHBIN.gif", "史密斯提踵": "videos/0773-6MaEjVA.gif", "腿举机提踵": "videos/1391-ykHcWme.gif", "坐姿提踵": "videos/0594-bOOdeyc.gif", "卷腹": "videos/0274-TFqbd8t.gif", "坐姿卷腹机": "videos/1452-Wgaz7pm.gif", "悬挂抬腿": "videos/0472-I3tsCnC.gif", "罗马椅抬腿": "videos/2963-weoDEpH.gif", "俄罗斯转体": "videos/0687-XVDdcoj.gif", "负重俄罗斯转体": "videos/0846-fZFZ704.gif", "死虫式": "videos/0276-iny3m5y.gif", "腹轮": "videos/0857-NAgVB3t.gif", "侧平板支撑": "videos/0705-RKjH6Lt.gif", "肩胛引体激活": "videos/0688-uTBt1HV.gif", "L撑": "videos/3419-UpWmA5E.gif", "开合跳": "videos/3220-f9lVSSI.gif", "单腿硬拉": "videos/1757-gKozT8X.gif", "单腿臀桥": "videos/3645-rmEukuS.gif"};
 
 function renderExDetailContent() {
@@ -4827,7 +4964,7 @@ function renderExDetailContent() {
     if (altActive) {
       _strEl.innerHTML = '';
     } else {
-      const _dq = encodeURIComponent(name + ' 动作教学');
+      const _dq = encodeURIComponent(_searchTerm(name) + ' 动作教学');
       const _djump = (href, label, title) => `<a href="${href}" target="_blank" rel="noopener" title="${title}" style="display:inline-flex;align-items:center;gap:3px;font-size:11px;color:var(--terra);text-decoration:none;border:1px solid var(--terra-br);border-radius:14px;padding:4px 11px;background:var(--terra-bg);font-weight:600">${label}</a>`;
       const _gif = (typeof EXERCISE_GIF !== 'undefined') ? EXERCISE_GIF[name] : null;
       const _gifBlock = _gif ? `<div style="text-align:center;margin-bottom:8px"><img src="${GIF_BASE}${_gif}" alt="${name}演示" crossorigin="anonymous" loading="lazy" onerror="this.parentElement.style.display='none'" style="max-width:220px;width:100%;border-radius:10px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.08)"><div style="font-size:9px;color:var(--ink3);margin-top:3px">动图示范 · © Gym Visual</div></div>` : '';
@@ -4877,9 +5014,11 @@ function renderExDetailContent() {
 }
 
 // 一键看示范:直接开 B 站搜该动作教学(练到不会的当场看,不用退出app满世界找)
+// 搜索词:去掉名字里的括注(「挺尸式（savasana）」→「挺尸式」),否则英文/梵文括注会被一起当关键词,抖音/小红书/B站反而搜不准
+function _searchTerm(name) { const t = String(name || '').replace(/\s*[（(][^）)]*[）)]\s*/g, '').trim(); return t || String(name || ''); }
 function openDemo(name) {
   // 「▶示范」快捷按钮 → 抖音搜索(动作演示最多);详情弹窗里另有 抖音/小红书/B站/Keep 一排
-  try { window.open('https://www.douyin.com/search/' + encodeURIComponent(name + ' 动作教学'), '_blank', 'noopener'); } catch (e) {}
+  try { window.open('https://www.douyin.com/search/' + encodeURIComponent(_searchTerm(name) + ' 动作教学'), '_blank', 'noopener'); } catch (e) {}
 }
 window.openDemo = openDemo;
 
@@ -4919,7 +5058,7 @@ function showHistoryDetail(dateStr) {
       entry.exercises.forEach(ex => { html += `<div class="hist-ex-row"><span class="hist-ex-name" onclick="showExDetail('${ex.name}')" style="cursor:pointer">${ex.name} <i class="ti ti-info-circle" style="font-size:11px;opacity:.4"></i></span><span class="hist-ex-detail"><span>${ex.sets || '?'}×${ex.reps || '?'}${ex.unit || '次'}</span>${ex.weight ? `<span class="hist-ex-weight">${ex.weight}kg</span>` : ''}</span></div>` });
       html += `</div>`
     }
-    if (entry.note) html += `<div class="hist-note">"${entry.note}"</div>`;
+    if (entry.note) html += `<div class="hist-note">"${_escHtml(entry.note)}"</div>`;
     if (_xMode && _ownerSession()) html += _xHistExtra(entry);
   });
   content.innerHTML = html; modal.classList.add('open');
@@ -5093,31 +5232,31 @@ function renderMuscleDiagram(muscles, exName = '') {
     posePattern = `
       <div style="font-size:11px;font-weight:600;color:var(--terra);margin-bottom:4px">🏋️ 推类发力要领 (Push Pattern)</div>
       <div style="font-size:11px;color:var(--ink2);line-height:1.4;background:var(--surface1);padding:8px 10px;border-radius:6px">
-        💡 <b>解刨发力</b>：胸大肌主导收缩，肘角保持 45°-60° 沉肩夹胸。离心控制 2 秒匀速下落，感受胸肌张力拉满。
+        💡 <b>解剖发力</b>：胸大肌主导收缩，肘角保持 45°-60° 沉肩夹胸。离心控制 2 秒匀速下落，感受胸肌张力拉满。
       </div>`;
   } else if (isBack) {
     posePattern = `
       <div style="font-size:11px;font-weight:600;color:var(--terra);margin-bottom:4px">🏋️‍♀️ 拉类发力要领 (Pull Pattern)</div>
       <div style="font-size:11px;color:var(--ink2);line-height:1.4;background:var(--surface1);padding:8px 10px;border-radius:6px">
-        💡 <b>解刨发力</b>：背阔肌拉动手肘后拽，肩胛骨向脊柱中线挤压。挺胸沉肩，手肘像钩子一样顺身体后拉。
+        💡 <b>解剖发力</b>：背阔肌拉动手肘后拽，肩胛骨向脊柱中线挤压。挺胸沉肩，手肘像钩子一样顺身体后拉。
       </div>`;
   } else if (isGlute || isHamstrings) {
     posePattern = `
       <div style="font-size:11px;font-weight:600;color:var(--terra);margin-bottom:4px">🍑 髋铰链发力要领 (Hinge/Glute Drive)</div>
       <div style="font-size:11px;color:var(--ink2);line-height:1.4;background:var(--surface1);padding:8px 10px;border-radius:6px">
-        💡 <b>解刨发力</b>：骨盆保持正位，臀大肌主导伸髋。顶峰收缩挤压 1 秒，膝盖微屈对准第二脚趾防止内扣。
+        💡 <b>解剖发力</b>：骨盆保持正位，臀大肌主导伸髋。顶峰收缩挤压 1 秒，膝盖微屈对准第二脚趾防止内扣。
       </div>`;
   } else if (isQuads) {
     posePattern = `
       <div style="font-size:11px;font-weight:600;color:var(--terra);margin-bottom:4px">🦵 下肢屈伸发力要领 (Squat/Quad Pattern)</div>
       <div style="font-size:11px;color:var(--ink2);line-height:1.4;background:var(--surface1);padding:8px 10px;border-radius:6px">
-        💡 <b>解刨发力</b>：股四头肌伸膝推地，全程脚底三角踩实。核心紧锁保持躯干稳定，避免腰部代偿。
+        💡 <b>解剖发力</b>：股四头肌伸膝推地，全程脚底三角踩实。核心紧锁保持躯干稳定，避免腰部代偿。
       </div>`;
   } else if (isShoulder) {
     posePattern = `
       <div style="font-size:11px;font-weight:600;color:var(--terra);margin-bottom:4px">💪 肩部孤立发力要领 (Deltoid Alignment)</div>
       <div style="font-size:11px;color:var(--ink2);line-height:1.4;background:var(--surface1);padding:8px 10px;border-radius:6px">
-        💡 <b>解刨发力</b>：沉肩锁定斜方肌，让大臂带动手臂向上提起。避免借力甩动，顶峰稍作停顿感应侧束/前束。
+        💡 <b>解剖发力</b>：沉肩锁定斜方肌，让大臂带动手臂向上提起。避免借力甩动，顶峰稍作停顿感应侧束/前束。
       </div>`;
   } else if (isSwim) {
     posePattern = `
@@ -5129,7 +5268,7 @@ function renderMuscleDiagram(muscles, exName = '') {
     posePattern = `
       <div style="font-size:11px;font-weight:600;color:var(--terra);margin-bottom:4px">🎯 目标孤立发力 (Target Isolation)</div>
       <div style="font-size:11px;color:var(--ink2);line-height:1.4;background:var(--surface1);padding:8px 10px;border-radius:6px">
-        💡 <b>解刨发力</b>：建立意念-肌肉连接（Mind-Muscle Connection），在动作顶峰保持有意识的孤立张力。
+        💡 <b>解剖发力</b>：建立意念-肌肉连接（Mind-Muscle Connection），在动作顶峰保持有意识的孤立张力。
       </div>`;
   }
 
@@ -5248,7 +5387,7 @@ function doAddExercise(groupKey, poolIdx) {
 
   const unit = ex.u || '次';
   const sets = 3;
-  const reps = unit === '秒' ? 30 : unit === '分钟' ? 10 : 12;
+  const reps = _repsFor(ex, { sec: 30, min: 10, reps: 12 }); // 规矩③:带 hold 的按 hold
 
   sel.exercises.push({
     name: ex.n,
@@ -5298,7 +5437,7 @@ function renderRecoveryModule(sel) {
 
   // 跟随「每次时长」设置(与游泳动作的时间分配同一来源 S.dur),而不是写死的 sel.duration
   const totalMins = S.dur || sel.duration || 60;
-  const swimMins = Math.max(20, Math.round(totalMins * 0.65));
+  const swimMins = _swimMinutes(totalMins);   // 与 pickSwimExercises 同一公式,水中时间两边对得上
   const recoveryMins = Math.max(10, totalMins - swimMins);
 
   const hasLounger = _poolHasLounger(sel.date);
