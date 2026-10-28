@@ -275,8 +275,8 @@ function uiStep(group, dir) {
   switch (group) {
     case 'days': S.days = uiClamp((+S.days || 3) + dir, 2, 7); return _uiAfterSetting(true);
     case 'dur': S.dur = uiClamp((+S.dur || 60) + dir * 5, 20, 90); return _uiAfterSetting(true);
-    case 'cycleDay': { const len = S.cycleLength || 28; S.cycleDay = uiClamp((S.cycleDay || 1) + dir, 1, len); return _uiAfterSetting(false); }
-    case 'cycleLen': { S.cycleLength = uiClamp((S.cycleLength || 28) + dir, 20, 40); S.cycleDay = Math.min(S.cycleDay || 1, S.cycleLength); return _uiAfterSetting(false); }
+    case 'cycleDay': { const len = S.cycleLength || 28; S.cycleDay = uiClamp((S.cycleDay || 1) + dir, 1, len); S.cycleSetAt = todayStr(); return _uiAfterSetting(false); }
+    case 'cycleLen': { S.cycleLength = uiClamp((S.cycleLength || 28) + dir, 20, 40); S.cycleDay = Math.min(S.cycleDay || 1, S.cycleLength); S.cycleSetAt = todayStr(); return _uiAfterSetting(false); }
   }
 }
 function uiToggleSetting(key) {

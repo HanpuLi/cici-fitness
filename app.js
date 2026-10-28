@@ -61,7 +61,7 @@ function updateThemeBtn(theme){
 
 // ══ State Persistence ════════════════════════════════════
 function saveState(){
-ls(K.settings,{goal:S.goal,level:S.level,days:S.days,dur:S.dur,equip:S.equip,focus:S.focus,limits:S.limits,volumeMultiplier:S.volumeMultiplier,restDur:S.restDur,swimLevel:S.swimLevel,weightLevel:S.weightLevel,periodMode:S.periodMode,displayName:S.displayName,sealChar:S.sealChar,cycleEnabled:S.cycleEnabled,cycleDay:S.cycleDay,cycleLength:S.cycleLength,vacuumDays:S.vacuumDays,partnerDays:S.partnerDays,partnerUid:S.partnerUid,autoVolumeAdjust:S.autoVolumeAdjust,userExcluded:S.userExcluded,userExcludeReasons:S.userExcludeReasons,cheer:S.cheer,aiWeights:S.aiWeights,planStale:!!S.planStale});
+ls(K.settings,{goal:S.goal,level:S.level,days:S.days,dur:S.dur,equip:S.equip,focus:S.focus,limits:S.limits,volumeMultiplier:S.volumeMultiplier,restDur:S.restDur,swimLevel:S.swimLevel,weightLevel:S.weightLevel,periodMode:S.periodMode,displayName:S.displayName,sealChar:S.sealChar,cycleEnabled:S.cycleEnabled,cycleDay:S.cycleDay,cycleLength:S.cycleLength,cycleSetAt:S.cycleSetAt||null,vacuumDays:S.vacuumDays,partnerDays:S.partnerDays,partnerUid:S.partnerUid,autoVolumeAdjust:S.autoVolumeAdjust,userExcluded:S.userExcluded,userExcludeReasons:S.userExcludeReasons,cheer:S.cheer,aiWeights:S.aiWeights,planStale:!!S.planStale});
 if(S.plan)ls(K.plan,{plan:S.plan,prog:S.prog,adj:S.adj,weights:S.weights,exRpe:S.exRpe,poolLounger:S.poolLounger,flexProg:S.flexProg,unlockedDates:S.unlockedDates});
 localStorage.setItem(nsKey('fit_selDate'), S.selDate || '');
 }
@@ -1068,7 +1068,7 @@ const reason=S.userExcludeReasons&&S.userExcludeReasons[name]?S.userExcludeReaso
 return `<div class="ex-list-row"><span><span class="n">${_escHtml(name)}</span><span class="why">${_escHtml(reason)}</span></span><button type="button" class="btn-line" data-act="restore" data-name="${_escHtml(name)}" aria-label="恢复 ${_escHtml(name)}">恢复</button></div>`;
 }).join('');
 };
-window.cyclePeriodStart=function(){S.cycleDay=1;saveState();applySettingsToUI();flashSaved();if(typeof showToast==='function')showToast('已记录：周期第 1 天');};
+window.cyclePeriodStart=function(){S.cycleDay=1;S.cycleSetAt=todayStr();saveState();applySettingsToUI();flashSaved();if(typeof showToast==='function')showToast('已记录：周期第 1 天');};
 
 // ══ Share Card Generator ════════════════════════════════
 let _currentShareImgUrl = null;

@@ -1020,6 +1020,28 @@ details.fold[open] > summary::after { content: ' ▾'; }
 .swap-option .so-s { font-family: var(--font-mono); font-size: 13px; color: var(--muted); margin-left: 6px; }
 .swap-option .so-note { font-size: 14px; color: var(--muted); line-height: 1.55; }
 .swap-more { border-top: 1px solid var(--line); }
+.swap-ai { display: flex; flex-direction: column; gap: 8px; }
+
+/* AI 落点:打卡后的教练反馈 / 对话里的提议卡 */
+.co-fb { margin-top: 4px; padding-top: 12px; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 8px; }
+.co-fb .prose { font-size: 16px; }
+.co-fb-next { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.co-fb-next li { border-top: 1px dashed var(--line); padding: 6px 0; display: flex; flex-direction: column; gap: 2px; }
+.co-fb-next .what { font-family: var(--font-mono); font-size: 14px; }
+.co-fb-next .why { font-size: 14px; color: var(--muted); line-height: 1.55; }
+.co-fb-add { align-self: flex-start; text-align: left; line-height: 1.5; padding: 8px 0; }
+.co-prop { border: 1px solid var(--ink); border-radius: 2px; padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+.co-prop-h { display: flex; align-items: center; gap: 8px; font-family: var(--font-mono); font-size: 12px; letter-spacing: .1em; text-transform: uppercase; }
+.co-prop-h .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); flex: none; }
+.co-prop-list { font-family: var(--font-mono); font-size: 13px; line-height: 1.7; display: grid; grid-template-columns: max-content minmax(0, 1fr); column-gap: 10px; row-gap: 6px; }
+.co-prop-list .d { color: var(--faint); }
+.co-prop-list .c { overflow-wrap: anywhere; }
+.co-prop-list .c small { display: block; font-family: var(--font-body); font-size: 13px; line-height: 1.5; color: var(--muted); }
+.co-prop-list .c.bad s { color: var(--muted); }
+.co-prop-list .c.bad small { color: var(--accent); }
+.co-prop-btns { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.co-prop-btns .btn-primary, .co-prop-btns .btn-line { min-height: 44px; font-size: 14px; letter-spacing: .06em; }
+.co-prop-st { font-family: var(--font-mono); font-size: 13px; }
 
 .hist-detail-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
 .hist-detail-date { font-size: 22px; line-height: 1.25; padding-top: 8px; }

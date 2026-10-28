@@ -1,6 +1,6 @@
 // ══ System Version ═════════════════════════════════════════
-const APP_VERSION = 'v3.0.0';
-const APP_BUILD = 154;               // = sw.js 的 CACHE 编号 = index.html 页脚 build(check-static 会查,三处一起改)
+const APP_VERSION = 'v3.1.0';
+const APP_BUILD = 155;               // = sw.js 的 CACHE 编号 = index.html 页脚 build(check-static 会查,三处一起改)
 const APP_BUILD_DATE = '2026-10-28';
 window.APP_VERSION = APP_VERSION;
 window.APP_BUILD = APP_BUILD;
@@ -2619,7 +2619,7 @@ function render() {
 
   let h = _todayNotices(sel, today);
   if (_xMode && _ownerSession()) h += _xPlanTop(today);
-  if (typeof coachTodayNoteHtml === 'function') h += coachTodayNoteHtml();
+  if (typeof coachTodayNoteHtml === 'function') h += coachTodayNoteHtml(sel ? sel.date : today);
 
   if (sel && !sel.isRest) {
     const lg = LOG.find(l => l.date === sel.date);
@@ -2637,6 +2637,7 @@ function render() {
       h += _logMetaHtml(lg);
       h += (lg.exercises && lg.exercises.length) ? _readListHtml(lg.exercises, sel.date) : `<div class="hist-empty">该日训练详情不可用</div>`;
       if (lg.note) h += `<div class="hist-note">"${_escHtml(lg.note)}"</div>`;
+      if (typeof coachFeedbackHtml === 'function') h += coachFeedbackHtml(sel.date);
       h += typeof renderRecoveryModule === 'function' ? renderRecoveryModule(sel) : '';
     } else {
       const pd = S.prog[sel.date] || {};
@@ -2666,6 +2667,7 @@ function render() {
         if (!isDone(sel)) h += `<button class="add-row" onclick="openAddExerciseModal('${sel.date}')">+ 加一个动作</button>`;
         h += typeof renderRecoveryModule === 'function' ? renderRecoveryModule(sel) : '';
         if (!alreadyLogged) h += `<div class="today-foot"><button class="btn-outline" onclick="endWorkoutEarly('${sel.date}')">${checkedCount === sel.exercises.length ? '完成游泳训练' : '结束训练并打卡'}</button></div>`;
+        else if (typeof coachFeedbackHtml === 'function') h += coachFeedbackHtml(sel.date);
       } else {
         // ── 力量日 / 私密日 / 锁定未打卡 ──
         const mus = _dayMuscles(sel);
@@ -2687,6 +2689,7 @@ function render() {
           h += `<div class="today-foot"><button class="btn-outline" onclick="endWorkoutEarly('${sel.date}')">${checkedCount === sel.exercises.length ? '完成打卡' : '结束训练并打卡'}</button></div>`;
         } else if (alreadyLogged) {
           h += `<div class="today-foot"><div class="note-line"><span class="olive">[ 已打卡 ]</span> RPE ${lg.rpe || '—'} · ${lg.exerciseCount || 0} 个动作</div><div class="actions"><button class="link-btn u" onclick="editLog(${LOG.indexOf(lg)})">编辑记录</button>${!sel.isPrivateDay ? `<button class="link-btn u" onclick="shareWorkout('${sel.date}')">分享卡片</button>` : ''}</div></div>`;
+          if (typeof coachFeedbackHtml === 'function') h += coachFeedbackHtml(sel.date);
         }
       }
     }
@@ -3289,6 +3292,7 @@ function submitRPE(rpe, isSkip = false) {
   const noteEl = document.getElementById('rpe-note');
   const note = noteEl ? noteEl.value.trim() : '';
   const actualRpe = isSkip ? 6 : rpe;
+  let _fbDate = null;   // 这次是新打卡(不是编辑旧记录):收尾后异步要教练反馈
   const moods = ['疲惫', '偏累', '一般', '舒适', '饱满', '充沛', '火热', '极佳', '突破', '力竭'];
 
   if (_editingLogIdx !== null) {
@@ -3332,6 +3336,7 @@ function submitRPE(rpe, isSkip = false) {
       subMetrics: xMetrics
     });
     ls(K.log, LOG);
+    _fbDate = date;
 
     if (isX) _xAfterCheckin(date, xMetrics);
 
@@ -3418,6 +3423,8 @@ function submitRPE(rpe, isSkip = false) {
   saveState(); render();
   if (typeof renderStats === 'function') renderStats(); // Refresh stats view
   if (typeof renderLog === 'function') renderLog(); // Refresh log view
+  // 打卡已经落盘、弹窗已关;AI 反馈后台去要,慢了失败了都不挡打卡
+  if (_fbDate && typeof coachAfterCheckin === 'function') { try { coachAfterCheckin(_fbDate, { skipped: isSkip }); } catch (e) { } }
 }
 
 let _pendingEarlyEnd = false;
@@ -3535,6 +3542,7 @@ function openExcludeByName(name) {
 function swapSetReason(v) {
   _swapReason = _swapReason === v ? '' : v;
   document.querySelectorAll('#swap-modal [data-group="swapReason"] .chip').forEach(b => { const on = b.dataset.v === _swapReason; b.classList.toggle('on', on); b.setAttribute('aria-pressed', String(on)); });
+  if (typeof coachSwapOnReason === 'function') coachSwapOnReason();
 }
 function swapShowAll() { _swapShowAll = true; _renderSwapSheet(); }
 function _renderSwapSheet() {
@@ -3562,6 +3570,7 @@ function _renderSwapSheet() {
   modal.innerHTML = `<div class="ex-modal-card" onclick="event.stopPropagation()">`
     + `<div class="ex-modal-hdr"><div><div class="sheet-eyebrow">${canSwap ? '换掉' : '划掉'}${canSwap && pos ? ` · ${String(pos).padStart(2, '0')}` : ''}</div><div class="sheet-title">${_escHtml(ex.name)}</div></div><button class="ex-modal-close" onclick="uiCloseOverlay('swap-modal')">关闭</button></div>`
     + uiChips('', 'swapReason', SWAP_REASONS, v => v === _swapReason)
+    + (canSwap && aiOn && typeof coachSwapHtml === 'function' ? coachSwapHtml(c.date, c.ei) : '')
     + (canSwap ? (alts.length ? `<div class="sheet-eyebrow" style="margin-top:4px">[ 同肌群 · 按规则 ]</div><div>${shown.map((a) => optHtml(a, alts.indexOf(a))).join('')}`
       + (!_swapShowAll && alts.length > 3 ? `<button type="button" class="swap-option swap-more" onclick="swapShowAll()"><span class="so-s" style="margin:0">其他同肌群动作 ${alts.length - 3} 个 →</span></button>` : '') + `</div>`
       : `<p class="sheet-desc">没有更多同肌群的备选，可以只今天划掉，或者永久排除。</p>`)
@@ -3582,19 +3591,30 @@ window.openExcludeByName = openExcludeByName;
 
 function doSwap(date, ei, altIdx) {
   const alt = window._swapAlts[altIdx];
-  const sel = S.plan.days.find(d => d.date === date);
-  if (sel) sel._edited = true;
+  if (alt) _applySwap(date, ei, alt);
+}
+// 把某天第 ei 个动作换成库里的 alt(只改数据,不落盘不刷新)。o = {sets, reps, kg}:AI 给了就用,不给沿用原来的量
+function _swapInto(date, ei, alt, o = {}) {
+  const sel = S.plan && S.plan.days.find(d => d.date === date);
+  if (!sel || !sel.exercises[ei] || !alt) return false;
+  sel._edited = true;
   const ex = sel.exercises[ei];
   const newUnit = alt.u || '次';
   // 单位不变沿用原来的量(swim 分钟↔分钟、gym 次↔次;旧代码把 分钟 一律压成 1);
   // 新动作写明了 hold 的以 hold 为准(规矩③)
-  const newReps = _swapReps(ex, alt);
+  const newReps = o.reps || _swapReps(ex, alt);
   // Carry muscle/group/diff/swimPhase so render tags, the swim-phase grouping, and a
   // second swap's swim-detection don't break.
-  sel.exercises[ei] = { name: alt.n, note: alt.note || '', sets: ex.sets, reps: newReps, unit: newUnit, group: ex.group, muscle: alt.muscle || [], diff: alt.diff, isWarmup: false, isStretch: false, bi: !!alt.bi };
+  sel.exercises[ei] = { name: alt.n, note: alt.note || '', sets: o.sets || ex.sets, reps: newReps, unit: newUnit, group: ex.group, muscle: alt.muscle || [], diff: alt.diff, isWarmup: false, isStretch: false, bi: !!alt.bi };
   if (alt.swimPhase) sel.exercises[ei].swimPhase = alt.swimPhase;
   // The new exercise inherits a fresh slot — drop the previous exercise's weight/adjust/done/rpe.
   _clearExState(date, ei);
+  // AI 给的是建议重量,还没举过:直接写进当天的重量格,不走 setWeight(那里会当成新纪录记 PR)
+  if (o.kg > 0 && needsWeightUI(sel.exercises[ei])) { if (!S.weights) S.weights = {}; S.weights[date + '-' + ei] = o.kg; }
+  return true;
+}
+function _applySwap(date, ei, alt, o) {
+  if (!_swapInto(date, ei, alt, o)) return;
   const m = document.getElementById('swap-modal'); if (m) m.classList.remove('open');
   saveState(); render();
   showToast(`已替换为 ${alt.n}`);
