@@ -68,6 +68,12 @@ self.addEventListener('fetch', e => {
   const AUTH_HOSTS = ['accounts.google.com', 'apis.google.com', 'identitytoolkit.googleapis.com', 'securetoken.googleapis.com', 'oauth2.googleapis.com', 'firebaseinstallations.googleapis.com', 'firestore.googleapis.com', 'www.googleapis.com', 'node.tail95239f.ts.net'];  // 最后一个是 AI 教练后端
   if (AUTH_HOSTS.some(h => url.hostname === h || url.hostname.endsWith('.' + h)) || url.pathname.startsWith('/__/auth') || url.pathname.startsWith('/__/firebase')) return;
 
+  // 9 月以前装到主屏幕的 App 记的启动地址是 ./Index.html(大写 I),入口改成小写后那个地址 404:大小写不对的首页一律转到 ./index.html
+  if (e.request.mode === 'navigate' && url.origin === self.location.origin && /\/index\.html$/i.test(url.pathname) && !url.pathname.endsWith('/index.html')) {
+    e.respondWith(Response.redirect(new URL('./index.html' + url.search, self.registration.scope).href, 302));
+    return;
+  }
+
   // ── 动作 GIF:缓存优先 + 只留最近 GIF_MAX 张 ──
   if (url.hostname === 'cdn.jsdelivr.net' && url.pathname.startsWith(GIF_PREFIX) && url.pathname.endsWith('.gif')) {
     e.respondWith(
