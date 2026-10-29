@@ -1,4 +1,4 @@
-const CACHE = 'cici-fitness-v159';   // 数字要和 core.js 的 APP_BUILD、index.html 页脚的 build 一致(check-static 会查)
+const CACHE = 'cici-fitness-v160';   // 数字要和 core.js 的 APP_BUILD、index.html 页脚的 build 一致(check-static 会查)
 // 动作演示 GIF:单独一个缓存,只留最近 GIF_MAX 张。来源锁在固定 commit(见 core.js GIF_BASE),内容不会变,
 // 所以缓存优先、跨版本保留;以前走 SWR 进主缓存,看过的每张都存着,越积越多
 const GIF_CACHE = 'cici-fitness-gif-v1';
@@ -7,7 +7,7 @@ const GIF_PREFIX = '/gh/hasaneyldrm/exercises-dataset@';
 
 // ── Local assets: always pre-cached on install ──
 const LOCAL_ASSETS = [
-  './index.html', './skin.js', './skin-sport.js', './ui.js', './core.js', './app.js', './coach.js', './style.css', './skin-sport.css',
+  './index.html', './skin.js', './skin-sport.js', './ui.js', './core.js', './app.js', './coach.js', './push.js', './style.css', './skin-sport.css',
   './manifest.json', './icon.svg', './dev.js'
 ];
 
@@ -121,6 +121,26 @@ self.addEventListener('fetch', e => {
       return r;
     }).catch(() => caches.match(e.request))
   );
+});
+
+// ── 「主动找你」推送(push.js 订阅,后端 ~/fitness-coach/push.py 发):收到就弹通知;点通知打开 app 到对应页 ──
+// 内容 {title, body, tag, url: './index.html#go=today'};iOS 要求每条推送都弹出通知,所以这里不做任何「静默」分支
+self.addEventListener('push', e => {
+  let d = {};
+  try { d = e.data ? e.data.json() : {}; } catch (x) { d = { body: e.data ? e.data.text() : '' }; }
+  e.waitUntil(self.registration.showNotification(d.title || '教练', {
+    body: d.body || '', tag: d.tag || 'fit-coach', icon: './icon.png', data: { url: d.url || './index.html' }
+  }));
+});
+self.addEventListener('notificationclick', e => {
+  e.notification.close();
+  const url = new URL((e.notification.data && e.notification.data.url) || './index.html', self.registration.scope).href;
+  const tab = (/[#&]go=(\w+)/.exec(url) || [])[1] || '';
+  e.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
+    const c = list.find(w => w.url.startsWith(self.registration.scope));
+    if (c) { if (tab) c.postMessage({ type: 'wp-open', tab }); return c.focus(); }   // app 开着:切到那一页
+    return self.clients.openWindow(url);   // 没开着:冷启动,push.js 读地址里的 #go=
+  }));
 });
 
 // 按放进去的先后删最旧的,只留 max 条

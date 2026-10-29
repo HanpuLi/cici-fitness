@@ -62,9 +62,10 @@ function updateThemeBtn(theme){
 
 // ══ State Persistence ════════════════════════════════════
 function saveState(){
-ls(K.settings,{goal:S.goal,level:S.level,days:S.days,dur:S.dur,equip:S.equip,focus:S.focus,limits:S.limits,volumeMultiplier:S.volumeMultiplier,restDur:S.restDur,swimLevel:S.swimLevel,weightLevel:S.weightLevel,periodMode:S.periodMode,displayName:S.displayName,sealChar:S.sealChar,cycleEnabled:S.cycleEnabled,cycleDay:S.cycleDay,cycleLength:S.cycleLength,cycleSetAt:S.cycleSetAt||null,vacuumDays:S.vacuumDays,partnerDays:S.partnerDays,partnerUid:S.partnerUid,autoVolumeAdjust:S.autoVolumeAdjust,userExcluded:S.userExcluded,userExcludeReasons:S.userExcludeReasons,cheer:S.cheer,aiWeights:S.aiWeights,planStale:!!S.planStale,skin:S.skin});
+ls(K.settings,{goal:S.goal,level:S.level,days:S.days,dur:S.dur,equip:S.equip,focus:S.focus,limits:S.limits,volumeMultiplier:S.volumeMultiplier,restDur:S.restDur,swimLevel:S.swimLevel,weightLevel:S.weightLevel,periodMode:S.periodMode,displayName:S.displayName,sealChar:S.sealChar,cycleEnabled:S.cycleEnabled,cycleDay:S.cycleDay,cycleLength:S.cycleLength,cycleSetAt:S.cycleSetAt||null,vacuumDays:S.vacuumDays,partnerDays:S.partnerDays,partnerUid:S.partnerUid,autoVolumeAdjust:S.autoVolumeAdjust,userExcluded:S.userExcluded,userExcludeReasons:S.userExcludeReasons,cheer:S.cheer,aiWeights:S.aiWeights,planStale:!!S.planStale,skin:S.skin,push:S.push});
 if(S.plan)ls(K.plan,{plan:S.plan,prog:S.prog,adj:S.adj,weights:S.weights,exRpe:S.exRpe,poolLounger:S.poolLounger,flexProg:S.flexProg,unlockedDates:S.unlockedDates});
 localStorage.setItem(nsKey('fit_selDate'), S.selDate || '');
+if(typeof wpStateDirty==='function')wpStateDirty(); // 开了「主动找你」:节流上传快照(push.js)
 }
 function loadState(){
 const s=lg(K.settings);

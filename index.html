@@ -98,8 +98,13 @@
             <section class="panel-tab" id="me" role="tabpanel" aria-labelledby="tab-me" hidden>
                 <div id="me-content"></div>
                 <div class="version-foot">
-                    <button type="button" id="app-version" class="link-btn" onclick="toggleChangelog()" aria-expanded="false" aria-controls="changelog-box">Cici健身计划 v3.4.0 (build 159) · 更新日志 ▾</button>
+                    <button type="button" id="app-version" class="link-btn" onclick="toggleChangelog()" aria-expanded="false" aria-controls="changelog-box">Cici健身计划 v3.5.0 (build 160) · 更新日志 ▾</button>
                     <div id="changelog-box" style="display:none">
+                        <p class="cl-h">v3.5.0 · 2026-10-29</p>
+                        <ul>
+                            <li>教练会主动找你：该练了还没开始、好几天没练、明天有动作该加重、搭子刚练完，推一句话到手机上。在「我 → 04 提醒」打开，安静时段和每天最多几条可以自己设。</li>
+                            <li>iPhone 要先在 Safari 里「添加到主屏幕」，再从主屏幕打开才能收推送（iOS 16.4 以上）。</li>
+                        </ul>
                         <p class="cl-h">v3.4.0 · 2026-10-29</p>
                         <ul>
                             <li>AI 教练能看到的更全了：全部训练历史、今天做到第几组和用时、每个动作的感受和备注、连续天数和成就；私密内容照旧不给。</li>
@@ -281,6 +286,7 @@
     <script src="core.js"></script>
     <script src="app.js"></script>
     <script src="coach.js"></script>
+    <script src="push.js"></script>
     <script>if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).catch(() => { });</script>
 </body>
 

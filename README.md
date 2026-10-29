@@ -6,7 +6,7 @@ Live app: https://hanpuli.github.io/cici-fitness/
 
 ## Architecture
 
-- **Static client:** `index.html`, `skin.js` (the two interface skins, 纸墨 / 运动: storage, switching, picker, share-card fonts), `skin-sport.js` (运动 templates that replace 纸墨 blocks), `ui.js` (shared controls, dialogs, navigation, Plan / Me pages, first-run setup), `core.js`, `app.js`, `coach.js`, `style.css` (纸墨) + `skin-sport.css` (运动, every rule under `html[data-skin="sport"]`) and local assets.
+- **Static client:** `index.html`, `skin.js` (the two interface skins, 纸墨 / 运动: storage, switching, picker, share-card fonts), `skin-sport.js` (运动 templates that replace 纸墨 blocks), `ui.js` (shared controls, dialogs, navigation, Plan / Me pages, first-run setup), `core.js`, `app.js`, `coach.js`, `push.js` (opt-in Web Push: subscription, settings, throttled state upload for the coach's proactive reminders), `style.css` (纸墨) + `skin-sport.css` (运动, every rule under `html[data-skin="sport"]`) and local assets.
 - **Offline support:** `sw.js` pre-caches the application shell and runtime data.
 - **Local persistence:** application state and recovery snapshots use browser storage, namespaced to the signed-in user where appropriate.
 - **Optional cloud sync:** Firebase Authentication + Firestore.
@@ -32,6 +32,7 @@ node --check ui.js
 node --check core.js
 node --check app.js
 node --check coach.js
+node --check push.js
 node --check dev.js
 node --check sw.js
 node tools/check-static.mjs

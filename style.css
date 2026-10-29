@@ -1196,3 +1196,8 @@ details.fold[open] > summary::after { content: ' ▾'; }
    用输入条整体的 :focus-within,不只看文本框:点「发送」时焦点从文本框挪到按钮上,只看文本框的话按下那一刻输入条往上跳,这一下就点空了 */
 body.has-composer:has(#composer:focus-within) .tabbar { display: none; }
 body.has-composer:has(#composer:focus-within) #composer { bottom: env(safe-area-inset-bottom); }
+
+/* 我 → 04 提醒 · 教练主动找你(push.js):开关下面三行步进、这台设备一行、装到主屏幕 / 打开权限的步骤 */
+.wp-box { display: flex; flex-direction: column; gap: 10px; }
+.wp-dev .link-btn { margin-left: 6px; }
+.wp-guide { padding-left: 12px; border-left: 1px solid var(--line); }

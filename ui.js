@@ -279,6 +279,7 @@ function uiStep(group, dir) {
     case 'dur': S.dur = uiClamp((+S.dur || 60) + dir * 5, 20, 90); return _uiAfterSetting(true);
     case 'cycleDay': { const len = S.cycleLength || 28; S.cycleDay = uiClamp((S.cycleDay || 1) + dir, 1, len); S.cycleSetAt = todayStr(); return _uiAfterSetting(false); }
     case 'cycleLen': { S.cycleLength = uiClamp((S.cycleLength || 28) + dir, 20, 40); S.cycleDay = Math.min(S.cycleDay || 1, S.cycleLength); S.cycleSetAt = todayStr(); return _uiAfterSetting(false); }
+    case 'wpQs': case 'wpQe': case 'wpMax': if (typeof wpStep === 'function') wpStep(group, dir); return;   // 「主动找你」安静时段 / 每天上限(push.js)
   }
 }
 function uiToggleSetting(key) {
@@ -310,6 +311,7 @@ function uiToggleSetting(key) {
       return uiRenderMeRemind();
     }
     case 'tecno': _uiPlan.tecno = !_uiPlan.tecno; return uiRenderP3();
+    case 'wp': if (typeof wpToggle === 'function') wpToggle(); return;   // 「主动找你」(push.js)
   }
 }
 // data-act:列表里的按钮(避免把动作名拼进 onclick 字符串)
@@ -661,7 +663,8 @@ function uiRenderMeRemind() {
   const ntf = typeof _notifMuted === 'function' ? !_notifMuted() : true;
   el.innerHTML = uiSecLabel('04 — 提醒')
     + uiToggle('sound', '提示音', '休息结束、打勾、完成时的音效；健身房或深夜可以关', snd, true, 'sound-enable-switch')
-    + uiToggle('notif', '系统通知', '休息结束弹锁屏 / 后台通知；关了只有声音', ntf, true, 'notif-enable-switch');
+    + uiToggle('notif', '系统通知', '休息结束弹锁屏 / 后台通知；关了只有声音', ntf, true, 'notif-enable-switch')
+    + (typeof wpRemindHtml === 'function' ? wpRemindHtml() : '');   // 教练主动找你(push.js)
 }
 function uiRenderMeAI() {
   const el = document.getElementById('me-ai'); if (!el) return;

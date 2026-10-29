@@ -1,6 +1,6 @@
 // ══ System Version ═════════════════════════════════════════
 const APP_VERSION = 'v3.1.0';
-const APP_BUILD = 159;               // = sw.js 的 CACHE 编号 = index.html 页脚 build(check-static 会查,三处一起改)
+const APP_BUILD = 160;               // = sw.js 的 CACHE 编号 = index.html 页脚 build(check-static 会查,三处一起改)
 const APP_BUILD_DATE = '2026-10-28';
 window.APP_VERSION = APP_VERSION;
 window.APP_BUILD = APP_BUILD;
