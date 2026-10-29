@@ -1,7 +1,7 @@
 // ══ System Version ═════════════════════════════════════════
 const APP_VERSION = 'v3.1.0';
-const APP_BUILD = 160;               // = sw.js 的 CACHE 编号 = index.html 页脚 build(check-static 会查,三处一起改)
-const APP_BUILD_DATE = '2026-10-28';
+const APP_BUILD = 161;               // = sw.js 的 CACHE 编号 = index.html 页脚 build(check-static 会查,三处一起改)
+const APP_BUILD_DATE = '2026-10-29';
 window.APP_VERSION = APP_VERSION;
 window.APP_BUILD = APP_BUILD;
 window.APP_BUILD_DATE = APP_BUILD_DATE;
@@ -2196,6 +2196,9 @@ hasGoal('翘臀美背') ? (GLUTE_BACK_SPLITS[gymPerWeek] || GLUTE_BACK_SPLITS[3]
 
   let generatedGymCount = 0;
   const _usedPrivate = new Set();
+  // 已配对、开着「排计划时跟搭子对齐」:今天及以后新排的日子按搭子现有的计划挪训练日(app.js partnerAlignForGen;
+  // 每周练几次不变,只换放在哪天)。没配对 / 关了 → null,下面照原排法,结果和以前一字不差
+  const _align = typeof partnerAlignForGen === 'function' ? partnerAlignForGen(startDate, preserve, pattern, gymPerWeek) : null;
 
   for (let i = 0; i < 14; i++) {
     const ds = addDays(startDate, i);
@@ -2206,7 +2209,7 @@ hasGoal('翘臀美背') ? (GLUTE_BACK_SPLITS[gymPerWeek] || GLUTE_BACK_SPLITS[3]
 
     const dObj = new Date(ds + 'T12:00:00');
     const dow = (dObj.getDay() + 6) % 7; // 0=Mon, 6=Sun
-    const dayType = pattern[dow]; // 0=rest, 1=gym, 2=swim
+    const dayType = _align && _align.t[ds] !== undefined ? _align.t[ds] : pattern[dow]; // 0=rest, 1=gym, 2=swim
 
     if (dayType === 1) {
       // Gym day
@@ -2321,18 +2324,20 @@ function applyStaleSettings() {
   const touched = S.plan.days.some(d => d.date > today && (d._edited || d._ai));
   if (touched && !confirm('按新设置重排今天之后的安排？\n你手动改过或 AI 排过的未来几天也会按新设置重排；已完成的、今天已经开练的不动。')) return;
   genPlan(true);
-  showToast('已按新设置重排后面的计划');
+  showToast('已按新设置重排后面的计划' + (typeof planAlignSuffix === 'function' ? planAlignSuffix() : ''));
 }
 window.applyStaleSettings = applyStaleSettings;
 
 function recalibratePlan() {
   if (!S.plan) return;
   genPlan(true);
-  showToast('已保留历史记录，重排本周剩余天数');
+  showToast('已保留历史记录，重排本周剩余天数' + (typeof planAlignSuffix === 'function' ? planAlignSuffix() : ''));
 }
 
 function autoAlignPlan() {
   if (!S.plan || !S.plan.days || !S.plan.days.length) return;
+  // 没练自动顺延(默认开,「计划 → 08」可关):开着就只挪训练,不弹下面这条「去重排」的老提示;关掉照旧
+  if (autoShiftOn()) { autoShiftRun(); return; }
   const today = todayStr();
 
   // Determine splits
@@ -2397,6 +2402,312 @@ hasGoal('翘臀美背') ? (GLUTE_BACK_SPLITS[gymPerWeek] || GLUTE_BACK_SPLITS[3]
   }
 }
 
+// ══ 没练自动顺延(2026-10-29) ════════════════════════════
+// Cait:「如果一天没有练(健身房11pm肯定关了)，能不能直接自动重排后面的？你拿捏程度」。
+// 只「挪」不重排:整天的内容原样搬(动作、手改的组数次数 / 重量 / RPE 跟着日期键一起搬),不重挑动作,不切页、不动选中的日子。
+//   · 没练 = 训练日(非休息、非私密、非标记日)整天没有任何痕迹(打卡记录 / 勾过动作 / 运动风格记过组或开练时间),
+//     且日期已过,或者是今天且已过 23:00。只看最近 7 天;撤销过的(_noShift)、手动解锁过的不管。
+//   · 挪:没练的那次挪到下一天,下一天也是训练日就把它的再往后挪,直到碰到休息日吸收。私密日 / 已经练过的天 /
+//     已经过去的休息日是固定桩,跳过。吸收日要在 7 天内(从今天算)。连续几天没练按日期一天一天处理。
+//   · 不练伤:挪完的连续训练天数最多比原计划最长的那段多 1 天(SHIFT_RUN_SLACK),且封顶 6 天(每 7 天至少 1 个休息日);
+//     相邻两天都是下肢日的对数不许比原来多。多给 1 天的理由(2026-10-29 主会话拍板):Cait「你拿捏程度」,她们要的是课别丢;
+//     照字面「不许比原计划长」,3 天计划(一 / 三 / 五)周一、周三没练都挪不动只能少练,挪成连练两天可以接受,下肢相邻照样挡。
+//     违反、或 7 天内没有休息日 → 丢掉链条末尾那一次(先后顺序不跳);还不行就只标记、什么都不挪。宁可少练,不过量。
+//   · 被挪走的那天 = 标记日:isRest + isMissed(不算训练日,也不算休息日的成就),missedOrig 记原计划,
+//     missedTo 记那次训练最后落到哪天(null = 这周少练)。打卡记录 / 热图都按 LOG 算,不受影响。
+//   · 每批改动留快照(S.plan.shifts,只存受影响的日子),今天页顶上一条提示可撤销;撤销后那几天记 _noShift,不再顺延。
+//     顺延掉的那天后来有了打卡记录、挪过去的天都还没动 → 自动撤回。
+//   · 确定性:同样的计划 + 打卡算出同样的结果(不用随机数,id 用日期);搭子同一天都没去,两边各自顺延后照样对齐。只改自己的计划。
+//   · 有搭子(已配对、读得到对方计划、开着「排计划时跟搭子对齐」):挪法在过得了身体规则的里挑和对方同一天同类最多的;
+//     对方顺延了、我那天练了 → 按「对齐搭子的训练日」自动跟一次(见下面「跟着搭子顺延」)。
+const SHIFT_BACK = 7, SHIFT_REACH = 7, SHIFT_HOUR = 23, SHIFT_MAX_RUN = 6;
+const SHIFT_RUN_SLACK = 1;   // 允许比原计划多连练几天(见上:3 天计划挪成连练两天可以接受);封顶仍是 SHIFT_MAX_RUN
+const SHIFT_LOWER = ['quads', 'glutemed', 'hamglutes', 'calves'];
+function autoShiftOn() { return S.autoShift !== false; }
+function _shLate() { return new Date().getHours() >= SHIFT_HOUR; }
+// 那天练过没有:打卡记录 / 勾过任何动作 / 运动风格记过组数或开练时间(本机)
+function _shAct(date) {
+  if (LOG.some(l => l.date === date)) return true;
+  if (Object.values(S.prog[date] || {}).some(Boolean)) return true;
+  const w = _wkDays()[date];
+  return !!(w && (w.t0 || Object.values(w.s || {}).some(n => n > 0)));
+}
+function _shTrain(d) { return !!d && !d.isRest; }   // 连练口径:私密日 / 游泳 / 轻量替代都算练;休息日和标记日不算
+function _shLower(d) {                              // 臀腿 / 下肢日:主项里下肢动作至少 2 个、占一半以上
+  if (!d || d.isRest || d.isSwimDay || d.isPrivateDay) return false;
+  const m = (d.exercises || []).filter(e => !e.isWarmup && !e.isStretch);
+  const n = m.filter(e => SHIFT_LOWER.includes(e.group)).length;
+  return n >= 2 && n * 2 >= m.length;
+}
+function _shMissable(d, c) {
+  if (!d || d.isRest || d.isPrivateDay || d.isMissed || d._noShift || !(d.exercises || []).length) return false;
+  if (d.date < c.today) { if (d.date < addDays(c.today, -SHIFT_BACK)) return false; }
+  else if (!(d.date === c.today && c.late)) return false;
+  if ((S.unlockedDates || []).includes(d.date)) return false;   // 手动解锁了 = 打算补打卡
+  return !c.act(d.date);
+}
+function _shContent(d) { const o = {}; for (const k in d) if (k !== 'date' && k !== '_noShift') o[k] = d[k]; return o; }
+function _shMarker(d) { return { date: d.date, isRest: true, isMissed: true, workoutType: '没练（已顺延）', duration: 0, exercises: [], missedOrig: { type: d.workoutType || '', n: (d.exercises || []).length, ...(d.isSwimDay ? { swim: true } : {}) }, missedTo: null }; }
+function _shRun(days, a, b) { let best = 0, run = 0; days.forEach(d => { if (d.date < a || d.date > b) return; run = _shTrain(d) ? run + 1 : 0; if (run > best) best = run; }); return best; }
+function _shPairs(days, a, b) { let n = 0; for (let i = 1; i < days.length; i++) if (days[i - 1].date >= a && days[i].date <= b && _shLower(days[i - 1]) && _shLower(days[i])) n++; return n; }
+// 挪完不能比挪之前更累:最长连练 ≤ max(原计划上限, 这一段本来就有的),相邻下肢日不增加
+function _shOk(pre, post, a, b, cap) { return _shRun(post, a, b) <= Math.max(cap, _shRun(pre, a, b)) && _shPairs(post, a, b) <= _shPairs(pre, a, b); }
+// 一步:days[mi] 没练 → 全部候选挪法。窗口 = 之后 7 天内不是固定桩的日子(同样没练的过去训练日 / 以后的训练日和休息日)。
+//   full(k):从没练那天到窗口第 k 格(必须是休息日)整段往后挪一格,第 k 格的休息日把最后那格吸收掉;
+//            k = 第一个休息日就是最初的「挪到下一天、下一天也练就再往后、碰到休息日为止」
+//   tail:挪到第一个休息日之前、丢掉链尾那次 / mark:只标记(丢掉没练的那次本身)
+function _shCands(days, mi, c) {
+  const M = days[mi], gone = d => d.date < c.today || (d.date === c.today && c.late);
+  const limit = addDays(c.late ? c.today : addDays(c.today, -1), SHIFT_REACH);
+  const W = [];
+  for (let j = mi + 1; j < days.length && days[j].date <= limit; j++) {
+    const X = days[j];
+    if (X.isPrivateDay || X.isMissed) continue;                  // 私密日 / 标记日:固定桩
+    if (gone(X)) { if (_shMissable(X, c)) W.push(j); continue; }  // 过去的天:同样没练的跟着挪(下一步再处理它),别的不动
+    if (c.act(X.date)) continue;                                   // 已经开练 / 打过卡:不动
+    W.push(j);
+  }
+  const mk = (src, tgt, n, kind, k) => {
+    const out = days.slice(), moves = [];
+    out[mi] = _shMarker(M);
+    for (let i = 0; i < n; i++) { out[tgt[i]] = { ..._shContent(days[src[i]]), date: days[tgt[i]].date }; moves.push([days[src[i]].date, days[tgt[i]].date]); }
+    const di = n < src.length ? src[n] : null;   // 丢掉的那次在哪天(mark = 没练的那天本身)
+    return { kind, k, days: out, moves, drop: di != null ? days[di].date : null, dropType: di != null ? (days[di].workoutType || '') : null, last: moves.length ? moves[moves.length - 1][1] : M.date };
+  };
+  const out = [];
+  W.forEach((j, k) => { if (days[j].isRest) out.push(mk([mi, ...W.slice(0, k)], W.slice(0, k + 1), k + 1, 'full', k)); });
+  const k0 = W.findIndex(j => days[j].isRest), chain = k0 < 0 ? W : W.slice(0, k0);
+  out.push(mk([mi, ...chain], chain, chain.length, chain.length ? 'tail' : 'mark'));
+  if (chain.length) out.push(mk([mi], [], 0, 'mark'));
+  return out;
+}
+// 和搭子对齐(只在已配对、读得到对方计划、开着「排计划时跟搭子对齐」时;规则和 app.js partnerAlignSolve 同一套口径:
+// 同一天同类 = 力量对健身房日、游泳对游泳日,没泳池 / 经期模式不算游泳)
+function _shAlignOn() { try { return typeof partnerAlignOn === 'function' && partnerAlignOn() && !!_ppTrain(); } catch (e) { return false; } }
+function _shAligned(d) {
+  const mk = myDayKind(d), pk = partnerKindOn(d.date), swim = S.equip.includes('泳池') && !S.periodMode;
+  return (mk === 'g' && pk === 'g') || (swim && mk === 's' && pk === 's');
+}
+function _shAlignMiss(d) {   // 这天两边有一方要练、却没对上
+  const mk = myDayKind(d), pk = partnerKindOn(d.date), swim = S.equip.includes('泳池') && !S.periodMode;
+  return (mk === 'g' || mk === 's' || pk === 'g' || (swim && pk === 's')) && !_shAligned(d);
+}
+function _shSig(d) { return d ? JSON.stringify([!!d.isRest, !!d.isMissed, !!d.isSwimDay, d.workoutType || '', (d.exercises || []).map(e => e.name)]) : ''; }
+// 某天的快照 / 指纹(计划那天 + 按日期存的勾选、重量、组次调整、RPE、泳池选择)
+function _shPick(o, dt) { const p = dt + '-', r = {}; Object.keys(o || {}).forEach(k => { if (k.startsWith(p)) r[k.slice(p.length)] = o[k]; }); return r; }
+function _shState(dt) { return { p: S.prog[dt] ? { ...S.prog[dt] } : null, w: _shPick(S.weights, dt), a: _shPick(S.adj, dt), r: _shPick(S.exRpe, dt), pl: S.poolLounger && dt in S.poolLounger ? S.poolLounger[dt] : null }; }
+function _shClear(dt) {
+  delete S.prog[dt];
+  ['weights', 'adj', 'exRpe'].forEach(k => { if (S[k]) Object.keys(S[k]).forEach(x => { if (x.startsWith(dt + '-')) delete S[k][x]; }); });
+  if (S.poolLounger) delete S.poolLounger[dt];
+}
+function _shPut(dt, st) {
+  _shClear(dt); if (!st) return;
+  if (st.p) S.prog[dt] = st.p;
+  [['weights', 'w'], ['adj', 'a'], ['exRpe', 'r']].forEach(([k, sk]) => Object.entries(st[sk] || {}).forEach(([x, v]) => { S[k] = S[k] || {}; S[k][dt + '-' + x] = v; }));
+  if (st.pl != null) { S.poolLounger = S.poolLounger || {}; S.poolLounger[dt] = st.pl; }
+}
+function _shFp(dt) {
+  const d = (S.plan && S.plan.days || []).find(x => x.date === dt);
+  const c = d ? { ...d } : null; if (c) delete c._noShift;
+  return JSON.stringify([c, _shState(dt)]);
+}
+function _shTop() { const L = (S.plan && S.plan.shifts) || []; for (let i = L.length - 1; i >= 0; i--) if (L[i].state === 'on') return L[i]; return null; }
+// 登录了就等第一份云端快照到了再算(否则拿本机旧数据顺延、再推上云,会盖掉别的设备刚打的卡)
+function _shReady() { try { return !_user || !!_cloudFirstSnap; } catch (e) { return true; } }
+let _shWaitT = null, _shWaitN = 0;
+function _shWait() { if (_shWaitT || _shWaitN >= 15) return; _shWaitN++; _shWaitT = setTimeout(() => { _shWaitT = null; autoShiftCheck(); }, 2000); }
+function autoShiftCheck() { if (S.plan && S.plan.days && S.plan.days.length) autoShiftRun(); }
+
+// 自己没练就顺延(开关「没练自动顺延」),然后看搭子有没有新顺延要跟(开关「排计划时跟搭子对齐」)。先自己、后跟随:两人同一天都没练时各自顺延就对齐了
+function autoShiftRun() {
+  if (!S.plan || !S.plan.days || !S.plan.days.length) return false;
+  if (!_shReady()) { _shWait(); return false; }
+  _shWaitN = 0;
+  const a = autoShiftOn() ? _shSelfRun() : false;
+  const b = _shFollowRun();
+  return a || b;
+}
+function _shSelfRun() {
+  const today = todayStr(), c = { today, late: _shLate(), act: _shAct };
+  const reverted = _shRevertIfLogged(today);
+  let days = S.plan.days.slice().sort((a, b) => a.date.localeCompare(b.date));
+  const first = days.findIndex(d => _shMissable(d, c));
+  if (first < 0) { if (reverted) _shAfter(); return reverted; }
+  const cap = Math.min(_shRun(days, '', '9999') + SHIFT_RUN_SLACK, SHIFT_MAX_RUN);   // 每 7 天至少 1 个休息日
+  const snapDates = days.slice(first).map(d => d.date);
+  const snap = { days: {}, st: {} };
+  snapDates.forEach(dt => { snap.days[dt] = JSON.parse(JSON.stringify(days.find(d => d.date === dt))); snap.st[dt] = _shState(dt); });
+  const where = {}; snapDates.forEach(dt => { where[dt] = dt; });   // 每天原来那次训练现在落在哪天
+  const align = _shAlignOn();
+  const steps = [], touched = new Set();
+  for (let i = first; i < days.length; i++) {
+    if (!_shMissable(days[i], c)) continue;
+    const a = addDays(days[i].date, -SHIFT_REACH);
+    // 挑挪法:先不丢课(过得了身体规则的 full 里挑);都过不了才丢一次(链尾优先,其次只标记)。
+    // 同一档里:和搭子同一天同类的天数多的优先 → 改动的天数少的优先 → 吸收的休息日靠前的优先。没有随机,同样输入同样结果
+    const cands = _shCands(days, i, c).filter(x => x.kind === 'mark' || _shOk(days, x.days, a, addDays(x.last, SHIFT_REACH), cap));
+    const win = new Set(cands.flatMap(x => x.moves.flat()).concat(days[i].date));
+    const sc = x => align ? x.days.filter(d => win.has(d.date) && _shAligned(d)).length : 0;
+    const ch = x => x.days.filter((d, n) => win.has(d.date) && _shSig(d) !== _shSig(days[n])).length;
+    const rank = x => [x.kind === 'full' ? 0 : 1, -sc(x), x.kind === 'full' ? ch(x) : 0, x.kind === 'full' ? x.k : x.kind === 'tail' ? 0 : 1];
+    const pick = cands.map(x => [rank(x), x]).sort((p, q) => { for (let n = 0; n < 4; n++) if (p[0][n] !== q[0][n]) return p[0][n] - q[0][n]; return 0; })[0][1];
+    // 按日期存的状态跟着内容搬(源都没练过,只有手改的组数次数 / 重量这些);丢掉的那次清掉(快照里留着)
+    const bag = {};
+    pick.moves.forEach(([f]) => { bag[f] = _shState(f); });
+    if (pick.drop) _shClear(pick.drop);
+    pick.moves.forEach(([f]) => _shClear(f));
+    pick.moves.forEach(([f, t]) => _shPut(t, bag[f]));
+    const inv = {}; pick.moves.forEach(([f, t]) => { inv[f] = t; });
+    Object.keys(where).forEach(o => { const cur = where[o]; if (cur == null) return; if (cur in inv) where[o] = inv[cur]; else if (cur === pick.drop) where[o] = null; });
+    touched.add(days[i].date); pick.moves.forEach(([f, t]) => { touched.add(f); touched.add(t); });
+    steps.push({ date: days[i].date, dropType: pick.dropType });
+    days = pick.days;
+  }
+  // 标记日:原计划按这一批之前的样子记,missedTo = 那次训练最后落到哪天
+  steps.forEach(st => {
+    const d = days.find(x => x.date === st.date), o = snap.days[st.date];
+    if (o) d.missedOrig = { type: o.workoutType || '', n: (o.exercises || []).length, ...(o.isSwimDay ? { swim: true } : {}) };
+    d.missedTo = where[st.date] || null;
+  });
+  S.plan.days = days;
+  const b = { id: 'sh-' + today + '-' + steps[0].date, at: today, missed: steps.map(s => s.date), shifted: steps.filter(s => where[s.date]).length, dropped: steps.filter(s => s.dropType != null).map(s => s.dropType), state: 'on', snap: { days: {}, st: {} }, post: {} };
+  touched.forEach(dt => { b.snap.days[dt] = snap.days[dt]; b.snap.st[dt] = snap.st[dt]; b.post[dt] = _shFp(dt); });
+  if (align) b.align = { nm: _ppName(), off: days.filter(d => touched.has(d.date) && d.date >= today && _shAlignMiss(d)).length };
+  S.plan.shifts = (S.plan.shifts || []).concat(b).slice(-6);
+  _shAfter();
+  return true;
+}
+function _shAfter() { saveState(); render(); if (typeof renderStats === 'function') try { renderStats(); } catch (e) { } }
+// 撤销 / 撤回:挪过去的天已经开练、或者顺延后计划又改过 → 不动,返回原因
+function _shRestore(b, noShift) {
+  if (!b || !b.snap) return '这次顺延已经没法撤销了';
+  const dates = Object.keys(b.snap.days), idx = dt => S.plan.days.findIndex(d => d.date === dt);
+  if (dates.some(dt => idx(dt) < 0)) return '计划已经换过，没法撤销';
+  if (dates.some(dt => !b.missed.includes(dt) && _shAct(dt))) return '挪过去的训练已经开练了，没法撤销';
+  if (Object.keys(b.post || {}).some(dt => _shFp(dt) !== b.post[dt])) return '顺延之后又改过计划，没法撤销';
+  dates.forEach(dt => { S.plan.days[idx(dt)] = JSON.parse(JSON.stringify(b.snap.days[dt])); _shPut(dt, b.snap.st[dt]); });
+  if (noShift) b.missed.forEach(dt => { S.plan.days[idx(dt)]._noShift = true; });
+  delete b.snap; delete b.post;
+  return '';
+}
+// 顺延掉的那天后来有了打卡记录(比如另一台设备补的),挪过去的天都还没动 → 自动撤回
+function _shRevertIfLogged(today) {
+  const b = _shTop(); if (!b || !b.snap) return false;
+  const hit = b.missed.filter(dt => LOG.some(l => l.date === dt) || Object.values(S.prog[dt] || {}).some(Boolean));
+  if (!hit.length || _shRestore(b, false)) return false;
+  b.state = 'reverted'; b.seen = true;
+  const msg = `${hit.map(dt => _shWd(dt, today)).join('、')}补了打卡，那次顺延已经撤回`;
+  if (typeof uiNotice === 'function') uiNotice(msg); else showToast(msg);
+  return true;
+}
+function autoShiftUndo() {
+  const b = _shTop(); if (!b) return;
+  const why = _shRestore(b, true);
+  if (why) { showToast(why); return; }
+  b.state = 'undone'; b.seen = true;
+  _shAfter();
+  showToast('已撤销顺延 · 那天练过的话，点开那天解锁后补打卡');
+}
+function autoShiftDismiss() { const b = _shTop(); if (!b) return; b.seen = true; saveState(); render(); }
+window.autoShiftUndo = autoShiftUndo; window.autoShiftDismiss = autoShiftDismiss;
+const _SH_WD = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'], _SH_CN = ['零', '一', '两', '三', '四', '五', '六', '七'];
+function _shWd(dt, today) { return dt === today ? '今天' : _SH_WD[new Date(dt + 'T12:00:00').getDay()]; }
+function _shText(b) {
+  const parts = [b.missed.map(dt => _shWd(dt, b.at)).join('、') + '没打卡'];
+  if (b.shifted) parts.push(`后面的训练已顺延${_SH_CN[b.shifted] || b.shifted}天`);
+  if (b.dropped.length) parts.push(`排不开，这周少练${_SH_CN[b.dropped.length] || b.dropped.length}次`);
+  if (b.align) parts.push(b.align.off ? `和 ${b.align.nm} 对不上 ${b.align.off} 天` : `已和 ${b.align.nm} 对齐`);
+  return { main: parts.join('，'), hint: '其实练了只是忘了打卡？点撤销，再去补打卡', id: 'shift-notice', undo: 'autoShiftUndo()', dismiss: 'autoShiftDismiss()', tag: '顺延' };
+}
+// 今天页顶上的提示(_todayNotices):自己最近一批顺延 / 最近一次跟着搭子对齐,各一条;没点「知道了」、三天内
+function _shNoticeHtml(t) {
+  return skinTpl('shiftNotice', t, t => `<div class="notice" id="${t.id}" role="status"><span>${_escHtml(t.main)}。${_escHtml(t.hint)}</span><button type="button" class="link-btn u" onclick="${t.undo}">撤销</button><button type="button" class="link-btn" onclick="${t.dismiss}">知道了</button></div>`);
+}
+function autoShiftNoticeHtml(today) {
+  let h = '';
+  const b = autoShiftOn() ? _shTop() : null;
+  if (b && !b.seen && b.at >= addDays(today, -2)) h += _shNoticeHtml(_shText(b));
+  const f = _shFollowTop();
+  if (f && !f.seen && f.at >= addDays(today, -2)) h += _shNoticeHtml({ main: `${f.nm || '搭子'} 没去成，后面的训练跟着对齐了`, hint: '', id: 'follow-notice', undo: 'autoShiftFollowUndo()', dismiss: 'autoShiftFollowDismiss()', tag: '对齐' });
+  return h;
+}
+
+// ── 跟着搭子顺延(2026-10-29 Cait「有搭子的情况下仍然要对齐」)──
+// 对方共享文档 train.shifts = 对方最近几批顺延 [{id, at, undone?}](coach.js coachSharedTraining,只有批次 id 和日期)。
+// 读到一个新的、还有效的批次 → 按「对齐搭子的训练日」同一套算法(app.js partnerAlignDraftCalc:只挪今天之后、没锁、没开练、
+// 没打卡、不是私密日的训练日,每周天数和分化顺序不变)自动采纳,今天页提示可撤销。每个对方批次只跟一次(S.shiftFollowed,随设置云同步)。
+// 对方撤销了那一批、我还没开练 → 跟着撤回。我跟随产生的改动记在 S.plan.follows,不算我的顺延批次、不进我共享的 shifts → 对方不会再跟回来。
+// 两人同一天都没练(对方没练的那天我也没练 / 也顺延了):各自顺延就已经对齐,不跟。
+const SH_ID_RE = /^sh-\d{4}-\d\d-\d\d-(\d{4}-\d\d-\d\d)$/;
+function _shPartnerShifts() {
+  const t = _shAlignOn() ? _ppTrain() : null;
+  return t && Array.isArray(t.shifts) ? t.shifts.filter(x => x && typeof x.id === 'string' && SH_ID_RE.test(x.id) && typeof x.at === 'string') : [];
+}
+function _shFollowTop() { const L = (S.plan && S.plan.follows) || []; for (let i = L.length - 1; i >= 0; i--) if (L[i].state === 'on') return L[i]; return null; }
+function _shFollowRun() {
+  if (!S.plan || !S.plan.days || !S.plan.days.length) return false;
+  const list = _shPartnerShifts(); if (!list.length) return false;
+  const today = todayStr(), nm = _ppName(), done = new Set(S.shiftFollowed || []);
+  let changed = false, seenNew = false;
+  // 对方撤销了我跟过的那一批 → 我这边还没开练、也没再改过就撤回
+  ((S.plan && S.plan.follows) || []).filter(f => f.state === 'on').forEach(f => {
+    const p = list.find(x => x.id === f.pid);
+    if (!p || !p.undone || _shRestore(f, false)) return;
+    f.state = 'reverted'; f.seen = true; changed = true;
+    if (typeof uiNotice === 'function') uiNotice(`${nm} 撤销了那次顺延，你的训练也跟着撤回了`);
+  });
+  list.filter(p => !p.undone && !done.has(p.id)).sort((x, y) => x.id.localeCompare(y.id)).forEach(p => {
+    done.add(p.id); seenNew = true;
+    if (p.at < addDays(today, -2)) return;                 // 配对前 / 很久以前的批次:只记下,不跟
+    const md = p.id.match(SH_ID_RE)[1], mine = S.plan.days.find(d => d.date === md);
+    if (mine && (mine.isMissed || (!mine.isRest && !mine.isPrivateDay && !_shAct(md)))) return;   // 那天我也没练:各自顺延
+    const dr = typeof partnerAlignDraftCalc === 'function' ? partnerAlignDraftCalc() : { none: true };
+    if (dr.none || !dr.moves.length) return;               // 跟随后计划不会变:不提示
+    const idx = ds => S.plan.days.findIndex(x => x.date === ds), dates = [...new Set(dr.moves.flat())];
+    const f = { pid: p.id, at: today, nm, missed: [], state: 'on', snap: { days: {}, st: {} }, post: {} };
+    dates.forEach(ds => { f.snap.days[ds] = JSON.parse(JSON.stringify(S.plan.days[idx(ds)])); f.snap.st[ds] = _shState(ds); });
+    dr.moves.forEach(([a, b]) => { S.plan.days[idx(b)] = { ...JSON.parse(JSON.stringify(f.snap.days[a])), date: b }; _shPut(b, f.snap.st[a]); });
+    dates.forEach(ds => { f.post[ds] = _shFp(ds); });
+    S.plan.follows = (S.plan.follows || []).concat(f).slice(-6);
+    changed = true;
+  });
+  if (seenNew) S.shiftFollowed = [...done].slice(-20);
+  if (changed) _shAfter(); else if (seenNew) saveState();
+  return changed;
+}
+function autoShiftFollowUndo() {
+  const f = _shFollowTop(); if (!f) return;
+  const why = _shRestore(f, false);
+  if (why) { showToast(why.replace('顺延', '对齐')); return; }
+  f.state = 'undone'; f.seen = true;
+  _shAfter();
+  showToast('已撤销，回到跟着对齐之前');
+}
+function autoShiftFollowDismiss() { const f = _shFollowTop(); if (!f) return; f.seen = true; saveState(); render(); }
+window.autoShiftFollowUndo = autoShiftFollowUndo; window.autoShiftFollowDismiss = autoShiftFollowDismiss;
+// 标记日在今天页 / 历史里的一句话
+function autoShiftMissedLine(d) {
+  const o = d.missedOrig || {};
+  return `原计划「${_escHtml(o.type || '训练')}」${o.n ? ` · ${o.n} 个动作` : ''}，${d.missedTo ? `已顺延到 ${fmtDate(d.missedTo)}` : '排不开，这周少练一次'}。`;
+}
+// 给 AI 教练的事实:最近 14 天自动顺延过哪几天(标记日不会是私密日;coach.js 再按门控过一遍)
+function autoShiftFacts(back = 14) {
+  const from = addDays(todayStr(), -back);
+  return ((S.plan && S.plan.days) || []).filter(d => d.isMissed && d.date >= from)
+    .map(d => ({ date: d.date, planned: (d.missedOrig && d.missedOrig.type) || '', result: d.missedTo ? '顺延到 ' + d.missedTo : '没排开，这周少练一次' }));
+}
+// 打开 app(loadState → autoAlignPlan)、切回前台、23:00 那一刻都检查一次
+let _shTimerId = null;
+function _shArm() {
+  clearTimeout(_shTimerId);
+  const n = new Date(), t = new Date(n.getTime()); t.setHours(SHIFT_HOUR, 0, 1, 0);
+  if (t <= n) t.setDate(t.getDate() + 1);
+  _shTimerId = setTimeout(() => { autoShiftCheck(); _shArm(); }, Math.min(t - n, 2147000000));
+}
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { autoShiftCheck(); _shArm(); } });
+_shArm();
+
 // ══ Render ══════════════════════════════════════════════
 function isDone(day) {
   if (!day || !day.exercises.length) return false;
@@ -2439,6 +2750,7 @@ function stepWeight(date, i, dir) {
 function _todayNotices(sel, today) {
   let h = '';
   if (S.planStale) h += `<div class="stale-bar"><span>训练设置改过了，计划还是按旧设置排的</span><button class="regen-btn" onclick="applyStaleSettings()">按新设置重排</button></div>`;
+  h += autoShiftNoticeHtml(today);   // 没练自动顺延:最近一次的提示 + 撤销
   if (typeof _todayNotice !== 'undefined' && _todayNotice) h += `<div class="notice" role="status"><span>${_escHtml(_todayNotice)}</span><button class="link-btn" onclick="uiNotice('')">知道了</button></div>`;
   if (sel && sel.date !== today) h += `<div class="notice"><span>正在看 ${fmtDate(sel.date)} ${sel.date.slice(5).replace('-', '/')}</span><button class="link-btn u" onclick="calGoToday()">回到今天</button></div>`;
   const isIos = /iphone|ipad|ipod/.test((navigator.userAgent || '').toLowerCase()) || (/macintosh/i.test(navigator.userAgent || '') && navigator.maxTouchPoints > 1);   // iPadOS 的 UA 写的是 Macintosh
@@ -2625,6 +2937,7 @@ function render() {
     h += SKIN_TPL.sport.todayBody({ sel, today, planDays, tip });
   } else {
   if (typeof coachTodayNoteHtml === 'function') h += coachTodayNoteHtml(sel ? sel.date : today);
+  if (typeof ptTodayHtml === 'function') h += ptTodayHtml(sel ? sel.date : today);   // 搭子今天练到哪(app.js「搭子」节)
 
   if (sel && !sel.isRest) {
     const lg = LOG.find(l => l.date === sel.date);
@@ -2699,8 +3012,8 @@ function render() {
       }
     }
   } else if (sel && sel.isRest) {
-    h += `<div class="wk-head"><div class="wk-title">休息日</div><div class="wk-meta"><span>${fmtDate(sel.date)}</span></div></div><div class="hint">好好恢复，明天继续。</div>`;
-    h += typeof renderRecoveryModule === 'function' ? renderRecoveryModule(sel) : '';
+    h += `<div class="wk-head"><div class="wk-title">${sel.isMissed ? '没练（已顺延）' : '休息日'}</div><div class="wk-meta"><span>${fmtDate(sel.date)}</span></div></div><div class="hint">${sel.isMissed ? autoShiftMissedLine(sel) : '好好恢复，明天继续。'}</div>`;
+    h += typeof renderRecoveryModule === 'function' && !sel.isMissed ? renderRecoveryModule(sel) : '';
   }
   if (tip) h += `<div class="tip" style="white-space:pre-line">${_escHtml(tip)}</div>`;
   if (_xMode && _ownerSession() && hasGoal('女性曲线')) {
@@ -2710,6 +3023,7 @@ function render() {
   mainEl.innerHTML = h;
   if (typeof skinAfterRender === 'function') skinAfterRender('today');
   _wmSync();
+  if (typeof partnerLiveTick === 'function') partnerLiveTick();   // 搭子看得到我练到哪:进度变了排一次推送(节流)
 
   if ('setAppBadge' in navigator) {
     const todayPlan = S.plan?.days.find(d => d.date === today);
@@ -4852,6 +5166,7 @@ function wmClose() {
     if (m) m.classList.remove('open');
     if (typeof stopTimer === 'function') stopTimer();
     _xGuidedStop();
+    if (typeof partnerLiveTick === 'function') partnerLiveTick();
 }
 function renderGuided() {
   const date = _wmDate, day = S.plan && S.plan.days.find(d => d.date === date), card = document.getElementById('wm-card');
@@ -4896,7 +5211,7 @@ function renderGuided() {
   card.innerHTML = skinTpl('guided', { date, idx: _wmIdx, set: _wmSet, side: _wmSide, list, ex, simple, sets, reps, needW, lastW, e1rm, curW, dispName, dispNote, timed, running, sideLbl, adjOpen, aiOn, canSwap, unitLbl, kgVal }, () => `<div class="wm-top"><span class="sheet-eyebrow">引导训练 · 动作 ${_wmIdx + 1}/${list.length}</span><button class="ex-modal-close" onclick="wmClose()" aria-label="关闭引导训练">关闭</button></div>
   <h2 class="wm-name">${dispName}</h2>
   <p class="tag">${(ex.muscle || []).join(' · ') || (ex.isWarmup ? '热身' : ex.isStretch ? '拉伸' : '')}</p>
-  <div class="wm-set">${simple ? `${reps} ${ex.unit}` : `第 <b>${_wmSet}</b> / ${sets} 组 · 目标 ${reps} ${ex.unit}${ex.bi ? '/每侧' : ''}`}</div>
+  <div class="wm-set">${simple ? `${reps} ${ex.unit}` : `第 <b>${_wmSet}</b> / ${sets} 组 · 目标 ${reps} ${ex.unit}${ex.bi ? '/每侧' : ''}`}</div>${date === todayStr() && typeof ptWithHtml === 'function' ? ptWithHtml('g') : ''}
   ${needW ? `<div class="wm-weight"><label for="wm-weight">重量</label><input id="wm-weight" type="number" inputmode="decimal" step="0.5" value="${curW || ''}" placeholder="${lastW ? lastW.weight : ''}"><span>kg${lastW ? ' · 上次 ' + lastW.weight : ''}${e1rm ? ' · 1RM≈' + e1rm : ''}</span></div>` : ''}
   <div class="actions wm-acts"><button type="button" class="link-btn" aria-expanded="${adjOpen}" onclick="wmToggleAdj()">${adjOpen ? '▴ 收起' : '▾ 调整'}</button>${canSwap ? `<button type="button" class="link-btn swap-btn" onclick="swapExercise('${date}',${i})">换 / 划掉</button>` : `<button type="button" class="link-btn" onclick="openSwapSheet('${date}',${i})">划掉</button>`}${aiOn ? `<button type="button" class="link-btn" onclick="wmClose();coachAskAbout('${_q(ex.name)}')">问教练</button>` : ''}</div>
   ${adjOpen ? `<div class="wm-edit">${simple ? '' : _stepRowHtml('组', `${sets}`, `adj('${date}',${i},'s',-1)`, `adj('${date}',${i},'s',1)`, sets <= 1)}${_stepRowHtml(unitLbl, `${reps}${ex.bi ? '<span class="step-unit"> /每侧</span>' : ''}`, `adj('${date}',${i},'r',-1)`, `adj('${date}',${i},'r',1)`, reps <= (ex.unit === '秒' ? 5 : 1))}${needW ? `<div class="stepper"><span class="step-lbl">kg</span><button type="button" class="step-btn" onclick="stepWeight('${date}',${i},-1)" aria-label="重量减少">−</button><span class="step-val">${kgVal}</span><button type="button" class="step-btn" onclick="stepWeight('${date}',${i},1)" aria-label="重量增加">+</button></div>` : ''}</div>` : ''}
@@ -4906,6 +5221,7 @@ function renderGuided() {
   const wEl = document.getElementById('wm-weight');
   if (wEl) wEl.addEventListener('change', () => { const v = parseFloat(wEl.value); if (isFinite(v) && v > 0) setWeight(date, _wmIdx, v); });
   if (typeof skinAfterRender === 'function') skinAfterRender('guided');   // 运动风格:卡里的组间倒计时接上计时器
+  if (typeof partnerLiveTick === 'function') partnerLiveTick();   // 引导里第几组变了:搭子那边跟着变
 }
 // 引导卡原地重画:焦点留在刚点的那个按钮上(键盘 / 读屏不丢位置),滚动位置不动
 function _wmRerender() {

@@ -632,6 +632,43 @@ html[data-skin="sport"] #coach-quick .sp-cq-row .send::before {
 }
 html[data-skin="sport"] #coach-quick .sp-cq-row .send:disabled { opacity: .4; }
 html[data-skin="sport"] #coach-quick .cq-foot { font-family: var(--sp-sans); font-weight: 400; font-size: 12px; letter-spacing: 0; line-height: 1.5; color: var(--faint); }
+/* —— 搭子卡(skin-sport.js ptToday):名字首字墨圆、状态胶囊(在练 = 墨底;练完 = 荧光底带勾)、练什么大字、进度条、回应胶囊 —— */
+html[data-skin="sport"] .sp-pt { gap: 10px; }
+html[data-skin="sport"] .sp-pt-top { display: flex; align-items: center; gap: 12px; }
+html[data-skin="sport"] .sp-pt-av { width: 40px; height: 40px; flex: none; border-radius: 50%; background: var(--sp-on); color: var(--sp-on-fg); display: flex; align-items: center; justify-content: center; font-family: var(--sp-num); font-weight: 800; font-size: 20px; }
+html[data-skin="sport"] .sp-pt-who { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+html[data-skin="sport"] .sp-pt-who b { font-family: var(--sp-cjk); font-weight: 700; font-size: 17px; line-height: 1.25; overflow-wrap: anywhere; }
+html[data-skin="sport"] .sp-pt-st { flex: none; min-height: 30px; padding: 0 12px; box-sizing: border-box; border: 1.5px solid var(--line); border-radius: 999px; display: inline-flex; align-items: center; gap: 6px; font-family: var(--sp-sans); font-weight: 700; font-size: 13px; color: var(--muted); white-space: nowrap; }
+html[data-skin="sport"] .sp-pt-st.training { border-color: var(--sp-on); background: var(--sp-on); color: var(--sp-on-fg); }
+html[data-skin="sport"] .sp-pt-st.training i { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+html[data-skin="sport"] .sp-pt-st.done { border-color: #d4ff3d; background: #d4ff3d; color: #111111; }
+html[data-skin="sport"] .sp-pt-type { font-family: var(--sp-cjk); font-weight: 900; font-size: 24px; line-height: 1.15; overflow-wrap: anywhere; }
+html[data-skin="sport"] .sp-pt-prog { display: flex; align-items: center; gap: 10px; }
+html[data-skin="sport"] .sp-pt-bar { flex: 1; min-width: 0; height: 8px; border-radius: 4px; background: var(--sp-track); overflow: hidden; display: block; }
+html[data-skin="sport"] .sp-pt-bar > i { display: block; height: 100%; border-radius: 4px; background: var(--sp-fill); }
+html[data-skin="sport"] .sp-pt-n { font-size: 13px; color: var(--muted); white-space: nowrap; }
+html[data-skin="sport"] .sp-pt-n b { font-family: var(--sp-num); font-weight: 800; font-size: 18px; color: var(--ink); }
+html[data-skin="sport"] .sp-pt-now { font-size: 14px; font-weight: 600; line-height: 1.45; }
+html[data-skin="sport"] .sp-pt-rx { padding: 8px 12px; border-radius: 14px; background: var(--sp-soft); display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 10px; font-size: 14px; }
+html[data-skin="sport"] .sp-pt-rx-k { font-size: 13px; color: var(--muted); }
+html[data-skin="sport"] .sp-pt-rx b { font-weight: 700; }
+html[data-skin="sport"] .sp-pt-words { display: flex; flex-wrap: wrap; gap: 8px; }
+html[data-skin="sport"] .sp-pt-words .chip { padding: 0 14px; font-size: 14px; font-weight: 600; }
+/* 一起练:焦点卡 / 引导卡(荧光底)顶上的墨字小条 */
+html[data-skin="sport"] .sp-pt-with { align-self: flex-start; max-width: 100%; min-height: 32px; padding: 4px 12px; box-sizing: border-box; border-radius: 999px; background: rgba(17, 17, 17, .1); color: #111111; display: inline-flex; align-items: center; gap: 8px; font-family: var(--sp-sans); font-size: 14px; font-weight: 700; line-height: 1.3; }
+html[data-skin="sport"] .sp-pt-with[hidden] { display: none; }
+html[data-skin="sport"] .sp-pt-dot { width: 8px; height: 8px; flex: none; border-radius: 50%; background: #111111; }
+/* 搭子卡:TA 在「共享给 TA」里关了实时进度 —— 浅灰小字一行,不画进度 */
+html[data-skin="sport"] .sp-pt-off { font-weight: 500; font-size: 13px; color: var(--muted); }
+
+/* 没练自动顺延的提示:白卡里一句粗体 + 小字说明,荧光绿「顺延」小签只做底色;撤销 / 知道了靠右 */
+html[data-skin="sport"] .sp-shift { flex-wrap: wrap; align-items: flex-end; row-gap: 0; padding: 12px 4px 2px 14px; }
+html[data-skin="sport"] .sp-shift-t { flex: 1 1 220px; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
+html[data-skin="sport"] .sp-shift-t b { font-weight: 700; font-size: 15px; line-height: 1.4; }
+html[data-skin="sport"] .sp-shift-tag { min-height: 22px; padding: 0 9px; border-radius: 999px; background: var(--sp-neon); color: #111111; display: inline-flex; align-items: center; font-size: 12px; font-weight: 700; }
+html[data-skin="sport"] .sp-shift-h { font-size: 13px; line-height: 1.45; color: var(--muted); }
+html[data-skin="sport"] .sp-shift-a { flex: none; margin-left: auto; display: flex; }
+html[data-skin="sport"] .sp-shift-a .link-btn { padding: 0 12px; text-align: center; }
 /* —— 10 今天 · 写在这行上面 —— */
 
 /* ══ 20 计划 ═══════════════════════════════════════════════════════════ */
@@ -746,6 +783,39 @@ html[data-skin="sport"] #plan-props .sp-pp { padding: 10px 6px 10px 14px; border
 html[data-skin="sport"] #plan-props .sp-pp-tag { flex: none; min-height: 26px; padding: 0 9px; border-radius: 999px; background: var(--sp-neon); color: #111111; display: inline-flex; align-items: center; font-family: var(--sp-sans); font-size: 12px; font-weight: 700; }
 html[data-skin="sport"] #plan-props .pp-t { flex: 1; min-width: 0; font-family: var(--sp-sans); font-size: 14px; line-height: 1.45; color: var(--ink); }
 html[data-skin="sport"] #plan-props .link-btn { flex: none; min-height: 44px; padding: 0 12px; color: var(--ink); font-family: var(--sp-sans); font-size: 14px; font-weight: 700; letter-spacing: 0; text-decoration: none; }
+/* 02 末尾「搭子」:圆点小标题 / 浅灰框「重合 →」/ 开关 / 整行描边胶囊「对齐搭子的训练日」;预览 = 墨色粗边卡片(同 AI 草稿),采纳后一行浅灰「已对齐 · 撤销」 */
+html[data-skin="sport"] #plan-partner { display: flex; flex-direction: column; gap: 10px; margin-top: 2px; padding-top: 14px; border-top: 1px solid var(--line); }
+html[data-skin="sport"] .sp-pt-h { display: flex; align-items: center; gap: 8px; }
+html[data-skin="sport"] .sp-pt-dot { flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--sp-fill); }
+html[data-skin="sport"] .sp-pt-h .sub-label { font-size: 14px; font-weight: 700; color: var(--ink); }
+html[data-skin="sport"] .sp-pt-ov { padding: 10px 12px; border-radius: 12px; background: var(--sp-soft); color: var(--ink); }
+html[data-skin="sport"] .sp-pt-ov .faint { color: var(--muted); }
+html[data-skin="sport"] #plan-partner .toggle-row { border-top: 0; }
+html[data-skin="sport"] .sp-pt-go { min-height: 48px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; border-color: var(--ink); color: var(--ink); font-weight: 700; font-size: 15px; }
+html[data-skin="sport"] .sp-pt-go:disabled { border-color: var(--line); }
+html[data-skin="sport"] .sp-pt-rv { padding: 12px 14px; border: 2px solid var(--ink); border-radius: 16px; gap: 10px; animation: sp-in .25s ease-out; }
+html[data-skin="sport"] .sp-pt-rvh { display: flex; align-items: center; gap: 10px; font-family: var(--sp-sans); font-size: 14px; font-weight: 600; color: var(--muted); }
+html[data-skin="sport"] .sp-pt-tag { flex: none; min-height: 26px; padding: 0 9px; border-radius: 999px; background: var(--sp-neon); color: #111111; display: inline-flex; align-items: center; font-size: 12px; font-weight: 700; }
+html[data-skin="sport"] .sp-pt-rows { display: flex; flex-direction: column; }
+html[data-skin="sport"] .sp-pt-row { display: grid; grid-template-columns: 52px minmax(0, 1fr); column-gap: 12px; align-items: center; padding: 8px 0; border-top: 1px solid var(--line); }
+html[data-skin="sport"] .sp-pt-row:first-child { border-top: 0; }
+html[data-skin="sport"] .sp-pt-d { display: flex; flex-direction: column; align-items: flex-start; font-family: var(--sp-sans); font-size: 12px; color: var(--muted); line-height: 1.3; }
+html[data-skin="sport"] .sp-pt-d b { font-family: var(--sp-num); font-weight: 800; font-size: 18px; color: var(--ink); }
+html[data-skin="sport"] .sp-pt-c { display: flex; flex-direction: column; gap: 2px; min-width: 0; font-family: var(--sp-sans); font-size: 15px; line-height: 1.4; color: var(--ink); overflow-wrap: anywhere; }
+html[data-skin="sport"] .sp-pt-c s { color: var(--muted); text-decoration-thickness: 1.5px; }
+html[data-skin="sport"] .sp-pt-c small { font-size: 13px; color: var(--muted); }
+html[data-skin="sport"] .sp-pt-note { font-family: var(--sp-sans); font-size: 13px; line-height: 1.55; color: var(--muted); }
+html[data-skin="sport"] .sp-pt-rv .btn-row .btn-primary { min-height: 48px; font-size: 16px; }
+html[data-skin="sport"] .sp-pt-rv .btn-row .btn-line { min-height: 48px; }
+html[data-skin="sport"] .sp-pt-done { display: flex; align-items: center; gap: 10px; padding: 2px 4px 2px 12px; border-radius: 14px; background: var(--sp-soft); color: var(--ink); }
+html[data-skin="sport"] .sp-pt-ok { flex: none; width: 22px; height: 22px; border-radius: 50%; background: var(--sp-neon); color: #111111; display: inline-flex; align-items: center; justify-content: center; }
+html[data-skin="sport"] .sp-pt-dt { flex: 1; min-width: 0; line-height: 1.45; padding: 8px 0; }
+html[data-skin="sport"] .sp-pt-done .link-btn { flex: none; padding: 0 12px; }
+/* 周历「和搭子同练」:日格圆点(上面 .co-day .dd)同一套;AI 排草稿里跟搭子对齐了几天 = 浅灰一行 */
+html[data-skin="sport"] #co-plan-body .co-align { padding: 8px 12px; border-radius: 12px; background: var(--sp-soft); font-family: var(--sp-sans); font-size: 14px; line-height: 1.5; color: var(--ink); }
+/* 搭子关了训练计划:置灰的「对齐搭子的训练日」下面一行原因 */
+html[data-skin="sport"] .sp-pt-why { margin-top: -4px; padding: 0 4px; }
+
 /* —— 20 计划 · 写在这行上面 —— */
 
 /* ══ 30 记录 ═══════════════════════════════════════════════════════════ */
@@ -973,6 +1043,35 @@ html[data-skin="sport"] #hist-modal .hist-note { padding: 2px 0 2px 10px; border
 html[data-skin="sport"] #hist-modal .hist-empty { padding: 16px; border-radius: 18px; background: var(--sp-card); font-family: var(--sp-sans); font-size: 14px; color: var(--muted); }
 /* 历史详情:有实际用时时多一格,四格排成 2 × 2 */
 html[data-skin="sport"] #hist-modal .sp-hm-s.n4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+/* —— 搭子卡(skin-sport.js ptLog):荧光底大数字「你俩连续周数」+ 本周两条进度;TA 最近的打卡(日期块 + 回应胶囊)—— */
+html[data-skin="sport"] #log .sp-ptl-top { display: grid; grid-template-columns: minmax(0, 104px) minmax(0, 1fr); gap: 12px; }
+html[data-skin="sport"] #log .sp-ptl-big { padding: 12px; border-radius: 16px; background: #d4ff3d; color: #111111; display: flex; flex-direction: column; justify-content: space-between; gap: 4px; }
+html[data-skin="sport"] #log .sp-ptl-big .bignum { font-family: var(--sp-num); font-weight: 800; font-size: 46px; line-height: .95; }
+html[data-skin="sport"] #log .sp-ptl-big .biglbl { margin: 0; font-family: var(--sp-sans); font-size: 13px; line-height: 1.3; letter-spacing: 0; font-weight: 600; color: var(--sp-neon-muted); }
+html[data-skin="sport"] #log .sp-ptl-wk { min-width: 0; display: flex; flex-direction: column; justify-content: center; gap: 8px; }
+html[data-skin="sport"] #log .sp-ptl-h { font-size: 13px; color: var(--faint); }
+html[data-skin="sport"] #log .sp-ptl-r { display: grid; grid-template-columns: minmax(0, 52px) minmax(0, 1fr) auto; column-gap: 8px; align-items: center; font-size: 14px; }
+html[data-skin="sport"] #log .sp-ptl-r .k { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+html[data-skin="sport"] #log .sp-ptl-r b { font-family: var(--sp-num); font-weight: 800; font-size: 16px; }
+html[data-skin="sport"] #log .sp-ptl-rows { display: flex; flex-direction: column; }
+html[data-skin="sport"] #log .sp-ptl-row { padding: 8px 0; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 8px; }
+html[data-skin="sport"] #log .sp-ptl-row:first-child { padding-top: 0; border-top: 0; }
+html[data-skin="sport"] #log .sp-ptl-rt { display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; column-gap: 12px; align-items: center; }
+html[data-skin="sport"] #log .sp-ptl-rt .sp-ld { display: flex; flex-direction: column; align-items: center; line-height: 1.05; }
+html[data-skin="sport"] #log .sp-ptl-rt .sp-ld b { font-family: var(--sp-num); font-weight: 800; font-size: 24px; }
+html[data-skin="sport"] #log .sp-ptl-rt .sp-ld i { font-family: var(--sp-num); font-style: normal; font-weight: 600; font-size: 12px; letter-spacing: .1em; color: var(--faint); }
+html[data-skin="sport"] #log .sp-ptl-rt .sp-lm { min-width: 0; display: flex; flex-direction: column; }
+html[data-skin="sport"] #log .sp-ptl-rt .lw { font-family: var(--sp-cjk); font-weight: 700; font-size: 15px; line-height: 1.35; }
+html[data-skin="sport"] #log .sp-ptl-rt :is(.lt, .sp-ptl-mine) { font-family: var(--sp-sans); font-size: 13px; color: var(--muted); }
+html[data-skin="sport"] #log .sp-ptl-row > .sp-pt-words { padding-left: 56px; }
+/* 我的日志行下面:搭子对这次打卡的回应 */
+html[data-skin="sport"] #log-list .sp-ptl-rx { margin: -2px 0 10px 56px; padding: 6px 12px; border-radius: 12px; background: var(--sp-soft); display: flex; flex-wrap: wrap; gap: 2px 8px; font-family: var(--sp-sans); font-size: 13px; color: var(--muted); }
+html[data-skin="sport"] #log-list .sp-ptl-rx b { font-weight: 700; color: var(--ink); }
+/* 搭子卡:TA 关了连续周数 / 打卡记录 —— 浅灰框一行「你俩连续周数 · TA 没共享」 */
+html[data-skin="sport"] #log .sp-ptl-off { min-height: 44px; padding: 8px 12px; box-sizing: border-box; border-radius: 14px; background: var(--sp-soft); display: flex; align-items: center; justify-content: space-between; gap: 10px; font-family: var(--sp-sans); font-size: 14px; }
+html[data-skin="sport"] #log .sp-ptl-off .k { color: var(--muted); }
+html[data-skin="sport"] #log .sp-ptl-off b { font-weight: 700; color: var(--ink); }
+
 /* —— 30 记录 · 写在这行上面 —— */
 
 /* ══ 40 教练 ═══════════════════════════════════════════════════════════ */
@@ -1108,6 +1207,52 @@ html[data-skin="sport"] .sp-memnote-go { flex: none; padding: 0 12px; color: var
    用输入条整体的 :focus-within,不只看文本框:点「发送」时焦点从文本框挪到按钮上,只看文本框的话按下那一刻输入条往上跳,这一下就点空了 */
 html[data-skin="sport"] body.has-composer:has(#composer:focus-within) .tabbar { display: none; }
 html[data-skin="sport"] body.has-composer:has(#composer:focus-within) #composer { bottom: env(safe-area-inset-bottom); }
+/* ── AI 结果:改一下 / 聊聊 / 逐条取舍 / 撤销(教练页、记录页复盘、计划 08、换动作面板、今天页的打卡反馈和教练的话都有,所以不限在 #coach-content)── */
+/* 「改一下」「聊聊」= 两个描边胶囊;版本切换一行;输入框浅灰圆角,发送 2 : 取消 1;改的时候荧光绿小点 + 墨字 */
+html[data-skin="sport"] .sp-rvw { display: flex; flex-direction: column; gap: 8px; text-align: left; }
+html[data-skin="sport"] .sp-rvw-acts { display: flex; flex-wrap: wrap; gap: 8px; }
+html[data-skin="sport"] .sp-rvw-chip { min-height: 44px; display: inline-flex; align-items: center; gap: 6px; padding: 0 16px; border: 1.5px solid var(--line); border-radius: 999px; background: var(--sp-card); color: var(--ink); font-family: var(--sp-sans); font-size: 14px; font-weight: 700; letter-spacing: 0; }
+html[data-skin="sport"] .sp-rvw-chip:active { background: var(--sp-soft); }
+html[data-skin="sport"] .sp-rvw-v { display: flex; flex-wrap: wrap; align-items: center; gap: 0 4px; }
+html[data-skin="sport"] .sp-rvw-vn { margin-right: 4px; font-family: var(--sp-num); font-size: 15px; font-weight: 700; letter-spacing: .04em; color: var(--ink); }
+html[data-skin="sport"] .sp-rvw-vb { min-height: 44px; padding: 0 10px; color: var(--ink); font-family: var(--sp-sans); font-size: 14px; font-weight: 600; letter-spacing: 0; text-decoration: underline; text-underline-offset: 3px; }
+html[data-skin="sport"] .sp-rvw-ta { box-sizing: border-box; width: 100%; min-height: 88px; padding: 12px 14px; border: 1.5px solid var(--line); border-radius: 14px; background: var(--sp-soft); color: var(--ink); font-family: var(--sp-sans); font-size: 16px; line-height: 1.5; resize: vertical; }
+html[data-skin="sport"] .sp-rvw-ta:focus { outline: none; border-color: var(--ink); }
+html[data-skin="sport"] .sp-rvw-ta::placeholder { color: var(--muted); }
+html[data-skin="sport"] .sp-rvw-was { font-family: var(--sp-sans); font-size: 13px; line-height: 1.5; color: var(--muted); overflow-wrap: anywhere; }
+html[data-skin="sport"] .sp-rvw-btns { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 8px; }
+html[data-skin="sport"] .sp-rvw-btns .btn-primary,
+html[data-skin="sport"] .sp-rvw-btns .btn-line { min-height: 48px; border-radius: 14px; font-family: var(--sp-sans); font-size: 15px; letter-spacing: 0; }
+html[data-skin="sport"] .sp-rvw-busy { display: flex; align-items: center; gap: 10px; min-height: 44px; font-family: var(--sp-sans); font-size: 14px; font-weight: 600; color: var(--ink); }
+html[data-skin="sport"] .sp-rvw-busy i { width: 10px; height: 10px; flex: none; border-radius: 50%; background: var(--sp-neon); box-shadow: 0 0 0 2px var(--ink); animation: sp-rvw-blink 1s ease-in-out infinite alternate; }
+@keyframes sp-rvw-blink { from { opacity: 1; } to { opacity: .35; } }
+/* 提议卡逐条取舍:一条一个勾选框(纸墨的 .adj-row,这里换成运动的行) */
+html[data-skin="sport"] #co-chat-log .sp-prop-msg { font-size: 14px; line-height: 1.55; }
+html[data-skin="sport"] #co-chat-log .sp-prop-sels { display: flex; flex-direction: column; }
+html[data-skin="sport"] #co-chat-log .sp-prop-sels .adj-row { min-height: 52px; grid-template-columns: 26px minmax(0, 1fr); column-gap: 10px; padding: 10px 0; border-top: 1px solid var(--line); }
+html[data-skin="sport"] #co-chat-log .sp-prop-sels .adj-row:first-child { border-top: 0; }
+html[data-skin="sport"] #co-chat-log .sp-prop-sels .box-sq { width: 26px; height: 26px; margin-top: 0; }
+html[data-skin="sport"] #co-chat-log .sp-prop-sels .what { font-family: var(--sp-sans); font-size: 14px; font-weight: 600; line-height: 1.45; overflow-wrap: anywhere; }
+html[data-skin="sport"] #co-chat-log .sp-prop-sels .why { font-family: var(--sp-sans); font-size: 13px; line-height: 1.45; color: var(--muted); }
+html[data-skin="sport"] #co-chat-log .sp-prop-sels .why.co-err { color: var(--sp-red); }
+html[data-skin="sport"] #co-chat-log .sp-prop .sp-rvw { padding-top: 10px; border-top: 1px solid var(--line); }
+/* 小改卡:撤销 / 不对，说说 两个胶囊一排 */
+html[data-skin="sport"] .sp-act-btns { display: flex; flex-wrap: wrap; gap: 8px; }
+/* 「聊聊」带进对话的引用:浅灰小卡(粗体「关于这份 XX」+ 摘要);输入框上面待带上的那条 */
+html[data-skin="sport"] .sp-ref { display: flex; flex-direction: column; gap: 2px; max-width: 100%; padding: 8px 12px; border-radius: 12px; background: var(--sp-track); color: var(--ink); font-family: var(--sp-sans); font-size: 13px; line-height: 1.45; text-align: left; overflow-wrap: anywhere; }
+html[data-skin="sport"] .sp-ref b { font-weight: 700; }
+html[data-skin="sport"] #composer .sp-ref-pend .sp-ref { flex: 1; min-width: 0; }
+/* 复盘:撤销刚才采纳的(描边胶囊);改一下 / 聊聊 上面一条细线 */
+html[data-skin="sport"] #log-review .sp-rv-undo { align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; padding: 0 14px; border: 1.5px solid var(--line); border-radius: 999px; color: var(--ink); font-family: var(--sp-sans); font-size: 14px; font-weight: 600; letter-spacing: 0; }
+html[data-skin="sport"] #log-review .sp-rvw { padding-top: 10px; border-top: 1px solid var(--line); }
+/* 计划 08 AI 排草稿:每天前面一个勾选框 */
+html[data-skin="sport"] #co-plan-body .co-day-sel { min-height: 48px; grid-template-columns: 26px minmax(0, 1fr); column-gap: 10px; align-items: center; padding: 6px 0 !important; }
+html[data-skin="sport"] #co-plan-body .co-day-sel .box-sq { width: 26px; height: 26px; margin-top: 0; }
+html[data-skin="sport"] #co-plan-body .co-day-sel .what { font-family: var(--sp-sans); font-size: 15px; font-weight: 700; }
+html[data-skin="sport"] #co-plan-body .sp-rvw { padding-top: 10px; border-top: 1px solid var(--line); }
+/* 今天页教练的话 / 打卡反馈、换动作面板的 AI 推荐:改一下 / 聊聊 贴在卡片底下 */
+html[data-skin="sport"] .sp-coach .sp-rvw,
+html[data-skin="sport"] #swap-ai .sp-rvw { padding-top: 4px; }
 /* —— 40 教练 · 写在这行上面 —— */
 
 /* ══ 50 我 + 新手设置 ═════════════════════════════════════════════════ */
@@ -1149,10 +1294,34 @@ html[data-skin="sport"] #me-pair #partner-code-input { min-width: 0; background:
 html[data-skin="sport"] #me-pair .pair-grid .btn-line { padding: 0 16px; }
 html[data-skin="sport"] #me-pair .pair-status { padding: 10px 12px; border-radius: 14px; background: var(--sp-soft); font-family: var(--sp-sans); font-size: 14px; line-height: 1.5; color: var(--ink); }
 html[data-skin="sport"] #me-pair .pair-status b { font-weight: 700; }
-html[data-skin="sport"] #me-pair #cheer-btn { border-color: var(--sp-on); background: var(--sp-on); color: var(--sp-on-fg); font-weight: 700; }
-html[data-skin="sport"] #me-pair #cheer-btn:disabled { opacity: .4; }
+html[data-skin="sport"] #me-pair .pair-status .accent { color: var(--sp-red); font-weight: 600; }
+/* 分享配对链接一行(墨底主按钮 + 二维码)、二维码白底块、回应胶囊(#cheer-btn 是第一个「加油」,发过的荧光底带勾)、TA 最近的回应 */
+html[data-skin="sport"] #me-pair .pair-acts { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
+html[data-skin="sport"] #me-pair .pair-acts :is(.btn-primary, .btn-line) { min-height: 48px; }
+html[data-skin="sport"] #me-pair .pair-acts .btn-line { padding: 0 18px; }
+html[data-skin="sport"] #me-pair .pair-qr { padding: 12px; border-radius: 14px; background: var(--sp-soft); }
+html[data-skin="sport"] #me-pair .pair-qr-img { border: 0; border-radius: 12px; overflow: hidden; }
+html[data-skin="sport"] #me-pair .pair-qr .foot-note { font-family: var(--sp-sans); font-size: 13px; color: var(--muted); }
+html[data-skin="sport"] #me-pair .pair-url { font-family: var(--sp-sans); font-size: 13px; }
+html[data-skin="sport"] #me-pair .pt-words { gap: 8px; }
+html[data-skin="sport"] #me-pair .pt-words .chip { padding: 0 14px; font-size: 14px; font-weight: 600; }
+html[data-skin="sport"] #me-pair .pt-rx-list { border-radius: 14px; background: var(--sp-soft); font-family: var(--sp-sans); font-size: 14px; line-height: 1.4; }
+html[data-skin="sport"] #me-pair .pt-rx-list li { min-height: 40px; padding: 0 12px; border-bottom: 0; border-top: 1px solid var(--line); align-items: center; }
+html[data-skin="sport"] #me-pair .pt-rx-list li:first-child { border-top: 0; }
+html[data-skin="sport"] #me-pair .pt-rx-list .k { color: var(--muted); }
+html[data-skin="sport"] #me-pair .pt-rx-list b { font-weight: 700; }
 html[data-skin="sport"] #me-pair #partner-days-row .sub-label { font-weight: 500; }
 html[data-skin="sport"] #me-pair #partner-overlap { font-family: var(--sp-sans); font-size: 14px; color: var(--ink); }
+
+/* 03 · 共享给 TA:粗小标题 + 灰字说明,下面一列开关(02 通用的开关样子),整组是一块浅灰底圆角卡 */
+html[data-skin="sport"] #me-pair .pair-share { padding: 12px 14px 4px; border-radius: 18px; background: var(--sp-soft); }
+html[data-skin="sport"] #me-pair .pair-share #pair-share-h { font-size: 15px; font-weight: 700; color: var(--ink); }
+html[data-skin="sport"] #me-pair .pair-share .hint { font-family: var(--sp-sans); font-size: 13px; line-height: 1.5; color: var(--muted); }
+html[data-skin="sport"] #me-pair .pair-share .toggle-row { min-height: 60px; }
+html[data-skin="sport"] #me-pair .pair-share .toggle-row .tl { font-size: 15px; }
+html[data-skin="sport"] #me-pair .pair-share .toggle-row .th { font-size: 13px; color: var(--muted); }
+html[data-skin="sport"] #me-pair .pair-share .toggle-row .tv { background: var(--sp-card); }
+html[data-skin="sport"] #me-pair .pair-share .toggle-row[aria-checked="true"] .tv { background: var(--sp-on); }
 
 /* 04 提醒:两行开关之间一条细线 */
 html[data-skin="sport"] #me-remind { gap: 0; padding-bottom: 8px; }
@@ -1467,6 +1636,10 @@ html[data-skin="sport"] .sp-g-card .sp-tile { background: #111111; color: #f4f4f
 html[data-skin="sport"] .sp-g-card .sp-tile .step-lbl { color: #b3b3ab; }
 html[data-skin="sport"] .sp-g-card .sp-tile .step-btn { color: #d4ff3d; }
 html[data-skin="sport"] .sp-g-card .sp-tile .step-btn:disabled { color: #55554f; }
+/* 配对确认(app.js _ptModal*):底板用 03 区的 .ex-modal-card;配对码一行、替换现有搭子的提醒 */
+html[data-skin="sport"] #pt-pair-modal .pt-warn { color: var(--sp-red); font-weight: 600; }
+html[data-skin="sport"] #pt-pair-modal .pt-code-row { padding: 8px 8px 8px 12px; border-radius: 14px; background: var(--sp-soft); }
+html[data-skin="sport"] #pt-pair-modal .pair-code { font-family: var(--sp-num); font-weight: 700; font-size: 16px; letter-spacing: .04em; color: var(--ink); }
 /* —— 60 弹窗内容 · 写在这行上面 —— */
 
 /* ══ 99 结束 ══════════════════════════════════════════════════════════ */

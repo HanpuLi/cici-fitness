@@ -1201,3 +1201,54 @@ body.has-composer:has(#composer:focus-within) #composer { bottom: env(safe-area-
 .wp-box { display: flex; flex-direction: column; gap: 10px; }
 .wp-dev .link-btn { margin-left: 6px; }
 .wp-guide { padding-left: 12px; border-left: 1px solid var(--line); }
+
+/* ══ v3.5 搭子:配对链接 / 实时进度 / 回应 / 双人连续周数 ═════════════════ */
+/* —— 我 → 03:状态一行、分享配对链接 + 二维码、给 TA 回应、TA 最近的回应 —— */
+.pair-status .accent { color: var(--accent); }
+.pair-acts { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
+.pair-acts .btn-primary, .pair-acts .btn-line { min-height: 48px; }
+.pair-acts .btn-line { padding: 0 16px; }
+.pair-qr { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
+.pair-qr[hidden] { display: none; }
+.pair-qr-img { width: 200px; max-width: 70vw; border: 1px solid var(--line); }
+.qr-svg { display: block; width: 100%; height: auto; }
+.pair-url { font-family: var(--font-mono); font-size: 12px; line-height: 1.5; color: var(--muted); overflow-wrap: anywhere; -webkit-user-select: all; user-select: all; }
+#pair-cheer, .pair-rx { display: flex; flex-direction: column; gap: 6px; }
+.pt-rx-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; font-family: var(--font-mono); font-size: 13px; line-height: 1.8; }
+.pt-rx-list li { display: flex; justify-content: space-between; gap: 12px; border-bottom: 1px dashed var(--line); }
+.pt-rx-list .k { color: var(--faint); }
+.pt-rx-list b { font-weight: 400; color: var(--ink); }
+/* 回应词:发过的 = 墨底(.chip.on),不能再点 */
+.pt-words .chip:disabled { opacity: 1; }
+
+/* —— 今天页:搭子一小节(教练的话下面,发丝线隔开)—— */
+.pt-line { padding: 14px 0; border-bottom: 1px solid var(--line); display: flex; flex-direction: column; gap: 6px; }
+.pt-head { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 10px; row-gap: 2px; font-size: 17px; line-height: 1.4; }
+.pt-head b { font-weight: 600; }
+.pt-type { font-size: 15px; color: var(--muted); }
+.pt-st { margin-left: auto; font-family: var(--font-mono); font-size: 12px; letter-spacing: .06em; color: var(--faint); }
+.pt-st.training, .pt-st.done { color: var(--olive); }
+.pt-line .pt-rx b, .pt-rx-log b { font-weight: 400; color: var(--ink); }
+.pt-line .pt-words { margin-top: 2px; }
+/* 一起练(引导卡里):橄榄小点 + 等宽小字 */
+.pt-with { display: flex; align-items: center; gap: 8px; color: var(--ink); }
+.pt-with[hidden] { display: none; }
+.pt-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--olive); flex: none; }
+
+/* —— 记录页:搭子卡(你俩连续 N 周 + TA 最近的打卡)、我的日志行下面 TA 的回应 —— */
+.pt-logs { display: flex; flex-direction: column; }
+.pt-lrow { padding: 2px 0 6px; border-top: 1px dashed var(--line); display: flex; flex-direction: column; gap: 4px; }
+.pt-lrow:first-child { border-top: 0; }
+.pt-ltop { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 12px; align-items: center; }
+.pt-ltxt { min-width: 0; display: flex; flex-direction: column; }
+.pt-ltxt .lw { font-size: 16px; line-height: 1.35; }
+.pt-ltxt .lt { font-family: var(--font-mono); font-size: 12px; color: var(--faint); }
+.log-row:has(+ .pt-rx-log) { border-bottom-color: transparent; }
+.pt-rx-log { padding: 0 0 8px; border-bottom: 1px solid var(--line); }
+.pt-rx-log:has(+ .log-detail) { border-bottom: 0; }
+
+/* —— 打开配对链接时的确认面板:压在新手设置(z 300)上面,刚注册的人也看得到 —— */
+#pt-pair-modal { z-index: 310; }
+.pt-code-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: center; }
+.pt-code-row .pair-code { overflow-wrap: anywhere; }
+.pt-warn { color: var(--accent); }

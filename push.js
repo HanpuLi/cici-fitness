@@ -2,11 +2,11 @@
 // 「我 → 04 提醒」里的开关 + 安静时段 + 每天最多几条:存在 S.push(随账号云同步,见 app.js saveState),带 uid 和改动时刻 at。
 // 每台设备的订阅登记在后端(按 uid);后端定时任务(~/fitness-coach/push.py tick,每 30 分钟)看快照判断
 // 搭子刚练完 / 今天该练了还没开练 / 好几天没练 / 明天有动作该加重 → 用快模型写一句话推过来。
-// 快照 = buildCoachContext({live:false, partner:false}) 去掉身体数据和周期(私密门控同 AI)+ wpFacts() 几个判断用的事实
-// (同一套门控;私密日不报开练 / 练完)。只在开了开关、登录、开通 AI 时上传;打开 app / 打卡 / 改计划后节流(saveState 里调 wpStateDirty)。
+// 快照 = buildCoachContext({live:false, partner:false, share:true}) 去掉身体数据和周期 + wpFacts() 几个判断用的事实。
+// 推送文字会上锁屏 → 两样都走「给别人看」那套门控(_shareGated / share=true:私密池 + 盆底、私密日、私密模式的记录,owner 也照拦;私密日不报开练 / 练完)。只在开了开关、登录、开通 AI 时上传;打开 app / 打卡 / 改计划后节流(saveState 里调 wpStateDirty)。
 // iPhone 只有「添加到主屏幕」的 PWA 才收得到推送(iOS 16.4+),Safari 标签页里收不到 —— 设置里写清楚怎么装。
 // 函数名一律 wp 开头(app.js 已经有 pushProfile / schedulePush / _pushTimer 这些云同步的名字)。
-// 加载顺序:在 coach.js 之后(用 _coachFetch / _coachUser / coachAccess / buildCoachContext / _coachGated / _coachLogOk)。
+// 加载顺序:在 coach.js 之后(用 _coachFetch / _coachUser / coachAccess / buildCoachContext / _shareGated / _coachLogOk)。
 
 const WP_DEF = { on: false, qs: 22, qe: 8, max: 1 };
 const WP_KEY = 'fit_wpkey';      // VAPID 公钥缓存(全设备一份;点开关时不用先联网,iOS 要求订阅紧跟着点击)
@@ -206,7 +206,7 @@ window.pushNotifyPartner = async function ({ kind, word, date, ref } = {}) {
     if (!_wpReady()) return { ok: false, sent: false, reason: '没登录或没开通' };
     const partner = typeof partnerUid === 'function' ? partnerUid() : null;
     if (!partner) return { ok: false, sent: false, reason: '还没配对' };
-    const r = await _coachFetch('/api/push/partner', { kind, word: String(word || '').slice(0, 16), ref: ref || date || null, partner });
+    const r = await _coachFetch('/api/push/partner', { kind, word: String(word || '').slice(0, 16), ref: ref || date || null, partner, tab: kind === 'react' ? 'log' : 'today' });   // 点通知落到对方看得到这条回应的页：对今天加油→今天页搭子卡，回应某次打卡→记录页那条日志
     return { ok: true, sent: !!(r && r.sent), reason: (r && r.reason) || '' };
   } catch (e) { return { ok: false, sent: false, reason: (e && e.message) || '没推出去' }; }
 };
@@ -277,9 +277,9 @@ function _wpMark() {
   if (ch) _wpLS(nsKey(WP_MARK), JSON.stringify(m));
   return m;
 }
-// 判断用的事实:和 buildCoachContext 同一套门控(_coachGated = 私密池 + owner 专属动作;私密日只报「另有安排」)
+// 判断用的事实:会上锁屏 → 走 _shareGated(私密池 + owner 专属动作,owner 也照拦;私密日只报「另有安排」)
 function wpFacts() {
-  const today = todayStr(), gated = _coachGated();
+  const today = todayStr(), gated = _shareGated();
   const days = (S.plan && S.plan.days) || [];
   const day = d => {
     if (!d) return null;
@@ -306,7 +306,7 @@ function wpFacts() {
       if (min > 0) f.doneMin = min;
     }
   }
-  const logOk = typeof _coachLogOk === 'function' ? _coachLogOk() : (l => !l.subMetrics);   // 和快照同一道门:私密日、带 subMetrics 的不算
+  const logOk = typeof _coachLogOk === 'function' ? _coachLogOk(true) : (l => !l.subMetrics);   // 和推送快照同一道门(share):私密日、带 subMetrics 的不算
   const last = LOG.filter(l => logOk(l) && l.date <= today && (l.exercises || []).some(e => !gated.has(e.name))).map(l => l.date).sort().pop();
   if (last) f.lastDone = last;
   // 该加重:今天 / 明天计划里要上重量的动作,app 建议的重量比上次(非经期)重;助力器械反过来,助力减了才算
@@ -345,7 +345,7 @@ async function wpUpload(force) {
     // 快照只要自己的、不会过时的部分:不带 live(今天做到第几组、感受、计时——节流上传一会儿就旧了,推送也不看)、
     // 不带 partner(搭子的数据由搭子自己开了推送才上传;不能借我的上传把没同意的人的数据存到服务器上)、
     // 去掉身体数据和周期(推送用不到,锁屏上也不该出现,少存一样是一样)
-    const context = buildCoachContext({ live: false, partner: false });
+    const context = buildCoachContext({ live: false, partner: false, share: true });   // share:推送文字上锁屏,owner 的私密内容也不带
     delete context.body; delete context.cycle;
     await _coachFetch('/api/state', {
       context, facts, prefs: wpPrefs(), tz: _wpTz(),

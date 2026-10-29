@@ -1,7 +1,10 @@
 // ══ AI 教练 ═══════════════════════════════════════════════
 // 后端在家里主力机(~/fitness-coach，Funnel /fit)，key 不进前端；用 app 自己的 Firebase 登录鉴权。
-// 隐私：发给 AI 的数据快照由 buildCoachContext() 现拼——私密池(_PRIVATE_POOL)的动作、私密日、带 subMetrics 的日志
-// 一律不进快照(对 owner 也不进)；非 owner 另有 getExcluded() 兜底。对话只存本机(nsKey 命名空间)，不进云同步。
+// 隐私：门控分两种用途(2026-10-29 起;Cait「我的所有动作都需要对ai可见」)——
+//   发给自己的 AI(_coachGated / _coachHidePriv):owner 会话什么都不拦,私密池动作、私密日真实内容、带 subMetrics 的记录都进快照;
+//     非 owner 照旧拦私密池 + 盆底、私密日只报「另有安排」、带 subMetrics 的记录不进,另有 getExcluded() 兜底。
+//   给别人看 / 会被别人看到(_shareGated,share=true):搭子共享文档、推送快照和推送文字,永远照旧拦,owner 也一样。
+// 对话只存本机(nsKey 命名空间)，不进云同步。
 const COACH_URL = 'https://node.tail95239f.ts.net/fit';
 const COACH_STORE = 'fit_coach1';
 const COACH_CHAT_MAX = 40;   // 本机保留条数
@@ -22,9 +25,9 @@ function _coachMd(s) {
 
 // ── 动作库 / 快照 ──
 function _coachPriv() { return new Set([..._PRIVATE_POOL]) }
-// 当前账号此刻真能排的动作：过 getExcluded() + 器械 + 门控(私密池 + 盆底，对 owner 也不给 AI)
-function _coachCatalogMap() {
-  const excluded = getExcluded(), priv = _coachGated(), hasPool = S.equip.includes('泳池'), m = new Map();
+// 当前账号此刻真能排的动作：过 getExcluded() + 器械 + 门控(非 owner 拦私密池 + 盆底；owner 全给自己的 AI)
+function _coachCatalogMap(priv = _coachGated()) {
+  const excluded = getExcluded(), hasPool = S.equip.includes('泳池'), m = new Map();
   for (const [g, exs] of Object.entries(DB)) {
     if (g === 'swimming' && !hasPool) continue;
     exs.forEach(ex => {
@@ -35,23 +38,25 @@ function _coachCatalogMap() {
   }
   return m;
 }
-function _coachCatalog(full) {
+function _coachCatalog(full, gated) {
   const out = {};
-  _coachCatalogMap().forEach(({ ex, g }) => {
+  _coachCatalogMap(gated).forEach(({ ex, g }) => {
     const t = ex.u === '秒' || ex.u === '分钟' ? `|${ex.u}${ex.hold ? ' ' + ex.hold : ''}` : '';
     (out[g] = out[g] || []).push(full ? `${ex.n}|${(ex.muscle || []).join('/')}|难度${ex.diff || 1}${t}` : ex.n);
   });
   return out;
 }
-// 哪些打卡记录能给 AI / 搭子看:私密模式的(带 subMetrics)、私密日的,一律不给
-function _coachLogOk() {
+// 哪些打卡记录能给 AI / 搭子看:私密模式的(带 subMetrics)、私密日的不给;owner 自己的 AI 全给。share=true(搭子 / 推送)永远不给
+function _coachLogOk(share) {
+  if (!_coachHidePriv(share)) return l => !!l;
   const privDays = new Set((S.plan?.days || []).filter(d => d.isPrivateDay).map(d => d.date));
   return l => l && !l.subMetrics && !privDays.has(l.date);
 }
 const _COACH_FEEL = { 4: '轻松', 6.5: '刚好', 8.5: '吃力' };
 function _coachFeel(date, i) { const v = typeof getExRpe === 'function' ? getExRpe(date, i) : null; return v == null ? null : (_COACH_FEEL[v] || `RPE ${v}`) }
 // 一次打卡 → 快照里的一条(动作串格式后端会解析:「名字 [12.5kg ]3×12次[ 未做]」,别改;感受另放 feel)
-function _coachLogItem(l, okEx, withNote) {
+// withSub:带上自定义指标 subMetrics(只有 owner 自己的 AI 快照传 true)
+function _coachLogItem(l, okEx, withNote, withSub) {
   const ex = [], feel = {};
   (l.exercises || []).forEach((e, i) => {
     if (!okEx(e.name)) return;
@@ -59,7 +64,7 @@ function _coachLogItem(l, okEx, withNote) {
     const f = _coachFeel(l.date, i); if (f) feel[e.name] = f;
   });
   if (!ex.length) return null;
-  return { date: l.date, workout: l.workout, min: l.duration, rpe: l.rpe, ex, ...(Object.keys(feel).length ? { feel } : {}), ...(withNote && l.note ? { note: l.note } : {}) };
+  return { date: l.date, workout: l.workout, min: l.duration, rpe: l.rpe, ex, ...(Object.keys(feel).length ? { feel } : {}), ...(withNote && l.note ? { note: l.note } : {}), ...(withSub && l.subMetrics ? { subMetrics: l.subMetrics } : {}) };
 }
 // 更早的记录按月压成一行:几次、平均 RPE、总分钟、练了哪些类型
 function _coachHistory(logs, before) {
@@ -80,8 +85,8 @@ function _coachWeights(okEx, per = 6, maxN = 40) {
     .slice(0, maxN)
     .map(([n, h]) => [n, h.slice(-per).map(x => `${String(x.date).slice(5)} ${x.weight}kg${x.reps ? '×' + x.reps : ''}${x.rpe ? ' RPE' + x.rpe : ''}`)]));
 }
-// 连续打卡天数、本月统计、成就(只数能给人看的记录)
-function _coachStats(logs) {
+// 连续打卡天数、本月统计、成就(只数能给人看的记录);gated = 调用方那一路的门控
+function _coachStats(logs, gated = _coachGated()) {
   const today = todayStr(), m = today.slice(0, 7), dates = new Set(logs.map(l => l.date));
   let streak = 0;
   for (let i = 0; i < 365; i++) { if (dates.has(addDays(today, -i))) streak++; else if (i > 0) break; }
@@ -89,17 +94,18 @@ function _coachStats(logs) {
   const ach = (L, kind) => ((L && L.milestones) || []).map(x => `${kind}·${x.title}${x.date ? '(' + x.date + ')' : ''}`);
   return {
     streakDays: streak, totalSessions: logs.length,
-    thisMonth: { sessions: ml.length, minutes: ml.reduce((a, l) => a + (+l.duration || 0), 0), ...(rp.length ? { avgRpe: Math.round(rp.reduce((a, l) => a + +l.rpe, 0) / rp.length * 10) / 10 } : {}), prs: PR_LIST.filter(p => p.date && p.date.startsWith(m) && !_coachGated().has(p.exercise)).length },
+    thisMonth: { sessions: ml.length, minutes: ml.reduce((a, l) => a + (+l.duration || 0), 0), ...(rp.length ? { avgRpe: Math.round(rp.reduce((a, l) => a + +l.rpe, 0) / rp.length * 10) / 10 } : {}), prs: PR_LIST.filter(p => p.date && p.date.startsWith(m) && !gated.has(p.exercise)).length },
     achievements: [...ach(typeof GYM_LOG !== 'undefined' ? GYM_LOG : null, '力量'), ...ach(typeof SWIM_LOG !== 'undefined' ? SWIM_LOG : null, '游泳')],
   };
 }
-// 今天的实时状态:做到哪个动作第几组、每个动作的感受、开练时间和用时、组间倒计时。私密日 / 门控动作不给
-function _coachTodayState(focusName) {
+// 今天的实时状态:做到哪个动作第几组、每个动作的感受、开练时间和用时、组间倒计时。私密日 / 门控动作不给(owner 自己的 AI 给);
+// share=true(搭子共享文档)照旧不给
+function _coachTodayState(focusName, share) {
   const date = todayStr(), d = S.plan?.days?.find(x => x.date === date);
   if (!d) return { date, status: '没有计划' };
-  if (d.isPrivateDay) return { date, status: '另有安排' };
+  if (d.isPrivateDay && _coachHidePriv(share)) return { date, status: '另有安排' };
   if (d.isRest) return { date, status: '休息日' };
-  const gated = _coachGated(), pd = S.prog[date] || {}, lg = LOG.find(l => l.date === date);
+  const gated = share ? _shareGated() : _coachGated(), pd = S.prog[date] || {}, lg = LOG.find(l => l.date === date);
   const sp = (typeof _spSetsAll === 'function' ? _spSetsAll()[date] : null) || {};
   const exercises = [];
   d.exercises.forEach((e, i) => {
@@ -123,30 +129,33 @@ function _coachTodayState(focusName) {
   if (ce && !gated.has(ce.name) && !lg) { const x = exercises.find(z => z.name === ce.name); if (x) out.current = { name: ce.name, set: Math.min(x.setsDone + 1, x.sets), of: x.sets } }
   if (focusName && !gated.has(focusName) && exercises.some(z => z.name === focusName)) out.askingAbout = focusName;
   if (typeof _timerEndTime !== 'undefined' && _timerEndTime > Date.now() && document.getElementById('universal-timer')?.classList.contains('show')) out.timer = { label: _timerKind === '组间休息' ? '组间休息' : '计时', leftSec: Math.ceil((_timerEndTime - Date.now()) / 1000) };
-  if (lg) out.logged = { rpe: lg.rpe, min: lg.duration };
+  if (lg) out.logged = { rpe: lg.rpe, min: lg.duration, ...(lg.subMetrics && !_coachHidePriv(share) ? { subMetrics: lg.subMetrics } : {}) };
   return out;
 }
 // 每条消息都带的实时状态(只放进那一条,不进缓存前缀)
 function buildCoachLive(focusName) { return { today: _coachTodayState(focusName) } }
-// 搭子分享出来的训练数据(对方 app 已经按同一套门控过滤过;这里再按自己的门控过一遍,字串截短)
+// 搭子分享出来的训练数据(对方 app 已经按 _shareGated 过滤过;这里再按 _shareGated 过一遍,字串截短。是别人的数据,owner 也照拦)
 function _coachPartner() {
   const pp = typeof _partnerProfile !== 'undefined' ? _partnerProfile : null;
   if (!pp || typeof partnerUid !== 'function' || !partnerUid()) return null;
-  const gated = _coachGated(), str = (v, n) => String(v ?? '').slice(0, n);
+  if (pp.aiOk === false) return null;   // 搭子在「共享给 TA」里关了「允许 TA 的 AI 教练参考我的数据」:整块不进快照(靠这边的 app 照办)
+  const gated = _shareGated(), str = (v, n) => String(v ?? '').slice(0, n);
   const clean = v => typeof v === 'string' ? ([...gated].some(g => v.includes(g)) ? null : str(v, 120)) : Array.isArray(v) ? v.map(clean).filter(x => x != null).slice(0, 60)
     : v && typeof v === 'object' ? Object.fromEntries(Object.entries(v).filter(([k]) => !gated.has(k)).slice(0, 60).map(([k, x]) => [str(k, 40), clean(x)]).filter(([, x]) => x != null)) : typeof v === 'number' || typeof v === 'boolean' ? v : null;
   const t = pp.train && typeof pp.train === 'object' ? pp.train : null;
   return { name: str(pp.name || '搭子', 20), today: str(pp.todayType || '—', 20), todayDone: !!pp.todayDone, lastActive: str(pp.lastActive, 10),
-    ...(t ? { plan: clean(t.plan), recentLogs: clean(t.logs), history: clean(t.history), weights: clean(t.weights), stats: clean(t.stats) } : { note: '搭子的 app 还没升级，只有今天的类型' }) };
+    ...(t ? { plan: clean(t.plan), recentLogs: clean(t.logs), history: clean(t.history), weights: clean(t.weights), stats: clean(t.stats) } : { note: '搭子的 app 还没升级，只有今天的类型' }),
+    // 搭子关掉没共享的类(免得 AI 把「没共享」当成「没练」)
+    ...(Array.isArray(pp.off) && pp.off.length ? { notShared: pp.off.slice(0, 8).map(k => typeof shareCatLabel === 'function' ? shareCatLabel(k) : str(k, 12)) } : {}) };
 }
-// 给 AI 的数据快照。私密池 / 盆底动作、私密日、私密模式的记录一律不进(对 owner 也不进);非 owner 另有 getExcluded() 兜底。
-// opts:catalog('names' / 'full')、logDays(明细天数,默认 42)、live(false 不带今天的实时状态)、partner(false 不带搭子)
-// 「主动找你」的推送也用这个函数拿全量快照
+// 给 AI 的数据快照。非 owner:私密池 / 盆底动作、私密日、私密模式的记录不进,另有 getExcluded() 兜底;owner 自己的 AI 全进(含 subMetrics)。
+// opts:catalog('names' / 'full')、logDays(明细天数,默认 42)、live(false 不带今天的实时状态)、partner(false 不带搭子)、
+// share(true = 会被别人看到的用途,按 _shareGated 照旧全拦,owner 也一样)。「主动找你」的推送快照用 share:true(推送文字上锁屏)
 function buildCoachContext(opts = {}) {
-  const today = todayStr(), gated = _coachGated();
+  const today = todayStr(), share = !!opts.share, gated = share ? _shareGated() : _coachGated(), hide = _coachHidePriv(share);
   const okEx = n => !gated.has(n);
   const sch = currentScheme();
-  const logOk = _coachLogOk(), logs = LOG.filter(logOk).sort((a, b) => a.date.localeCompare(b.date));
+  const logOk = _coachLogOk(share), logs = LOG.filter(logOk).sort((a, b) => a.date.localeCompare(b.date));
   const from = addDays(today, -(opts.logDays || 42));
   const ctx = {
     settings: {
@@ -157,27 +166,30 @@ function buildCoachContext(opts = {}) {
       ...(S.cycleEnabled && S.periodMode ? { periodMode: true } : {}),
     },
     userExcluded: (S.userExcluded || []).filter(okEx).map(n => n + (S.userExcludeReasons?.[n] ? `(${S.userExcludeReasons[n]})` : '')),
-    recentLogs: logs.filter(l => l.date >= from).map(l => _coachLogItem(l, okEx, true)).filter(Boolean),
+    recentLogs: logs.filter(l => l.date >= from).map(l => _coachLogItem(l, okEx, true, !hide)).filter(Boolean),
     history: _coachHistory(logs, from),
     weightHistory: _coachWeights(okEx),
-    stats: _coachStats(logs),
+    stats: _coachStats(logs, gated),
     body: BODY_LOG.slice(-12),
     prs: PR_LIST.filter(p => okEx(p.exercise)).slice(-15),
   };
-  if (opts.live !== false) ctx.today = _coachTodayState();
+  if (opts.live !== false) ctx.today = _coachTodayState(undefined, share);
   if (S.plan && S.plan.days) {
     ctx.upcoming = S.plan.days.filter(d => d.date >= today).slice(0, 14).map(d =>
-      d.isPrivateDay ? { date: d.date, type: '(另有安排)' } :
+      d.isPrivateDay && hide ? { date: d.date, type: '(另有安排)' } :
         d.isRest ? { date: d.date, type: '休息' } :
           { date: d.date, type: d.workoutType, ex: d.exercises.filter(e => okEx(e.name)).map(e => `${e.name} ${e.sets}×${e.reps}${e.unit}`) });
     // 计划里要上重量的动作，app 下次会建议多少 kg(AI 复盘调重量时参考)
     const nx = {};
-    S.plan.days.filter(d => d.date >= today && !d.isPrivateDay).forEach(d => d.exercises.forEach(e => {
+    S.plan.days.filter(d => d.date >= today && !(d.isPrivateDay && hide)).forEach(d => d.exercises.forEach(e => {
       if (okEx(e.name) && !nx[e.name] && needsWeightUI(e)) { const w = suggestWeight(e.name); if (w) nx[e.name] = w }
     }));
     ctx.nextSuggestedKg = nx;
+    // 最近自动顺延过哪几天(没练 → 后面的训练往后挪;标记日不会是私密日,类型名再按门控过一遍)
+    const sh = typeof autoShiftFacts === 'function' ? autoShiftFacts().filter(x => ![...gated].some(g => x.planned.includes(g))) : [];
+    if (sh.length) ctx.autoShifted = sh;
   }
-  if (opts.catalog) ctx.catalog = _coachCatalog(opts.catalog === 'full');
+  if (opts.catalog) ctx.catalog = _coachCatalog(opts.catalog === 'full', gated);
   // 开了周期功能、而且自己设过第几天:当前周期阶段(「计划 → 06」里手动设的,不会自动往后数;setOn = 最后一次设的日子)。
   // 周期功能默认是开的、默认第 1 天:从没设过的人不发,免得 AI 对没设过(或没有周期)的人说「今天经期第一天」
   if (S.cycleEnabled !== false && S.cycleSetAt && typeof cyclePhase === 'function') {
@@ -187,21 +199,26 @@ function buildCoachContext(opts = {}) {
   if (opts.partner !== false) { const p = _coachPartner(); if (p) ctx.partner = p }
   return ctx;
 }
-// 搭子互通:写进共享文档的训练数据(计划、记录、重量、感受)。和 buildCoachContext 同一套过滤,
+// 搭子互通:写进共享文档的训练数据(计划、记录、重量、感受)。会被搭子看到 → 一律走 _shareGated / share=true(owner 也照拦),
 // 另外不放身体数据(体重围度、身体情况、周期)、不放打卡备注原文(可能写了身体情况);只放最近一段 + 按月汇总,控制文档大小
+// plan 每天带 k(g 健身房 / s 游泳 / r 休息 / p 另有安排 / x 别的):对方排计划对齐、周历算同一天同类用它(app.js partnerKindOn),
+// AI 排的游泳日类型名不一定带「游泳」,所以不靠类型名猜
 function coachSharedTraining() {
-  const today = todayStr(), gated = _coachGated(), okEx = n => !gated.has(n);
-  const logs = LOG.filter(_coachLogOk()).sort((a, b) => a.date.localeCompare(b.date)), from = addDays(today, -42);
+  const today = todayStr(), gated = _shareGated(), okEx = n => !gated.has(n);
+  const logs = LOG.filter(_coachLogOk(true)).sort((a, b) => a.date.localeCompare(b.date)), from = addDays(today, -42);
   const td = S.plan?.days?.find(d => d.date === today);
   const t = {
     v: 1, at: today,
-    plan: (S.plan?.days || []).filter(d => d.date >= today).slice(0, 14).map(d => d.isPrivateDay ? { date: d.date, type: '另有安排' } : d.isRest ? { date: d.date, type: '休息' }
-      : { date: d.date, type: d.workoutType, ex: d.exercises.filter(e => okEx(e.name)).map(e => `${e.name} ${e.sets}×${e.reps}${e.unit}`) }),
-    today: td && !td.isPrivateDay && !td.isRest ? (() => { const s = _coachTodayState(); return { status: s.status, done: (s.exercises || []).filter(e => e.done).length, total: (s.exercises || []).length } })() : null,
+    plan: (S.plan?.days || []).filter(d => d.date >= today).slice(0, 14).map(d => d.isPrivateDay ? { date: d.date, type: '另有安排', k: 'p' } : d.isRest ? { date: d.date, type: '休息', k: 'r' }
+      : { date: d.date, type: d.workoutType, k: d.isSwimDay ? 's' : d.workoutType === '轻量替代' ? 'x' : 'g', ex: d.exercises.filter(e => okEx(e.name)).map(e => `${e.name} ${e.sets}×${e.reps}${e.unit}`) }),
+    today: td && !td.isPrivateDay && !td.isRest ? (() => { const s = _coachTodayState(undefined, true); return { status: s.status, done: (s.exercises || []).filter(e => e.done).length, total: (s.exercises || []).length } })() : null,
     logs: logs.filter(l => l.date >= from).map(l => _coachLogItem(l, okEx, false)).filter(Boolean),
     history: _coachHistory(logs, from),
     weights: _coachWeights(okEx, 5, 30),
-    stats: (({ streakDays, totalSessions, thisMonth, achievements }) => ({ streakDays, totalSessions, thisMonth: { sessions: thisMonth.sessions, minutes: thisMonth.minutes }, achievements }))(_coachStats(logs)),
+    stats: (({ streakDays, totalSessions, thisMonth, achievements }) => ({ streakDays, totalSessions, thisMonth: { sessions: thisMonth.sessions, minutes: thisMonth.minutes }, achievements }))(_coachStats(logs, gated)),
+    // 最近几批没练自动顺延:只有批次 id(sh-日期-没练那天)和日期,撤销过的标 undone;搭子那边据此跟着对齐(core.js _shFollowRun)。
+    // 只放自己的顺延批次,不放「跟着搭子对齐」的改动(否则两边来回跟)
+    shifts: ((S.plan && S.plan.shifts) || []).slice(-4).map(b => ({ id: String(b.id || '').slice(0, 40), at: String(b.at || '').slice(0, 10), ...(b.state !== 'on' ? { undone: true } : {}) })),
   };
   // Firestore 单文档 1MB:这里卡在 200KB 以内(正常十几 KB),超了先砍最早的明细再砍重量
   while (JSON.stringify(t).length > 200000 && (t.logs.length > 7 || Object.keys(t.weights).length > 5)) {
@@ -389,7 +406,7 @@ const _CAM_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h3l2-
 function _coachEnsureComposer() {
   const c = document.getElementById('composer');
   if (!c || c.dataset.built) return;
-  c.innerHTML = `<div id="co-chat-img"></div><div class="composer-row">`
+  c.innerHTML = `<div id="co-chat-ref"></div><div id="co-chat-img"></div><div class="composer-row">`
     + `<label class="icon-btn" title="发图片" aria-label="发图片">${_CAM_SVG}<input type="file" accept="image/*" onchange="coachAttach(this)"></label>`
     + `<textarea id="co-chat-text" rows="1" placeholder="问点什么…" aria-label="问教练" onkeydown="if(event.key==='Enter'&&!event.shiftKey&&!event.isComposing){event.preventDefault();coachSend()}"></textarea>`
     + `<button type="button" class="send" id="co-chat-go" onclick="coachSend()">发送</button></div>`;
@@ -423,6 +440,7 @@ async function renderCoach() {
     <div class="co-foot">对话只存在这台手机上 · <span id="co-status" class="co-meta">连接中…</span></div>
   </div>`);
   _coachShowChat();
+  _coachRefPaint();
   if (typeof uiUpdateComposer === 'function') uiUpdateComposer();
   try {
     const me = await _coachFetch('/api/me');
@@ -553,8 +571,8 @@ function _coachMaybeAutoReview() {
   const st = _coachLoad(), today = todayStr(), wk = _coachWeekStart(today);
   if (st.review && st.review.at >= wk) return;     // 本周已经有复盘(手点的也算)
   if (st.reviewAuto === wk) return;                // 本周已经自动试过
-  // 最近两周一次都没练(或只有私密模式的记录):没东西可复盘,不自动花这笔钱
-  if (!LOG.some(l => l.date >= addDays(today, -14) && !l.subMetrics)) return;
+  // 最近两周一次都没练(或只有私密模式的记录;owner 的私密模式记录也算):没东西可复盘,不自动花这笔钱
+  if (!LOG.some(l => l.date >= addDays(today, -14) && (!l.subMetrics || !_coachHidePriv()))) return;
   coachReview(true);
 }
 async function coachReview(auto) {
@@ -591,7 +609,7 @@ function _adjText(a) {
 function _coachAdjCount() {
   const n = document.querySelectorAll('#co-adj-list .adj-row[aria-checked="true"]:not([aria-disabled="true"])').length;
   const b = document.getElementById('co-adopt');
-  if (b) { b.textContent = `采纳勾选的 ${n} 条`; b.disabled = !n; }
+  if (b) { b.textContent = `采纳所选 ${n} 条`; b.disabled = !n; }
 }
 function _coachShowReview(rv) {
   const el = document.getElementById('co-review-body');
@@ -607,13 +625,16 @@ function _coachShowReview(rv) {
     return `<button type="button" class="adj-row co-adj${done ? ' done' : ''}" role="checkbox" aria-checked="true" data-i="${i}"${done ? ' aria-disabled="true"' : ` onclick="uiToggleBox(this);_coachAdjCount()"`}>${uiBoxSq()}<span><span class="what">${_esc(_ADJ_LABEL[a.type] || a.type)} · ${_esc(_adjText(a))}${done ? ' <span class="olive">已采纳</span>' : ''}</span><span class="why">${_esc(a.reason)}</span></span></button>`;
   }).join('');
   const left = (rv.adjustments || []).length - applied.length;
-  el.innerHTML = skinTpl('logReview', { rv, adj, left, applied }, () => `<div class="co-rv"><div class="rv-h">${_esc(rv.headline)}<span class="accent">.</span></div>
+  // 刚采纳的那几条能撤销(只留最近一次采纳的快照);下面是「改一下 / 聊聊」
+  const undo = rv.snap && (rv.cur || 0) === rv.snap.ver ? rv.snap.idx.length : 0, rvb = _coachRvHtml('review', '');
+  el.innerHTML = skinTpl('logReview', { rv, adj, left, applied, undo, rvb }, () => `<div class="co-rv"><div class="rv-h">${_esc(rv.headline)}<span class="accent">.</span></div>
     ${_coachMd(rv.summary)}
     ${rv.wins?.length ? `<div class="co-rv-t">做得好</div><ul>${li(rv.wins)}</ul>` : ''}
     ${rv.issues?.length ? `<div class="co-rv-t">要注意</div><ul>${li(rv.issues)}</ul>` : ''}
     ${adj ? `<div class="sub-label" style="margin-top:4px">建议调整 · 勾选后一键采纳</div><div id="co-adj-list">${adj}</div>
-      ${left > 0 ? `<button class="btn-primary" id="co-adopt" onclick="coachApplyReview()">采纳勾选的 ${left} 条</button>` : `<div class="note-line olive">✓ 已采纳 ${applied.length} 条</div>`}` : ''}
-    ${_coachCostLine(rv)}</div>`);
+      ${left > 0 ? `<button class="btn-primary" id="co-adopt" onclick="coachApplyReview()">采纳所选 ${left} 条</button>` : `<div class="note-line olive">✓ 已采纳 ${applied.length} 条</div>`}` : ''}
+    ${undo ? `<button type="button" class="link-btn u" style="align-self:flex-start" onclick="coachReviewUndo()">撤销刚才采纳的 ${undo} 条</button>` : ''}
+    ${_coachCostLine(rv)}${rvb}</div>`);
 }
 // 不合规的建议(越界数值、动作库外/本账号不可排的动作)直接不显示；采纳时 coachApplyReview 还会再核一遍
 function _coachCleanAdj(list) {
@@ -634,10 +655,15 @@ function coachApplyReview() {
   const cat = _coachCatalogMap();
   let regen = false, replan = false;
   const done = [];
+  // 撤销用的快照:只撤这次采纳的几条(设置原值、AI 建议重量原值;要重排的话连今天起的计划一起存)
+  const today = todayStr(), snap = { ver: rv.cur || 0, idx: [], set: {}, aiW: {}, stale: !!S.planStale, from: today };
+  _COACH_RV_SET.forEach(k => { if (k in S) snap.set[k] = JSON.parse(JSON.stringify(S[k])) });
+  const days0 = _coachDaySnap((S.plan?.days || []).filter(d => d.date >= today).map(d => d.date));
   picks.forEach(i => {
     const a = rv.adjustments[i], v = Number(a.value);
     if (a.type === 'weight') {
       if (!(v > 0 && v < 500) || !cat.has(a.exercise)) return;
+      if (!(a.exercise in snap.aiW)) snap.aiW[a.exercise] = S.aiWeights?.[a.exercise] ?? null;
       S.aiWeights = S.aiWeights || {};
       S.aiWeights[a.exercise] = { kg: roundWeight(v, a.exercise), date: todayStr() };
     } else if (a.type === 'volume') {
@@ -662,6 +688,10 @@ function coachApplyReview() {
     done.push(i);
   });
   rv.applied = [...new Set([...(rv.applied || []), ...done])];
+  // 「重排计划」那条只是跳去 AI 排,本身不改东西;其余的留快照(覆盖上一次采纳的)
+  snap.idx = done.filter(i => rv.adjustments[i].type !== 'replan');
+  if (regen && S.plan) snap.plan = days0;
+  if (snap.idx.length) rv.snap = snap; else delete rv.snap;
   _coachSave(st);
   saveState();
   if (typeof applySettingsToUI === 'function') applySettingsToUI();
@@ -676,6 +706,62 @@ function coachApplyReview() {
     setTimeout(() => { document.getElementById('p8')?.scrollIntoView({ behavior: 'smooth' }); coachPlan(); }, 50);
   }
 }
+// 复盘采纳会动的设置(撤销时按快照放回去;快照里没有的键 = 原来就没设,删掉)
+const _COACH_RV_SET = ['volumeMultiplier', 'dur', 'days', 'userExcluded', 'userExcludeReasons'];
+// 计划里一批天的快照 / 恢复(复盘采纳、AI 排计划草稿采纳的撤销用;规矩同提议卡的 _coachPropUndo)
+function _coachDaySnap(dates) {
+  const pick = (o, date) => Object.fromEntries(Object.entries(o || {}).filter(([k]) => k.startsWith(date + '-')));
+  const out = { dates: [...dates], days: {}, st: {} };
+  dates.forEach(date => {
+    const d = S.plan?.days?.find(x => x.date === date);
+    out.days[date] = d ? JSON.parse(JSON.stringify(d)) : null;
+    out.st[date] = { prog: S.prog[date] ? { ...S.prog[date] } : null, w: pick(S.weights, date), a: pick(S.adj, date), r: pick(S.exRpe, date) };
+  });
+  return out;
+}
+// 采纳以后已经打卡、或者又勾了新动作的天不回滚(返回这样的天数);快照里原来没有的天删掉;已经过去的天不动。
+// from:这天起计划里冒出来、快照里没有的天也删掉(复盘重排可能多排出几天)
+function _coachDayRestore(sn, from) {
+  const today = todayStr(), dates = new Set(sn.dates);
+  if (from) (S.plan?.days || []).forEach(d => { if (d.date >= from) dates.add(d.date) });
+  let kept = 0;
+  dates.forEach(date => {
+    if (date < today || !S.plan) return;
+    const i = S.plan.days.findIndex(x => x.date === date), s0 = sn.st[date] || {};
+    const now = Object.values(S.prog[date] || {}).filter(Boolean).length, was = Object.values(s0.prog || {}).filter(Boolean).length;
+    if (LOG.some(l => l.date === date) || now > was) { kept++; return }
+    const d0 = sn.days[date];
+    if (d0) { if (i >= 0) S.plan.days[i] = d0; else S.plan.days.push(d0) }
+    else if (i >= 0) S.plan.days.splice(i, 1);
+    if (s0.prog) S.prog[date] = s0.prog; else delete S.prog[date];
+    [['weights', 'w'], ['adj', 'a'], ['exRpe', 'r']].forEach(([k, sk]) => {
+      S[k] = S[k] || {};
+      Object.keys(S[k]).forEach(x => { if (x.startsWith(date + '-')) delete S[k][x] });
+      Object.assign(S[k], s0[sk] || {});
+    });
+  });
+  if (S.plan) S.plan.days.sort((a, b) => a.date.localeCompare(b.date));
+  return kept;
+}
+// 撤销最近一次采纳的复盘调整:设置、AI 建议重量放回去;那次重排过计划的,今天起的计划也回到采纳前;那几条回到没采纳
+function coachReviewUndo() {
+  const st = _coachLoad(), rv = st.review, sn = rv && rv.snap;
+  if (!sn) return;
+  _COACH_RV_SET.forEach(k => { if (k in sn.set) S[k] = sn.set[k]; else delete S[k] });
+  Object.entries(sn.aiW || {}).forEach(([k, v]) => { S.aiWeights = S.aiWeights || {}; if (v == null) delete S.aiWeights[k]; else S.aiWeights[k] = v });
+  const kept = sn.plan ? _coachDayRestore(sn.plan, sn.from) : 0;
+  S.planStale = sn.stale;
+  const v = (rv.cur || 0) === sn.ver ? rv : rv.vers && rv.vers[sn.ver];
+  if (v) v.applied = (v.applied || []).filter(i => !sn.idx.includes(i));
+  delete rv.snap;
+  _coachSave(st);
+  saveState();
+  if (typeof applySettingsToUI === 'function') applySettingsToUI();
+  if (typeof updateStaleBar === 'function') updateStaleBar();
+  render();
+  coachRenderReview();
+  showToast(kept ? `已撤销 · ${kept} 天已经开练或打卡，没回滚` : '已撤销 · 回到采纳前');
+}
 
 // ── 排计划(在「计划 → 08」选 AI 排) ──
 function _coachPlanDates(span) {
@@ -683,7 +769,7 @@ function _coachPlanDates(span) {
   for (let i = 0; i < span; i++) {
     const ds = addDays(today, i);
     const d = S.plan?.days?.find(x => x.date === ds);
-    if (d && (d.isPrivateDay || isLocked(d) || isDone(d))) continue;
+    if (d && ((d.isPrivateDay && _coachHidePriv()) || isLocked(d) || isDone(d))) continue;   // 私密日:owner 的 AI 也能排
     if (ds === today && d && Object.values(S.prog[today] || {}).some(Boolean)) continue; // 今天已开练就不动
     out.push(ds);
   }
@@ -694,12 +780,19 @@ async function coachPlan() {
   if (!dates.length) return showToast('接下来这几天都已完成或锁定');
   _coachBusy('gen-btn', true, '排计划中…（约一分钟）');
   try {
+    // 已配对、开着「排计划时跟搭子对齐」:把搭子这几天练什么和对齐规则一起带上(后端写进提示词);搭子的计划只当参考,不会被改
+    const align = typeof partnerAlignForAI === 'function' ? partnerAlignForAI(dates) : null;
+    const request = document.getElementById('co-plan-req')?.value || '';
     const r = await _coachFetch('/api/plan', {
-      context: buildCoachContext({ catalog: 'full' }), dates,
-      request: document.getElementById('co-plan-req')?.value || '', ..._coachOpts('plan')
+      context: buildCoachContext({ catalog: 'full' }), dates, ...(align ? { align } : {}),
+      request, ..._coachOpts('plan')
     });
     const draft = _coachValidatePlan(r.data, dates);
     draft.model = r.model; draft.effort = r.effort; draft.cost = r.cost;
+    draft.dates = dates; draft.req = request;   // 「改一下」照原来的日期和要求再排
+    _rvOpen.delete('plan:'); _rvDraft.delete('plan:');
+    if (align && typeof partnerAlignCount === 'function') draft.align = partnerAlignCount(draft.days);
+    else if (typeof partnerAlignOffNote === 'function' && partnerAlignOffNote(true)) draft.align = { text: partnerAlignOffNote(true) };   // 开着对齐但搭子没共享计划 / 不许 AI 参考:说一句这次没对齐
     const st = _coachLoad(); st.planDraft = draft; _coachSave(st);
     _coachShowPlan(draft);
   } catch (e) { showToast(e.message) }
@@ -715,7 +808,7 @@ function _coachValidatePlan(data, dates) {
     const exs = [], seen = new Set();
     d.exercises.forEach(e => {
       const hit = cat.get(e.name);
-      if (!hit || seen.has(e.name)) { if (!hit) dropped.push(e.name); return }
+      if (!hit || seen.has(e.name)) { if (!hit && !_coachGated().has(e.name)) dropped.push(e.name); return }   // 门控动作的名字不往界面上写
       seen.add(e.name);
       const { ex, g } = hit;
       const unit = ex.u === '秒' || ex.u === '分钟' ? ex.u : '次';
@@ -736,26 +829,52 @@ function _coachShowPlan(dr) {
   const el = document.getElementById('co-plan-body');
   if (!el) return;
   if (!dr || !dr.days?.length) { el.innerHTML = ''; return }
-  el.innerHTML = `<div class="co-rv" style="border-top:1px solid var(--line);padding-top:12px"><div class="sec-label">[ AI 排 ] 预览 · ${_esc(dr.at || '')}</div>${_coachMd(dr.rationale)}
+  const al = dr.align;   // 跟搭子对齐了几天(_coachValidatePlan 之后按草稿现算的)
+  // 采纳过:收成一行「已写进计划 N 天 · 撤销 / 收起」;撤销以后草稿回到待定
+  if (dr.state === 'applied') {
+    el.innerHTML = skinTpl('planDraftDone', { dr }, () => `<div class="co-rv" style="border-top:1px solid var(--line);padding-top:12px"><div class="note-line olive">✓ AI 排的 ${dr.appliedN || 0} 天已经写进计划</div>
+      <div style="display:flex;gap:20px">${dr.snap ? `<button type="button" class="link-btn u" onclick="coachPlanUndo()">撤销，回到采纳前</button>` : ''}<button type="button" class="link-btn u" onclick="coachDropPlan()">收起</button></div></div>`);
+    return;
+  }
+  // 多于一天:每天前面一个勾选框,「采纳」只写勾上的那几天(dr.off = 没勾的日期)
+  const sel = dr.days.length > 1, off = new Set(dr.off || []), selN = dr.days.filter(d => !off.has(d.date)).length;
+  const label = selN === dr.days.length ? '采纳这份计划' : `采纳所选 ${selN} 天`, rvb = _coachRvHtml('plan', '');
+  el.innerHTML = skinTpl('planDraft', { dr, al, sel, off, selN, label, rvb }, () => `<div class="co-rv" style="border-top:1px solid var(--line);padding-top:12px"><div class="sec-label">[ AI 排 ] 预览 · ${_esc(dr.at || '')}</div>${_coachMd(dr.rationale)}
+    ${al ? `<div class="co-meta co-align">${_esc(al.text)}</div>` : ''}
     ${dr.dropped?.length ? `<div class="co-meta co-err">已去掉 ${dr.dropped.length} 个不在你动作库里的：${_esc(dr.dropped.join('、'))}</div>` : ''}
-    ${dr.days.map(d => `<div class="co-day"><div class="co-day-h">${_esc(fmtDate(d.date))} · ${_esc(d.workoutType)}</div>
+    ${sel ? `<div class="sub-label" style="margin-top:4px">不想要的那天去掉勾</div>` : ''}
+    ${dr.days.map(d => `<div class="co-day">${sel ? `<button type="button" class="adj-row co-day-sel" style="border-top:0;padding:4px 0" role="checkbox" aria-checked="${!off.has(d.date)}" data-d="${_esc(d.date)}" onclick="coachPlanSel(this)">${uiBoxSq()}<span class="what co-day-h">${_esc(fmtDate(d.date))} · ${_esc(d.workoutType)}</span></button>` : `<div class="co-day-h">${_esc(fmtDate(d.date))} · ${_esc(d.workoutType)}</div>`}
       ${d.isRest ? '' : `<div class="co-day-ex">${d.exercises.map(e => `<button type="button" data-act="detail" data-name="${_esc(e.name)}">${_esc(e.name)} <small>${e.sets}×${e.reps}${_esc(e.unit)}</small></button>`).join('')}</div>`}</div>`).join('')}
-    <div class="btn-row"><button class="btn-primary" style="min-height:44px;font-size:14px" onclick="coachApplyPlan()">采纳这份计划</button><button class="btn-line" onclick="coachDropPlan()">不要了</button></div>
-    ${_coachCostLine(dr)}</div>`;
+    <div class="btn-row"><button class="btn-primary" id="co-plan-adopt" style="min-height:44px;font-size:14px" onclick="coachApplyPlan()"${selN ? '' : ' disabled'}>${label}</button><button class="btn-line" onclick="coachDropPlan()">不要了</button></div>
+    ${_coachCostLine(dr)}${rvb}</div>`);
+}
+// 草稿里勾 / 不勾某一天:记进 dr.off(存本机),按钮跟着改字
+function coachPlanSel(btn) {
+  const st = _coachLoad(), dr = st.planDraft, date = btn && btn.dataset.d;
+  if (!dr || dr.state === 'applied' || !date) return;
+  const on = uiToggleBox(btn), off = new Set(dr.off || []);
+  if (on) off.delete(date); else off.add(date);
+  dr.off = [...off].sort();
+  _coachSave(st);
+  const n = dr.days.filter(d => !off.has(d.date)).length, b = document.getElementById('co-plan-adopt');
+  if (b) { b.textContent = n === dr.days.length ? '采纳这份计划' : `采纳所选 ${n} 天`; b.disabled = !n }
 }
 function coachShowPlanDraft() { const st = _coachLoad(); _coachShowPlan(st.planDraft || null); }
-function coachDropPlan() { const st = _coachLoad(); delete st.planDraft; _coachSave(st); _coachShowPlan(null) }
+function coachDropPlan() { const st = _coachLoad(); delete st.planDraft; _coachSave(st); _rvOpen.delete('plan:'); _coachShowPlan(null) }
 function coachApplyPlan() {
   const st = _coachLoad(), dr = st.planDraft;
-  if (!dr) return;
-  // 采纳前再核一遍：生成之后可能已经打卡/换了账号设置
-  const ok = new Set(_coachPlanDates(30)), cat = _coachCatalogMap();
-  const days = dr.days.filter(d => ok.has(d.date)).map(d => ({ ...d, exercises: d.exercises.filter(e => cat.has(e.name)) }));
-  if (!days.length) return showToast('这份草稿里的日子都已经过去或完成了');
+  if (!dr || dr.state === 'applied') return;
+  // 采纳前再核一遍：生成之后可能已经打卡/换了账号设置;没勾的那几天不动
+  const ok = new Set(_coachPlanDates(30)), cat = _coachCatalogMap(), off = new Set(dr.off || []);
+  const days = dr.days.filter(d => ok.has(d.date) && !off.has(d.date)).map(d => ({ ...d, exercises: d.exercises.filter(e => cat.has(e.name)) }));
+  if (!days.length) return showToast(off.size ? '勾上的日子都已经过去或完成了' : '这份草稿里的日子都已经过去或完成了');
+  // 撤销用的快照:这几天原来的样子(原来没有的记 null)+ 计划顶上那句说明
+  const snap = { ..._coachDaySnap(days.map(d => d.date)), tip: S.plan ? S.plan.tip : null };
   if (!S.plan) S.plan = { days: [], tip: '', rest: currentScheme().rest, excludedCount: visibleExcludedCount(getExcluded()) };
   const used = new Set();
   days.forEach(d => {
-    if (!d.isRest && !d.isSwimDay && _ownerSession()) {
+    // owner:AI 排的这天里已经有私密池动作(owner 的 AI 看得到、能排)就不再追加,免得重复
+    if (!d.isRest && !d.isSwimDay && _ownerSession() && !d.exercises.some(e => _PRIVATE_POOL.includes(e.name))) {
       try { pickPrivateForSplit({ groups: [...new Set(d.exercises.map(e => e.group))], type: d.workoutType }, getExcluded(), used).forEach(e => d.exercises.push(e)) } catch { }
     }
     // 这一天原来按下标存的打勾/重量/RPE/调整全部清掉，免得错位到新动作上
@@ -766,11 +885,26 @@ function coachApplyPlan() {
   });
   S.plan.days.sort((a, b) => a.date.localeCompare(b.date));
   if (dr.rationale) S.plan.tip = 'AI 教练：' + dr.rationale;
-  delete st.planDraft; _coachSave(st);
+  // 草稿留着(收成一行「已写进计划 · 撤销」),快照只留这一次的
+  dr.state = 'applied'; dr.appliedN = days.length; dr.snap = snap;
+  _rvOpen.delete('plan:');
+  _coachSave(st);
   saveState(); render();
   showToast(`已采纳 ${days.length} 天`);
   showTab('today');
   if (typeof uiNotice === 'function') uiNotice(`AI 排的 ${days.length} 天已经写进计划`);
+}
+// 撤销 AI 排计划的采纳:那几天回到采纳前(已经开练 / 打卡的天不回滚),草稿回到待定,可以再改、再采纳
+function coachPlanUndo() {
+  const st = _coachLoad(), dr = st.planDraft;
+  if (!dr || dr.state !== 'applied' || !dr.snap) return;
+  const kept = _coachDayRestore(dr.snap);
+  if (S.plan && dr.snap.tip !== null && dr.snap.tip !== undefined) S.plan.tip = dr.snap.tip;
+  delete dr.state; delete dr.snap; delete dr.appliedN;
+  _coachSave(st);
+  saveState(); render();
+  coachShowPlanDraft();
+  showToast(kept ? `已撤销 · ${kept} 天已经开练或打卡，没回滚` : '已撤销 · 计划回到采纳前');
 }
 
 // ── 拍器械 ──
@@ -782,30 +916,53 @@ async function coachVision(input) {
   let img;
   try { img = await _coachImage(f) } catch (e) { return showToast(e.message) }
   el.innerHTML = `<div style="padding:8px 0;display:flex;flex-direction:column;gap:8px"><img class="co-thumb" src="${img}" alt="刚拍的器械"><div class="co-meta">识别中…</div></div>`;
+  _rvOpen.delete('vision:'); _rvDraft.delete('vision:');
   try {
     const r = await _coachFetch('/api/vision', { image: img, context: buildCoachContext({ catalog: 'full', logDays: 14 }), ..._coachOpts('vision') });
-    const cat = _coachCatalogMap(), d = r.data;
-    const list = (d.exercises || []).filter(e => cat.has(e.name));
-    const today = S.plan?.days?.find(x => x.date === todayStr());
-    const canAdd = today && !today.isRest && !today.isPrivateDay && !isLocked(today);
-    window._coachVisionList = list.map(e => e.name);
-    el.innerHTML = `<div style="padding:8px 0 12px;display:flex;flex-direction:column;gap:8px"><img class="co-thumb" src="${img}" alt="刚拍的器械"><div class="co-rv"><div class="co-rv-h">${_esc(d.equipment)}</div>${_coachMd(d.note)}
-      ${list.map((e, i) => `<div class="co-vx"><button type="button" onclick="showExDetail(window._coachVisionList[${i}])"><span>${_esc(e.name)}</span><small>${_esc(e.why)}</small></button>
-        ${canAdd ? `<button class="btn-line" onclick="coachAddToday(${i},this)">加到今天</button>` : ''}</div>`).join('') || '<p class="co-meta">动作库里没有对应的动作。</p>'}
-      ${_coachCostLine(r)}</div></div>`;
-  } catch (e) { el.innerHTML = `<div class="co-meta co-err" style="padding:8px 0">${_esc(e.message)}</div>` }
+    // 结果放在内存里(照片不进本机存储):「改一下」带着照片和这一版再问;切回上一版、加到今天的撤销都靠它
+    window._coachVis = { img, ..._coachVisTake(r.data || {}, r), added: {} };
+    _coachVisionPaint();
+  } catch (e) { window._coachVis = null; el.innerHTML = `<div class="co-meta co-err" style="padding:8px 0">${_esc(e.message)}</div>` }
+}
+function _coachVisTake(d, r) {
+  const cat = _coachCatalogMap();
+  return { equipment: String(d.equipment || ''), note: String(d.note || ''), model: r.model, effort: r.effort, cost: r.cost,
+    list: (Array.isArray(d.exercises) ? d.exercises : []).filter(e => e && cat.has(e.name)).map(e => ({ name: e.name, why: String(e.why || '') })) };
+}
+function _coachVisionPaint() {
+  const el = document.getElementById('co-vision-body'), v = window._coachVis;
+  if (!el || !v) return;
+  const today = S.plan?.days?.find(x => x.date === todayStr());
+  const canAdd = today && !today.isRest && !(today.isPrivateDay && _coachHidePriv()) && !isLocked(today);
+  window._coachVisionList = v.list.map(e => e.name);
+  // 加到今天:每个动作单独加;加了的那条换成「已加 · 撤销」(撤销走对话小改同一套快照)
+  el.innerHTML = `<div style="padding:8px 0 12px;display:flex;flex-direction:column;gap:8px"><img class="co-thumb" src="${v.img}" alt="刚拍的器械"><div class="co-rv"><div class="co-rv-h">${_esc(v.equipment)}</div>${_coachMd(v.note)}
+      ${v.list.map((e, i) => `<div class="co-vx"><button type="button" onclick="showExDetail(window._coachVisionList[${i}])"><span>${_esc(e.name)}</span><small>${_esc(e.why)}</small></button>
+        ${v.added[e.name] ? `<button class="btn-line" onclick="coachVisionUndo(${i})">已加 · 撤销</button>` : canAdd ? `<button class="btn-line" onclick="coachAddToday(${i},this)">加到今天</button>` : ''}</div>`).join('') || '<p class="co-meta">动作库里没有对应的动作。</p>'}
+      ${_coachCostLine(v)}${_coachRvHtml('vision', '')}</div></div>`;
 }
 function coachAddToday(i, btn) {
-  const name = window._coachVisionList?.[i], hit = name && _coachCatalogMap().get(name);
+  const v = window._coachVis, name = window._coachVisionList?.[i], hit = name && _coachCatalogMap().get(name);
   const day = S.plan?.days?.find(x => x.date === todayStr());
   if (!hit || !day) return;
   if (day.exercises.some(e => e.name === name)) return showToast('今天已经有这个动作');
-  const { ex, g } = hit, unit = ex.u === '秒' || ex.u === '分钟' ? ex.u : '次';
-  const item = { name: ex.n, sets: 3, reps: unit === '秒' ? (ex.hold || 30) : unit === '分钟' ? 10 : 12, unit, note: ex.note || '', group: g, diff: ex.diff, bi: !!ex.bi, muscle: ex.muscle || [] };
-  _coachInsertEx(day, item);
+  // 和对话里「加动作」同一套执行和快照(组数次数按库里的默认),撤销只撤这一个
+  const { result, snap } = _coachTodayApply([{ op: 'add', exercise: name, sets: null, reps: null, kg: null }]);
+  if (result[0]) return showToast(result[0]);
+  if (v) v.added[name] = snap;
   saveState(); render();
-  btn.textContent = '已加'; btn.disabled = true;
-  showToast(`已加到今天：${name}`);
+  if (v) _coachVisionPaint(); else if (btn) { btn.textContent = '已加'; btn.disabled = true }
+  showToast(`已加到今天：${name} · 可以撤销`);
+}
+function coachVisionUndo(i) {
+  const v = window._coachVis, name = v && v.list[i] && v.list[i].name, snap = name && v.added[name];
+  if (!snap) return;
+  const why = _coachTodayUndo(snap);
+  if (why) return showToast(why);
+  delete v.added[name];
+  saveState(); render();
+  _coachVisionPaint();
+  showToast(`已撤销：${name} 不加了`);
 }
 
 // 往某天加一个动作:加在拉伸前面;插入会让后面的按下标状态错位,整体后移一格。返回新动作的下标
@@ -821,8 +978,14 @@ function _coachInsertEx(day, item) {
 }
 
 // ── AI 给的动作:按库里的定义收拾组/次/kg ──
-// 私密池 + 盆底:AI 永远看不到,也不许它动(就算碰巧说出名字也当「不在动作库里」)
-function _coachGated() { return new Set([..._PRIVATE_POOL, ...(typeof OWNER_ONLY_MOVES !== 'undefined' ? OWNER_ONLY_MOVES : [])]) }
+// 门控两种用途(调用点逐个判断用哪个,别混):
+// _shareGated():给别人看 / 会被别人看到的(搭子共享文档、推送快照和推送文字):私密池 + 盆底,永远拦,owner 也一样。
+// _coachGated():发给自己的 AI(快照、live、catalog、对话 / 提议 / 换动作的校验):owner 会话不拦(空集合);
+//   非 owner 同 _shareGated(),AI 看不到也不许它动(就算碰巧说出名字也当「不在动作库里」)。
+// _coachHidePriv(share):私密日只报「另有安排」、带 subMetrics 的记录不进 —— 非 owner 或 share 时为 true。
+function _shareGated() { return new Set([..._PRIVATE_POOL, ...(typeof OWNER_ONLY_MOVES !== 'undefined' ? OWNER_ONLY_MOVES : [])]) }
+function _coachGated() { return _ownerSession() ? new Set() : _shareGated() }
+function _coachHidePriv(share) { return !!share || !_ownerSession() }
 function _coachUnit(ex) { return ex && (ex.u === '秒' || ex.u === '分钟') ? ex.u : '次' }
 const _COACH_REPS = { '次': [1, 50], '秒': [5, 600], '分钟': [1, 90] };
 function _coachInt(v) { if (v === null || v === undefined || v === '') return null; const x = Number(v); return Number.isFinite(x) ? Math.round(x) : null }
@@ -855,7 +1018,8 @@ function coachTodayNoteHtml(date) {
   if ((date && date !== today) || coachAccess() !== 'on') return '';
   const n = _coachLoad().note;
   if (n && n.date === today && n.text) {
-    return skinTpl('coachNote', n, n => `<div class="coach-note" id="co-note"><div class="sec-label">[ 教练 ] Note · ${_coachHM(n.at)}</div><div class="prose">${_esc(n.text)}</div><button type="button" class="link-btn u" style="align-self:flex-start" onclick="showTab('coach')">接着问 →</button></div>`);
+    // 下面是「改一下 / 聊聊」(聊聊 = 带着这段话去教练页接着问)
+    return skinTpl('coachNote', { ...n, rvb: _coachRvHtml('note', today) }, n => `<div class="coach-note" id="co-note"><div class="sec-label">[ 教练 ] Note · ${_coachHM(n.at)}</div><div class="prose">${_esc(n.text)}</div>${n.rvb}</div>`);
   }
   setTimeout(_coachNoteMaybeFetch, 0);
   return '';
@@ -902,6 +1066,11 @@ function coachSwapHtml() {
   return x ? `<div id="swap-ai" class="swap-ai" aria-live="polite">${_coachSwapInner(x)}</div>` : '';
 }
 function _coachSwapInner(x) {
+  // 拿到结果以后下面接「改一下 / 聊聊」(两种风格都是 _coachRvHtml 画的)
+  const r0 = _swapReason ? _swapAI.get(x.key) : null;
+  return _coachSwapInner0(x) + (r0 && r0.state === 'ok' ? _coachRvHtml('swap', x.key) : '');
+}
+function _coachSwapInner0(x) {
   // 运动风格换结构(skin-sport.js 60 区):ctx 是原因和这次的结果
   return skinTpl('swapAI', { reason: _swapReason, r: _swapReason ? _swapAI.get(x.key) : null }, () => {
     const head = `<div class="sheet-eyebrow" style="margin-top:4px">[ AI 推荐 ]</div>`;
@@ -961,19 +1130,19 @@ function coachSwapPick(k) {
 }
 
 // ══ 打卡后即时反馈 ══
-// 打卡先落盘、弹窗先关,反馈后台去要;到了显示在「今天」打卡那行下面。私密模式的打卡、私密日不发,私密池动作不进。
+// 打卡先落盘、弹窗先关,反馈后台去要;到了显示在「今天」打卡那行下面。私密模式的打卡、私密日不发,私密池动作不进(owner 都发,带 subMetrics)。
 function _coachSessionFor(date, o = {}) {
-  const lg = LOG.find(l => l.date === date);
-  if (!lg || lg.subMetrics) return null;
+  const lg = LOG.find(l => l.date === date), hide = _coachHidePriv();
+  if (!lg || (lg.subMetrics && hide)) return null;
   const day = S.plan?.days?.find(d => d.date === date);
-  if (day && day.isPrivateDay) return null;
-  const priv = _coachPriv();
+  if (day && day.isPrivateDay && hide) return null;
+  const priv = hide ? _coachPriv() : new Set();
   const exercises = (lg.exercises || []).map((e, i) => {
     const r = typeof getExRpe === 'function' ? getExRpe(date, i) : null;
     return { name: e.name, sets: e.sets, reps: e.reps, unit: e.unit || '次', kg: e.weight || null, done: e.done !== false, ...(r != null ? { rpe: r } : {}) };
   }).filter(e => !priv.has(e.name));
   if (!exercises.length) return null;
-  return { date, workout: lg.workout, rpe: o.skipped ? null : lg.rpe, min: lg.duration || null, note: lg.note || '', exercises };
+  return { date, workout: lg.workout, rpe: o.skipped ? null : lg.rpe, min: lg.duration || null, note: lg.note || '', exercises, ...(lg.subMetrics && !hide ? { subMetrics: lg.subMetrics } : {}) };
 }
 async function coachAfterCheckin(date, o = {}) {
   if (coachAccess() !== 'on') return;
@@ -1019,7 +1188,7 @@ function coachFeedbackHtml(date) {
   const next = fb.next && fb.next.length ? `<span class="sub-label">下次</span><ul class="co-fb-next">${fb.next.map(a => `<li><span class="what">${_esc(a.exercise)} · ${_esc(a.change)}</span>${a.why ? `<span class="why">${_esc(a.why)}</span>` : ''}</li>`).join('')}</ul>` : '';
   const lim = !fb.limit_add ? '' : fb.limitAdded ? `<span class="note-line olive">✓ 已加进身体情况 · 「计划 → 05」可以改</span>`
     : `<button type="button" class="link-btn u co-fb-add" data-date="${_esc(date)}" onclick="coachAddLimit(this.dataset.date)">+ 把「${_esc(fb.limit_add)}」加进身体情况</button>`;
-  return open + `<div class="prose">${_esc(fb.text)}</div>${next}${lim}${_coachCostLine(fb)}</div>`;
+  return open + `<div class="prose">${_esc(fb.text)}</div>${next}${lim}${_coachCostLine(fb)}${_coachRvHtml('feedback', date)}</div>`;
 }
 // 把反馈里的不适追加到「身体情况」;改了身体情况 → 计划顶上亮「按新设置重排」(和手动改 05 一样)
 function coachAddLimit(date) {
@@ -1050,7 +1219,7 @@ function _coachShowChat(streaming) {
   const chat = _coachLoad().chat || [];
   el.innerHTML = skinTpl('coachChat', { chat, streaming }, () => chat.length ? chat.map(m => m.role === 'assistant'
     ? `<div class="co-msg assistant"><span class="who">[ 教练 ]${m.at ? ' ' + _coachHM(m.at) : ''}</span><div class="co-text">${_coachMd(m.text)}</div>${m.action ? _coachActHtml(m.action) : ''}${m.proposal ? _coachPropHtml(m.proposal) : ''}${m.mem ? _coachMemNoteHtml(m.mem) : ''}${m.meta ? _coachCostLine(m.meta) : ''}</div>`
-    : `<div class="co-msg user"><span class="who">你${m.at ? ' · ' + _coachHM(m.at) : ''}</span>${m.img ? '<span class="co-meta">[ 图片 ]</span>' : ''}<span class="co-text">${_esc(m.text).replace(/\n/g, '<br>')}</span></div>`).join('')
+    : `<div class="co-msg user"><span class="who">你${m.at ? ' · ' + _coachHM(m.at) : ''}</span>${m.ref ? _coachRefHtml(m.ref) : ''}${m.img ? '<span class="co-meta">[ 图片 ]</span>' : ''}<span class="co-text">${_esc(m.text).replace(/\n/g, '<br>')}</span></div>`).join('')
     + (streaming ? `<div class="co-msg assistant"><span class="who">[ 教练 ]</span><div class="co-text" id="co-stream"><span class="co-meta">思考中…</span></div></div>` : '')
     : '<div class="note-line" style="padding:12px 0">比如：「我深蹲总是膝盖往里扣怎么办」「这周只能练两次，怎么安排」「今天很累还要练吗」</div>');
   if (streaming || chat.length) { const last = el.lastElementChild; if (last && typeof last.scrollIntoView === 'function' && typeof uiCurrentTab !== 'undefined' && uiCurrentTab === 'coach') last.scrollIntoView({ block: 'end' }); }
@@ -1123,25 +1292,29 @@ function _coachReplyMsg(res) {
   return m;
 }
 // 发出去的历史:提议卡 / 小改之后补的那句(「(她采纳了)」「(已直接改了…)」)跟着那条助手消息一起发,AI 才知道改没改成
+// 「聊聊」带进来的引用(m.ref)放在她那条话前面;提议卡「改一下」改过几版(m.rev)也跟着那条助手消息发
 function _coachHist(list, n) {
-  const send = list.slice(-n).map(m => ({ role: m.role, text: m.text + (m.role === 'assistant' && m.after ? '\n\n' + m.after : '') }));
+  const send = list.slice(-n).map(m => ({ role: m.role, text: (m.ref ? _coachRefText(m.ref) + '\n\n' : '') + m.text
+    + (m.role === 'assistant' && m.rev ? '\n\n' + m.rev : '') + (m.role === 'assistant' && m.after ? '\n\n' + m.after : '') }));
   while (send.length && send[0].role !== 'user') send.shift();
   return send;
 }
 async function coachSend() {
   const ta = document.getElementById('co-chat-text');
   const text = (ta.value || '').trim();
-  if (!text && !_coachPendingImg) return;
-  const st = _coachLoad();
+  const st = _coachLoad(), ref = st.chatRef || null;   // 「聊聊」带进来的那份结果:跟这条一起发,发完就清掉
+  if (!text && !_coachPendingImg && !ref) return;
   st.chat = st.chat || [];
   // 数据快照在对话开头拍一次，整段对话沿用(后端放进第一条消息，缓存命中省钱)；要用最新数据就点「新对话」。
   // 今天做到哪、用时这些会变的,每条消息另带 live(只放进那一条)
   if (!st.chat.length || !st.chatCtx) st.chatCtx = buildCoachContext({ catalog: 'names', logDays: 28 });
   const img = _coachPendingImg;
-  st.chat.push({ role: 'user', text: text || '(看图)', img: !!img, at: Date.now() });
+  st.chat.push({ role: 'user', text: text || (img ? '(看图)' : '这份我想跟你聊聊。'), img: !!img, at: Date.now(), ...(ref ? { ref: { k: ref.k, t: ref.t, s: ref.s } } : {}) });
+  delete st.chatRef;
   st.chat = st.chat.slice(-COACH_CHAT_MAX);
   _coachSave(st);
   ta.value = ''; _coachPendingImg = null; document.getElementById('co-chat-img').innerHTML = '';
+  _coachRefPaint();
   _coachShowChat(true);
   _coachBusy('co-chat-go', true, '…');
   const res = await _coachStream('/api/chat', { messages: _coachHist(st.chat, COACH_CHAT_SEND), context: st.chatCtx, live: buildCoachLive(), gate: [..._coachGated()], image: img || undefined, ..._coachOpts('chat') },
@@ -1150,9 +1323,9 @@ async function coachSend() {
   const st2 = _coachLoad();
   st2.chat = st2.chat || [];
   if (reply) st2.chat.push(reply);
-  else st2.chat.pop(); // 失败就撤回刚才那条，免得历史里两条用户消息连在一起
+  else { const u = st2.chat.pop(); if (u && u.ref && !st2.chatRef) st2.chatRef = u.ref }   // 失败就撤回刚才那条(引用放回输入框上面)，免得历史里两条用户消息连在一起
   _coachSave(st2);
-  if (!res.text) ta.value = text;
+  if (!res.text) { ta.value = text; _coachRefPaint() }
   _coachShowChat();
   _coachBusy('co-chat-go', false);
   if (res.err) showToast(res.err);
@@ -1285,7 +1458,7 @@ function _coachTodayCheck(c, day) {
   if (c.op === 'timer') return Number.isInteger(c.seconds) && c.seconds >= 5 && c.seconds <= 900 ? '' : '计时长度不对';
   if (c.op === 'limit') return typeof c.text === 'string' && c.text.trim() && c.text.length <= 80 ? '' : '身体情况写得不对';
   if (!day) return '今天没有训练计划';
-  if (day.isPrivateDay) return '今天另有安排，不改';
+  if (day.isPrivateDay && _coachHidePriv()) return '今天另有安排，不改';
   if (day.isRest) return '今天是休息日';
   if (LOG.some(l => l.date === day.date)) return '今天已经打卡了';
   const gated = _coachGated(), cat = _coachCatalogMap();
@@ -1472,11 +1645,13 @@ function _coachActHtml(a) {
   }).join('');
   const gated = _coachGated(), drop = (a.dropped || []).filter(n => !gated.has(n));
   const head = a.state === 'applied' ? `已改 · 今天 · ${okN} 处` : a.state === 'undone' ? '已撤销 · 今天的训练回到改之前' : '没改成';
-  return skinTpl('coachAct', { a, okN, rows, drop, head }, () => `<div class="co-act" data-aid="${_esc(a.id)}"><div class="co-act-h"><span class="dot" aria-hidden="true"></span>${_esc(head)}</div>`
+  // 改过了(不管还能不能撤销)就有「不对，说说」:带着这次改了什么去教练对话
+  const talk = a.state === 'applied' && okN ? `<button type="button" class="link-btn u" data-rk="action:${_esc(a.id)}" onclick="coachDiscuss(this)">不对，说说</button>` : '';
+  return skinTpl('coachAct', { a, okN, rows, drop, head, talk }, () => `<div class="co-act" data-aid="${_esc(a.id)}"><div class="co-act-h"><span class="dot" aria-hidden="true"></span>${_esc(head)}</div>`
     + `<ul class="co-act-list">${rows}</ul>`
     + (drop.length ? `<div class="co-meta">还提到 ${drop.length} 个不在你今天计划或动作库里的：${_esc(drop.join('、'))}</div>` : '')
     + (a.undoErr ? `<div class="co-meta co-err">${_esc(a.undoErr)}</div>` : '')
-    + (a.state === 'applied' && a.snap ? `<button type="button" class="link-btn u" style="align-self:flex-start" onclick="coachActUndo(this)">撤销</button>` : '')
+    + (a.state === 'applied' && (a.snap || talk) ? `<div style="display:flex;flex-wrap:wrap;column-gap:20px">${a.snap ? `<button type="button" class="link-btn u" onclick="coachActUndo(this)">撤销</button>` : ''}${talk}</div>` : '')
     + `</div>`);
 }
 // 记忆变动:一行小字(「已记住：…」)
@@ -1493,6 +1668,7 @@ function _coachMemNoteHtml(mm) {
 // 采纳前客户端再核一遍(动作库 / getExcluded / 私密池 / 数值范围 / 那天的状态),核不过的划掉并写原因;
 // 已完成的天、今天已经勾了的动作不动;采纳前存快照,卡片上能撤销(只留最近一次采纳的快照)。
 const _COACH_OPS = ['replace', 'adjust', 'remove', 'add', 'setting'];
+const _COACH_SKIP = '没选';   // 采纳时她去掉了勾的那条:结果里记这个(卡片上划掉写「没选，没改」)
 const _SET_NAME = { days: '每周天数', dur: '每次时长', restDur: '组间休息', equip: '器械', focus: '重点部位', goal: '目标', level: '动作难度', weightLevel: '重量强度', limits: '身体情况' };
 function _coachPropFrom(j) {
   if (!j || typeof j !== 'object' || !Array.isArray(j.changes) || !j.changes.length) return null;
@@ -1554,10 +1730,10 @@ function _coachSetApply(key, v) {
   } else S[key] = Array.isArray(v) ? [...v] : v;
   return key !== 'restDur' && key !== 'weightLevel';
 }
-// 这条改动要落在哪些天:指定日期 = 那一天;「以后」= 今天之后所有还没练完的训练日。休息日、私密日、已打卡的天都不动
+// 这条改动要落在哪些天:指定日期 = 那一天;「以后」= 今天之后所有还没练完的训练日。休息日、私密日(owner 除外)、已打卡的天都不动
 function _coachPropDays(c) {
-  const today = todayStr();
-  const ok = d => d && !d.isRest && !d.isPrivateDay && !isDone(d) && d.date >= today;
+  const today = todayStr(), hide = _coachHidePriv();
+  const ok = d => d && !d.isRest && !(d.isPrivateDay && hide) && !isDone(d) && d.date >= today;
   if (c.scope === '以后') return (S.plan?.days || []).filter(d => d.date > today && ok(d));
   const d = S.plan?.days?.find(x => x.date === c.scope);
   return ok(d) ? [d] : [];
@@ -1587,7 +1763,7 @@ function _coachPropCheck(c) {
     if (c.scope < today) return '那天已经过去了';
     const d = S.plan.days.find(x => x.date === c.scope);
     if (!d) return '那天不在现在的计划里';
-    if (d.isPrivateDay) return '那天另有安排，不改';
+    if (d.isPrivateDay && _coachHidePriv()) return '那天另有安排，不改';
     if (d.isRest) return '那天是休息日';
     if (isDone(d)) return '那天已经练完打卡了';
     if (c.op === 'add' && d.isSwimDay) return '那天是游泳日';
@@ -1624,7 +1800,7 @@ function _coachScopeLabel(scope) {
   if (n > 1 && n < 7) return fmtDate(scope).split('·')[0];
   return scope.slice(5).replace('-', '/');
 }
-// 门控动作的名字不往界面上写(AI 看不到它们,真碰巧说出来也只显示成「不在动作库里的动作」)
+// 门控动作的名字不往界面上写(AI 看不到它们,真碰巧说出来也只显示成「不在动作库里的动作」);owner 的 _coachGated 是空的 → 显示真名
 function _coachNm(n) { return _coachGated().has(String(n || '').trim()) ? '不在动作库里的动作' : String(n ?? '') }
 function _coachChangeTxt(c) {
   const kgOk = n => c.kg != null && isWeightedMove(n);
@@ -1652,16 +1828,38 @@ function _coachPropHtml(p) {
     const bad = res[i], txt = _coachRowTxt(c, open);
     return `<span class="d">${_esc(c.op === 'setting' ? '设置' : _coachScopeLabel(c.scope))}</span><span class="c${bad ? ' bad' : ''}">${bad ? `<s>${_esc(txt)}</s><small class="co-err">${_esc(bad)}${open ? '，不会改' : '，没改'}</small>` : `${_esc(txt)}${c.why ? `<small>${_esc(c.why)}</small>` : ''}`}</span>`;
   }).join('');
+  // 待定、不止一条:每条一个勾选框,没勾的(p.off)采纳时跳过;全勾着按钮叫「采纳」,去掉过勾叫「采纳所选」
+  const off = new Set(p.off || []), multi = open && p.changes.length > 1;
+  const selN = res.filter((x, i) => !x && !off.has(i)).length, label = selN === res.filter(x => !x).length ? '采纳' : '采纳所选';
+  const sel = !multi ? '' : p.changes.map((c, i) => {
+    const bad = res[i], txt = _coachRowTxt(c, true), d = c.op === 'setting' ? '设置' : _coachScopeLabel(c.scope);
+    return `<button type="button" class="adj-row co-prop-sel" role="checkbox" aria-checked="${!bad && !off.has(i)}" data-i="${i}"${bad ? ' aria-disabled="true"' : ' onclick="coachPropSel(this)"'}>${uiBoxSq()}<span><span class="what">${_esc(d)} · ${bad ? `<s>${_esc(txt)}</s>` : _esc(txt)}</span>${bad ? `<span class="why co-err">${_esc(bad)}，不会改</span>` : c.why ? `<span class="why">${_esc(c.why)}</span>` : ''}</span></button>`;
+  }).join('');
   const drop = (p.dropped || []).filter(n => !gated.has(n));
+  const msg = p.vers && p.msg ? p.msg : '', rvb = open ? _coachRvHtml('proposal', p.id) : '';   // 改过的版本:教练这一版说的话写在卡片里
   let foot = '';
-  if (open) foot = `<div class="co-prop-btns"><button type="button" class="btn-primary" onclick="coachPropAct(this,'apply')"${okN ? '' : ' disabled'}>采纳</button><button type="button" class="btn-line" onclick="coachPropAct(this,'reject')">不要</button></div>`;
+  if (open) foot = `<div class="co-prop-btns"><button type="button" class="btn-primary" onclick="coachPropAct(this,'apply')"${selN ? '' : ' disabled'}>${label}</button><button type="button" class="btn-line" onclick="coachPropAct(this,'reject')">不要</button></div>`;
   else if (p.state === 'applied') foot = `<div class="co-prop-st olive">✓ 已写进计划${okN < p.changes.length ? ` · ${p.changes.length - okN} 条没改` : ''}</div>` + (p.snap ? `<button type="button" class="link-btn u" style="align-self:flex-start" onclick="coachPropAct(this,'undo')">撤销，回到采纳前</button>` : '');
   else if (p.state === 'rejected') foot = `<div class="co-prop-st faint">— 没改。计划照旧。</div><button type="button" class="link-btn u" style="align-self:flex-start" onclick="coachPropAct(this,'reopen')">再看看</button>`;
   else if (p.state === 'undone') foot = `<div class="co-prop-st faint">已撤销 · 计划回到采纳前</div>`;
-  return skinTpl('coachProp', { p, open, okN, rows, drop }, () => `<div class="co-prop" data-pid="${_esc(p.id)}"><div class="co-prop-h"><span class="dot" aria-hidden="true"></span>提议 · ${okN} 处改动</div>`
-    + `<div class="co-prop-list">${rows}</div>`
+  return skinTpl('coachProp', { p, open, okN, rows, drop, sel, label, msg, rvb }, () => `<div class="co-prop" data-pid="${_esc(p.id)}"><div class="co-prop-h"><span class="dot" aria-hidden="true"></span>提议 · ${okN} 处改动</div>`
+    + (msg ? `<div class="co-text">${_coachMd(msg)}</div>` : '')
+    + (sel ? `<div class="co-prop-sels">${sel}</div>` : `<div class="co-prop-list">${rows}</div>`)
     + (drop.length ? `<div class="co-meta">还提到 ${drop.length} 个不在你动作库里的动作，已去掉：${_esc(drop.join('、'))}</div>` : '')
-    + foot + `</div>`);
+    + foot + rvb + `</div>`);
+}
+// 提议卡上勾 / 不勾一条:记进 p.off(存本机),按钮跟着改字;不重画整段对话(免得滚动跳)
+function coachPropSel(btn) {
+  const card = btn && btn.closest && btn.closest('.co-prop'), pid = card && card.dataset.pid, i = +btn.dataset.i;
+  const st = _coachLoad(), m = (st.chat || []).find(x => x.proposal && x.proposal.id === pid);
+  if (!m || m.proposal.state !== 'open' || btn.getAttribute('aria-disabled') === 'true') return;
+  const on = uiToggleBox(btn), off = new Set(m.proposal.off || []);
+  if (on) off.delete(i); else off.add(i);
+  m.proposal.off = [...off].sort((a, b) => a - b);
+  _coachSave(st);
+  const all = card.querySelectorAll('.co-prop-sel:not([aria-disabled="true"])').length, n = card.querySelectorAll('.co-prop-sel[aria-checked="true"]:not([aria-disabled="true"])').length;
+  const b = card.querySelector('.co-prop-btns .btn-primary');
+  if (b) { b.textContent = n === all ? '采纳' : '采纳所选'; b.disabled = !n }
 }
 // 计划页「采纳过的教练提议」:还能撤销的(采纳了、快照还在 —— 只有最近一次采纳留快照)每条一句摘要 + 撤销。
 // 撤销按钮放在 .co-prop[data-pid] 里,点了走 coachPropAct 同一套(撤销后 render() 会把这块重画掉)。没有就返回空串,整块不显示。
@@ -1688,11 +1886,12 @@ function _coachPropApply(p) {
     snap.st[d.date] = { prog: S.prog[d.date] ? { ...S.prog[d.date] } : null, w: pick(S.weights, d.date), a: pick(S.adj, d.date), r: pick(S.exRpe, d.date) };
   };
   const keepSet = k => { if (!(k in snap.set)) snap.set[k] = JSON.parse(JSON.stringify(S[k] ?? null)) };
-  const result = p.changes.map(() => '');
+  const result = p.changes.map(() => ''), off = new Set(p.off || []);
   let stale = false, n = 0;
   // 先改目标(它会顺带重置重点部位),同一张卡里另外给的重点部位再盖上去
   const order = p.changes.map((c, i) => [c, i]).sort((a, b) => (a[0].key === 'goal' ? -1 : 0) - (b[0].key === 'goal' ? -1 : 0));
   order.forEach(([c, i]) => {
+    if (off.has(i)) { result[i] = _COACH_SKIP; return }   // 她去掉了勾的:不改
     const bad = _coachPropCheck(c);
     if (bad) { result[i] = bad; return }
     n++;
@@ -1781,15 +1980,19 @@ function coachPropAct(btn, act) {
     const { snap, result, stale, n } = _coachPropApply(p);
     (st.chat || []).forEach(x => { if (x.proposal && x !== m) delete x.proposal.snap });   // 只有最近一次采纳能撤销
     p.state = 'applied'; p.result = result; p.snap = n ? snap : null;
-    const bad = [...new Set(result.filter(Boolean))];
-    m.after = !n ? `(她点了采纳，但一条都没改成：${bad.join('；')})` : bad.length ? `(她采纳了；其中 ${result.filter(Boolean).length} 条没改成：${bad.join('；')})` : '(她采纳了)';
+    _rvOpen.delete('proposal:' + p.id);
+    // 没勾的(她不要的)和核不过的(没改成的)分开告诉 AI
+    const skipped = p.changes.filter((c, i) => result[i] === _COACH_SKIP).map(_coachChangeTxt);
+    const badN = result.filter(x => x && x !== _COACH_SKIP).length, bad = [...new Set(result.filter(x => x && x !== _COACH_SKIP))];
+    const part = skipped.length ? `其中 ${n} 条；没选：${skipped.join('；')}` : '';
+    m.after = !n ? `(她点了采纳，但一条都没改成：${bad.join('；')})` : badN ? `(她采纳了${part ? part + '；' : '；'}其中 ${badN} 条没改成：${bad.join('；')})` : `(她采纳了${part})`;
     _coachSave(st);
     saveState();
     if (typeof flashSaved === 'function') flashSaved();
     if (stale && typeof markPlanStale === 'function') markPlanStale();
     if (typeof applySettingsToUI === 'function') applySettingsToUI();
     render(); _coachShowChat();
-    showToast(!n ? '一条都没改成' : `已改 ${n} 处${bad.length ? `，${result.filter(Boolean).length} 条没改` : ''}${stale ? ' · 设置改了，计划顶上可以按新设置重排' : ''}`);
+    showToast(!n ? '一条都没改成' : `已改 ${n} 处${badN ? `，${badN} 条没改` : ''}${stale ? ' · 设置改了，计划顶上可以按新设置重排' : ''}`);
     return;
   }
   if (act === 'undo' && p.state === 'applied' && p.snap) {
@@ -1803,6 +2006,248 @@ function coachPropAct(btn, act) {
     showToast(kept ? `已撤销 · ${kept} 天已经开练或打卡，没回滚` : '已撤销');
   }
 }
+
+// ══ AI 结果:改一下 / 聊聊 ══════════════════════════════════
+// 每份 AI 给的结果(提议卡、复盘、AI 排计划草稿、换动作推荐、认器械、打卡反馈、教练的话)下面都有:
+//   改一下 = 写哪里不对 → /api/revise 在正看的这一版上改,回同样格式的新版本,原地换掉;旧版本留着(卡上「上一版 / 下一版」),
+//            每轮都把之前所有意见一起带上。新版本照样过前端原来那套校验(_coachPropFrom / _coachCleanAdj / _coachValidatePlan / …)。
+//   聊聊   = 去教练对话,下一条消息带上这份结果(对话里显示「关于这份 XX」);教练可以再给一张提议卡(同样能逐条勾、改一下)。
+// 对话 / 陪练里已经直接改了今天的(change_today)没有「改一下」,只有「不对，说说」(同聊聊,带着这次改了什么)。
+// 每种结果一个适配(_RV):get(id) → {obj, save}、fields 每版存哪些字段、original 发给 AI 的上一版(去掉门控动作)、body 原接口要的
+// 附加字段(快照照原接口现拍)、take 新版本过校验、after 换了版本之后的事、paint 重画、ref 聊聊带的摘要、base 模型设置跟哪个接口、can 现在能不能改。
+const _RV_MAX = 6;   // 每份结果最多留几版
+const _rvOpen = new Set(), _rvBusy = new Set(), _rvDraft = new Map();   // 输入框开着的 / 正在改的 / 没发出去的意见(按「种类:id」)
+function _rvClip(s, n) { s = String(s ?? '').replace(/\s+/g, ' ').trim(); return s.length > n ? s.slice(0, n - 1) + '…' : s }
+function _rvOkName(n) { return !_coachGated().has(String(n || '').trim()) }
+function _rvVal(v) { return v === null || v === undefined ? '' : Array.isArray(v) ? v.join('、') : String(v) }
+function _rvPick(o, fields) { const v = {}; fields.forEach(f => { if (o[f] !== undefined) v[f] = JSON.parse(JSON.stringify(o[f])) }); return v }
+function _rvPut(o, fields, v) { v = JSON.parse(JSON.stringify(v)); fields.forEach(f => { if (v[f] !== undefined) o[f] = v[f]; else delete o[f] }) }
+const _RV = {
+  proposal: {
+    name: '提议', base: 'chat', fields: ['changes', 'dropped', 'msg', 'off'],
+    get(id) { const st = _coachLoad(), m = (st.chat || []).find(x => x.proposal && x.proposal.id === id); return m ? { obj: m.proposal, m, st, save: () => _coachSave(st) } : null },
+    can: h => h.obj.state === 'open',
+    original: h => ({
+      message: _rvClip(h.obj.msg || h.m.text, 200) || '(见修改)',
+      changes: h.obj.changes.filter(c => _rvOkName(c.exercise) && _rvOkName(c.to)).map(c => ({
+        scope: c.op === 'setting' ? '以后' : String(c.scope || '以后'), op: c.op, exercise: c.exercise || '', to: c.to || '',
+        sets: c.sets ?? null, reps: c.reps ?? null, kg: c.kg ?? null, key: c.key || '',
+        value: c.op !== 'setting' ? '' : c.key === 'limits' && !c.value ? '无' : _rvVal(c.value), why: c.why || ''
+      }))
+    }),
+    body: h => ({ context: h.st.chatCtx || buildCoachContext({ catalog: 'names', logDays: 28 }) }),
+    take(h, d) {
+      const p = _coachPropFrom({ id: h.obj.id, changes: d.changes, dropped: d.dropped });
+      return { changes: p ? p.changes : [], dropped: p ? p.dropped : (Array.isArray(d.dropped) ? d.dropped.filter(n => typeof n === 'string').slice(0, 8) : []), msg: _rvClip(d.message, 200), off: [] };
+    },
+    // 对话历史里跟着那条助手消息告诉 AI:她提过什么意见、提议现在是第几版
+    after(h) { const o = h.obj; h.m.rev = `(她对这张提议提了修改意见：${(o.notes || []).map(n => `「${n}」`).join('')}；现在卡片上是第 ${o.cur + 1} 版：${o.changes.map(_coachChangeTxt).join('；') || '没有改动'})` },
+    paint(id) {   // 重画整段对话会滚到最底下:画完把这张卡滚回视野里
+      _coachShowChat();
+      const c = [...document.querySelectorAll('#co-chat-log .co-prop')].find(x => x.dataset.pid === id);
+      if (c && typeof c.scrollIntoView === 'function' && typeof uiCurrentTab !== 'undefined' && uiCurrentTab === 'coach') c.scrollIntoView({ block: 'nearest' });
+    },
+    ref: h => ({ t: '提议', s: (h.obj.changes || []).map(c => `${c.op === 'setting' ? '设置' : _coachScopeLabel(c.scope)} ${_coachRowTxt(c, h.obj.state === 'open')}`).join('；') }),
+  },
+  review: {
+    name: '复盘', base: 'review', fields: ['headline', 'summary', 'wins', 'issues', 'adjustments', 'applied', 'model', 'effort', 'cost'],
+    get() { const st = _coachLoad(); return st.review ? { obj: st.review, st, save: () => _coachSave(st) } : null },
+    can: () => true,
+    original: h => ({
+      headline: h.obj.headline || '', summary: h.obj.summary || '', wins: h.obj.wins || [], issues: h.obj.issues || [],
+      adjustments: (h.obj.adjustments || []).filter(a => _rvOkName(a.exercise)).map(a => ({ type: a.type, exercise: a.exercise || '', value: Number(a.value) || 0, reason: a.reason || '' }))
+    }),
+    body: () => ({ context: buildCoachContext({ catalog: 'names' }) }),
+    take(h, d, r) {
+      if (!d.headline && !d.summary) throw new Error('AI 回的格式不对，再试一次');
+      const arr = a => (Array.isArray(a) ? a : []).map(x => String(x));
+      return { headline: String(d.headline || ''), summary: String(d.summary || ''), wins: arr(d.wins), issues: arr(d.issues), adjustments: _coachCleanAdj(Array.isArray(d.adjustments) ? d.adjustments : []), applied: [], model: r.model, effort: r.effort, cost: r.cost };
+    },
+    paint: () => coachRenderReview(),
+    ref: h => ({ t: '复盘', s: `${h.obj.headline || ''}。` + ((h.obj.adjustments || []).length ? '建议调整：' + h.obj.adjustments.map(_adjText).join('；') : '') }),
+  },
+  plan: {
+    name: '计划草稿', base: 'plan', fields: ['rationale', 'days', 'dropped', 'align', 'off', 'model', 'effort', 'cost'],
+    get() { const st = _coachLoad(); return st.planDraft ? { obj: st.planDraft, st, save: () => _coachSave(st) } : null },
+    can: h => h.obj.state !== 'applied',
+    original: h => ({
+      rationale: h.obj.rationale || '',
+      days: (h.obj.days || []).map(d => ({ date: d.date, isRest: !!d.isRest, workoutType: d.workoutType || '', exercises: (d.exercises || []).filter(e => _rvOkName(e.name)).map(e => ({ name: e.name, group: e.group || '', sets: e.sets, reps: e.reps })) }))
+    }),
+    body(h) {
+      const dates = h.obj.dates || h.obj.days.map(d => d.date), al = typeof partnerAlignForAI === 'function' ? partnerAlignForAI(dates) : null;
+      return { context: buildCoachContext({ catalog: 'full' }), dates, ...(al ? { align: al } : {}), request: h.obj.req || '' };
+    },
+    take(h, d, r) {
+      const dates = h.obj.dates || h.obj.days.map(x => x.date), dr = _coachValidatePlan(d, dates);
+      if (!dr.days.length) throw new Error('新的一版里没有能用的日子，还是上一版');
+      const al = typeof partnerAlignForAI === 'function' && partnerAlignForAI(dates) && typeof partnerAlignCount === 'function' ? partnerAlignCount(dr.days) : null;
+      return { rationale: dr.rationale, days: dr.days, dropped: dr.dropped, align: al, off: [], model: r.model, effort: r.effort, cost: r.cost };
+    },
+    paint: () => coachShowPlanDraft(),
+    ref: h => ({ t: '计划草稿', s: (h.obj.days || []).map(d => `${String(d.date).slice(5).replace('-', '/')} ${d.isRest ? '休息' : `${d.workoutType}：${d.exercises.filter(e => _rvOkName(e.name)).map(e => e.name).join('、')}`}`).join('；') }),
+  },
+  swap: {
+    name: '换动作推荐', base: 'swap', fields: ['options', 'dropped', 'model', 'effort', 'cost'],
+    get(id) { const x = _coachSwapCtx(), e = x && x.key === id ? _swapAI.get(id) : null; return e && e.state === 'ok' ? { obj: e, x, save() { } } : null },
+    can: () => true,
+    original: h => ({ options: (h.obj.options || []).map(o => ({ name: o.name, sets: o.sets, reps: o.reps, kg: o.kg ?? null, why: o.why || '' })) }),
+    body: h => ({ context: buildCoachContext({ catalog: 'full', logDays: 28 }), exercise: h.x.ex.name, reason: _SWAP_WHY[_swapReason] || _swapReason, date: h.x.c.date }),
+    take: (h, d, r) => ({ ..._coachCleanSwap(d, h.x.c.date, h.x.c.ei), model: r.model, effort: r.effort, cost: r.cost }),
+    paint: () => _coachSwapPaint(),
+    ref: h => ({ t: '换动作推荐', s: `换掉「${_coachNm(h.x.ex.name)}」(${_swapReason || '没说原因'})：` + ((h.obj.options || []).map(o => `${o.name} ${_coachSpecTxt(o.sets, o.reps, o.unit, o.kg)}`).join('；') || '没挑出合适的') }),
+  },
+  vision: {
+    name: '认器械结果', base: 'vision', fields: ['equipment', 'note', 'list', 'model', 'effort', 'cost'],
+    get() { const v = window._coachVis; return v ? { obj: v, save() { } } : null },
+    can: () => true,
+    original: h => ({ equipment: h.obj.equipment, note: h.obj.note, exercises: h.obj.list.map(e => ({ name: e.name, why: e.why })) }),
+    body: h => ({ context: buildCoachContext({ catalog: 'full', logDays: 14 }), image: h.obj.img }),
+    take: (h, d, r) => _coachVisTake(d, r),
+    paint: () => _coachVisionPaint(),
+    ref: h => ({ t: '认器械结果', s: `${h.obj.equipment}：${h.obj.list.map(e => e.name).join('、') || '动作库里没有对应的动作'}` }),
+  },
+  feedback: {
+    name: '打卡反馈', base: 'feedback', fields: ['text', 'limit_add', 'next', 'limitAdded', 'model', 'effort', 'cost'],
+    get(date) { const st = _coachLoad(), fb = (st.feedback || {})[date]; return fb && fb.state === 'ok' ? { obj: fb, st, date, save: () => _coachSave(st) } : null },
+    can: h => !!_coachSessionFor(h.date, { skipped: !!h.obj.skipped }),
+    original: h => ({ text: h.obj.text || '', limit_add: h.obj.limit_add || null, next_adjust: (h.obj.next || []).map(a => ({ exercise: a.exercise, change: a.change, why: a.why || '' })) }),
+    body: h => ({ context: buildCoachContext({ catalog: 'names', logDays: 28 }), session: _coachSessionFor(h.date, { skipped: !!h.obj.skipped }) }),
+    take(h, d, r) {
+      const f = _coachCleanFb(d);
+      if (!f.text) throw new Error('AI 回的格式不对，再试一次');
+      return { ...f, limitAdded: !!(f.limit_add && (S.limits || '').includes(f.limit_add)), model: r.model, effort: r.effort, cost: r.cost };
+    },
+    paint(date) { const el = document.getElementById('co-fb-' + date); if (el) el.outerHTML = coachFeedbackHtml(date) },
+    ref: h => ({ t: '打卡反馈', s: `${h.date.slice(5).replace('-', '/')} 打卡后：${h.obj.text}` + ((h.obj.next || []).length ? ' 下次：' + h.obj.next.map(a => `${a.exercise} ${a.change}`).join('；') : '') }),
+  },
+  note: {
+    name: '教练的话', base: null, fields: ['text', 'model', 'effort', 'cost'],   // 原接口不带「我 → 05」选的模型,这里也不带
+    get(date) { const st = _coachLoad(), n = st.note; return n && n.text && n.date === date ? { obj: n, st, save: () => _coachSave(st) } : null },
+    can: () => true,
+    original: h => ({ note: h.obj.text }),
+    body: () => ({ context: buildCoachContext({ logDays: 14 }) }),
+    take(h, d, r) {
+      const t = String(d.note || '').trim().slice(0, 200);
+      if (!t) throw new Error('AI 回的格式不对，再试一次');
+      return { text: t, model: r.model, effort: r.effort, cost: r.cost };
+    },
+    paint() { const el = document.getElementById('co-note'); if (el) el.outerHTML = coachTodayNoteHtml(todayStr()) },
+    ref: h => ({ t: '教练的话', s: h.obj.text }),
+  },
+  action: {   // 对话 / 陪练里已经直接改了今天的训练:只有「不对，说说」
+    name: '改动', fields: [],
+    get(id) { const st = _coachLoad(), m = [...(st.chat || []), ...((st.quick && st.quick.msgs) || [])].find(x => x.action && x.action.id === id); return m ? { obj: m.action, save() { } } : null },
+    can: () => false,
+    ref(h) {
+      const a = h.obj, ok = a.changes.filter((c, k) => !a.result[k]).map(_coachTodayTxt);
+      return { t: '改动', s: `教练${a.date === todayStr() ? '今天' : ' ' + String(a.date).slice(5)}直接改了训练${a.state === 'undone' ? '(她后来撤销了)' : ''}：${ok.join('；')}` };
+    },
+  },
+};
+// 「改一下 / 聊聊」那一条(带版本切换;点开是输入框)。没开通 AI、结果不在了就不画
+function _coachRvHtml(kind, id) {
+  if (coachAccess() !== 'on') return '';
+  const A = _RV[kind], h = A && A.get(id);
+  if (!h) return '';
+  const rk = kind + ':' + (id || ''), o = h.obj, busy = _rvBusy.has(rk), can = A.can(h), open = can && !busy && _rvOpen.has(rk);
+  const c = { rk, kind, name: A.name, n: o.vers ? o.vers.length : 1, cur: o.vers ? o.cur : 0, busy, open, can, draft: _rvDraft.get(rk) || '', notes: o.notes || [] };
+  return skinTpl('coachRv', c, c => `<div class="co-rvw" data-rk="${_esc(c.rk)}" style="display:flex;flex-direction:column;gap:6px">`
+    + (c.n > 1 ? `<div class="co-meta" style="display:flex;flex-wrap:wrap;align-items:center;column-gap:16px">第 ${c.cur + 1} / ${c.n} 版${c.cur > 0 ? `<button type="button" class="link-btn u" onclick="coachRvVer(this,-1)">上一版</button>` : ''}${c.cur < c.n - 1 ? `<button type="button" class="link-btn u" onclick="coachRvVer(this,1)">下一版</button>` : ''}</div>` : '')
+    + (c.busy ? `<span class="note-line" role="status">教练在按你的意见改…</span>`
+      : c.open ? `<textarea class="line-area" rows="2" aria-label="哪里不对、想怎么改" placeholder="哪里不对、想怎么改。可以只说某一条：「第 2 条不要」「深蹲换成别的」" oninput="coachRvDraft(this)">${_esc(c.draft)}</textarea>`
+        + (c.notes.length ? `<span class="note-line">之前说过：${c.notes.map(x => `「${_esc(x)}」`).join('')}</span>` : '')
+        + `<div class="btn-row"><button type="button" class="btn-primary" onclick="coachRvSend(this)">发送</button><button type="button" class="btn-line" onclick="coachRvToggle(this)">取消</button></div>`
+        : `<div style="display:flex;column-gap:20px">${c.can ? `<button type="button" class="link-btn u" onclick="coachRvToggle(this)">改一下</button>` : ''}<button type="button" class="link-btn u" onclick="coachDiscuss(this)">聊聊</button></div>`)
+    + `</div>`);
+}
+function _rvKey(el) {
+  const w = el && el.closest && el.closest('[data-rk]'), rk = w ? w.dataset.rk : '', i = rk.indexOf(':');
+  return i > 0 && _RV[rk.slice(0, i)] ? { rk, kind: rk.slice(0, i), id: rk.slice(i + 1), w } : null;
+}
+function coachRvToggle(btn) {
+  const k = _rvKey(btn);
+  if (!k) return;
+  if (_rvOpen.has(k.rk)) _rvOpen.delete(k.rk); else _rvOpen.add(k.rk);
+  _RV[k.kind].paint(k.id);
+  if (!_rvOpen.has(k.rk)) return;
+  const ta = [...document.querySelectorAll('.co-rvw textarea')].find(t => t.closest('[data-rk]').dataset.rk === k.rk);
+  if (ta) { try { ta.focus({ preventScroll: true }) } catch { } }
+}
+function coachRvDraft(ta) { const k = _rvKey(ta); if (k) _rvDraft.set(k.rk, ta.value) }
+// 切到上一版 / 下一版:当前这版的勾选、采纳状态先存回去
+function coachRvVer(btn, d) {
+  const k = _rvKey(btn);
+  if (!k || _rvBusy.has(k.rk)) return;
+  const A = _RV[k.kind], h = A.get(k.id), o = h && h.obj;
+  if (!o || !o.vers || !A.can(h)) return;
+  const to = o.cur + d;
+  if (to < 0 || to >= o.vers.length) return;
+  o.vers[o.cur] = _rvPick(o, A.fields);
+  o.cur = to; _rvPut(o, A.fields, o.vers[to]);
+  if (A.after) A.after(h);
+  h.save();
+  A.paint(k.id);
+}
+async function coachRvSend(btn) {
+  const k = _rvKey(btn);
+  if (!k || _rvBusy.has(k.rk)) return;
+  const ta = k.w.querySelector('textarea'), note = String((ta && ta.value) || '').trim().slice(0, 500);
+  if (!note) { if (ta) ta.focus(); return showToast('先写一句哪里不对') }
+  const A = _RV[k.kind], h = A.get(k.id);
+  if (!h || !A.can(h)) return;
+  const notes = [...(h.obj.notes || []), note].slice(-10);
+  const body = { kind: k.kind, original: A.original(h), notes, gate: [..._coachGated()], ...A.body(h), ...(A.base ? _coachOpts(A.base) : {}) };
+  _rvDraft.set(k.rk, note);
+  _rvBusy.add(k.rk); A.paint(k.id);
+  let err = '', n = 0;
+  try {
+    const r = await _coachPoint('/api/revise', body);
+    const h2 = A.get(k.id);   // 等的这会儿存档可能变了:重新取,还能改才换
+    if (!h2 || !A.can(h2)) throw new Error('这份结果已经变了，没换');
+    const nv = A.take(h2, r.data || {}, r), o = h2.obj;
+    if (!o.vers) { o.vers = [_rvPick(o, A.fields)]; o.cur = 0 }
+    o.vers[o.cur] = _rvPick(o, A.fields);
+    o.vers.push(nv);
+    while (o.vers.length > _RV_MAX) o.vers.shift();
+    o.cur = o.vers.length - 1; n = o.vers.length;
+    _rvPut(o, A.fields, nv);
+    o.notes = notes;
+    if (A.after) A.after(h2);
+    h2.save();
+    _rvOpen.delete(k.rk); _rvDraft.delete(k.rk);
+  } catch (e) { err = e.message || '没改成' }
+  _rvBusy.delete(k.rk);
+  A.paint(k.id);
+  showToast(err ? `没改成：${err}` : `改好了 · 第 ${n} 版，不满意可以切回上一版`);
+}
+// 聊聊 / 不对，说说:把这份结果记成「待带上的引用」,跳到教练对话;从弹窗、陪练面板、引导训练里点的先把它们关掉
+function coachDiscuss(btn) {
+  const k = _rvKey(btn);
+  if (!k) return;
+  const h = _RV[k.kind].get(k.id);
+  if (!h) return showToast('这份结果已经不在了');
+  const r = _RV[k.kind].ref(h), st = _coachLoad();
+  st.chatRef = { k: k.kind, t: r.t, s: _rvClip(r.s, 600), at: Date.now() };
+  _coachSave(st);
+  if (document.getElementById('swap-modal')?.classList.contains('open')) uiCloseOverlay('swap-modal');
+  if (document.getElementById('coach-quick')?.classList.contains('open')) coachQuickClose();
+  const wm = document.getElementById('workout-modal'); if (wm && wm.classList.contains('open') && typeof wmClose === 'function') wmClose();
+  showTab('coach');
+  setTimeout(() => { _coachRefPaint(); const ta = document.getElementById('co-chat-text'); if (ta) { try { ta.focus() } catch { } } }, 60);
+}
+// 引用:发给 AI 的写法 / 她那条消息上面的小引用 / 输入框上面「待带上」的那条
+function _coachRefText(ref) { return `[她点了「聊聊」，关于这份${ref.t}]\n${ref.s}` }
+function _coachRefHtml(ref) {
+  return skinTpl('coachRef', ref, r => `<span class="co-meta co-ref" style="display:block;border-left:2px solid var(--line);padding-left:8px">关于这份${_esc(r.t)}：${_esc(_rvClip(r.s, 80))}</span>`);
+}
+function _coachRefPaint() {
+  const el = document.getElementById('co-chat-ref');
+  if (!el) return;
+  const ref = _coachLoad().chatRef;
+  el.innerHTML = !ref ? '' : skinTpl('coachRefPending', ref, r => `<div class="co-pending"><span class="co-meta" style="flex:1;min-width:0;border-left:2px solid var(--ink);padding-left:8px">关于这份${_esc(r.t)}：${_esc(_rvClip(r.s, 60))}</span><button type="button" class="link-btn" onclick="coachRefClear()">不带了</button></div>`);
+}
+function coachRefClear() { const st = _coachLoad(); delete st.chatRef; _coachSave(st); _coachRefPaint() }
 
 // ══ owner 扩展包加载 ═══════════════════════════════════════
 // 扩展包(private/xp.js)不在公开仓库里：只有 owner 登录后才从后端 /api/xp 取(后端再核一遍 Firebase 身份)。

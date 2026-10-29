@@ -7,9 +7,14 @@
     const sandboxKeys = () => [...new Set([...(typeof K !== 'undefined' && K ? Object.values(K) : SANDBOX_FALLBACK), 'fit_selDate', 'snap_ring'])];
     const dataKeys = () => sandboxKeys().filter(k => k !== 'snap_ring');   // 导入/导出用:不含快照环
 
-    const originalGetItem = localStorage.getItem;
-    const originalSetItem = localStorage.setItem;
-    const originalRemoveItem = localStorage.removeItem;
+    // 拦截装在 Storage.prototype 上:旧写法直接给 localStorage.getItem 赋值,Chrome 里拦截虽然生效,
+    // 但 Storage 的具名属性 setter 同时把 getItem/setItem/removeItem 当成三个键存进了存档(2026-10-29 实测)。
+    // 原型上的方法 localStorage / sessionStorage 共用,所以按 this === localStorage 判断。
+    const SP = Storage.prototype;
+    const originalGetItem = SP.getItem;
+    const originalSetItem = SP.setItem;
+    const originalRemoveItem = SP.removeItem;
+    ['getItem', 'setItem', 'removeItem'].forEach(k => originalRemoveItem.call(localStorage, k));
 
     const isSandboxActive = () => originalGetItem.call(localStorage, '__dev_active__') === '1';
 
@@ -18,26 +23,10 @@
     }
 
     // Proxied localStorage
-    localStorage.getItem = function(key) {
-        if (isSandboxActive() && isSandboxKey(key)) {
-            return originalGetItem.call(localStorage, '__dev__' + key);
-        }
-        return originalGetItem.call(localStorage, key);
-    };
-
-    localStorage.setItem = function(key, value) {
-        if (isSandboxActive() && isSandboxKey(key)) {
-            return originalSetItem.call(localStorage, '__dev__' + key, value);
-        }
-        return originalSetItem.call(localStorage, key, value);
-    };
-
-    localStorage.removeItem = function(key) {
-        if (isSandboxActive() && isSandboxKey(key)) {
-            return originalRemoveItem.call(localStorage, '__dev__' + key);
-        }
-        return originalRemoveItem.call(localStorage, key);
-    };
+    const redirect = (st, key) => st === localStorage && isSandboxActive() && isSandboxKey(key) ? '__dev__' + key : key;
+    SP.getItem = function(key) { return originalGetItem.call(this, redirect(this, key)); };
+    SP.setItem = function(key, value) { return originalSetItem.call(this, redirect(this, key), value); };
+    SP.removeItem = function(key) { return originalRemoveItem.call(this, redirect(this, key)); };
 
     // Override Sync failures when sandbox is active or simulated offline mode is on
     if (isSandboxActive() || sessionStorage.getItem('__dev_mock_sync_fail__') === '1') {

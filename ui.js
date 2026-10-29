@@ -285,6 +285,7 @@ function uiStep(group, dir) {
 function uiToggleSetting(key) {
   switch (key) {
     case 'autoVol': S.autoVolumeAdjust = !(S.autoVolumeAdjust !== false); return _uiAfterSetting(false);
+    case 'autoShift': S.autoShift = !(S.autoShift !== false); _uiAfterSetting(false); if (S.autoShift && typeof autoShiftCheck === 'function') autoShiftCheck(); return;   // 没练自动顺延
     case 'cycle': {
       S.cycleEnabled = !(S.cycleEnabled !== false);
       let ch = false; if (!S.cycleEnabled && S.periodMode) { S.periodMode = false; ch = true; }
@@ -312,6 +313,10 @@ function uiToggleSetting(key) {
     }
     case 'tecno': _uiPlan.tecno = !_uiPlan.tecno; return uiRenderP3();
     case 'wp': if (typeof wpToggle === 'function') wpToggle(); return;   // 「主动找你」(push.js)
+    // 排计划时跟搭子对齐(配对后才出现):只是下次排计划的规则,现有计划不动(要挪就点下面「对齐搭子的训练日」)
+    case 'partnerAlign': S.partnerAlign = S.partnerAlign === false; return _uiAfterSetting(false);
+    // 「我 → 03 · 共享给 TA」:share.plan / share.logs …(app.js shareToggle,改完立刻推共享文档)
+    default: if (/^share\./.test(key) && typeof shareToggle === 'function') return shareToggle(key.slice(6));
   }
 }
 // data-act:列表里的按钮(避免把动作名拼进 onclick 字符串)
@@ -423,7 +428,35 @@ function uiRenderP2() {
   el.innerHTML = uiSecLabel('02 — 时间与节奏') + _uiTimeHtml()
     + `<div id="swim-breakdown" class="note-line" style="display:${sw ? '' : 'none'}"><span class="faint">每周拆分 →</span> ${uiEsc(sw)}</div>`
     + `<span class="sub-label">组间休息</span>${uiSeg('g-rest', 'rest', [['30', '30s'], ['45', '45s'], ['60', '60s'], ['90', '90s'], ['0', '关']], String(S.restDur ?? 45), { label: '组间休息' })}`
-    + uiToggle('autoVol', '自动调整训练量', S.autoVolumeAdjust !== false ? '按疲劳度自动调；提前结束打卡时不再单独问' : '关了以后，提前结束打卡时自己勾选要不要下调', S.autoVolumeAdjust !== false, false, 'auto-vol-switch');
+    + uiToggle('autoVol', '自动调整训练量', S.autoVolumeAdjust !== false ? '按疲劳度自动调；提前结束打卡时不再单独问' : '关了以后，提前结束打卡时自己勾选要不要下调', S.autoVolumeAdjust !== false, false, 'auto-vol-switch')
+    + (_uiPartnerLast = uiPartnerPlanHtml());
+}
+// 02 末尾「搭子」(配对后才有):重合 → 一行、排计划时跟搭子对齐(开关,随设置云同步)、对齐搭子的训练日(先预览,采纳才改,能撤销)。
+// 规则和算法在 app.js「排计划对齐搭子」;预览 / 撤销的数据在 app.js _alignDraft / fit_align1
+function uiPartnerPlanHtml() {
+  if (typeof partnerUid !== 'function' || !partnerUid()) return '';
+  const on = S.partnerAlign !== false, ready = typeof partnerAlignReady === 'function' && partnerAlignReady();
+  const ov = typeof partnerOverlapHtml === 'function' ? partnerOverlapHtml() : null;
+  const nm = typeof _ppName === 'function' ? _ppName() : '搭子';
+  const dr = typeof _alignDraft !== 'undefined' ? _alignDraft : null;
+  const undo = !dr && typeof partnerAlignUndoable === 'function' ? partnerAlignUndoable() : 0, st = undo ? _alignLoad() : null;
+  if (!undo && typeof _alignLoad === 'function' && _alignLoad()) _alignSave(null);   // 已经撤不回去了(重排过 / 开练了),记录也清掉
+  const KZ = typeof _KIND_ZH !== 'undefined' ? _KIND_ZH : {};
+  // 搭子在「共享给 TA」里关了训练计划:对齐按钮置灰、下面写原因;开关的小字说这次排计划先不对齐(why = '' 时和原来一字不差)
+  const why = typeof _ppOff === 'function' && _ppOff('plan') ? 'TA 没共享计划，没法对齐' : '';
+  const hint = on ? (why ? 'TA 现在没共享计划，排计划时先不对齐；TA 打开后照常对齐' : 'TA 去健身房你也去，TA 游泳你也游；只挪训练放在哪天，天数不变，不改 TA 的计划') : '关了：排计划只按你自己的设置';
+  const ctx = { on, ready, ov, nm, dr, undo, st, KZ, why, hint };
+  return skinTpl('planPartner', ctx, () => `<div id="plan-partner" style="display:flex;flex-direction:column;gap:10px;margin-top:4px"><span class="sub-label">搭子 · ${uiEsc(nm)}</span>`
+    + `<div id="plan-partner-overlap" class="note-line"${ov == null ? ' style="display:none"' : ''}>${ov || ''}</div>`
+    + uiToggle('partnerAlign', '排计划时跟搭子对齐', hint, on, false, 'partner-align-switch')
+    + (dr ? `<div class="co-rv" id="align-rv" style="border-top:1px solid var(--line);padding-top:12px"><div class="sec-label">[ 对齐搭子 ] 预览 · 挪 ${dr.moves.length} 天</div>`
+      + `<div class="kv wide">${dr.rows.map(x => `<span class="k">${uiEsc(fmtDate(x.date))}</span><span>${uiEsc(x.was)} → ${uiEsc(x.now)} <span class="faint">· ${uiEsc(nm)} ${uiEsc(KZ[x.pk] || '—')}</span></span>`).join('')}</div>`
+      + `<div class="co-meta">挪完${uiEsc(partnerAlignNote(dr.r))}。只在这几天之间换，动作和已调的组次重量跟着走。</div>`
+      + `<div class="btn-row"><button type="button" class="btn-primary" style="min-height:44px;font-size:14px" onclick="partnerAlignApply()">采纳</button><button type="button" class="btn-line" onclick="partnerAlignDrop()">不要</button></div></div>`
+      : `<button type="button" class="btn-line" id="align-btn" onclick="partnerAlignPreview()"${ready ? '' : ' disabled'}${why ? ' aria-describedby="align-why"' : ''}>对齐搭子的训练日</button>`
+      + (why ? `<div class="note-line" id="align-why">${uiEsc(why)}</div>` : ''))
+    + (undo ? `<div class="note-line" id="align-done" style="display:flex;align-items:center;justify-content:space-between;gap:12px"><span><span class="olive">✓</span> 已对齐 · ${uiEsc(st.note || '')}</span><button type="button" class="link-btn u" style="text-align:right" onclick="partnerAlignUndo()">撤销</button></div>` : '')
+    + `</div>`);
 }
 const UI_TECNO = [
   ['力量器械', [['Chest Press', '坐姿推胸机'], ['Shoulder Press', '器械推举'], ['Pectoral', '器械夹胸'], ['Reverse Fly', '反向飞鸟机'], ['Lat Machine', '高位下拉'], ['Low Row', '坐姿划船'], ['Upper Back', '器械上背划船'], ['Leg Press', '倒蹬机'], ['Leg Extension', '腿屈伸'], ['Leg Curl', '腿弯举 / 坐姿腿弯举'], ['Adductor', '器械内收机'], ['Abductor', '器械外展机'], ['Arm Curl', '器械弯举'], ['Arm Extension', '器械三头下压'], ['Delts Machine', '坐姿侧平举机'], ['Multi Hip', '绳索后踢腿'], ['Abdominal', '坐姿卷腹机'], ['Lower Back', '山羊挺身']]],
@@ -508,7 +541,8 @@ function uiRenderP8() {
     + (isAi ? `<div style="display:flex;flex-direction:column;gap:10px">${uiSeg('ai-span', 'aiSpan', [['7', '接下来 7 天'], ['14', '接下来 14 天']], _uiGen.span, { light: true, label: '天数' })}`
       + `<input type="hidden" id="co-plan-span" value="${_uiGen.span}"><input id="co-plan-req" class="line-input" placeholder="要求（可空）：周五只有 30 分钟" aria-label="排计划的要求" value="${uiEsc(req)}"></div>` : '')
     + `<button type="button" class="btn-primary" id="gen-btn" onclick="uiGenerate()">${label}</button>`
-    + `<div class="foot-note">${note}</div><div id="co-plan-body"></div>`;
+    + `<div class="foot-note">${note}</div><div id="co-plan-body"></div>`
+    + uiToggle('autoShift', '没练自动顺延', '过了晚上 11 点还没打卡，后面的训练往后挪一天，碰到休息日为止；关掉就只提醒', S.autoShift !== false, false, 'auto-shift-switch');
   if (typeof coachShowPlanDraft === 'function') coachShowPlanDraft();
 }
 function uiGenerate() {
@@ -517,21 +551,23 @@ function uiGenerate() {
   if (_uiGen.scope === 'rest' && had) {
     if (!confirm('只重排剩余的天？\n已完成的和今天已经开练的不动；你手动改过的未来几天会按当前设置重排。')) return;
     recalibratePlan();
-    uiNotice('已保留历史记录，重排了本周剩下的天');
+    uiNotice('已保留历史记录，重排了本周剩下的天' + (typeof planAlignSuffix === 'function' ? planAlignSuffix() : ''));
     return;
   }
   confirmGenPlan();
-  if (S.plan && S.plan.days && S.plan.days.length && uiCurrentTab === 'today') uiNotice(had ? '换上了一份全新的计划 · 想改去「计划」' : '计划排好了 · 想改去「计划」');
+  if (S.plan && S.plan.days && S.plan.days.length && uiCurrentTab === 'today') uiNotice((had ? '换上了一份全新的计划' : '计划排好了') + (typeof planAlignSuffix === 'function' ? planAlignSuffix() : '') + ' · 想改去「计划」');
 }
 
 // ══ 计划页:周历(由 render() 调用) ═══════════════════════════
 function uiRenderPlanCal(visibleDays, sel, today, isCurrentView, viewStart, viewEnd) {
   const el = document.getElementById('plan-cal'); if (!el) return;
   const _xCal = (typeof _xMode !== 'undefined') && _xMode && _ownerSession();
-  const ov = (typeof partnerOverlap === 'function') ? partnerOverlap() : null;
+  // 搭子同一天同类:读得到对方真实计划就逐日比(Map 日期 → g/s);否则按周几的老算法(没配对手填天数 / 对方 app 没升级)
+  const co = (typeof partnerCoDays === 'function') ? partnerCoDays(visibleDays) : null;
+  const ov = co ? null : (typeof partnerOverlap === 'function') ? partnerOverlap() : null;
   const coDows = ov ? new Set([...ov.gym, ...ov.swim]) : null;
   const dows = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'];
-  let h = skinTpl('planCalNav', { visibleDays, isCurrentView, viewStart, viewEnd, coDows }, () => `<div class="cal-nav"><button type="button" class="link-btn" onclick="calPrev()" aria-label="上两周">‹ 上两周</button>`
+  let h = skinTpl('planCalNav', { visibleDays, isCurrentView, viewStart, viewEnd, coDows: co || coDows, coReal: !!co }, () => `<div class="cal-nav"><button type="button" class="link-btn" onclick="calPrev()" aria-label="上两周">‹ 上两周</button>`
     + `<span class="cal-nav-label">${viewStart.slice(5).replace('-', '/')} — ${viewEnd.slice(5).replace('-', '/')}</span>`
     + (!isCurrentView ? `<button type="button" class="link-btn" onclick="calGoToday()">回到今天</button>` : '')
     + `<button type="button" class="link-btn" onclick="calNext()" ${isCurrentView ? 'disabled' : ''} aria-label="下两周" style="text-align:right">下两周 ›</button></div>`);
@@ -544,29 +580,43 @@ function uiRenderPlanCal(visibleDays, sel, today, isCurrentView, viewStart, view
     let cls = 'dc';
     if (isNone) cls += ' no-data';
     else if (isLog && !isPlan) cls += ' historical';
-    else if (d.isRest && isPlan) cls += ' rest';
+    else if (d.isRest && isPlan) cls += ' rest' + (d.isMissed ? ' missed' : '');
     else if (done && isPlan) cls += ' done';
     if (isToday) cls += ' today';
     if (locked && !d.isRest) cls += ' locked';
     if (d.isSwimDay) cls += ' swim-day';
     if (d.isPrivateDay) cls += ' prv-day';
-    if (coDows && isPlan && !d.isRest && coDows.has((new Date(d.date + 'T12:00:00').getDay() + 6) % 7)) cls += ' co-day';
+    const isCo = co ? co.has(d.date) : !!(coDows && isPlan && !d.isRest && coDows.has((new Date(d.date + 'T12:00:00').getDay() + 6) % 7));
+    if (isCo) cls += ' co-day';
     if (isSel && !isNone) cls += ' sel';
     const drag = (isPlan && !d.isRest && !locked) ? `draggable="true" ondragstart="dragStart(event,'${d.date}')" ondragover="dragOver(event)" ondrop="dragDrop(event,'${d.date}')" ondragend="dragEnd()"` :
       (isPlan && !d.isRest && locked ? `ondragover="dragOver(event)" ondrop="dragDrop(event,'${d.date}')"` : '');
     const click = isNone ? '' : `onclick="selectDate('${d.date}');showTab('today')"`;   // 点一格 = 选这天并回到「今天」看
     const dt = new Date(d.date + 'T12:00:00');
-    const tag = d.isRest ? (isPlan ? '休' : '—') : d.isPrivateDay ? '另' : d.isSwimDay ? '泳' : _uiShortType(d.workoutType);
+    const tag = d.isMissed ? '延' : d.isRest ? (isPlan ? '休' : '—') : d.isPrivateDay ? '另' : d.isSwimDay ? '泳' : _uiShortType(d.workoutType);
     let mark = '';
     if (done && isPlan) mark = _xCal ? '<span style="color:var(--accent)">●</span>' : '✓';
     else if (isLog && !isPlan) mark = '✓';
     else if (locked && !d.isRest) mark = '锁';
-    h += `<div class="${cls}" role="gridcell" tabindex="${isNone ? -1 : 0}" aria-label="${fmtDate(d.date)} ${uiEsc(d.isRest ? '休息' : d.workoutType || '')}${done ? ' 已完成' : ''}${isSel ? ' 选中' : ''}" ${drag} ${click}>`
+    h += `<div class="${cls}" role="gridcell" tabindex="${isNone ? -1 : 0}" aria-label="${fmtDate(d.date)} ${uiEsc(d.isMissed ? '没练（已顺延）' : d.isRest ? '休息' : d.workoutType || '')}${done ? ' 已完成' : ''}${co && isCo ? ' 和搭子同练' : ''}${isSel ? ' 选中' : ''}" ${drag} ${click}>`
       + `<span class="dw">${dows[dt.getDay()]}</span><span class="dn">${dt.getDate()}</span><span class="dt">${uiEsc(tag)}</span><span class="dm">${mark}${_xCal ? _xCalMark(d.date) : ''}</span><span class="dd"></span></div>`;
   });
   h += `</div></div>`;
+  // 按真实计划比出同练的天:纸墨在格子下面写一行图例(运动的图例在 planCalNav 里)
+  if (co && co.size) h += skinTpl('planCalCoKey', null, () => `<div class="foot-note" id="cal-co-key" style="padding-top:6px">类型下面画线的 = 和搭子同一天同类（健身房 / 游泳）</div>`);
   el.innerHTML = h;
   if (typeof initTouchDrag === 'function') initTouchDrag();
+  uiRefreshPartnerPlan();
+}
+// 搭子的数据 / 配对 / 计划变了(都会走 render → 这里):02 末尾的「搭子」块跟着更新;内容没变不动(免得开关丢焦点)
+let _uiPartnerLast = null;
+function uiRefreshPartnerPlan() {
+  const p2 = document.getElementById('p2'); if (!p2 || !p2.firstChild) return;
+  const h = uiPartnerPlanHtml(), el = document.getElementById('plan-partner');
+  if (h === _uiPartnerLast && (!!el === !!h)) return;
+  _uiPartnerLast = h;
+  if (!h) { if (el) el.remove(); return; }
+  if (el) el.outerHTML = h; else p2.insertAdjacentHTML('beforeend', h);
 }
 // 周历格里只放一两个字:按训练类型取一个代表字
 function _uiShortType(t) {
@@ -641,14 +691,20 @@ function uiRenderMeLook() {
 function uiRenderMePair() {
   const el = document.getElementById('me-pair'); if (!el) return;
   if (!el.dataset.built) {
+    // 状态一行(app.js updatePairUI 按状态写)→ 分享配对链接 / 二维码 → 给 TA 回应 → TA 最近的回应 → 手动交换配对码(原来的)→ 没配对时手填天数
     el.innerHTML = uiSecLabel('03 — 训练搭子')
-      + `<span class="hint">配对后日历会标出你俩重合的健身房 / 游泳日，能看对方今日状态、互相加油。两人的训练计划、记录、重量和感受互通，AI 教练也会参考；身体数据、备注原文和私密内容不分享。</span>`
+      + `<span class="hint">配对后能看到对方今天练什么、练到第几组，能互相回应；日历会标出你俩重合的健身房 / 游泳日。两人的训练计划、记录、重量和感受默认互通，AI 教练也会参考，在下面「共享给 TA」可以逐类关掉；身体数据、备注原文和私密内容不分享。</span>`
+      + `<div id="pair-status" class="pair-status" role="status"></div>`
+      + `<div class="pair-acts"><button type="button" class="btn-primary" id="pair-share-btn" onclick="sharePairLink()">分享配对链接</button><button type="button" class="btn-line" id="pair-qr-btn" aria-expanded="false" aria-controls="pair-qr" onclick="togglePairQR()">二维码</button></div>`
+      + `<div id="pair-qr" class="pair-qr" hidden></div>`
+      + `<div id="pair-cheer" style="display:none"><span class="sub-label">给 TA 回应</span><div class="chips pt-words" id="pair-words" role="group" aria-label="给搭子回应"></div></div>`
+      + `<div id="pair-rx" class="pair-rx" style="display:none"></div>`
+      + `<span class="sub-label">也可以手动交换配对码</span>`
       + `<div class="pair-grid"><span class="k">我的配对码</span><code id="my-pair-code" class="pair-code">（请先登录）</code><button type="button" class="btn-line" onclick="copyMyPairCode()">复制</button>`
       + `<label class="k" for="partner-code-input">搭子配对码</label><input id="partner-code-input" class="line-input" type="text" placeholder="粘贴对方的码" autocomplete="off" spellcheck="false"><button type="button" class="btn-line" id="pair-btn" onclick="savePartnerCode()">连接</button></div>`
-      + `<div id="pair-status" class="pair-status" style="display:none"></div>`
-      + `<div id="pair-cheer" style="display:none"><button type="button" class="btn-line" id="cheer-btn" onclick="sendCheer()">给搭子加油</button></div>`
       + `<div id="partner-days-row" style="display:flex;flex-direction:column;gap:6px"><span class="sub-label">还没配对？也可以手动填搭子每周练几天，先看重合日</span><div id="partner-days-chips"></div></div>`
-      + `<div id="partner-overlap" class="note-line" style="display:none"></div>`;
+      + `<div id="partner-overlap" class="note-line" style="display:none"></div>`
+      + `<div id="pair-share" class="pair-share" role="group" aria-labelledby="pair-share-h" style="display:flex;flex-direction:column;gap:6px;margin-top:6px"></div>`;
     el.dataset.built = '1';
   }
   const pd = +S.partnerDays || 0;
@@ -656,6 +712,20 @@ function uiRenderMePair() {
   if (chips) chips.innerHTML = uiChips('g-partner-days', 'partnerDays', [['0', '关闭'], ['2', '2 天'], ['3', '3 天'], ['4', '4 天'], ['5', '5 天'], ['6', '6 天'], ['7', '7 天']], v => +v === pd);
   if (typeof updatePairUI === 'function') updatePairUI();
   if (typeof updatePartnerOverlap === 'function') updatePartnerOverlap();
+  uiRenderPairShare();
+}
+// 03 末尾「共享给 TA」:每类一个开关(app.js SHARE_CATS / shareToggle),开关下面一行小字写关掉后 TA 那边少了什么。默认全开。
+// 没配对也显示:配对前就能先关掉,一配上推出去的就是关过的
+function uiRenderPairShare() {
+  const el = document.getElementById('pair-share'); if (!el || typeof SHARE_CATS === 'undefined') return;
+  const a = document.activeElement, refocus = a && el.contains(a) && a.dataset ? a.dataset.toggle : null;
+  el.innerHTML = `<span class="sub-label" id="pair-share-h">共享给 TA</span>`
+    + `<span class="hint">默认都分享。名字、今天练什么、回应一直分享，配对就靠这几样。</span>`
+    + SHARE_CATS.map(([k, label, what, lose]) => {
+      const on = shareOn(k);
+      return uiToggle('share.' + k, label, on ? (what ? what + '。' : '') + '关掉后 ' + lose : '已关 · ' + lose, on, false, 'share-' + k);
+    }).join('');
+  if (refocus) { const b = el.querySelector(`[data-toggle="${refocus}"]`); if (b) try { b.focus({ preventScroll: true }); } catch (e) { } }   // 重画后键盘焦点留在刚点的那个开关
 }
 function uiRenderMeRemind() {
   const el = document.getElementById('me-remind'); if (!el) return;
@@ -745,13 +815,13 @@ function uiOobeSkip(viaEsc) {
   const first = !S.plan;
   if (first && viaEsc) { uiCloseOobe(); return; }   // Esc 只是关掉,不替人生成
   uiCloseOobe();
-  if (first) { _genStay = false; genPlan(false); showTab('today'); uiNotice('用默认设置排好了第一周 · 想改去「计划」'); }
+  if (first) { _genStay = false; genPlan(false); showTab('today'); uiNotice('用默认设置排好了第一周' + (typeof planAlignSuffix === 'function' ? planAlignSuffix() : '') + ' · 想改去「计划」'); }
 }
 function uiOobeFinish() {
   try { sessionStorage.setItem('__oobe_dismissed__', '1'); } catch (e) { }
   const first = !S.plan;
   uiCloseOobe();
-  if (first) { _genStay = false; genPlan(false); showTab('today'); uiNotice('第一周计划排好了 · 想改去「计划」'); return; }
+  if (first) { _genStay = false; genPlan(false); showTab('today'); uiNotice('第一周计划排好了' + (typeof planAlignSuffix === 'function' ? planAlignSuffix() : '') + ' · 想改去「计划」'); return; }
   if (S.planStale) {
     if (confirm('设置改过了。按新设置重排今天之后的安排？\n记录不动；选「取消」就先不排，「计划」页顶上会一直提示。')) applyStaleSettings();
   } else showToast('设置没有变化，计划照旧');

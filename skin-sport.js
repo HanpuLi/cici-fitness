@@ -178,6 +178,7 @@ function _spFocusHtml(sel, st, o) {
   let h = `<section class="sp-focus ex-row" data-i="${i}" aria-label="${inSession ? '现在' : '下一项'}：${_escHtml(nm.name)}">`;
   if (_spJust && _spJust.date === date) h += _spJustHtml(sel);
   h += `<div class="sp-f-top"><span class="sp-f-tag">${inSession ? '现在' : '下一项'} · ${pos}</span>${part ? `<span class="sp-f-part">${_escHtml(part)}</span>` : ''}</div>`
+    + ((inSession || _spT0(date) > 0) && date === todayStr() && typeof ptWithHtml === 'function' ? ptWithHtml('f') : '')   // 一起练:我开练了(点过开练 / 做过一组)、搭子也在练时写 TA 在做什么(app.js;没配对是空串)
     + `<button type="button" class="sp-f-name exname" ${_detailAttrs(ex.name, date, i)}>${nm.name}${nm.pdot}${nm.pr}</button>`
     + `<div class="sp-f-nums"><div><span class="sp-f-lbl">组 × ${timedU}${ex.bi ? ' / 每侧' : ''}</span><span class="sp-f-big">${sets}×${reps}</span></div>`
     + `<div><span class="sp-f-lbl">${needW ? '重量 KG' : '负重'}</span><span class="sp-f-big ${kgSize}">${kgVal}</span></div></div>`;
@@ -264,6 +265,7 @@ function _spClock(s) { s = Math.max(0, Math.floor(s)); const h = Math.floor(s / 
 SKIN_TPL.sport.todayBody = ({ sel, today, planDays, tip }) => {
   let h = '';
   const note = typeof coachTodayNoteHtml === 'function' ? coachTodayNoteHtml(sel ? sel.date : today) : '';
+  const pt = typeof ptTodayHtml === 'function' ? ptTodayHtml(sel ? sel.date : today) : '';   // 搭子卡(看今天、读得到对方才有)
   if (sel && !sel.isRest) {
     const lg = LOG.find(l => l.date === sel.date);
     if ((sel._src === 'log' && !planDays.find(dd => dd.date === sel.date)) || (isLocked(sel) && lg)) {
@@ -277,13 +279,14 @@ SKIN_TPL.sport.todayBody = ({ sel, today, planDays, tip }) => {
       else h += `<div class="sp-card hist-empty">该日训练详情不可用</div>`;
       if (e && e.note) h += `<div class="sp-card hist-note">"${_escHtml(e.note)}"</div>`;
       if (!hist) { if (typeof coachFeedbackHtml === 'function') h += coachFeedbackHtml(sel.date); h += typeof renderRecoveryModule === 'function' ? renderRecoveryModule(sel) : ''; }
+      h += pt;
     } else {
       const pd = S.prog[sel.date] || {}, locked = isLocked(sel);
       const o = { pd, locked, pv: _ownerSession() ? new Set(_PRIVATE_POOL) : null, isX: _xMode && _ownerSession() && hasGoal('女性曲线') };
       const st = _spDayState(sel), checkedCount = Object.keys(pd).filter(k => pd[k]).length;
       const inSession = !lg && (checkedCount > 0 || _spT0(sel.date) > 0);
       h += _spDayCard(sel, today, st, o, lg);
-      if (!inSession) h += note;
+      if (!inSession) h += note + pt;
       if (sel.isSwimDay && !locked) {
         // 泳日:按阶段分组(纸墨同一套行,换成卡片)
         const PHASE_LABELS = { warmup: '热身', tech: '技术练习', main: '主练', cooldown: '放松' };
@@ -298,7 +301,7 @@ SKIN_TPL.sport.todayBody = ({ sel, today, planDays, tip }) => {
         });
         if (open) h += `</div>`;
         if (!isDone(sel)) h += `<button type="button" class="sp-card sp-add add-row" onclick="openAddExerciseModal('${sel.date}')"><span class="sp-add-ico">${SP.icon(SP.I.plus, 14, 3)}</span><span class="sp-add-t">加一个动作</span></button>`;
-        if (inSession) h += note;
+        if (inSession) h += note + pt;
         h += typeof renderRecoveryModule === 'function' ? renderRecoveryModule(sel) : '';
         if (!lg) h += `<div class="today-foot sp-foot"><button type="button" class="btn-outline sp-checkin${checkedCount === sel.exercises.length ? ' on' : ''}" onclick="endWorkoutEarly('${sel.date}')">${checkedCount === sel.exercises.length ? '完成游泳训练' : `结束训练并打卡 · ${checkedCount}/${sel.exercises.length}`}</button></div>`;
         else if (typeof coachFeedbackHtml === 'function') h += coachFeedbackHtml(sel.date);
@@ -316,6 +319,7 @@ SKIN_TPL.sport.todayBody = ({ sel, today, planDays, tip }) => {
         }
         if (inSession) h += note;
         h += _spQueueHtml(sel, st, o);
+        if (inSession) h += pt;
         h += _spBlockHtml('s', sel.date, all.filter(([ex]) => _isBlockStretch(ex)), o);
         h += typeof renderRecoveryModule === 'function' ? renderRecoveryModule(sel) : '';
         if (_xMode && _ownerSession()) h += _xTaskPanel(sel.date);
@@ -326,8 +330,8 @@ SKIN_TPL.sport.todayBody = ({ sel, today, planDays, tip }) => {
       }
     }
   } else if (sel && sel.isRest) {
-    h += note + `<div class="sp-card sp-day wk-head"><span class="sp-eyebrow">${fmtDate(sel.date)}</span><span class="sp-day-t wk-title">休息日</span><span class="sp-day-m">好好恢复，明天继续。</span></div>`;
-    h += typeof renderRecoveryModule === 'function' ? renderRecoveryModule(sel) : '';
+    h += note + `<div class="sp-card sp-day wk-head"><span class="sp-eyebrow">${fmtDate(sel.date)}</span><span class="sp-day-t wk-title">${sel.isMissed ? '没练（已顺延）' : '休息日'}</span><span class="sp-day-m">${sel.isMissed ? autoShiftMissedLine(sel) : '好好恢复，明天继续。'}</span></div>` + pt;
+    h += typeof renderRecoveryModule === 'function' && !sel.isMissed ? renderRecoveryModule(sel) : '';
   }
   if (tip) h += `<div class="sp-card tip" style="white-space:pre-line">${_escHtml(tip)}</div>`;
   if (_xMode && _ownerSession() && hasGoal('女性曲线')) h += (_xp() && _xp().curveTipHtml) || '';
@@ -419,13 +423,13 @@ SKIN_TPL.sport.after_today = () => {
 SKIN_TPL.sport.mh_today = () => {
   if (typeof S === 'undefined' || !S.plan) return {};
   const sel = S.plan.days.find(d => d.date === (S.selDate || todayStr())); if (!sel) return {};
-  if (sel.isRest) return { aside: SKIN_TPL.sport.mhChip('休息日') };
+  if (sel.isRest) return { aside: SKIN_TPL.sport.mhChip(sel.isMissed ? '已顺延' : '休息日') };
   const st = _spDayState(sel); if (!st.total) return {};
   return { aside: SKIN_TPL.sport.ring(st.doneN, st.total), bar: st.mains.map(([, i]) => `<i class="${st.pd[i] ? 'on' : st.cur && st.cur[1] === i ? 'cur' : ''}"></i>`).join('') };
 };
-// 教练的话:卡片头是荧光绿小方块 + 「教练」+ 时间
+// 教练的话:卡片头是荧光绿小方块 + 「教练」+ 时间;底下「改一下 / 聊聊」(coach.js _coachRvHtml,样子在 40 区)
 SKIN_TPL.sport.coachNote = (n) => `<div class="sp-card sp-coach coach-note" id="co-note"><div class="sp-coach-h"><span class="sp-coach-ico">${SP.icon(SP.I.chat, 16)}</span><b>教练</b><span class="sp-num">${_coachHM(n.at)}</span></div>`
-  + `<div class="prose">${_esc(n.text)}</div><button type="button" class="sp-link" onclick="showTab('coach')">接着问${SP.icon(SP.I.arrow, 16, 2.4)}</button></div>`;
+  + `<div class="prose">${_esc(n.text)}</div>${n.rvb || ''}</div>`;
 SKIN_TPL.sport.coachFbOpen = (date, fb) => `<div class="sp-card sp-coach co-fb" id="co-fb-${_esc(date)}" aria-live="polite"><div class="sp-coach-h"><span class="sp-coach-ico">${SP.icon(SP.I.chat, 16)}</span><b>教练</b>${fb.at && fb.state === 'ok' ? `<span class="sp-num">${_coachHM(fb.at)}</span>` : ''}</div>`;
 // 训练中陪练(coach.js coachQuickOpen):底部面板 —— 顶上「陪练」小标签 + 动作名大字 + 黑底三格(第几组 / 重量 / 刚才的感受),
 // 中间对话(教练左边荧光绿小头像 + 白卡气泡,我右边墨底气泡),下面一排快捷问题胶囊 + 胶囊输入框 + 圆形发送键
@@ -457,6 +461,26 @@ SKIN_TPL.sport.coachQuickLog = ({ msgs, streaming }) => {
 };
 // 装到主屏幕的提示(只在 iOS Safari、还没装时):运动版是白卡 + 粗标题,不带纸墨的方括号标签
 SKIN_TPL.sport.iosInstall = () => `<div class="notice sp-install" id="ios-install-prompt"><span><b>装到主屏幕</b> Safari 右下角 ••• → 分享 → 添加到主屏幕，离线也能打开。</span><button class="link-btn" onclick="try{localStorage.setItem('hideInstallPrompt','1')}catch(e){};document.getElementById('ios-install-prompt').remove()">关闭</button></div>`;
+// —— 搭子卡(app.js ptTodayHtml):白卡。左边名字首字的圆、右上状态胶囊(在练 = 墨底荧光字带圆点;练完 = 荧光底带勾),
+//    练什么大字、进度条 + 做完几项、「在做 臀推 · 第 2/4 组 · 18:05 开练」、TA 对你说,底下一排回应胶囊(发过的荧光底带勾、不能再点)
+SKIN_TPL.sport.ptToday = ({ v, rx, date, now, start, off }) => {
+  const e = SP.esc, bar = (v.st === 'training' || v.st === 'paused' || v.st === 'done') && v.total;
+  return `<section class="sp-card sp-pt" id="pt-card" aria-label="搭子 ${e(v.name)} 今天">`
+    + `<div class="sp-pt-top"><span class="sp-pt-av" aria-hidden="true">${e(v.name.charAt(0).toUpperCase())}</span>`
+    + `<span class="sp-pt-who"><span class="sp-eyebrow">搭子 · 今天</span><b>${e(v.name)}</b></span>`
+    + `<span class="sp-pt-st ${v.st}">${v.st === 'done' ? SP.tick(14, 3) : v.st === 'training' ? '<i aria-hidden="true"></i>' : ''}${PT_ST[v.st]}</span></div>`
+    + `<div class="sp-pt-type">${e(v.type)}</div>`
+    + (bar ? `<div class="sp-pt-prog"><span class="sp-pt-bar" aria-hidden="true"><i style="width:${Math.round(v.done / v.total * 100)}%"></i></span><span class="sp-pt-n"><b>${v.done}/${v.total}</b> 项</span></div>` : '')
+    + (now || start ? `<div class="sp-pt-now">${[now ? e(now) : '', start].filter(Boolean).join(' · ')}</div>` : '')
+    + (off ? `<div class="sp-pt-now sp-pt-off">${e(off)}</div>` : '')   // 搭子关了实时进度
+    + (rx.length ? `<div class="sp-pt-rx"><span class="sp-pt-rx-k">${e(v.name)} 对你说</span><b>${rx.map(e).join(' · ')}</b></div>` : '')
+    + `<div class="sp-pt-words pt-words" role="group" aria-label="给 ${e(v.name)} 回应">${ptWordBtns('today', date)}</div></section>`;
+};
+// 「一起练」一行(焦点卡 / 引导卡顶上,荧光底上的墨字小条):搭子没在练时是 hidden 的占位,ptRefresh 原地换
+SKIN_TPL.sport.ptWith = ({ where, on, text }) => `<div class="sp-pt-with pt-with" id="pt-with-${where}"${on ? '' : ' hidden'}><span class="sp-pt-dot" aria-hidden="true"></span><span>${SP.esc(text)}</span></div>`;
+// 没练自动顺延 / 跟着搭子对齐的提示(core.js autoShiftNoticeHtml):白卡 + 荧光绿小签(顺延 / 对齐)+ 一句 + 小字说明,撤销 / 知道了。id、onclick 同纸墨
+SKIN_TPL.sport.shiftNotice = (t) => `<div class="notice sp-shift" id="${t.id}" role="status"><span class="sp-shift-t"><span class="sp-shift-tag">${SP.esc(t.tag)}</span><b>${SP.esc(t.main)}</b>${t.hint ? `<span class="sp-shift-h">${SP.esc(t.hint)}</span>` : ''}</span>`
+  + `<span class="sp-shift-a"><button type="button" class="link-btn u" onclick="${t.undo}">撤销</button><button type="button" class="link-btn" onclick="${t.dismiss}">知道了</button></span></div>`;
 // —— 10 今天 · 写在这行上面 ——
 
 // ══ 20 计划 ═════════════════════════════════════════════════════════════
@@ -465,7 +489,7 @@ SKIN_TPL.sport.mh_plan = () => ({ aside: SKIN_TPL.sport.mhChip(typeof S !== 'und
 
 // 周历卡片头(ui.js uiRenderPlanCal):标题 + 日期范围 + 回到今天 / 翻页;下面一排星期(按这两周第一周实际的星期排,
 // 计划不一定从周一开始);图例写在这里,CSS 用 order 排到格子下面。格子本身(.dc,拖拽 / 点选 / owner 标记都在上面)不换结构,只换样子
-SKIN_TPL.sport.planCalNav = ({ visibleDays, isCurrentView, viewStart, viewEnd, coDows }) => {
+SKIN_TPL.sport.planCalNav = ({ visibleDays, isCurrentView, viewStart, viewEnd, coDows, coReal }) => {
   const DW = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'];
   return `<div class="cal-nav sp-cal-head"><span class="sp-cal-tt"><span class="sp-cal-t">两周安排</span>`
     + `<span class="cal-nav-label">${viewStart.slice(5).replace('-', '/')} — ${viewEnd.slice(5).replace('-', '/')}</span></span>`
@@ -473,8 +497,10 @@ SKIN_TPL.sport.planCalNav = ({ visibleDays, isCurrentView, viewStart, viewEnd, c
     + `<button type="button" class="link-btn sp-cal-arr" onclick="calPrev()" aria-label="上两周">${SP.icon('M15 5l-7 7 7 7', 20, 2.4)}</button>`
     + `<button type="button" class="link-btn sp-cal-arr" onclick="calNext()" ${isCurrentView ? 'disabled' : ''} aria-label="下两周">${SP.icon('M9 5l7 7-7 7', 20, 2.4)}</button></div>`
     + `<div class="sp-cal-dows" aria-hidden="true">${visibleDays.slice(0, 7).map(d => `<span>${DW[new Date(d.date + 'T12:00:00').getDay()]}</span>`).join('')}</div>`
-    + `<div class="sp-cal-key">${coDows ? `<span><i class="sp-cal-dot"></i>搭子也练</span>` : ''}<span>✓ 已完成</span></div>`;
+    + `<div class="sp-cal-key">${coDows ? `<span><i class="sp-cal-dot"></i>${coReal ? '和搭子同练' : '搭子也练'}</span>` : ''}<span>✓ 已完成</span></div>`;
 };
+// 周历下面纸墨那行「画线 = 同练」的图例:运动的图例已经在卡片头里(上面「和搭子同练」),这里不要
+SKIN_TPL.sport.planCalCoKey = () => '';
 
 // 当前设置卡片(ui.js uiRenderPlanSummary):设置一行一项 + 纸墨那几行计划统计(kv 原样接上) + 01–08 跳转胶囊
 SKIN_TPL.sport.planSummary = ({ kv }) => {
@@ -524,6 +550,25 @@ SKIN_TPL.sport.planP7 = (ctx, paper) => paper().replace('<div id="excluded-list"
 // 荧光绿「教练」小签 + 一句摘要 + 撤销。撤销按钮在 .co-prop[data-pid] 里,走 coachPropAct 同一套
 SKIN_TPL.sport.planProps = ({ items }) => items.map(it => `<div class="co-prop plan-prop sp-pp" data-pid="${SP.esc(it.id)}"><span class="sp-pp-tag">教练</span>`
   + `<span class="pp-t">${SP.esc(it.text)}，已写进计划</span><button type="button" class="link-btn u" onclick="coachPropAct(this,'undo')">撤销</button></div>`).join('');
+// 02 末尾「搭子」(ui.js uiPartnerPlanHtml,配对后才有):圆点 + 名字小标题、浅灰框里的「重合 →」、开关(02 区已运动化)、
+// 「对齐搭子的训练日」整行描边胶囊;预览 = 墨色粗边卡片,荧光绿「对齐搭子」小签,一天一行「日期 / 原来 → 挪来的 / 搭子那天」,
+// 采纳(主按钮)/ 不要;采纳后一行浅灰「已对齐 · 撤销」。id / onclick / data-toggle 和纸墨一样
+SKIN_TPL.sport.planPartner = ({ on, ready, ov, nm, dr, undo, st, KZ, why, hint }) => {
+  const e = SP.esc;
+  return `<div id="plan-partner" class="sp-pt"><div class="sp-pt-h"><i class="sp-pt-dot" aria-hidden="true"></i><span class="sub-label">搭子 · ${e(nm)}</span></div>`
+    + `<div id="plan-partner-overlap" class="note-line sp-pt-ov"${ov == null ? ' style="display:none"' : ''}>${ov || ''}</div>`
+    + uiToggle('partnerAlign', '排计划时跟搭子对齐', hint, on, false, 'partner-align-switch')
+    + (dr ? `<div class="co-rv sp-pt-rv" id="align-rv"><div class="sp-pt-rvh"><span class="sp-pt-tag">对齐搭子</span><span>挪 ${dr.moves.length} 天 · 先看看</span></div>`
+      + `<div class="sp-pt-rows">${dr.rows.map(x => { const [w, md] = fmtDate(x.date).split('·'); return `<div class="sp-pt-row"><span class="sp-pt-d"><b>${e(md)}</b>${e(w)}</span>`
+        + `<span class="sp-pt-c"><span><s>${e(x.was)}</s> → <b>${e(x.now)}</b></span><small>${e(nm)} 这天：${e(KZ[x.pk] || '—')}</small></span></div>`; }).join('')}</div>`
+      + `<div class="sp-pt-note">挪完${e(partnerAlignNote(dr.r))}。只在这几天之间换，动作和已调的组次重量跟着走。</div>`
+      + `<div class="btn-row"><button type="button" class="btn-primary" onclick="partnerAlignApply()">采纳</button><button type="button" class="btn-line" onclick="partnerAlignDrop()">不要</button></div></div>`
+      : `<button type="button" class="btn-line sp-pt-go" id="align-btn" onclick="partnerAlignPreview()"${ready ? '' : ' disabled'}${why ? ' aria-describedby="align-why"' : ''}>${SP.icon(SP.I.swap, 18, 2.2)}对齐搭子的训练日</button>`
+        + (why ? `<div class="sp-pt-note sp-pt-why" id="align-why">${e(why)}</div>` : ''))   // 搭子关了训练计划:按钮置灰,下面写原因
+    + (undo ? `<div class="note-line sp-pt-done" id="align-done"><span class="sp-pt-ok" aria-hidden="true">${SP.tick(14, 3)}</span><span class="sp-pt-dt">已对齐 · ${e(st.note || '')}</span>`
+      + `<button type="button" class="link-btn u" onclick="partnerAlignUndo()">撤销</button></div>` : '')
+    + `</div>`;
+};
 // —— 20 计划 · 写在这行上面 ——
 
 // ══ 30 记录 ═════════════════════════════════════════════════════════════
@@ -555,7 +600,7 @@ SKIN_TPL.sport.logReviewLocked = ({ a }) => `<button type="button" class="row-bt
 // 容器带 data-skin="sport":换回纸墨时 coachRenderReview 认出来整块重建
 SKIN_TPL.sport.logReviewBox = () => `<div class="co-card sp-rv" id="co-review" data-skin="sport"><div id="co-review-body"></div><button class="btn-outline" id="co-review-go" onclick="coachReview()">生成复盘</button></div>`;
 SKIN_TPL.sport.logReviewEmpty = () => `<div class="sp-rv-top"><span class="sp-rv-chip">复盘</span><span class="sp-rv-when">每周</span></div><div class="hint">看最近几周练得怎么样，给出下周可以一键采纳的调整。</div>`;
-SKIN_TPL.sport.logReview = ({ rv, adj, left, applied }) => {
+SKIN_TPL.sport.logReview = ({ rv, adj, left, applied, undo, rvb }) => {
   const wk = typeof _uiIsoWeek === 'function' ? `WEEK ${_uiIsoWeek(rv.at)} ` : '';
   const when = rv.auto ? `${new Date(rv.at + 'T12:00:00').getDay() === 1 ? '周一' : '本周'}自动生成` : String(rv.at || '').slice(5).replace('-', '/');
   const li = arr => (arr || []).map(x => `<li>${SP.esc(x)}</li>`).join('');
@@ -564,8 +609,9 @@ SKIN_TPL.sport.logReview = ({ rv, adj, left, applied }) => {
     + (rv.wins?.length ? `<div class="co-rv-t">做得好</div><ul>${li(rv.wins)}</ul>` : '')
     + (rv.issues?.length ? `<div class="co-rv-t">要注意</div><ul>${li(rv.issues)}</ul>` : '')
     + (adj ? `<div class="sub-label">建议调整 · 勾选后一键采纳</div><div id="co-adj-list">${adj}</div>`
-      + (left > 0 ? `<button class="btn-primary" id="co-adopt" onclick="coachApplyReview()">采纳勾选的 ${left} 条</button>` : `<div class="sp-rv-done">${SP.tick(16, 3)}已采纳 ${applied.length} 条</div>`) : '')
-    + `${_coachCostLine(rv)}</div>`;
+      + (left > 0 ? `<button class="btn-primary" id="co-adopt" onclick="coachApplyReview()">采纳所选 ${left} 条</button>` : `<div class="sp-rv-done">${SP.tick(16, 3)}已采纳 ${applied.length} 条</div>`) : '')
+    + (undo ? `<button type="button" class="link-btn sp-rv-undo" onclick="coachReviewUndo()">${SP.icon(SP.I.swap, 16)}撤销刚才采纳的 ${undo} 条</button>` : '')
+    + `${_coachCostLine(rv)}${rvb || ''}</div>`;
 };
 
 // 大数字三格 + 训练量柱 + 本月(app.js renderStats 的 top)
@@ -811,6 +857,27 @@ SKIN_TPL.sport.achCard = ({ type, idx }) => {
   ctx.textAlign = 'left'; ctx.fillStyle = C.faint; ctx.font = F.lbl(18); ctx.fillText('CICI FITNESS · 极简专业健身助理', 40, 790);
   return cv.toDataURL('image/png');
 };
+// 搭子卡(app.js ptLogPanelHtml):左边荧光底大数字「你俩连续周数」,右边本周两条进度(你 / TA,各对各的目标,不比高低);
+// 下面 TA 最近的打卡:日期块 + 类型 / 时长,右边「回应」胶囊,点开一排回应词
+SKIN_TPL.sport.ptLog = ({ name, js, logs, logsOff }) => {
+  const e = SP.esc, row = (lbl, n, g) => `<div class="sp-ptl-r"><span class="k">${e(lbl)}</span>${_spLog.meter(n / g)}<b>${n}/${g}</b></div>`;
+  return `<div class="panel sp-ptl" id="pt-log">${_spLog.head(`搭子 · ${e(name)}`, '只算一起坚持')}`
+    + (js ? `<div class="sp-ptl-top"><div class="sp-ptl-big"><span class="bignum">${js.weeks}</span><span class="biglbl">你俩连续周数</span></div>`
+    + `<div class="sp-ptl-wk"><span class="sp-ptl-h">本周${js.thisOk ? ' · 算上了' : ''}</span>${row('你', js.me, js.meGoal)}${row(name, js.pa, js.paGoal)}</div></div>`
+    + `<div class="sp-sub">两个人这一周都练够各自的每周天数，才算一周。</div>`
+      : `<div class="sp-ptl-off pt-off"><span class="k">你俩连续周数</span><b>TA 没共享</b></div>`)   // 搭子关了连续周数
+    + (logsOff ? `<div class="sp-ptl-off pt-off"><span class="k">最近的打卡</span><b>TA 没共享</b></div>` : '')   // 搭子关了打卡记录
+    + (logs.length ? `<p class="sub-label">${e(name)} 最近的打卡</p><div class="sp-ptl-rows">` + logs.map(l => {
+      const [, m, d] = l.date.split('-'), meta = _ptLogMeta(l).replace(/^\d\d\/\d\d( · )?/, '');
+      return `<div class="sp-ptl-row"><div class="sp-ptl-rt"><span class="sp-ld"><b>${d}</b><i>${_spLog.mon(+m - 1)}</i></span>`
+        + `<span class="sp-lm"><span class="lw">${e(l.workout)}</span>${meta ? `<span class="lt">${meta}</span>` : ''}${l.mine.length ? `<span class="sp-ptl-mine">你说：${l.mine.map(e).join(' · ')}</span>` : ''}</span>`
+        + `<button type="button" class="sp-pill${l.open ? ' on' : ''}" data-d="${l.date}" aria-expanded="${l.open}" onclick="ptLogToggle('${l.date}')">${l.open ? '收起' : '回应'}</button></div>`
+        + (l.open ? `<div class="sp-pt-words pt-words" role="group" aria-label="回应 ${e(name)} ${+m}/${+d} 的打卡">${ptWordBtns('log', l.date)}</div>` : '') + `</div>`;
+    }).join('') + `</div>` : '')
+    + `</div>`;
+};
+// 我的日志行下面:搭子对这次打卡的回应(浅灰小条)
+SKIN_TPL.sport.ptLogRx = ({ name, w }) => `<div class="sp-ptl-rx pt-rx-log"><span>${SP.esc(name)}</span><b>${w.map(SP.esc).join(' · ')}</b></div>`;
 // —— 30 记录 · 写在这行上面 ——
 
 // ══ 40 教练 ═════════════════════════════════════════════════════════════
@@ -853,35 +920,39 @@ SKIN_TPL.sport.coachChat = ({ chat, streaming }) => {
   return chat.map(m => m.role === 'assistant'
     ? coach(m.at ? _coachHM(m.at) : '', `<div class="co-text sp-bub">${_coachMd(m.text)}</div>${m.action ? _coachActHtml(m.action) : ''}${m.proposal ? _coachPropHtml(m.proposal) : ''}${m.mem ? _coachMemNoteHtml(m.mem) : ''}${m.meta ? _coachCostLine(m.meta) : ''}`)
     : `<div class="co-msg user sp-msg-me"><span class="who">你${m.at ? ' · ' + _coachHM(m.at) : ''}</span>`
+    + (m.ref ? _coachRefHtml(m.ref) : '')
     + (m.img ? `<span class="sp-co-img">${SP.icon(_spCoI.photo, 16, 2)}图片</span>` : '')
     + `<div class="co-text sp-bub">${SP.esc(m.text).replace(/\n/g, '<br>')}</div></div>`).join('')
     + (streaming ? coach('', `<div class="co-text sp-bub" id="co-stream"><span class="co-meta">思考中…</span></div>`) : '');
 };
 // 提议卡:墨色粗边白卡;「提议」荧光绿小签;采纳 2 : 不要 1;采纳后荧光绿条 + 撤销;不要之后一行灰字 + 「再看看」(回到待定)
 // rows 是纸墨那版拼好的 <span class="d">哪天</span><span class="c">改什么</span>,结构够用,样子在 CSS 里换
-SKIN_TPL.sport.coachProp = ({ p, open, okN, rows, drop }) => {
+SKIN_TPL.sport.coachProp = ({ p, open, okN, rows, drop, sel, label, msg, rvb }) => {
   let foot = '';
-  if (open) foot = `<div class="co-prop-btns"><button type="button" class="btn-primary" onclick="coachPropAct(this,'apply')"${okN ? '' : ' disabled'}>采纳</button><button type="button" class="btn-line" onclick="coachPropAct(this,'reject')">不要</button></div>`;
+  if (open) foot = `<div class="co-prop-btns"><button type="button" class="btn-primary" onclick="coachPropAct(this,'apply')"${sel ? (/aria-checked="true"/.test(sel) ? '' : ' disabled') : okN ? '' : ' disabled'}>${SP.esc(label || '采纳')}</button><button type="button" class="btn-line" onclick="coachPropAct(this,'reject')">不要</button></div>`;
   else if (p.state === 'applied') foot = `<div class="sp-prop-done">${SP.tick(18, 2.8)}<span>已写进计划${okN < p.changes.length ? ` · ${p.changes.length - okN} 条没改` : ''}</span>`
     + (p.snap ? `<button type="button" class="link-btn u" onclick="coachPropAct(this,'undo')">撤销</button>` : '') + `</div>`;
   else if (p.state === 'rejected') foot = `<div class="sp-prop-no"><span class="co-prop-st sp-prop-st">没改，计划照旧。</span><button type="button" class="link-btn" onclick="coachPropAct(this,'reopen')">再看看</button></div>`;
   else if (p.state === 'undone') foot = `<div class="co-prop-st sp-prop-st">已撤销 · 计划回到采纳前</div>`;
+  // 待定、不止一条:sel 是一条条勾选框(纸墨那版拼好的 .adj-row,样子在 40 区 .sp-prop-sels 里换);改过的版本:教练这一版的话写在小签下面
   return `<div class="co-prop sp-prop" data-pid="${SP.esc(p.id)}"><div class="co-prop-h"><span class="sp-prop-tag">提议</span><span class="sp-prop-t">${okN} 处改动</span></div>`
-    + `<div class="co-prop-list">${rows}</div>`
+    + (msg ? `<div class="co-text sp-prop-msg">${_coachMd(msg)}</div>` : '')
+    + (sel ? `<div class="co-prop-sels sp-prop-sels">${sel}</div>` : `<div class="co-prop-list">${rows}</div>`)
     + (drop.length ? `<div class="co-meta">还提到 ${drop.length} 个不在你动作库里的动作，已去掉：${SP.esc(drop.join('、'))}</div>` : '')
-    + foot + `</div>`;
+    + foot + (rvb || '') + `</div>`;
 };
 // 小改卡(对话里 / 陪练面板里都用):已经执行了,所以不是「采纳 / 不要」而是荧光绿小签「已改」+ 一条条带勾 + 撤销胶囊
 // rows 是纸墨那版拼好的 <li>(没改成的划线 + 原因),结构够用,样子在 CSS 里换(40 区 .sp-act)
 _spCoI.mem = 'M7 4h10v16l-5-4-5 4z';
-SKIN_TPL.sport.coachAct = ({ a, okN, rows, drop }) => {
+SKIN_TPL.sport.coachAct = ({ a, okN, rows, drop, talk }) => {
   const tag = a.state === 'applied' ? '已改' : a.state === 'undone' ? '已撤销' : '没改成';
   const t = a.state === 'applied' ? `今天 · ${okN} 处` : a.state === 'undone' ? '今天的训练回到改之前' : '这次一条都没改';
   return `<div class="co-act sp-act${a.state === 'applied' ? '' : ' off'}" data-aid="${SP.esc(a.id)}"><div class="sp-act-h"><span class="sp-act-tag">${tag}</span><span class="sp-act-t">${t}</span></div>`
     + `<ul class="co-act-list sp-act-list">${rows}</ul>`
     + (drop.length ? `<div class="co-meta">还提到 ${drop.length} 个不在你今天计划或动作库里的：${SP.esc(drop.join('、'))}</div>` : '')
     + (a.undoErr ? `<div class="co-meta co-err">${SP.esc(a.undoErr)}</div>` : '')
-    + (a.state === 'applied' && a.snap ? `<button type="button" class="link-btn sp-act-undo" onclick="coachActUndo(this)">${SP.icon(SP.I.swap, 16)}撤销</button>` : '')
+    + (a.state === 'applied' && (a.snap || talk) ? `<div class="sp-act-btns">${a.snap ? `<button type="button" class="link-btn sp-act-undo" onclick="coachActUndo(this)">${SP.icon(SP.I.swap, 16)}撤销</button>` : ''}`
+      + (talk ? `<button type="button" class="link-btn sp-act-undo" data-rk="action:${SP.esc(a.id)}" onclick="coachDiscuss(this)">${SP.icon(SP.I.chat, 16)}不对，说说</button>` : '') + `</div>` : '')
     + `</div>`;
 };
 // 记住 / 忘掉了什么:书签小图标 + 一行字 + 「看看」(去「我 → 05」)
@@ -894,6 +965,27 @@ SKIN_TPL.sport.mh_coach = () => {
   if (a === 'on') { const l = typeof coachModelLabel === 'function' ? coachModelLabel() : ''; t = !l || l === 'Auto' ? '自动' : l; }
   return { aside: SKIN_TPL.sport.mhChip(t) };
 };
+// 「改一下 / 聊聊」(coach.js _coachRvHtml;复盘、AI 排草稿、换动作推荐、认器械、打卡反馈、教练的话、提议卡都用这一条):
+// 两个描边胶囊;版本多于一版时上面一行「第 2 / 3 版」+ 上一版 / 下一版;点开「改一下」= 浅灰圆角输入框 + 发送(墨底)2 : 取消 1;
+// 改的时候一行荧光绿小点 +「教练在按你的意见改…」。data-rk / onclick 和纸墨一样
+_spCoI.edit = 'M4 20h4L19 9l-4-4L4 16zM13.5 6.5l4 4';
+SKIN_TPL.sport.coachRv = (c) => {
+  const e = SP.esc;
+  return `<div class="co-rvw sp-rvw" data-rk="${e(c.rk)}">`
+    + (c.n > 1 ? `<div class="sp-rvw-v"><span class="sp-rvw-vn">第 ${c.cur + 1} / ${c.n} 版</span>`
+      + (c.cur > 0 ? `<button type="button" class="link-btn sp-rvw-vb" onclick="coachRvVer(this,-1)">上一版</button>` : '')
+      + (c.cur < c.n - 1 ? `<button type="button" class="link-btn sp-rvw-vb" onclick="coachRvVer(this,1)">下一版</button>` : '') + `</div>` : '')
+    + (c.busy ? `<div class="sp-rvw-busy" role="status"><i aria-hidden="true"></i>教练在按你的意见改…</div>`
+      : c.open ? `<textarea class="sp-rvw-ta" rows="3" aria-label="哪里不对、想怎么改" placeholder="哪里不对、想怎么改。可以只说某一条：「第 2 条不要」「深蹲换成别的」" oninput="coachRvDraft(this)">${e(c.draft)}</textarea>`
+        + (c.notes.length ? `<div class="sp-rvw-was">之前说过：${c.notes.map(x => `「${e(x)}」`).join('')}</div>` : '')
+        + `<div class="sp-rvw-btns"><button type="button" class="btn-primary" onclick="coachRvSend(this)">发送</button><button type="button" class="btn-line" onclick="coachRvToggle(this)">取消</button></div>`
+        : `<div class="sp-rvw-acts">${c.can ? `<button type="button" class="sp-rvw-chip" onclick="coachRvToggle(this)">${SP.icon(_spCoI.edit, 16)}改一下</button>` : ''}`
+        + `<button type="button" class="sp-rvw-chip" onclick="coachDiscuss(this)">${SP.icon(SP.I.chat, 16)}聊聊</button></div>`)
+    + `</div>`;
+};
+// 「聊聊」带进对话的引用:她那条气泡上面一张浅灰小卡「关于这份 XX」+ 摘要;输入框上面「待带上」的那条 + 「不带了」
+SKIN_TPL.sport.coachRef = (r) => `<span class="co-ref sp-ref"><b>关于这份${SP.esc(r.t)}</b><span>${SP.esc(_rvClip(r.s, 80))}</span></span>`;
+SKIN_TPL.sport.coachRefPending = (r) => `<div class="co-pending sp-ref-pend"><span class="sp-ref"><b>关于这份${SP.esc(r.t)}</b><span>${SP.esc(_rvClip(r.s, 60))}</span></span><button type="button" class="link-btn" onclick="coachRefClear()">不带了</button></div>`;
 // —— 40 教练 · 写在这行上面 ——
 
 // ══ 50 我 + 新手设置 ═══════════════════════════════════════════════════
@@ -1174,6 +1266,7 @@ SKIN_TPL.sport.guided = (c) => {
   return `<div class="wm-top"><span class="sheet-eyebrow">引导训练</span><button class="ex-modal-close" onclick="wmClose()" aria-label="关闭引导训练">关闭</button></div>`
     + `<div class="sp-g-card">`
     + `<div class="sp-g-top"><span class="sp-g-tag">动作 ${SP.pad2(idx + 1)} / ${SP.pad2(list.length)}</span>${part ? `<span class="sp-g-part">${part}</span>` : ''}</div>`
+    + (date === todayStr() && typeof ptWithHtml === 'function' ? ptWithHtml('g') : '')   // 一起练
     + `<h2 class="wm-name">${dispName}</h2>`
     + `<div class="sp-g-grid${needW ? '' : ' one'}"><div class="sp-g-cell"><span class="sp-g-lbl">${bigLbl}</span><span class="sp-g-big${big.length > 5 ? ' sm' : ''}">${big}</span></div>`
     + (needW ? `<div class="sp-g-cell"><label class="sp-g-lbl" for="wm-weight">重量 KG</label><input id="wm-weight" class="sp-g-kg" type="number" inputmode="decimal" step="0.5" value="${curW || ''}" placeholder="${lastW ? lastW.weight : ''}"></div>` : '')

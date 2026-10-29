@@ -98,8 +98,17 @@
             <section class="panel-tab" id="me" role="tabpanel" aria-labelledby="tab-me" hidden>
                 <div id="me-content"></div>
                 <div class="version-foot">
-                    <button type="button" id="app-version" class="link-btn" onclick="toggleChangelog()" aria-expanded="false" aria-controls="changelog-box">Cici健身计划 v3.5.0 (build 160) · 更新日志 ▾</button>
+                    <button type="button" id="app-version" class="link-btn" onclick="toggleChangelog()" aria-expanded="false" aria-controls="changelog-box">Cici健身计划 v3.6.0 (build 161) · 更新日志 ▾</button>
                     <div id="changelog-box" style="display:none">
+                        <p class="cl-h">v3.6.0 · 2026-10-29</p>
+                        <ul>
+                            <li>搭子：配对改成发链接或二维码，状态写清楚（等 TA 加你 / 已互相配对 / TA 不跟你配对了）；今天页有搭子卡，看得到 TA 今天练什么、做到哪；两个人同时在练时显示 TA 在做哪一组。</li>
+                            <li>回应：加油 / 太强了 / 一起练？/ 我也去，可以对 TA 的今天，也可以对 TA 的某一次打卡；记录页有「你俩连续 N 周」。</li>
+                            <li>排计划默认跟搭子对齐：TA 去健身房你也去，TA 游泳你也游；计划页能一键对齐，先看预览再采纳，可以撤销。</li>
+                            <li>没练自动顺延：某天没练（过了晚上 11 点也算），这次训练挪到后面，不会丢；今天页能撤销。搭子顺延了，你后面的训练会跟着对齐。开关在「计划 → 08」。</li>
+                            <li>AI 给的东西可以改：逐条勾选只采纳一部分；「改一下」写下哪里不对让教练重做，能切回上一版；「聊聊」带着它去和教练讨论。</li>
+                            <li>共享给搭子什么可以自己选：「我 → 03」里每一类都能关。</li>
+                        </ul>
                         <p class="cl-h">v3.5.0 · 2026-10-29</p>
                         <ul>
                             <li>教练会主动找你：该练了还没开始、好几天没练、明天有动作该加重、搭子刚练完，推一句话到手机上。在「我 → 04 提醒」打开，安静时段和每天最多几条可以自己设。</li>

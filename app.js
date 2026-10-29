@@ -62,7 +62,7 @@ function updateThemeBtn(theme){
 
 // ══ State Persistence ════════════════════════════════════
 function saveState(){
-ls(K.settings,{goal:S.goal,level:S.level,days:S.days,dur:S.dur,equip:S.equip,focus:S.focus,limits:S.limits,volumeMultiplier:S.volumeMultiplier,restDur:S.restDur,swimLevel:S.swimLevel,weightLevel:S.weightLevel,periodMode:S.periodMode,displayName:S.displayName,sealChar:S.sealChar,cycleEnabled:S.cycleEnabled,cycleDay:S.cycleDay,cycleLength:S.cycleLength,cycleSetAt:S.cycleSetAt||null,vacuumDays:S.vacuumDays,partnerDays:S.partnerDays,partnerUid:S.partnerUid,autoVolumeAdjust:S.autoVolumeAdjust,userExcluded:S.userExcluded,userExcludeReasons:S.userExcludeReasons,cheer:S.cheer,aiWeights:S.aiWeights,planStale:!!S.planStale,skin:S.skin,push:S.push});
+ls(K.settings,{goal:S.goal,level:S.level,days:S.days,dur:S.dur,equip:S.equip,focus:S.focus,limits:S.limits,volumeMultiplier:S.volumeMultiplier,restDur:S.restDur,swimLevel:S.swimLevel,weightLevel:S.weightLevel,periodMode:S.periodMode,displayName:S.displayName,sealChar:S.sealChar,cycleEnabled:S.cycleEnabled,cycleDay:S.cycleDay,cycleLength:S.cycleLength,cycleSetAt:S.cycleSetAt||null,vacuumDays:S.vacuumDays,partnerDays:S.partnerDays,partnerUid:S.partnerUid,autoVolumeAdjust:S.autoVolumeAdjust,userExcluded:S.userExcluded,userExcludeReasons:S.userExcludeReasons,cheer:S.cheer,reacts:S.reacts,partnerSeen:S.partnerSeen||null,partnerName:S.partnerName||null,aiWeights:S.aiWeights,planStale:!!S.planStale,skin:S.skin,push:S.push,partnerAlign:S.partnerAlign!==false,autoShift:S.autoShift,shiftFollowed:S.shiftFollowed,share:S.share});
 if(S.plan)ls(K.plan,{plan:S.plan,prog:S.prog,adj:S.adj,weights:S.weights,exRpe:S.exRpe,poolLounger:S.poolLounger,flexProg:S.flexProg,unlockedDates:S.unlockedDates});
 localStorage.setItem(nsKey('fit_selDate'), S.selDate || '');
 if(typeof wpStateDirty==='function')wpStateDirty(); // 开了「主动找你」:节流上传快照(push.js)
@@ -137,6 +137,8 @@ el.innerHTML=`<span class="faint">每周拆分 →</span> ${t}`;
 
 // ── 搭子重合日(按周几;两边都用同一套每周排法模板,不用读对方的计划)──
 // v15x 某次提交连同日历标记一起误删了 partnerOverlap,设置页的「重合」一直不显示;按原实现补回来。
+// 配对后读得到对方的真实计划(共享文档 train.plan,coach.js coachSharedTraining 写的)就逐日按真实计划比(下面「搭子:按真实计划」);
+// 没配对(手填天数)、对方 app 还没升级(共享文档里没有 train)才走这套按周几的老算法。
 const GYM_PATTERNS={2:[1,0,0,1,0,0,0],3:[1,0,1,0,1,0,0],4:[1,1,0,1,1,0,0],5:[1,1,1,0,1,1,0],6:[1,1,1,1,1,1,0],7:[1,1,1,1,1,1,1]};
 function weekdayPlanTypes(days,hasPool){
 days=+days;
@@ -145,6 +147,14 @@ if(hasPool){const sp=SWIM_SPLIT[days]||{gym:Math.max(2,days-1),swim:1};return (C
 return GYM_PATTERNS[days]||GYM_PATTERNS[3];
 }
 function partnerOverlap(){
+if(_ppOff('plan'))return null;   // 对方关了「训练计划」:不拿每周天数猜(那是对方没同意给的),没有重合日
+const real=_ppTrain();
+if(real){
+// 接下来两周逐日比:两边同一天同类(健身房 / 游泳)。dates = [[日期, 'g'|'s']]
+const today=todayStr(),dates=[];
+for(let i=0;i<14;i++){const ds=addDays(today,i),k=_myKindOn(ds);if((k==='g'||k==='s')&&partnerKindOn(ds)===k)dates.push([ds,k]);}
+return {real:true,dates,gym:[],swim:[]};
+}
 const pp=(typeof _partnerProfile!=='undefined')?_partnerProfile:null;
 const pd=(pp&&pp.days)?+pp.days:+S.partnerDays;
 if(!pd||pd<2||pd>7)return null;
@@ -155,15 +165,287 @@ const gym=[],swim=[];
 for(let d=0;d<7;d++){if(mine[d]===1&&theirs[d]===1)gym.push(d);if(mine[d]===2&&theirs[d]===2)swim.push(d);}
 return {gym,swim};
 }
-function updatePartnerOverlap(){
-const el=document.getElementById('partner-overlap');
-if(!el)return;
+// 「重合 →」那一行(「我 → 搭子」和「计划 → 02」各一行,同一句):没得比时 null
+function partnerOverlapHtml(){
+if(_ppOff('plan'))return '<span class="faint">重合 →</span> TA 没共享计划，看不到重合日';
 const ov=partnerOverlap();
-if(!ov){el.style.display='none';return;}
-el.style.display='';
+if(!ov)return null;
+if(ov.real){
+if(!ov.dates.length)return '<span class="faint">重合 →</span> 接下来两周你俩没有同一天同类的训练日';
+const g=ov.dates.filter(x=>x[1]==='g').map(x=>fmtDate(x[0])).join('、'),s=ov.dates.filter(x=>x[1]==='s').map(x=>fmtDate(x[0])).join('、');
+return `<span class="faint">重合 →</span> 接下来两周 ${ov.dates.length} 天 · ${g?'健身房 '+g:''}${g&&s?' · ':''}${s?'游泳 '+s:''}`;
+}
 const g=ov.gym.map(d=>DN[d]).join('、'),s=ov.swim.map(d=>DN[d]).join('、');
-if(!g&&!s){el.innerHTML='<span class="faint">重合 →</span> 你俩这周没有重合的训练日，换个天数试试';return;}
-el.innerHTML=`<span class="faint">重合 →</span> ${g?'健身房 '+g:''}${g&&s?' · ':''}${s?'游泳 '+s:''}，这些天一起收拾`;
+if(!g&&!s)return '<span class="faint">重合 →</span> 你俩这周没有重合的训练日，换个天数试试';
+return `<span class="faint">重合 →</span> ${g?'健身房 '+g:''}${g&&s?' · ':''}${s?'游泳 '+s:''}，这些天一起收拾`;
+}
+function updatePartnerOverlap(){
+const els=['partner-overlap','plan-partner-overlap'].map(id=>document.getElementById(id)).filter(Boolean);
+if(!els.length)return;
+const h=partnerOverlapHtml();
+els.forEach(el=>{if(h==null){el.style.display='none';return;}el.style.display='';if(el.innerHTML!==h)el.innerHTML=h;});
+}
+
+// ── 搭子:按真实计划 ──
+// 一天用一个字母:g 健身房 · s 游泳 · r 休息 · p 另有安排(私密日,不对齐) · x 别的(经期的陆地轻量替代等,不对齐) · null 不知道
+const _KIND_T={0:'r',1:'g',2:'s'};
+function _dow0(ds){return (new Date(ds+'T12:00:00').getDay()+6)%7;}   // 0 = 周一
+function _ppPaired(){const pp=(typeof _partnerProfile!=='undefined')?_partnerProfile:null;return (pp&&typeof pp==='object'&&partnerUid())?pp:null;}
+function _ppTrain(){const pp=_ppPaired(),t=pp&&pp.train;return (t&&typeof t==='object'&&Array.isArray(t.plan))?t:null;}
+// 对方的显示名;Cici 的账号名可能是 akane / aaakane(Cait:「akane就是cici」),一律叫 Cici
+function _ppName(){const pp=_ppPaired();return ptName(pp&&pp.name).slice(0,12);}   // akane→Cici 统一走 ptName
+// 对方计划里的一天 → 字母(新版共享文档每天带 k;旧版按类型名猜)
+function _ppEntryKind(e){
+if(!e||typeof e!=='object')return null;
+if(['g','s','r','p','x'].includes(e.k))return e.k;
+const t=String(e.type||'');
+return t==='休息'?'r':t==='另有安排'?'p':t==='轻量替代'?'x':/游泳/.test(t)?'s':t?'g':null;
+}
+// 这一天对方的信息是不是真实的(对方的计划 / 打卡记录里有);不是就是按对方每周天数的标准排法补的
+function _ppRealOn(ds){
+const t=_ppTrain();if(!t)return false;
+if(t.plan.some(x=>x&&x.date===ds))return true;
+return !!(t.at&&ds<t.at&&ds>=addDays(t.at,-42)&&Array.isArray(t.logs));
+}
+// 对方某天练什么:计划里有就用计划;早于对方上次同步的日子看打卡记录(近 6 周,没记录 = 没练);
+// 都没有(对方计划过期 / 没覆盖到)就按对方每周天数的标准排法(和老算法同一套)
+function partnerKindOn(ds){
+const pp=_ppPaired();if(!pp||_ppOff('plan'))return null;
+const t=_ppTrain();
+if(t){
+const e=t.plan.find(x=>x&&x.date===ds);if(e)return _ppEntryKind(e);
+if(_ppRealOn(ds)){const l=(t.logs||[]).find(x=>x&&x.date===ds);return l?(/游泳/.test(String(l.workout||''))?'s':'g'):'r';}
+}
+const pd=+pp.days;if(!(pd>=2&&pd<=7))return null;
+return _KIND_T[weekdayPlanTypes(pd,!!pp.hasPool)[_dow0(ds)]];
+}
+// 我这一天(计划里的一天,或周历上只在日志里的一天)
+function myDayKind(d){
+if(!d)return null;
+if(d.isPrivateDay)return 'p';
+if(d.isRest)return 'r';
+if(d.isSwimDay)return 's';
+if(d.workoutType==='轻量替代')return 'x';
+if(d._src==='log'&&/游泳/.test(String(d.workoutType||'')))return 's';
+return 'g';
+}
+function _myKindOn(ds){
+const d=(S.plan&&S.plan.days)?S.plan.days.find(x=>x.date===ds):null;
+return d?myDayKind(d):_KIND_T[weekdayPlanTypes(S.days)[_dow0(ds)]];
+}
+// 周历:两边同一天同类的日子(Map 日期 → 'g'|'s');对方没有真实计划数据(没配对 / 对方没升级)→ null,周历走老算法
+function partnerCoDays(days){
+if(!_ppTrain())return null;
+const m=new Map();
+(days||[]).forEach(d=>{if(!d||d._src==='empty')return;const k=myDayKind(d);if((k==='g'||k==='s')&&partnerKindOn(d.date)===k)m.set(d.date,k);});
+return m;
+}
+
+// ── 排计划对齐搭子 ──
+// 谁排计划,谁去对齐对方「现有」的计划;对方的计划不会被自动改(免得两个人来回改)。对方计划没覆盖到的日子按对方每周天数的标准排法。
+// 只挪训练放在哪天:每个自然周里练几次力量、几次游泳和原排法一样,所以天数少的一方自然落在天数多的一方的训练日里。
+// 打分:同一天同类(力量对健身房日、游泳对游泳日)最多 → 和原排法改动最少。
+// 身体和规矩优先:连续训练的天数不超过上限(原排法本身就更长的,不比原排法更长);臀腿类目标每周力量 ≤ 3 天时两次力量之间至少隔一天
+// (这些分化每次都练臀腿,要 48 小时恢复)。没泳池的只对齐健身房日;经期模式下游泳日换成陆地轻量,不算分;对方「另有安排」的日子不对齐。
+function partnerAlignOn(){return S.partnerAlign!==false&&!!_ppPaired()&&!_ppOff('plan');}
+// 开着对齐、但这次对不了(对方关了「训练计划」;AI 排计划另外看对方许不许 AI 参考):排完的提示里说一句
+function partnerAlignOffNote(ai){
+const pp=_ppPaired();if(!pp||S.partnerAlign===false)return '';
+if(_ppOff('plan'))return 'TA 没共享计划，这次没对齐';
+if(ai&&pp.aiOk===false)return 'TA 没让 AI 参考 TA 的数据，这次没对齐';
+return '';
+}
+function _alignRun(arr,pred,circ){let best=0,run=0;const n=arr.length,L=circ?n*2:n;for(let i=0;i<L;i++){if(pred(arr[i%n])){run++;if(run>best)best=run;}else run=0;}return Math.min(best,n);}
+function _alignComb(n,k){const out=[],pre=[];const go=st=>{if(pre.length===k){out.push(pre.slice());return;}for(let i=st;i<n;i++){pre.push(i);go(i+1);pre.pop();}};go(0);return out;}
+function _alignOpt(gymPerWeek){
+return {swimOk:S.equip.includes('泳池')&&!S.periodMode,lowerBody:hasGoal('臀腿塑形')||hasGoal('女性曲线')||hasGoal('翘臀美背'),gymPerWeek};
+}
+// slots = [{date, base}] 可以挪的日子(base:0 休息 / 1 力量 / 2 游泳);fixedOn(日期) → 其余日子的类型(只用来数连续训练天数);
+// pattern = 我每周的标准排法(定连续上限)。返回 {t:{日期:类型}, n 对齐天数, base 原排法对齐天数, blocked 为了恢复间隔没对上的天数, fb 其中按对方标准排法补的天数, pTrain 对方能对齐的训练日数}
+function partnerAlignSolve(slots,fixedOn,pattern,opt){
+opt=opt||{};
+const gymWk=opt.gymPerWeek||pattern.filter(x=>x===1).length;
+const capAny=Math.max(2,_alignRun(pattern,x=>x>0,true)),capGym=Math.max(opt.lowerBody&&gymWk<=3?1:2,_alignRun(pattern,x=>x===1,true));
+const pk={};slots.forEach(s=>{pk[s.date]=partnerKindOn(s.date);});
+const hit=(ds,ty)=>(ty===1&&pk[ds]==='g')||(ty===2&&opt.swimOk&&pk[ds]==='s')?1:0;
+const weeks=new Map();
+slots.forEach(s=>{const w=addDays(s.date,-_dow0(s.date));if(!weeks.has(w))weeks.set(w,[]);weeks.get(w).push(s);});
+const solve=limited=>{
+const t={};slots.forEach(s=>{t[s.date]=s.base;});
+[...weeks.keys()].sort().forEach(w=>{
+const F=weeks.get(w),n=F.length,nG=F.filter(s=>s.base===1).length,nS=F.filter(s=>s.base===2).length;
+// 连续天数看这一周前后各一周:已经定了的周用新排法,还没定的用原排法,别的日子用 fixedOn
+const seq=[];for(let i=-7;i<14;i++)seq.push(addDays(w,i));
+const at=(ds,c)=>(c&&ds in c)?c[ds]:(ds in t)?t[ds]:fixedOn(ds);
+const runs=c=>{const a=seq.map(ds=>at(ds,c));return [_alignRun(a,x=>x>0),_alignRun(a,x=>x===1)];};
+const [b0,b1]=runs(null),okAny=Math.max(capAny,b0),okGym=Math.max(capGym,b1);
+let best=null;
+_alignComb(n,nG).forEach(gs=>{
+const rest=[...Array(n).keys()].filter(i=>!gs.includes(i));
+_alignComb(rest.length,nS).forEach(si=>{
+const ss=si.map(i=>rest[i]),c={};
+F.forEach((s,i)=>{c[s.date]=gs.includes(i)?1:ss.includes(i)?2:0;});
+if(limited){const [r0,r1]=runs(c);if(r0>okAny||r1>okGym)return;}
+let sc=0,ch=0;F.forEach(s=>{sc+=hit(s.date,c[s.date]);if(c[s.date]!==s.base)ch++;});
+if(!best||sc>best.sc||(sc===best.sc&&ch<best.ch))best={sc,ch,c};
+});
+});
+if(best)Object.assign(t,best.c);   // 原排法本身总在候选里,best 不会是空的
+});
+return t;
+};
+const t=solve(true),free=solve(false),cnt=x=>slots.reduce((a,s)=>a+hit(s.date,x[s.date]),0),b={};
+slots.forEach(s=>{b[s.date]=s.base;});
+const n=cnt(t);
+return {t,n,base:cnt(b),blocked:Math.max(0,cnt(free)-n),fb:slots.filter(s=>hit(s.date,t[s.date])&&!_ppRealOn(s.date)).length,
+pTrain:slots.filter(s=>pk[s.date]==='g'||(opt.swimOk&&pk[s.date]==='s')).length};
+}
+// 我自己某天(不在这次要挪的日子里)的类型,只用来数连续天数:过去看打卡记录,以后看计划;计划外的(end 之后)还没排,算空着
+// (下次排的时候它前面这几天已经是打卡记录 / 计划,会照样按恢复间隔排,不用在这里替它占位;当成原排法会白白挡掉计划末尾的对齐)
+function _alignFixed(ds,today,pattern,dayOf,end){
+if(end&&ds>end)return 0;
+if(ds<today){const l=LOG.find(x=>x.date===ds);return l?((l.isSwimDay||/游泳/.test(String(l.workout||'')))?2:1):0;}
+const d=dayOf(ds);
+if(d){const k=myDayKind(d);return k==='r'?0:(k==='g'||k==='p')?1:2;}
+return pattern[_dow0(ds)];
+}
+let _lastPlanAlign=null;   // genPlan 最近一次的对齐结果(排完的提示用);没对齐 = null
+// genPlan 用:这次新排的日子(今天及以后、不保留的)里按搭子挪训练日 → {t:{日期:0/1/2}, …};不对齐 → null(genPlan 照原排法,结果和没配对时一字不差)
+function partnerAlignForGen(startDate,preserve,pattern,gymPerWeek){
+_lastPlanAlign=null;
+if(!partnerAlignOn())return null;
+const today=todayStr(),slots=[];
+for(let i=0;i<14;i++){const ds=addDays(startDate,i);if(!preserve[ds]&&ds>=today)slots.push({date:ds,base:pattern[_dow0(ds)]});}
+if(!slots.length)return null;
+const r=partnerAlignSolve(slots,ds=>_alignFixed(ds,today,pattern,x=>preserve[x]||null,addDays(startDate,13)),pattern,_alignOpt(gymPerWeek));
+_lastPlanAlign=r;
+return r;
+}
+// 排完 / 挪完的提示里那半句;r 不给 = genPlan 最近一次
+function partnerAlignNote(r){
+if(r===undefined)r=_lastPlanAlign;
+if(!r)return '';
+const nm=_ppName();
+if(!r.pTrain)return `${nm}这两周没有能一起练的日子`;
+if(!r.n)return `这两周没能和${nm}排在同一天`+(r.blocked?'（为了恢复间隔）':'');
+return `和${nm}同一天同类 ${r.n} 天`+(r.blocked?`，${r.blocked} 天为了恢复间隔没对上`:'')+(r.fb&&r.fb===r.n&&+(_ppPaired()||{}).days?`（${nm}的计划没覆盖到，按 TA 每周 ${+_ppPaired().days} 天的排法对的）`:'');
+}
+function planAlignSuffix(){const t=partnerAlignNote()||partnerAlignOffNote();return t?' · '+t:'';}
+// AI 排计划(coach.js coachPlan)带上的对齐信息:搭子这几天练什么(guess = 对方计划没覆盖、按 TA 每周天数的标准排法猜的)、两边有没有泳池。
+// 规则写在后端 PLAN_SYS(和上面 partnerAlignSolve 同一套);不对齐 → null
+const _KIND_AI={g:'健身房',s:'游泳',r:'休息',p:'另有安排',x:'别的安排'};
+function partnerAlignForAI(dates){
+if(!partnerAlignOn())return null;
+const pp=_ppPaired();
+if(pp.aiOk===false)return null;   // 对方关了「允许 TA 的 AI 教练参考我的数据」:搭子的安排也不发给 AI
+const days=(dates||[]).map(ds=>{const k=partnerKindOn(ds);return {date:ds,partner:k?_KIND_AI[k]:'不知道',...(k&&!_ppRealOn(ds)?{guess:true}:{})};});
+return {name:_ppName(),partnerDaysPerWeek:+pp.days||null,partnerPool:!!pp.hasPool,myPool:S.equip.includes('泳池'),periodMode:!!S.periodMode,days};
+}
+// 一份计划(AI 草稿)里有几天和搭子同一天同类
+function partnerAlignCount(days){
+const swimOk=S.equip.includes('泳池')&&!S.periodMode,nm=_ppName();
+let n=0,pt=0,mine=0;
+(days||[]).forEach(d=>{
+const pk=partnerKindOn(d.date),mk=myDayKind(d);
+if(pk==='g'||(swimOk&&pk==='s'))pt++;
+if(mk==='g'||mk==='s')mine++;
+if((mk==='g'&&pk==='g')||(swimOk&&mk==='s'&&pk==='s'))n++;
+});
+return {n,of:pt,mine,text:pt?`和${nm}同一天同类 ${n} 天（这几天${nm}练 ${pt} 天，你排了 ${mine} 个训练日）`:`${nm}这几天没有能一起练的日子`};
+}
+
+// ── 「对齐搭子的训练日」:把我接下来(今天之后、没锁、没开练、没打卡、不是私密日)的训练日挪到和搭子对齐 ──
+// 只在这些天之间换内容(像周历拖拽换天:整天的动作 / 类型 / 按日期存的勾选、重量、组次一起走),每个自然周里同类的内容按原来的先后落到新位置,
+// 分化顺序不乱、每周天数不变。先预览,点采纳才改;采纳前存快照能撤销(只留最近一次,存本机);撤销时已经开练、打卡或又改过的天不回滚。
+const ALIGN_STORE='fit_align1';
+let _alignDraft=null;
+function _alignLoad(){try{return JSON.parse(localStorage.getItem(nsKey(ALIGN_STORE)))||null;}catch(e){return null;}}
+function _alignSave(v){try{if(v)localStorage.setItem(nsKey(ALIGN_STORE),JSON.stringify(v));else localStorage.removeItem(nsKey(ALIGN_STORE));}catch(e){}}
+function _alignMovable(d,today){return !!d&&d.date>today&&!isLocked(d)&&!d.isPrivateDay&&!isDone(d)&&!LOG.some(l=>l.date===d.date)&&!Object.values(S.prog[d.date]||{}).some(Boolean);}
+function _alignDayLabel(d){const k=myDayKind(d);return k==='r'?'休息':k==='s'?'游泳':String(d.workoutType||'训练');}
+const _KIND_ZH={g:'健身房',s:'游泳',r:'休息',p:'另有安排',x:'轻量'};
+function partnerAlignReady(){return !!(_ppPaired()&&!_ppOff('plan')&&S.plan&&S.plan.days&&S.plan.days.length);}
+// 算一份预览:{at, moves:[[原日期, 新日期]], rows:[{date, was, now, pk}], r};没有能挪的天 → {none:'原因'}
+function partnerAlignDraftCalc(){
+if(_ppOff('plan'))return {none:'TA 没共享计划，没法对齐'};
+if(!partnerAlignReady())return {none:'先和搭子连上、有了计划才能对齐'};
+const today=todayStr(),days=S.plan.days.filter(d=>_alignMovable(d,today));
+if(!days.length)return {none:'接下来没有能挪的天（已经开练、打卡或锁定的不动）'};
+const typ=d=>{const k=myDayKind(d);return k==='r'?0:k==='g'?1:2;};   // 轻量替代占游泳日的位置
+const slots=days.map(d=>({date:d.date,base:typ(d)})),pattern=weekdayPlanTypes(S.days);
+const sp=S.equip.includes('泳池')?(SWIM_SPLIT[S.days]||{gym:Math.max(2,S.days-1)}):{gym:S.days};
+const dayOf=ds=>S.plan.days.find(x=>x.date===ds)||null;
+const r=partnerAlignSolve(slots,ds=>_alignFixed(ds,today,pattern,dayOf,S.plan.days[S.plan.days.length-1].date),pattern,_alignOpt(sp.gym));
+// 每周里同类的内容按日期先后对到新位置
+const wk={};slots.forEach(s=>{const w=addDays(s.date,-_dow0(s.date));(wk[w]=wk[w]||[]).push(s);});
+const moves=[];
+Object.values(wk).forEach(F=>[0,1,2].forEach(ty=>{
+const src=F.filter(s=>s.base===ty).map(s=>s.date).sort(),dst=F.filter(s=>r.t[s.date]===ty).map(s=>s.date).sort();
+src.forEach((a,i)=>{if(dst[i]&&dst[i]!==a)moves.push([a,dst[i]]);});
+}));
+moves.sort((a,b)=>a[1].localeCompare(b[1]));
+const rows=moves.map(([a,b])=>({date:b,was:_alignDayLabel(dayOf(b)),now:_alignDayLabel(dayOf(a)),pk:partnerKindOn(b)}));
+return {at:today,moves,rows,r};
+}
+function partnerAlignPreview(){
+const dr=partnerAlignDraftCalc();
+if(dr.none){_alignDraft=null;showToast(dr.none);}
+else if(!dr.moves.length){_alignDraft=null;showToast(dr.r.n?`已经对齐了：${partnerAlignNote(dr.r)}，不用挪`:(partnerAlignNote(dr.r)||'没有能挪的'));}
+else _alignDraft=dr;
+if(typeof uiRenderP2==='function')uiRenderP2();
+}
+function partnerAlignDrop(){_alignDraft=null;if(typeof uiRenderP2==='function')uiRenderP2();}
+function partnerAlignApply(){
+const dr=_alignDraft;if(!dr)return;
+// 采纳前按现在的计划重算一遍:预览之后可能已经开练 / 打卡 / 换了搭子的计划
+const now=partnerAlignDraftCalc();
+if(now.none||JSON.stringify(now.moves)!==JSON.stringify(dr.moves)){_alignDraft=now.none||!now.moves.length?null:now;if(typeof uiRenderP2==='function')uiRenderP2();showToast(now.none||(now.moves.length?'计划刚变过，按现在的重新预览了一遍':'现在已经对齐了，不用挪'));return;}
+const idx=ds=>S.plan.days.findIndex(x=>x.date===ds);
+const pick=(o,ds)=>Object.fromEntries(Object.entries(o||{}).filter(([k])=>k.startsWith(ds+'-')).map(([k,v])=>[k.slice(ds.length+1),v]));
+const dates=[...new Set(dr.moves.flat())],snap={days:{},st:{}};
+dates.forEach(ds=>{snap.days[ds]=JSON.parse(JSON.stringify(S.plan.days[idx(ds)]));snap.st[ds]={prog:S.prog[ds]?{...S.prog[ds]}:null,weights:pick(S.weights,ds),adj:pick(S.adj,ds),exRpe:pick(S.exRpe,ds)};});
+const putSt=(ds,st)=>{
+if(st.prog)S.prog[ds]={...st.prog};else delete S.prog[ds];
+['weights','adj','exRpe'].forEach(k=>{S[k]=S[k]||{};Object.keys(S[k]).forEach(x=>{if(x.startsWith(ds+'-'))delete S[k][x];});Object.entries(st[k]||{}).forEach(([x,v])=>{S[k][ds+'-'+x]=v;});});
+};
+dr.moves.forEach(([a,b])=>{S.plan.days[idx(b)]={...JSON.parse(JSON.stringify(snap.days[a])),date:b};putSt(b,snap.st[a]);});
+const after={};dates.forEach(ds=>{after[ds]=JSON.stringify(S.plan.days[idx(ds)]);});
+_alignSave({at:dr.at,moves:dr.moves,snap,after,note:partnerAlignNote(dr.r)});
+_alignDraft=null;
+saveState();render();if(typeof uiRenderP2==='function')uiRenderP2();
+showToast(`挪了 ${dr.moves.length} 天 · ${partnerAlignNote(dr.r)}`);
+}
+// 撤销按「换位圈」整圈回滚(a→b→c→a 三天一起换的,只回滚其中一天会一天两份、丢一份):圈里有一天已经开练 / 打卡 / 又改过,这一圈就不动
+function _alignCycles(moves){
+const to=new Map(moves),seen=new Set(),out=[];
+moves.forEach(([a])=>{if(seen.has(a))return;const c=[];let x=a;while(x!==undefined&&!seen.has(x)){seen.add(x);c.push(x);x=to.get(x);}out.push(c);});
+return out;
+}
+function _alignOkToUndo(st,ds){
+const i=S.plan&&S.plan.days?S.plan.days.findIndex(x=>x.date===ds):-1;
+return i>=0&&ds>todayStr()&&!LOG.some(l=>l.date===ds)&&JSON.stringify(S.plan.days[i])===st.after[ds]&&!Object.values(S.prog[ds]||{}).some(Boolean);
+}
+// 还能撤销的天数(0 = 撤销那一行不用再显示)
+function partnerAlignUndoable(){
+const st=_alignLoad();if(!st||!st.moves||!st.snap)return 0;
+return _alignCycles(st.moves).filter(c=>c.every(ds=>_alignOkToUndo(st,ds))).reduce((a,c)=>a+c.length,0);
+}
+function partnerAlignUndo(){
+const st=_alignLoad();if(!st||!st.snap)return;
+let back=0,kept=0;
+_alignCycles(st.moves).forEach(c=>{
+if(!c.every(ds=>_alignOkToUndo(st,ds))){kept+=c.length;return;}
+c.forEach(ds=>{
+const i=S.plan.days.findIndex(x=>x.date===ds),s0=st.snap.st[ds]||{};
+S.plan.days[i]=st.snap.days[ds];
+if(s0.prog)S.prog[ds]={...s0.prog};else delete S.prog[ds];
+['weights','adj','exRpe'].forEach(k=>{S[k]=S[k]||{};Object.keys(S[k]).forEach(x=>{if(x.startsWith(ds+'-'))delete S[k][x];});Object.entries(s0[k]||{}).forEach(([x,v])=>{S[k][ds+'-'+x]=v;});});
+back++;
+});
+});
+_alignSave(null);
+saveState();render();if(typeof uiRenderP2==='function')uiRenderP2();
+showToast(kept?`已撤销 · ${kept} 天已经开练、打卡或又改过，没回滚`:'已撤销，回到对齐前');
 }
 
 // ══ Tabs ═══ showTab 在 ui.js(底部导航、页签 aria、刊头) ══
@@ -188,6 +470,7 @@ if(m!==lastMonth&&_logShowAll){lastMonth=m;const[y,mo]=m.split('-');html+=`<div 
 const logIdx=LOG.indexOf(x);
 const open=_logOpen===x.date;
 html+=skinTpl('logRow',{x,open},()=>`<button type="button" class="log-row" aria-expanded="${open}" onclick="toggleLogRow('${x.date}')"><span><span class="lw">${_escHtml(x.workout||'训练')}</span><span class="lt">${x.date.slice(5).replace('-','/')} · ${x.duration||'?'} min${wkLogMin(x)?' · 用时 '+wkLogMin(x)+' min':''} · ${x.exerciseCount||0} 个动作${x.mood?' · '+_escHtml(x.mood):''}</span></span><span class="lr">${x.rpe?'RPE '+x.rpe:'—'}</span></button>`);
+if(typeof ptLogRxHtml==='function')html+=ptLogRxHtml(x.date);   // 搭子对这次打卡的回应(没有就是空串)
 if(open){
 html+=`<div class="log-detail"><div class="jentry-chips">${x.exercises?x.exercises.map(e=>`<span class="jchip${e.done===false?' undone':''}">${e.name}${e.weight?` ${e.weight}kg`:''}</span>`).join(''):''}</div>`
 +(x.note?`<div class="jentry-note">"${_escHtml(x.note)}"</div>`:'')
@@ -402,7 +685,7 @@ else if(i>0)break;
 // Month stats
 const monthLogs=LOG.filter(l=>l.date.startsWith(thisMonth));
 const t7str=addDays(tStr,-6); // -6 + 双闭区间 = 7 天窗口(原 -7 是 8 天)
-const weekDays=S.plan?S.plan.days.filter(d=>!d.isRest&&d.date>=t7str&&d.date<=tStr):[];
+const weekDays=S.plan?S.plan.days.filter(d=>(!d.isRest||d.isMissed)&&d.date>=t7str&&d.date<=tStr):[]; // 没练(已顺延)的标记日算没练的训练日,别当休息日
 const weekDone=weekDays.filter(d=>LOG.some(l=>l.date===d.date)).length; // 与"本月训练天/连续天数"口径一致:以已打卡(LOG)为准,而非勾满即算
 const weekTotal=weekDays.length;
 const weekPct=weekTotal?Math.round(weekDone/weekTotal*100):0;
@@ -537,7 +820,7 @@ ${nextMs?`<div class="ascii" style="line-height:1.4"><span class="k">下一个 �
 
 // 日志列表(#journal)夹在「本月」和后面的明细之间:innerHTML 重画前先把它拿出来,画完放回去
 const journal=document.getElementById('journal');
-el.innerHTML=top+`<div id="journal-slot"></div>`+heat+distHtml+wtHtml+prHtml
+el.innerHTML=top+(typeof ptLogPanelHtml==='function'?ptLogPanelHtml():'')+`<div id="journal-slot"></div>`+heat+distHtml+wtHtml+prHtml
   +(typeof renderBodyPanel==='function'?renderBodyPanel():'')
   +(typeof renderCurvePanel==='function'?renderCurvePanel():'')
   +achHtml('gym')+achHtml('swim');
@@ -708,6 +991,7 @@ if(typeof uiRenderMe==='function')uiRenderMe();
 if(typeof uiRenderP8==='function')uiRenderP8();
 if(typeof uiUpdateComposer==='function')uiUpdateComposer();
 if(typeof render==='function')render();   // 登录状态定了:没计划没数据时这里才弹新手设置
+if(typeof ptResumePending==='function')ptResumePending();   // 打开的是配对链接:登录状态定了再问「和 X 配对？」(没登录先引导登录)
 }
 
 // ── 未登录(本地模式)攒的数据 → 登录后并进账号 ──
@@ -929,28 +1213,85 @@ function partnerUid(){ return (S.partnerUid && String(S.partnerUid).trim()) || n
 
 // Whitelist-only shareable profile. Anything not listed simply never leaves the
 // private doc — that's what keeps owner-only content from ever reaching a partner.
-// train = 搭子互通的训练数据(计划、记录、重量、感受),由 coach.js coachSharedTraining() 按 AI 快照同一套门控过滤:
+// train = 搭子互通的训练数据(计划、记录、重量、感受),由 coach.js coachSharedTraining() 按「给别人看」那套门控(_shareGated)过滤,owner 也照拦:
 // 私密池 / 盆底动作、私密日、私密模式的记录一律不进;身体数据(体重围度、身体情况、周期)和打卡备注原文也不进。
+// 下面三项也只在配对后写(实现在本节后半「搭子:实时进度 / 回应 / 连续周数」):
+// live = 今天的实时进度(在练什么、第几组、做完几项、开练时间;动作名过同一套门控,私密的写「另有安排」,私密日整天只写「另有安排」);
+// reacts = 我发给搭子的回应(固定几个词,对今天 / 对某次打卡);weeks = 每周打卡几天(同一套门控的记录)+ 每周目标,算双人连续周数用。
 function buildSharedProfile(){
   const today=todayStr();
   const td=(S.plan&&S.plan.days)?S.plan.days.find(d=>d.date===today):null;
   const myName=(S.displayName&&S.displayName.trim())||(_user&&_user.displayName?_user.displayName.split(' ')[0]:'搭子');
   const pu=partnerUid();
-  let train=null;
+  let train=null, live=null, weeks=null;
   try{ train=(pu&&typeof coachSharedTraining==='function')?coachSharedTraining():null; }catch(e){ console.warn('shared training build failed:',e); }   // 没配对就不写
-  return {
+  try{ if(pu){ live=_ptLiveStamp(_ptLiveCore()); weeks=_ptMyWeeks(); } }catch(e){ console.warn('shared live build failed:',e); }
+  return _shareFilter({   // 「共享给 TA」关掉的类在这里删(见下)
     name: myName,
     days: +S.days||null,
     hasPool: S.equip.includes('泳池'),
     todayType: td?(td.isPrivateDay?'另有安排':td.isRest?'休息':td.workoutType):'—',
     todayDone: td?!!isDone(td):false,
     swimCount: (typeof SWIM_LOG!=='undefined'&&SWIM_LOG.count)||0,
-    cheer: (S.cheer&&S.cheer.date)?S.cheer:null,   // my latest cheer TO my partner
+    cheer: (S.cheer&&S.cheer.date)?S.cheer:null,   // my latest cheer TO my partner(旧版只读这个键:对今天的最近一次回应)
     allowedReaders: pu?[pu]:[],                     // who may read this doc (the rule checks this)
     lastActive: today,
-    train
-  };
+    train,
+    live,
+    weeks,
+    reacts: pu?_ptMyReacts():null
+  });
 }
+// ── 共享给 TA(「我 → 03」每类一个开关;S.share 随 fit_s1 云同步,没设过 / undefined = 开,老用户升级后分享的内容不变)──
+// 后过滤:buildSharedProfile 照旧生成整份,这里按关掉的类删路径;coachSharedTraining 内部不动。删不存在的路径是空操作(train.shifts 由「没练自动顺延」加)。
+// 路径:a.b 一层层往下;x[] = 数组里每一项;* = 对象里每个键。[路径, 正则] = 不删字段,只把字串里匹配的部分去掉(重量 / RPE 是嵌在一行字里的)。
+// 名字、今天练什么(todayType / todayDone)、回应(reacts / cheer)、days / hasPool 是配对的基本功能,不做开关。
+// 关了的类记在 off(对方据此显示「TA 没共享…」,和「对方 app 还没升级、没有这个字段」分开);AI 那一项写 aiOk:false,对方 app 读到就不把搭子数据放进 AI 快照。
+// 每项:[键, 名字, 分享什么, 关掉后对方少了什么, 要删的路径]
+const SHARE_CATS=[
+  ['plan','训练计划','未来两周每天练什么、顺延','TA 没法跟你对齐，也看不到你俩的重合日',['train.plan','train.shifts']],
+  ['logs','打卡记录','练了什么、时长、完成情况、月度汇总','TA 看不到你的打卡，也没法回应某一次',['train.logs','train.history','train.stats']],
+  ['weights','重量','各动作最近的重量','TA 看不到你各个动作练多重',['train.weights',['train.logs[].ex[]',/ \S+kg(?= \S+×)/g]]],
+  ['feel','感受','RPE 和每个动作的感受','TA 看不到你练得累不累、每个动作感觉怎样',['train.logs[].rpe','train.logs[].feel','train.history[].avgRpe',['train.weights.*[]',/ RPE\S+/g]]],
+  ['live','实时进度','今天做到哪、第几组','TA 的今天页看不到你练到哪，也没有「一起练」',['live','train.today']],
+  ['weeks','连续周数','每周练了几天','TA 那边不显示你俩连续几周',['weeks']],
+  ['ai','允许 TA 的 AI 教练参考我的数据','','TA 的 AI 教练不读你的数据',[]]
+];
+function shareOn(k){ return !(S.share&&S.share[k]===false); }
+function shareCatLabel(k){ const c=SHARE_CATS.find(x=>x[0]===k); return c?c[1]:String(k).slice(0,12); }
+function _shareWalk(o,keys,fn){
+  if(!o||typeof o!=='object') return;
+  const k=keys[0], arr=k.endsWith('[]'), name=arr?k.slice(0,-2):k, rest=keys.slice(1);
+  (name==='*'?Object.keys(o):[name]).forEach(n=>{
+    if(!Object.prototype.hasOwnProperty.call(o,n)) return;
+    if(!arr){ if(rest.length) _shareWalk(o[n],rest,fn); else fn(o,n); return; }
+    const a=o[n]; if(!Array.isArray(a)) return;
+    a.forEach((v,i)=>{ if(rest.length) _shareWalk(v,rest,fn); else fn(a,i); });
+  });
+}
+function _shareFilter(p){
+  const off=SHARE_CATS.map(c=>c[0]).filter(k=>!shareOn(k));
+  if(!off.length) return p;   // 全开 = 和原来一字不差
+  SHARE_CATS.forEach(([k,,,,paths])=>{
+    if(shareOn(k)) return;
+    paths.forEach(x=>{ const [path,re]=Array.isArray(x)?x:[x,null];
+      _shareWalk(p,path.split('.'),(o,n)=>{ if(!re) delete o[n]; else if(typeof o[n]==='string') o[n]=o[n].replace(re,''); }); });
+  });
+  const o2=off.filter(k=>k!=='ai');
+  if(o2.length) p.off=o2;
+  if(!shareOn('ai')) p.aiOk=false;
+  return p;
+}
+// 「我 → 03 · 共享给 TA」的开关(ui.js uiToggleSetting 的 share.*):改完立刻推一次共享文档
+window.shareToggle=function(k){
+  if(!SHARE_CATS.some(c=>c[0]===k)) return;
+  S.share={...(S.share||{}),[k]:!shareOn(k)};
+  saveState(); pushProfile();
+  if(typeof uiRenderPairShare==='function') uiRenderPairShare();
+  if(typeof flashSaved==='function') flashSaved();
+};
+// 对方关掉了哪一类(对方是旧版本 / 没配对 = 都没关)
+function _ppOff(k){ const pp=_ppPaired(); return !!(pp&&Array.isArray(pp.off)&&pp.off.includes(k)); }
 // 整份覆盖(不 merge):这份文档只由 buildSharedProfile 写,覆盖才能把过时的字段 / 已经不分享的数据一起清掉。
 // 和上次推的一字不差就不推(saveState 每次都会排一次推送)
 let _profileLast=null;
@@ -968,27 +1309,34 @@ function scheduleProfilePush(){
   clearTimeout(_profilePushTimer);
   _profilePushTimer=setTimeout(pushProfile,1500);
 }
-function subscribePartner(){
+function subscribePartner(retry){
   if(_partnerUnsub){ _partnerUnsub(); _partnerUnsub=null; }
   clearTimeout(_partnerRetry);
   _partnerProfile=null;
   const pu=partnerUid();
+  if(!(retry&&_ptRead==='denied')) _ptRead=pu&&_db&&_user?'loading':'idle';   // 15 秒一次的重试不把状态改回「正在连接」(免得状态行来回闪)
   if(!_db||!_user||!pu){ if(typeof updatePairUI==='function')updatePairUI(); if(typeof render==='function')render(); return; }
   _partnerUnsub=_db.collection('users').doc(pu).collection('shared').doc('profile').onSnapshot(doc=>{
+    const prev=_partnerProfile;
     _partnerProfile=doc.exists?doc.data():null;
+    _ptOnSnap(prev,doc.exists);
+    if(typeof autoShiftCheck==='function')autoShiftCheck();   // 搭子顺延了 → 跟着对齐(core.js 没练自动顺延);没新批次时什么都不做
     if(typeof updatePartnerOverlap==='function')updatePartnerOverlap();
     if(typeof updatePairUI==='function')updatePairUI();
-    if(typeof render==='function')render();
+    // 只是实时进度 / 回应变了(对方每做完一组都会推一次):原地换搭子卡,不整页重画(免得打断正在输入的重量)
+    if(_ptSig(prev)!==_ptSig(_partnerProfile)){ if(typeof render==='function')render(); } else ptRefresh();
   },e=>{
     // permission-denied = partner hasn't added me to their allowedReaders yet.
     // Firestore terminates a denied listener and won't auto-resume once access is
     // granted, so retry periodically until both sides have paired.
-    _partnerProfile=null;
+    const had=!!_partnerProfile;
+    _partnerProfile=null; _ptRead='denied';
+    if(had&&typeof render==='function')render();   // 刚刚还读得到(对方断开了):把今天页的搭子卡撤掉
     if(typeof updatePairUI==='function')updatePairUI();
     console.warn('partner read:',e.code||e.message);
     if(_partnerUnsub){ _partnerUnsub(); _partnerUnsub=null; }
     clearTimeout(_partnerRetry);
-    _partnerRetry=setTimeout(()=>{ if(partnerUid()&&!_partnerProfile) subscribePartner(); },15000);
+    _partnerRetry=setTimeout(()=>{ if(partnerUid()&&!_partnerProfile) subscribePartner(true); },15000);
   });
 }
 window.copyMyPairCode=function(){
@@ -1001,58 +1349,490 @@ window.savePartnerCode=function(){
   const code=inp?inp.value.trim():'';
   if(!_user){ showToast('请先登录再配对'); return; }
   if(code&&code===_user.uid){ showToast('不能填自己的配对码'); return; }
+  if(code!==partnerUid()){ S.partnerSeen=null; S.partnerName=null; }
   S.partnerUid=code||null;
   if(code) S.partnerDays=null;   // paired: overlap follows partner's real day count
   saveState(); pushProfile(); subscribePartner(); updatePairUI(); flashSaved();
   showToast(code?'已保存搭子配对码':'已取消配对');
 };
 window.unpairPartner=function(){
-  S.partnerUid=null; saveState(); pushProfile(); subscribePartner(); updatePairUI(); showToast('已解除配对');
+  S.partnerUid=null; S.partnerSeen=null; S.partnerName=null; saveState(); pushProfile(); subscribePartner(); updatePairUI(); showToast('已解除配对');
 };
-window.sendCheer=function(word){
-  if(!partnerUid()){ showToast('先和搭子配对'); return; }
-  // 字段名沿用 emoji(搭子那边的旧版本读这个键),内容改成文字
-  S.cheer={ date:todayStr(), emoji:(typeof word==='string'&&word)?word:'加油' };
-  saveState(); pushProfile(); updatePairUI(); if(typeof render==='function')render();
-  showToast('已给搭子加油');
-};
+// 旧入口(「我 → 03」原来的「给搭子加油」):现在是几种回应里的「加油」,对今天发
+window.sendCheer=function(word){ ptReact(typeof word==='string'&&word?word:'加油','today',todayStr()); };
+// 「我 → 03」:状态写清楚(没登录 / 还没配对 / 你已添加 TA、等 TA 加你 / 已互相配对 / TA 已经不跟你配对了)、分享链接、回应、最近收到的回应
 function updatePairUI(){
   const me=document.getElementById('my-pair-code');
   if(me) me.textContent=_user?_user.uid:'（请先登录）';
   const inp=document.getElementById('partner-code-input');
   if(inp&&document.activeElement!==inp) inp.value=partnerUid()||'';
-  const pu=partnerUid();
+  const pu=partnerUid(), st=_ptState(), T=todayStr();
   const btn=document.getElementById('pair-btn');
   if(btn){ btn.textContent=pu?'断开':'连接'; btn.onclick=pu?unpairPartner:savePartnerCode; }
   const pdRow=document.getElementById('partner-days-row');
   if(pdRow) pdRow.style.display=pu?'none':'flex'; // paired → manual day-count hidden
+  ['pair-share-btn','pair-qr-btn'].forEach(id=>{ const b=document.getElementById(id); if(b) b.disabled=!_user; });
+  const shareBtn=document.getElementById('pair-share-btn');
+  if(shareBtn) shareBtn.textContent=st==='ok'?'再发一次配对链接':'分享配对链接';
+  const qr=document.getElementById('pair-qr');
+  if(qr&&!qr.hidden){ if(_user) qr.innerHTML=_ptQrPanel(); else { qr.hidden=true; const qb=document.getElementById('pair-qr-btn'); if(qb) qb.setAttribute('aria-expanded','false'); } }
   const cheerRow=document.getElementById('pair-cheer');
   if(cheerRow){
-    cheerRow.style.display=(pu&&_partnerProfile)?'':'none';
-    const cb=document.getElementById('cheer-btn');
-    if(cb){ const sent=S.cheer&&S.cheer.date===todayStr(); cb.textContent=sent?'今天已加油':'给搭子加油'; cb.disabled=!!sent; }
+    cheerRow.style.display=st==='ok'?'':'none';
+    const w=document.getElementById('pair-words');
+    if(w) w.innerHTML=st==='ok'?ptWordBtns('today',T,'cheer-btn'):'';
   }
   const status=document.getElementById('pair-status');
   if(status){
-    status.replaceChildren();
-    if(!pu){ status.style.display='none'; }
-    else{
-      status.style.display='block';
-      if(_partnerProfile){
-        const c=_partnerProfile.cheer;
-        const cheered=!!(c&&c.date===todayStr());
-        const nameEl=document.createElement('b');
-        nameEl.textContent=String(_partnerProfile.name||'搭子');
-        const ok=document.createElement('span'); ok.className='olive'; ok.textContent='已连接 ';
-        status.append(ok,nameEl);
-        status.append(document.createTextNode(
-          ` · 今天：${String(_partnerProfile.todayType||'—')}${_partnerProfile.todayDone?'（已练完）':''}${cheered?' · TA 今天给你加油了':''}`
-        ));
-      }else{
-        status.append(document.createTextNode('已保存配对码，等对方也填上你的配对码就能连上。'));
-      }
-    }
+    const pp=_partnerProfile, nm=_escHtml(ptName(pp?pp.name:S.partnerName));
+    status.style.display='block';
+    status.dataset.state=st;
+    if(st==='ok'){
+      // 对方能控制的名字 / 类型 / 回应一律走 textContent(check-static 查这条);显示名再按 akane → Cici 换一次
+      const v=ptView(), rx=ptRxWords('today',T);
+      status.replaceChildren();
+      const nameEl=document.createElement('b');
+      nameEl.textContent=String(_partnerProfile.name||'搭子');
+      nameEl.textContent=ptName(nameEl.textContent);
+      const ok=document.createElement('span'); ok.className='olive'; ok.textContent='已连接 ';
+      status.append(ok,nameEl,document.createTextNode(` · 你俩已互相配对 · 今天：${v?v.type:'—'}${v&&v.st==='done'?'（已练完）':''}${rx.length?` · TA 今天对你说：${rx.join('、')}`:''}`));
+    }else status.innerHTML={
+      signedout:'还没登录。登录后才能配对搭子。',
+      none:'还没配对。点「分享配对链接」发给搭子，TA 打开后点「配对」就加上你了；再让 TA 把 TA 的链接发回给你，你俩就互相连上了。',
+      loading:'正在连接搭子…',
+      waiting:`<span class="accent">你已添加 ${S.partnerName?`<b>${nm}</b>`:'TA'}，等 TA 加你。</span>把你的配对链接发给 TA，TA 打开点「配对」就连上了。`,
+      gone:`<span class="accent">${S.partnerName?`<b>${nm}</b>`:'TA'} 已经不跟你配对了</span>（TA 断开了，或者换了搭子）。可以点下面的「断开」，或者把你的配对链接重新发给 TA。`
+    }[st]||'';
   }
+  const rxEl=document.getElementById('pair-rx');
+  if(rxEl){
+    const list=st==='ok'?_ptRxList().filter(r=>r.d>=addDays(T,-13)).sort((a,b)=>(b.at||0)-(a.at||0)||b.d.localeCompare(a.d)).slice(0,5):[];
+    rxEl.style.display=list.length?'':'none';
+    rxEl.innerHTML=list.length?`<span class="sub-label">TA 最近的回应</span><ul class="pt-rx-list">${list.map(r=>`<li><span class="k">${r.to==='log'?`你 ${r.d.slice(5).replace('-','/')} 的打卡`:r.d===T?'今天':r.d.slice(5).replace('-','/')}</span><b>${_escHtml(r.w)}</b></li>`).join('')}</ul>`:'';
+  }
+}
+
+// ══ 搭子:配对链接 / 实时进度 / 回应 / 双人连续周数 / 二维码 ═══════════════════
+// 纸墨的 HTML 在这里(skinTpl 的 paperFn);运动的在 skin-sport.js(ptToday / ptWith 在 10 今天,ptLog / ptLogRx 在 30 记录)。
+// 一切都只写自己的 shared/profile、只读对方的,不跨账号写(规则不用改)。
+const PT_WORDS=['加油','太强了','一起练？','我也去'];   // 回应只有这几个固定词(推送、旧版本兼容都好办)
+let _ptRead='idle';   // 读对方共享文档:idle / loading / ok / missing(文档不存在)/ denied(没权限 = 对方没加我,或者把我删了)
+// 显示名:Cici 的账号名可能是 akane / aaakane(Cait:「akane就是cici」),界面上一律显示 Cici
+function ptName(n){ const s=String(n==null?'':n).trim().slice(0,20); return /^a+kane/i.test(s)?'Cici':(s||'搭子'); }
+function ptWord(w){ return PT_WORDS.includes(w)?w:'加油'; }   // 旧版本 cheer.emoji 里可能是表情符号:一律当「加油」
+// 没登录 / 还没配对 / 正在连 / 你已添加 TA、等 TA 加你 / 已互相配对 / TA 已经不跟你配对了(读过对方、现在读不到了)
+function _ptState(){
+  if(!_user) return 'signedout';
+  const pu=partnerUid(); if(!pu) return 'none';
+  if(_partnerProfile) return 'ok';
+  if(_ptRead==='loading') return 'loading';
+  return S.partnerSeen===pu?'gone':'waiting';
+}
+
+// ── 实时进度 live(写进自己的 shared/profile;搭子的今天页搭子卡、「一起练」那行读它) ──
+// 动作名过「给别人看」那套门控(_shareGated:私密池 + 盆底,owner 也照拦),私密的写「另有安排」;私密日整天只写「另有安排」。
+// 「第几组」:引导训练里用引导卡的组数;今天页用运动风格的组进度(本机 fit_spsets);纸墨没有组进度就只写动作名。
+function _ptWmOpen(date){ try{ return typeof _wmDate!=='undefined'&&_wmDate===date&&document.getElementById('workout-modal').classList.contains('open'); }catch(e){ return false; } }
+function _ptLiveCore(){
+  const T=todayStr(), td=S.plan&&S.plan.days?S.plan.days.find(d=>d.date===T):null;
+  if(!td) return {date:T,st:'none'};
+  if(td.isPrivateDay) return {date:T,st:'private'};
+  if(td.isRest) return {date:T,st:'rest'};
+  const gated=typeof _shareGated==='function'?_shareGated():new Set(typeof _PRIVATE_POOL!=='undefined'?_PRIVATE_POOL:[]), pd=S.prog[T]||{};
+  const mains=td.exercises.map((e,i)=>[e,i]).filter(([e])=>!_isBlockWarm(e)&&!_isBlockStretch(e)&&!gated.has(e.name));
+  const t0=typeof wkStartAt==='function'?(+wkStartAt(T)||0):0, g=_ptWmOpen(T);
+  const st=LOG.some(l=>l.date===T)?'done':(t0||g||Object.values(pd).some(Boolean))?'training':'idle';
+  const out={date:T,st,type:String(td.workoutType||'').slice(0,20),done:mains.filter(([,i])=>pd[i]).length,total:mains.length};
+  if(t0) out.t0=t0;
+  if(st==='training'){
+    let i=-1,set=0,sets=0;
+    if(g){
+      i=_wmIdx; const ex=td.exercises[i];
+      if(ex){ const one=typeof _wmIsSimple==='function'&&_wmIsSimple(ex); sets=one?1:getAdj(T,i,'s',ex.sets); set=one?0:Math.min(_wmSet,sets); }
+      out.guided=true;
+    }else if(typeof _spDayState==='function'){
+      const c=_spDayState(td).cur;
+      if(c){ i=c[1]; sets=getAdj(T,i,'s',c[0].sets); const n=_spSetsDone(T,i,sets,!!pd[i]); set=(uiSkin()==='sport'||n>0)?Math.min(n+1,sets):0; }
+    }
+    const ex=i>=0?td.exercises[i]:null;
+    if(ex){ const hide=gated.has(ex.name); out.cur={name:hide?'另有安排':String(ex.name).slice(0,24),...(set&&!hide?{set,sets}:{})}; }
+  }
+  return out;
+}
+// at = 实时进度最后一次「内容变了」的时间(不是推送时间:内容没变,文档就一字不差,不重复写)
+let _ptLiveSig='',_ptLiveAt=0,_ptLiveTimer=null,_ptLivePushAt=0;
+function _ptLiveStamp(live){ const sig=JSON.stringify(live); if(sig!==_ptLiveSig){ _ptLiveSig=sig; _ptLiveAt=Date.now(); } return {...live,at:_ptLiveAt}; }
+// render() / renderGuided() / wmClose() 末尾调:进度变了就排一次推送。节流:两次之间至少隔 8 秒,期间的变化合并成一次推出去
+function partnerLiveTick(){
+  if(!_db||!_user||!partnerUid()||_ptLiveTimer) return;
+  let sig=''; try{ sig=JSON.stringify(_ptLiveCore()); }catch(e){ return; }
+  if(sig===_ptLiveSig) return;
+  _ptLiveTimer=setTimeout(()=>{ _ptLiveTimer=null; _ptLivePushAt=Date.now(); pushProfile(); },Math.max(1500,8000-(Date.now()-_ptLivePushAt)));
+}
+
+// ── 双人连续周数:两个人这一周(周一到周日)都练够自己的每周目标,才算一周;只合作,不排名 ──
+function _ptWeekKey(ds){ const d=new Date(ds+'T12:00:00'); return addDays(ds,-((d.getDay()+6)%7)); }
+// 每周目标 = 每周练几天。私密日的打卡不进共享数据,所以计划里有私密日的,目标按平均每周私密日数减掉(不然永远凑不够)
+function _ptGoal(){
+  const days=Math.max(1,Math.min(7,Math.round(+S.days)||3)), pl=(S.plan&&S.plan.days)||[], priv=pl.filter(d=>d.isPrivateDay).length;
+  return priv?Math.max(1,days-Math.round(priv/Math.max(1,pl.length/7))):days;
+}
+// 写进共享文档的 weeks:最近 26 周每周打卡了几天(和 train 同一套「给别人看」的门控:私密日、私密模式的记录不算,owner 也一样)
+function _ptMyWeeks(){
+  const ok=typeof _coachLogOk==='function'?_coachLogOk(true):(l=>l&&!l.subMetrics), cur=_ptWeekKey(todayStr()), from=addDays(cur,-7*25), n={};
+  new Set(LOG.filter(l=>ok(l)&&l.date>=from).map(l=>l.date)).forEach(d=>{ const w=_ptWeekKey(d); n[w]=(n[w]||0)+1; });
+  return {goal:_ptGoal(),n};
+}
+function _ptPartnerWeeks(pp){
+  const goal=v=>Math.max(1,Math.min(7,Math.round(+v)||3)), isD=d=>/^\d{4}-\d\d-\d\d$/.test(d||''), n={};
+  if(pp.weeks&&pp.weeks.n&&typeof pp.weeks.n==='object'){ Object.entries(pp.weeks.n).forEach(([w,c])=>{ if(isD(w)) n[w]=Math.max(0,+c||0); }); return {goal:goal(pp.weeks.goal||pp.days),n}; }
+  // 对方还是旧版本(没有 weeks):用 train 里近 6 周的打卡明细照样数
+  new Set(((pp.train&&Array.isArray(pp.train.logs))?pp.train.logs:[]).map(l=>l&&l.date).filter(isD)).forEach(d=>{ const w=_ptWeekKey(d); n[w]=(n[w]||0)+1; });
+  return {goal:goal(pp.days),n};
+}
+function ptJointStreak(){
+  const pp=_partnerProfile; if(!pp||!partnerUid()) return null;
+  const me=_ptMyWeeks(), pa=_ptPartnerWeeks(pp), cur=_ptWeekKey(todayStr());
+  const ok=w=>(me.n[w]||0)>=me.goal&&(pa.n[w]||0)>=pa.goal;
+  let weeks=ok(cur)?1:0;   // 这周还没练够不算断:从上周往前数
+  for(let w=addDays(cur,-7),k=0;k<52&&ok(w);w=addDays(w,-7),k++) weeks++;
+  return {weeks,thisOk:ok(cur),me:me.n[cur]||0,meGoal:me.goal,pa:pa.n[cur]||0,paGoal:pa.goal};
+}
+
+// ── 回应:几个固定词,能对搭子的「今天」发,也能对搭子的某一次打卡发;写在自己的 shared/profile.reacts,对方读 ──
+// 一条 = {w 词, to 'today' / 'log', d 对象的日期(今天 / 那次打卡的日期), at 发出时间};留 21 天、最多 30 条
+function _ptMyReacts(){ const cut=Date.now()-21*864e5; return (S.reacts||[]).filter(r=>r&&r.at>cut&&PT_WORDS.includes(r.w)).slice(-30).map(r=>({w:r.w,to:r.to==='log'?'log':'today',d:String(r.d).slice(0,10),at:+r.at})); }
+// 搭子发给我的(对方是旧版本:只有 cheer = 今天的「加油」)
+function _ptRxList(pp){
+  pp=pp||_partnerProfile; if(!pp) return [];
+  if(Array.isArray(pp.reacts)) return pp.reacts.filter(r=>r&&typeof r.d==='string').map(r=>({w:ptWord(r.w),to:r.to==='log'?'log':'today',d:r.d.slice(0,10),at:+r.at||0}));
+  const c=pp.cheer; return c&&c.date?[{w:ptWord(c.emoji),to:'today',d:String(c.date).slice(0,10),at:0}]:[];
+}
+function ptRxWords(to,d){ return [...new Set(_ptRxList().filter(r=>r.to===to&&r.d===d).map(r=>r.w))]; }
+function ptMine(to,d){ return new Set((S.reacts||[]).filter(r=>r&&r.to===to&&r.d===d).map(r=>r.w)); }
+// 一排回应按钮:发过的变实心、不能再点(同一个词对同一个对象只发一次)。firstId 给第一个按钮(「我 → 03」的 #cheer-btn,旧代码 / 测试认它)
+function ptWordBtns(to,d,firstId){
+  const mine=ptMine(to,d);
+  return PT_WORDS.map((w,k)=>{ const on=mine.has(w); return `<button type="button" class="chip pt-w${on?' on':''}" data-w="${w}"${k===0&&firstId?` id="${firstId}"`:''}${on?` disabled aria-label="${w}，已发"`:''} onclick="ptReact('${w}','${to}','${d}')">${w}</button>`; }).join('');
+}
+window.ptReact=function(word,to,d){
+  if(!partnerUid()){ showToast('先和搭子配对'); return; }
+  word=ptWord(word); to=to==='log'?'log':'today'; d=/^\d{4}-\d\d-\d\d$/.test(d||'')?d:todayStr();
+  if(ptMine(to,d).has(word)) return;
+  const cut=Date.now()-21*864e5;
+  S.reacts=(S.reacts||[]).filter(r=>r&&r.at>cut).concat([{w:word,to,d,at:Date.now()}]).slice(-30);
+  if(to==='today') S.cheer={date:todayStr(),emoji:word};   // 旧版本只认 cheer(今天最近的一次;字段名沿用 emoji,内容是文字)
+  saveState(); pushProfile();
+  // 推送到对方手机(ai-push 提供;没有就算了)。ref:对今天 = 'today',对某次打卡 = 那次打卡的日期
+  if(typeof window.pushNotifyPartner==='function'){ try{ window.pushNotifyPartner({kind:to==='today'?'cheer':'react',word,date:d,ref:to==='today'?'today':d}); }catch(e){ console.warn('pushNotifyPartner:',e); } }
+  ptRefresh();
+  showToast(`已发给 ${ptName(_partnerProfile?_partnerProfile.name:S.partnerName)}：${word}`);
+};
+// 收到新回应:弹一句(推送是另一条路;这里管 app 开着的时候)
+function _ptToastNew(){
+  const pp=_partnerProfile; if(!pp) return;
+  const key=nsKey('fit_pt_rx'), list=_ptRxList(pp).filter(r=>r.at), mx=list.reduce((a,r)=>Math.max(a,r.at),0);
+  let seen=0; try{ seen=+localStorage.getItem(key)||0; }catch(e){}
+  if(!mx||mx<=seen) return;
+  try{ localStorage.setItem(key,String(mx)); }catch(e){}
+  if(!seen&&mx<Date.now()-10*60e3) return;   // 第一次读到:老的不弹
+  const r=list.filter(x=>x.at>seen).sort((a,b)=>b.at-a.at)[0];
+  showToast(`${ptName(pp.name)}：${r.w}${r.to==='log'?`（你 ${r.d.slice(5).replace('-','/')} 的打卡）`:''}`);
+}
+
+// ── 搭子今天怎么样(读对方的 live;对方是旧版本就退回 todayType / todayDone / train.today / train.plan) ──
+const PT_ST={unk:'没共享进度',training:'在练',paused:'练到一半',done:'练完了',idle:'还没开练',rest:'今天休息',private:'另有安排',none:'今天没安排'};
+function ptView(){
+  const pp=_partnerProfile; if(!pp||!partnerUid()) return null;
+  const T=todayStr(), lv=pp.live&&pp.live.date===T?pp.live:null, tr=pp.train&&typeof pp.train==='object'?pp.train:null;
+  const planT=tr&&Array.isArray(tr.plan)?tr.plan.find(d=>d&&d.date===T):null;
+  const active=!pp.lastActive||pp.lastActive===T;   // 对方今天打开过 app(旧文档没有这个字段:照旧信 todayType)
+  const gated=typeof _shareGated==='function'?_shareGated():new Set(), s=(v,n)=>String(v==null?'':v).slice(0,n);   // 搭子的数据:照「给别人看」那套拦
+  let type=active?pp.todayType:(planT&&planT.type), st='idle', done=null, total=null, cur=null, t0=0;
+  if(lv){
+    st=PT_ST[lv.st]&&lv.st!=='paused'?lv.st:'idle';
+    if(lv.type) type=lv.type;
+    done=Math.max(0,+lv.done||0); total=Math.max(0,+lv.total||0); t0=+lv.t0||0;
+    if(lv.cur&&lv.cur.name){ const nm=s(lv.cur.name,24); cur={name:gated.has(nm)?'另有安排':nm,set:+lv.cur.set||0,sets:+lv.cur.sets||0}; }
+    if(st==='training'&&!(Date.now()-(+lv.at||0)<45*60e3)) st='paused';   // 四十多分钟没动静(关了 app / 忘了打卡):不算「在练」
+  }else if(active){
+    const tt=tr&&tr.at===T&&tr.today?tr.today:null;
+    if(tt){ done=Math.max(0,+tt.done||0); total=Math.max(0,+tt.total||0); }
+    st=pp.todayDone||(tt&&tt.status==='已打卡')?'done':tt&&tt.status==='训练中'?'paused':'idle';
+  }
+  if(type==='休息'&&st==='idle') st='rest';
+  if(type==='另有安排') st='private';
+  if(!type||type==='—'){ if(st==='idle') st='none'; type='—'; }
+  if(st==='private'){ type='另有安排'; cur=null; done=total=null; t0=0; }
+  if(st==='idle'&&_ppOff('live')) st='unk';   // 对方关了实时进度:不知道练没练,别写「还没开练」
+  return {name:ptName(pp.name),type:s(type,20),st,done,total,cur,t0};
+}
+function _ptProgTxt(v){ return v.total?`${v.done}/${v.total} 项`:''; }
+function _ptNowTxt(v){ const c=v.cur; if(!c||c.name==='另有安排') return ''; return `在做 ${c.name}${c.set&&c.sets?` · 第 ${c.set}/${c.sets} 组`:''}`; }
+function _ptHM(t){ const d=new Date(t); return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`; }
+
+// 今天页的搭子卡(只在看今天、读得到对方时出现):纸墨是发丝线隔开的一小节,运动是白卡片
+function ptTodayHtml(date){
+  if(date!==todayStr()) return '';
+  const v=ptView(); if(!v) return '';
+  const e=_escHtml, rx=ptRxWords('today',date), live=v.st==='training'||v.st==='paused';
+  const prog=live||v.st==='done'?_ptProgTxt(v):'', now=v.st==='training'?_ptNowTxt(v):'', start=live&&v.t0?_ptHM(v.t0)+' 开练':'';
+  const off=v.st!=='private'&&_ppOff('live')?'TA 没共享实时进度':'';   // 对方在「共享给 TA」里关了实时进度:只有今天练什么、练完没
+  return skinTpl('ptToday',{v,rx,date,prog,now,start,off},()=>`<section class="pt-line" id="pt-card" aria-label="搭子 ${e(v.name)} 今天">`
+    + `<div class="pt-head"><span class="tag">[ 搭子 ]</span><b>${e(v.name)}</b><span class="pt-type">${e(v.type)}</span><span class="pt-st ${v.st}">${PT_ST[v.st]}</span></div>`
+    + (prog||now||start?`<div class="note-line pt-prog">${[prog,e(now),start].filter(Boolean).join(' · ')}</div>`:'')
+    + (off?`<div class="note-line pt-off">${off}</div>`:'')
+    + (rx.length?`<div class="note-line pt-rx">TA 对你说：<b>${rx.map(e).join('、')}</b></div>`:'')
+    + `<div class="chips pt-words" role="group" aria-label="给 ${e(v.name)} 回应">${ptWordBtns('today',date)}</div></section>`);
+}
+// 「一起练」一行:我在练(今天页训练中 / 引导训练里)、搭子也在练时,写「Cici 在做 臀推 · 第 2/4 组」。
+// 读得到对方就先留一个 hidden 的占位,搭子开练时 ptRefresh 原地填上;没配对 / 读不到时什么都不输出(页面和原来一字不差)
+function ptWithHtml(where){
+  const v=ptView(); if(!v||_ppOff('live')) return '';   // 对方关了实时进度:连占位都不留
+  const on=v.st==='training', now=_ptNowTxt(v), text=now?`${v.name} ${now}`:`${v.name} 也在练${v.total?` · ${v.done}/${v.total} 项`:''}`;
+  return skinTpl('ptWith',{v,where,on,text},()=>`<div class="pt-with note-line" id="pt-with-${where}"${on?'':' hidden'}><span class="pt-dot" aria-hidden="true"></span>${_escHtml(text)}</div>`);
+}
+// 记录页「搭子」卡:你俩连续 N 周 + 本周各自进度 + TA 最近的打卡(能回应)。只列类型、时长、动作数、RPE,不列动作名
+let _ptLogOpen=null;
+function ptLogPanelHtml(){
+  const pp=_partnerProfile; if(!pp||!partnerUid()) return '';
+  // 对方在「共享给 TA」里关了连续周数 → js = null(不拿打卡明细替它数);关了打卡记录 → logsOff,列表换成一句说明
+  const name=ptName(pp.name), js=_ppOff('weeks')?null:ptJointStreak(), logsOff=_ppOff('logs'), e=_escHtml, s=(v,n)=>String(v==null?'':v).slice(0,n);
+  const logs=((pp.train&&Array.isArray(pp.train.logs))?pp.train.logs:[]).filter(l=>l&&/^\d{4}-\d\d-\d\d$/.test(l.date||'')).sort((a,b)=>b.date.localeCompare(a.date)).slice(0,5)
+    .map(l=>({date:l.date,workout:s(l.workout||'训练',16),min:Math.max(0,+l.min||0),rpe:Math.max(0,+l.rpe||0),n:Array.isArray(l.ex)?l.ex.length:0,mine:[...ptMine('log',l.date)],open:_ptLogOpen===l.date}));
+  return skinTpl('ptLog',{name,js,logs,logsOff},()=>`<div class="panel" id="pt-log"><p class="panel-title">搭子 · ${e(name)}</p>`
+    + (js?`<div class="kv wide"><span class="k">你俩连续</span><span><b>${js.weeks}</b> 周</span><span class="k">本周</span><span>你 ${js.me}/${js.meGoal} · ${e(name)} ${js.pa}/${js.paGoal}${js.thisOk?' · <span class="olive">这周算上了</span>':''}</span></div>`
+    + `<div class="foot-note">两个人这一周都练够各自的每周天数，才算一周。只看一起坚持了多久，不比谁练得多。</div>`
+      :`<div class="kv wide pt-off"><span class="k">你俩连续</span><span>TA 没共享</span></div>`)
+    + (logsOff?`<div class="note-line pt-off">TA 没共享打卡记录</div>`:'')
+    + (logs.length?`<p class="sub-label">${e(name)} 最近的打卡</p><div class="pt-logs">${logs.map(l=>`<div class="pt-lrow"><div class="pt-ltop"><span class="pt-ltxt"><span class="lw">${e(l.workout)}</span><span class="lt">${_ptLogMeta(l)}</span></span>`
+      + `<button type="button" class="link-btn u" data-d="${l.date}" aria-expanded="${l.open}" onclick="ptLogToggle('${l.date}')">${l.open?'收起':'回应'}</button></div>`
+      + (l.mine.length?`<div class="note-line">你说：${l.mine.map(e).join('、')}</div>`:'')
+      + (l.open?`<div class="chips pt-words" role="group" aria-label="回应 ${e(name)} ${l.date.slice(5).replace('-','/')} 的打卡">${ptWordBtns('log',l.date)}</div>`:'')
+      + `</div>`).join('')}</div>`:'')
+    + `</div>`);
+}
+function _ptLogMeta(l){ return `${l.date.slice(5).replace('-','/')}${l.min?` · ${l.min} min`:''}${l.n?` · ${l.n} 个动作`:''}${l.rpe?` · RPE ${l.rpe}`:''}`; }
+window.ptLogToggle=function(d){
+  _ptLogOpen=_ptLogOpen===d?null:d;
+  _ptSwap('pt-log',ptLogPanelHtml());
+  const b=document.querySelector(`#pt-log [data-d="${d}"]`); if(b) try{ b.focus({preventScroll:true}); }catch(e){}
+};
+// 我的日志行下面:搭子对这次打卡的回应
+function ptLogRxHtml(date){
+  const pp=_partnerProfile; if(!pp||!partnerUid()) return '';
+  const w=ptRxWords('log',date); if(!w.length) return '';
+  return skinTpl('ptLogRx',{name:ptName(pp.name),w},({name,w})=>`<div class="pt-rx-log note-line">${_escHtml(name)}：<b>${w.map(_escHtml).join('、')}</b></div>`);
+}
+
+// ── 对方文档到了 ──
+// 会频繁变的(实时进度、回应、今天勾了几个)不算「内容变了」:只变这些就原地换搭子卡,不整页重画
+function _ptSig(p){ if(!p) return ''; const {live,reacts,cheer,lastActive,todayDone,train,...rest}=p; return JSON.stringify([rest,train?{...train,today:null,at:null}:null]); }
+function _ptOnSnap(prev,exists){
+  const pu=partnerUid(), pp=_partnerProfile;
+  _ptRead=exists?'ok':'missing';
+  if(pp&&pu){
+    const nm=String(pp.name||'').slice(0,20);
+    if(S.partnerSeen!==pu||(nm&&S.partnerName!==nm)){ S.partnerSeen=pu; if(nm) S.partnerName=nm; saveState(); }   // 记住「读到过」:以后读不到了 = TA 不跟你配对了
+    _ptToastNew();
+  }
+  const m=document.getElementById('pt-pair-modal');
+  if(_ptModalStep===2&&m&&m.classList.contains('open')) _ptModalShow2();
+}
+// 原地换:今天页搭子卡、「一起练」那行(今天页 / 引导卡)、记录页搭子卡;焦点留在原来那个按钮(发过的词变成不能点:落到下一个能点的)
+function _ptSwap(id,html){
+  const el=document.getElementById(id); if(!el) return;
+  const a=document.activeElement, idx=a&&el.contains(a)?[...el.querySelectorAll('button')].indexOf(a):-1;
+  const t=document.createElement('div'); t.innerHTML=html||''; const n=t.firstElementChild;
+  if(!n){ el.remove(); return; }
+  el.replaceWith(n);
+  if(idx>=0){ const bs=[...n.querySelectorAll('button')], b=bs.slice(idx).find(x=>!x.disabled)||bs.find(x=>!x.disabled); if(b) try{ b.focus({preventScroll:true}); }catch(e){} }
+}
+function ptRefresh(){
+  const T=todayStr();
+  _ptSwap('pt-card',ptTodayHtml(T));
+  _ptSwap('pt-with-f',ptWithHtml('f'));
+  _ptSwap('pt-with-g',ptWithHtml('g'));
+  _ptSwap('pt-log',ptLogPanelHtml());
+  if(typeof uiCurrentTab!=='undefined'&&uiCurrentTab==='log'&&typeof renderLog==='function') renderLog();
+  updatePairUI();
+}
+
+// ── 配对链接:「我 → 03」分享 #pair=<我的 uid>&n=<名字>;对方打开 → 确认「和 X 配对？」→ 写进 TA 自己的 partnerUid ──
+// 规则只允许各写各的,对方没法替我把 TA 加进我的 allowedReaders(我也不知道 TA 的 uid):所以 TA 确认后要把 TA 的链接发回来,我点一次,才算互相配对。
+function _ptMyName(){ return (S.displayName&&S.displayName.trim())||(_user&&_user.displayName?_user.displayName.split(' ')[0]:'')||''; }
+function ptPairUrl(){
+  if(!_user) return '';
+  let base=location.href.split('#')[0].split('?')[0]; try{ base=new URL('index.html',base).href; }catch(e){}
+  const nm=_ptMyName().slice(0,20);
+  return `${base}#pair=${encodeURIComponent(_user.uid)}${nm?'&n='+encodeURIComponent(nm):''}`;
+}
+// iPhone / 安卓:系统分享面板;不支持就复制;复制也不行就把二维码和链接摊开
+window.sharePairLink=async function(){
+  if(!_user){ showToast('请先登录'); return; }
+  const url=ptPairUrl();
+  if(navigator.share){ try{ await navigator.share({title:'做我的训练搭子',text:'打开链接，点「配对」，我们就是训练搭子了。',url}); return; }catch(e){ if(e&&e.name==='AbortError') return; } }
+  try{ await navigator.clipboard.writeText(url); showToast('配对链接已复制，发给搭子'); }
+  catch(e){ togglePairQR(true); showToast('没能复制，长按下面的链接手动复制'); }
+};
+window.togglePairQR=function(force){
+  const box=document.getElementById('pair-qr'), b=document.getElementById('pair-qr-btn'); if(!box) return;
+  const open=force===true||box.hidden;
+  if(open&&!_user){ showToast('请先登录'); return; }
+  box.hidden=!open; if(b) b.setAttribute('aria-expanded',String(open));
+  box.innerHTML=open?_ptQrPanel():'';
+};
+function _ptQrPanel(){
+  const url=ptPairUrl(); if(!url) return '';
+  return `<div class="pair-qr-img">${ptQrSvg(url,'配对链接二维码')}</div><span class="foot-note">让搭子用手机相机扫一下，或者把这个链接发过去：</span><code class="pair-url">${_escHtml(url)}</code>`;
+}
+// 打开带 #pair= 的链接:先记在 sessionStorage(没登录要先去登录,Google 登录会整页跳走再回来),再从地址栏拿掉;登录状态定了(handleAuth)再问
+const _PT_PEND='fit_pair_pending';
+function _ptReadLink(){
+  try{
+    const h=location.hash||'', m=/[#&]pair=([A-Za-z0-9_-]{6,128})/.exec(h); if(!m) return false;
+    const nm=/[#&]n=([^&]*)/.exec(h); let name=''; try{ name=nm?decodeURIComponent(nm[1]):''; }catch(e){}
+    sessionStorage.setItem(_PT_PEND,JSON.stringify({uid:m[1],name:String(name).trim().slice(0,20)}));
+    history.replaceState(null,'',location.pathname+location.search);
+    return true;
+  }catch(e){ return false; }
+}
+_ptReadLink();
+window.addEventListener('hashchange',()=>{ if(_ptReadLink()&&typeof _authKnown!=='undefined'&&_authKnown) ptResumePending(); });
+function _ptPending(){ try{ return JSON.parse(sessionStorage.getItem(_PT_PEND)||'null'); }catch(e){ return null; } }
+function _ptClearPending(){ try{ sessionStorage.removeItem(_PT_PEND); }catch(e){} }
+let _ptModalStep=0,_ptModalP=null;
+function ptResumePending(){
+  const p=_ptPending(); if(!p||!p.uid) return;
+  if(!_user){ _ptModalLogin(p); return; }
+  _ptClearPending(); _ptModalP=p;
+  if(p.uid===_user.uid){ showToast('这是你自己的配对链接，发给搭子用'); return; }
+  if(partnerUid()===p.uid){ if(_ptState()==='ok') showToast(`已经和 ${ptName(_partnerProfile.name)} 配对了`); else _ptModalShow2(); return; }
+  _ptModalAsk();
+}
+// 确认弹窗(底部面板;压在新手设置上面,刚注册的人也看得到)
+function _ptModal(inner){
+  let m=document.getElementById('pt-pair-modal');
+  if(!m){ m=document.createElement('div'); m.id='pt-pair-modal'; m.className='ex-modal-overlay'; m.onclick=e=>{ if(e.target===m) ptPairClose(); }; document.body.appendChild(m); }
+  m.innerHTML=`<div class="ex-modal-card pt-pair-card" onclick="event.stopPropagation()">${inner}</div>`;
+  m.classList.add('open');
+}
+function _ptHdr(t){ return `<div class="ex-modal-hdr"><div><div class="sheet-eyebrow">训练搭子</div><h3 class="ex-modal-title">${t}</h3></div><button type="button" class="ex-modal-close" onclick="ptPairCancel()">关闭</button></div>`; }
+window.ptPairClose=function(){ _ptModalStep=0; uiCloseOverlay('pt-pair-modal'); };
+if(typeof _uiOverlayClose!=='undefined') _uiOverlayClose['pt-pair-modal']=()=>ptPairClose();   // Esc = 关闭(没登录时那份待配对留着,登录后照样接着问)
+window.ptPairCancel=function(){ _ptClearPending(); _ptModalP=null; ptPairClose(); };
+function _ptModalAsk(){
+  const p=_ptModalP, nm=_escHtml(ptName(p.name)), cur=partnerUid();
+  _ptModalStep=1;
+  _ptModal(_ptHdr(`和 ${nm} 配对？`)
+    + `<p class="sheet-desc">配对后你俩能看到对方今天练什么、练到第几组，能互相回应；训练计划、记录、重量和感受默认互通，AI 教练也会参考，每一类都能在「我 → 03」关掉。身体数据、备注原文和私密内容不分享。</p>`
+    + (cur?`<p class="sheet-desc pt-warn">你现在的搭子是 ${_escHtml(ptName(_partnerProfile?_partnerProfile.name:S.partnerName))}，配对后换成 ${nm}。</p>`:'')
+    + `<button type="button" class="btn-primary" onclick="ptPairConfirm()">配对</button><button type="button" class="btn-ghost" onclick="ptPairCancel()">先不了</button>`);
+}
+window.ptPairConfirm=function(){
+  const p=_ptModalP; if(!p||!_user){ ptPairClose(); return; }
+  if(p.uid!==partnerUid()) S.partnerSeen=null;
+  S.partnerUid=p.uid; S.partnerName=p.name||null; S.partnerDays=null;
+  saveState(); pushProfile(); subscribePartner(); updatePairUI();
+  _ptModalShow2();
+};
+function _ptModalShow2(){
+  const p=_ptModalP||{}, ok=_ptState()==='ok', nm=_escHtml(ptName(ok?_partnerProfile.name:(p.name||S.partnerName)));
+  _ptModalStep=2;
+  _ptModal(_ptHdr(ok?`和 ${nm} 配对好了`:`已添加 ${nm}`)
+    + (ok?`<p class="sheet-desc">你俩已经互相配对。今天页能看到 TA 练到哪了，也能给 TA 回应。</p><button type="button" class="btn-primary" onclick="ptPairClose();showTab('today')">去今天页</button>`
+      :`<p class="sheet-desc">还差一步：把你的配对链接发给 ${nm}，TA 打开点「配对」，你俩就连上了。</p><button type="button" class="btn-primary" onclick="sharePairLink()">分享我的配对链接</button><button type="button" class="btn-ghost" onclick="ptPairClose()">稍后再发</button>`));
+}
+function _ptModalLogin(p){
+  _ptModalP=p; _ptModalStep=1;
+  _ptModal(_ptHdr(`${_escHtml(ptName(p.name))} 邀请你做训练搭子`)
+    + `<p class="sheet-desc">先登录（或注册）再配对，登录后会接着问你。</p>`
+    + `<button type="button" class="btn-primary" onclick="ptPairGoLogin()">去登录</button>`
+    + `<p class="sheet-desc">平时用的是装到主屏幕的 app？打开 app，在「我 → 03」把这个配对码粘贴进去也行：</p>`
+    + `<div class="pt-code-row"><code class="pair-code">${_escHtml(p.uid)}</code><button type="button" class="btn-line" onclick="ptCopyPendingCode()">复制</button></div>`
+    + `<button type="button" class="btn-ghost" onclick="ptPairCancel()">先不了</button>`);
+}
+window.ptCopyPendingCode=function(){
+  const p=_ptModalP; if(!p) return;
+  if(navigator.clipboard) navigator.clipboard.writeText(p.uid).then(()=>showToast('配对码已复制')).catch(()=>showToast('配对码：'+p.uid)); else showToast('配对码：'+p.uid);
+};
+window.ptPairGoLogin=function(){
+  _ptModalStep=0; uiCloseOverlay('pt-pair-modal');
+  if(typeof _oobe!=='undefined'&&_oobe.open&&typeof uiOobeSkip==='function') uiOobeSkip(true);   // 新手设置盖着:先关掉(和 Esc 一样,不替人生成计划)
+  showTab('me');
+  setTimeout(()=>{ const i=document.getElementById('login-email'); if(i) try{ i.scrollIntoView({block:'center'}); i.focus({preventScroll:true}); }catch(e){} },80);
+};
+
+// ── 二维码:自写小生成器(字节模式、纠错 M、版本 1–10,最多约 210 字节;配对链接一般 100 字节上下)。不引 CDN,离线也能出 ──
+const _QR_M=[null,[10,1,16,0,0],[16,1,28,0,0],[26,1,44,0,0],[18,2,32,0,0],[24,2,43,0,0],[16,4,27,0,0],[18,4,31,0,0],[22,2,38,2,39],[22,3,36,2,37],[26,4,43,1,44]];   // [每块纠错码数, 组一块数, 组一每块数据码, 组二块数, 组二每块数据码]
+const _QR_AL=[null,[],[6,18],[6,22],[6,26],[6,30],[6,34],[6,22,38],[6,24,42],[6,26,46],[6,28,50]];   // 校正图形中心
+function ptQrMatrix(text){
+  const bytes=[...new TextEncoder().encode(String(text))];
+  let ver=1;
+  while(ver<=10&&12+(ver>9?8:0)+bytes.length*8>(_QR_M[ver][1]*_QR_M[ver][2]+_QR_M[ver][3]*_QR_M[ver][4])*8) ver++;
+  if(ver>10) return null;
+  const [ecn,b1,d1,b2,d2]=_QR_M[ver], dn=b1*d1+b2*d2, n=17+4*ver;
+  // 数据码:模式 0100 + 长度 + 字节 + 结束符,补齐整字节,再用 EC / 11 填满
+  const bits=[], put=(v,k)=>{ for(let i=k-1;i>=0;i--) bits.push(v>>>i&1); };
+  put(4,4); put(bytes.length,ver>9?16:8); bytes.forEach(b=>put(b,8)); put(0,Math.min(4,dn*8-bits.length));
+  while(bits.length%8) bits.push(0);
+  const data=[]; for(let i=0;i<bits.length;i+=8) data.push(bits.slice(i,i+8).reduce((a,b)=>a<<1|b,0));
+  for(let p=0xEC;data.length<dn;p^=0xEC^0x11) data.push(p);
+  // 里德-所罗门纠错码(GF(256),本原多项式 0x11D),分块后交织
+  const EXP=[],LOG=[]; for(let i=0,x=1;i<255;i++){ EXP[i]=x; LOG[x]=i; x<<=1; if(x&256) x^=0x11D; }
+  const mul=(a,b)=>a&&b?EXP[(LOG[a]+LOG[b])%255]:0;
+  let gen=[1]; for(let i=0;i<ecn;i++){ const g=new Array(gen.length+1).fill(0); gen.forEach((c,j)=>{ g[j]^=c; g[j+1]^=mul(c,EXP[i]); }); gen=g; }
+  const blocks=[]; let off=0;
+  for(let k=0;k<b1+b2;k++){ const len=k<b1?d1:d2, blk=data.slice(off,off+len); off+=len; const r=new Array(ecn).fill(0); blk.forEach(b=>{ const f=b^r.shift(); r.push(0); for(let j=0;j<ecn;j++) r[j]^=mul(gen[j+1],f); }); blocks.push([blk,r]); }
+  const cw=[]; for(let i=0;i<Math.max(d1,d2);i++) blocks.forEach(([b])=>{ if(i<b.length) cw.push(b[i]); });
+  for(let i=0;i<ecn;i++) blocks.forEach(([,r])=>cw.push(r[i]));
+  // 功能图形:时序 / 定位(带分隔) / 校正 / 格式 / 版本
+  const M=Array.from({length:n},()=>new Array(n).fill(0)), F=Array.from({length:n},()=>new Array(n).fill(false));
+  const set=(x,y,v)=>{ M[y][x]=v?1:0; F[y][x]=true; };
+  for(let i=0;i<n;i++){ set(6,i,i%2===0); set(i,6,i%2===0); }
+  [[3,3],[n-4,3],[3,n-4]].forEach(([cx,cy])=>{ for(let dy=-4;dy<=4;dy++) for(let dx=-4;dx<=4;dx++){ const x=cx+dx,y=cy+dy,d=Math.max(Math.abs(dx),Math.abs(dy)); if(x>=0&&y>=0&&x<n&&y<n) set(x,y,d!==2&&d!==4); } });
+  const al=_QR_AL[ver], L=al.length;
+  al.forEach((ay,i)=>al.forEach((ax,j)=>{ if((!i&&!j)||(!i&&j===L-1)||(i===L-1&&!j)) return; for(let dy=-2;dy<=2;dy++) for(let dx=-2;dx<=2;dx++) set(ax+dx,ay+dy,Math.max(Math.abs(dx),Math.abs(dy))!==1); }));
+  const fmt=mask=>{   // 纠错 M = 00,BCH(15,5),掩 0x5412
+    let r=mask; for(let i=0;i<10;i++) r=r<<1^(r>>>9)*0x537;
+    const b=(mask<<10|r)^0x5412, bit=i=>b>>>i&1;
+    for(let i=0;i<=5;i++) set(8,i,bit(i));
+    set(8,7,bit(6)); set(8,8,bit(7)); set(7,8,bit(8));
+    for(let i=9;i<15;i++) set(14-i,8,bit(i));
+    for(let i=0;i<8;i++) set(n-1-i,8,bit(i));
+    for(let i=8;i<15;i++) set(8,n-15+i,bit(i));
+    set(8,n-8,1);
+  };
+  fmt(0);
+  if(ver>=7){ let r=ver; for(let i=0;i<12;i++) r=r<<1^(r>>>11)*0x1F25; const b=ver<<12|r; for(let i=0;i<18;i++){ const v=b>>>i&1,a=n-11+i%3,c=Math.floor(i/3); set(a,c,v); set(c,a,v); } }
+  // 数据:从右下角起两列一组,之字形上下填
+  let k=0;
+  for(let right=n-1;right>=1;right-=2){
+    if(right===6) right=5;
+    for(let v=0;v<n;v++) for(let j=0;j<2;j++){ const x=right-j,y=(right+1&2)===0?n-1-v:v; if(!F[y][x]&&k<cw.length*8){ M[y][x]=cw[k>>>3]>>>7-(k&7)&1; k++; } }
+  }
+  // 八种掩码挑罚分最低的(连续同色、2×2 色块、类定位图形、深浅比例)
+  const MASK=[(x,y)=>(x+y)%2===0,(x,y)=>y%2===0,x=>x%3===0,(x,y)=>(x+y)%3===0,(x,y)=>(Math.floor(x/3)+Math.floor(y/2))%2===0,
+    (x,y)=>x*y%2+x*y%3===0,(x,y)=>(x*y%2+x*y%3)%2===0,(x,y)=>((x+y)%2+x*y%3)%2===0];
+  const apply=m=>{ for(let y=0;y<n;y++) for(let x=0;x<n;x++) if(!F[y][x]&&MASK[m](x,y)) M[y][x]^=1; };
+  const score=()=>{
+    let s=0,dark=0;
+    for(let i=0;i<n;i++) [M[i].join(''),M.map(r=>r[i]).join('')].forEach(l=>{ (l.match(/0{5,}|1{5,}/g)||[]).forEach(r=>s+=r.length-2); s+=40*(l.match(/(?=10111010000|00001011101)/g)||[]).length; });
+    for(let y=0;y<n-1;y++) for(let x=0;x<n-1;x++){ const c=M[y][x]; if(c===M[y][x+1]&&c===M[y+1][x]&&c===M[y+1][x+1]) s+=3; }
+    M.forEach(r=>r.forEach(c=>dark+=c));
+    return s+10*Math.floor(Math.abs(dark*20-n*n*10)/(n*n));
+  };
+  let best=0,bestS=Infinity;
+  for(let m=0;m<8;m++){ apply(m); fmt(m); const s=score(); if(s<bestS){ bestS=s; best=m; } apply(m); }
+  apply(best); fmt(best);
+  return M;
+}
+// 二维码 SVG:白底黑块 + 4 格留白(深色模式也保持白底黑块,手机相机才认得出)
+function ptQrSvg(text,label){
+  const M=ptQrMatrix(text); if(!M) return '';
+  const n=M.length,q=4,d=[];
+  M.forEach((r,y)=>r.forEach((c,x)=>{ if(c) d.push(`M${x+q} ${y+q}h1v1h-1z`); }));
+  return `<svg xmlns="http://www.w3.org/2000/svg" class="qr-svg" viewBox="0 0 ${n+2*q} ${n+2*q}" role="img" aria-label="${_escHtml(label||'二维码')}" shape-rendering="crispEdges"><rect width="100%" height="100%" fill="#ffffff"/><path d="${d.join('')}" fill="#111111"/></svg>`;
 }
 
 // ══ UI Bindings ══════════════════════════════════════════
