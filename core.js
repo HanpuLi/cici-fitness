@@ -1,6 +1,6 @@
 // ══ System Version ═════════════════════════════════════════
 const APP_VERSION = 'v3.1.0';
-const APP_BUILD = 162;               // = sw.js 的 CACHE 编号 = index.html 页脚 build(check-static 会查,三处一起改)
+const APP_BUILD = 163;               // = sw.js 的 CACHE 编号 = index.html 页脚 build(check-static 会查,三处一起改)
 const APP_BUILD_DATE = '2026-10-29';
 window.APP_VERSION = APP_VERSION;
 window.APP_BUILD = APP_BUILD;
@@ -15,7 +15,8 @@ function currentUid() { return (typeof firebase !== 'undefined' && firebase.auth
 function _ownerSession() { try { const u = typeof firebase !== 'undefined' && firebase.auth && firebase.auth().currentUser; return !!u && u.email === atob('Y2FpdGx5ZUBnbWFpbC5jb20='); } catch { return false; } }
 function nsKey(k) { return currentUid() + '__' + k; }
 function lg(k) { try { const v = localStorage.getItem(nsKey(k)); return v ? JSON.parse(v) : null } catch { return null } }
-function ls(k, v) { try { localStorage.setItem(nsKey(k), JSON.stringify(v)); if (typeof schedulePush === 'function') schedulePush() } catch { } }
+// 值没变就不写、不标脏(开机重算成就之类的自动写盘不能算「本机改过」,否则开机合并会拿本机旧设置 / 旧计划盖掉云端);变了记下是哪个键(app.js _syncMarkKey)
+function ls(k, v) { try { const s = JSON.stringify(v), nk = nsKey(k); if (localStorage.getItem(nk) === s) return; localStorage.setItem(nk, s); if (typeof _syncMarkKey === 'function') _syncMarkKey(k); if (typeof schedulePush === 'function') schedulePush() } catch { } }
 // 用户自己输入的文字(打卡备注、排除原因…)拼进 innerHTML 之前先转义
 function _escHtml(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]); }
 
@@ -1273,6 +1274,16 @@ const SWIM_TIPS = {
   '进阶': '好的蛙泳70%时间在滑行。关注节奏而非速度，累了就加长滑行而不是加快频率。',
   '挑战': '自由泳呼吸的秘诀：不是转头，而是转动整个身体。先用蛙泳热身，再切换到自由泳练习。'
 };
+// 方案要点(计划页顶部;没开通 AI 的今天页底部):按现在的目标 / 计划实时取,不用排计划那一刻冻结的 S.plan.tip(改了目标不重排也跟着变)。
+// AI 排的计划另附它的排法理由(S.plan.tip 以「AI 教练：」开头的那段)
+function planTipText() {
+  let t = TIPS[currentGoalKey()] || TIPS['女性薄肌'];
+  const wk = ((S.plan && S.plan.days) || []).slice(0, 7);
+  const swim = wk.filter(d => d.isSwimDay).length, gym = wk.filter(d => !d.isRest && !d.isSwimDay).length;
+  if (swim > 0) t += `\n游泳水平：${SWIM_TIPS[S.swimLevel || '入门']}\n本周安排：${gym}天力量 + ${swim}天游泳`;
+  const ai = S.plan && typeof S.plan.tip === 'string' && S.plan.tip.startsWith('AI 教练：') ? S.plan.tip : '';
+  return ai ? t + '\n' + ai : t;
+}
 const DN = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
 
 // ══ Swim Milestones ════════════════════════════════════════
@@ -2915,7 +2926,9 @@ function render() {
     return;
   }
   if (typeof uiOobeCheck === 'function') uiOobeCheck();
-  const { days: planDays, tip } = S.plan;
+  const { days: planDays } = S.plan;
+  // 开通了 AI 的今天页有每天换的「教练的话」,方案要点只在计划页放;没登录 / 没开通的照旧放在今天页底部
+  const tip = (typeof coachAccess === 'function' && coachAccess() === 'on') ? '' : planTipText();
   const today = todayStr();
   const planStart = planDays[0]?.date || today;
   const planEnd = planDays[planDays.length - 1]?.date || today;

@@ -816,6 +816,8 @@ html[data-skin="sport"] #co-plan-body .co-align { padding: 8px 12px; border-radi
 /* 搭子关了训练计划:置灰的「对齐搭子的训练日」下面一行原因 */
 html[data-skin="sport"] .sp-pt-why { margin-top: -4px; padding: 0 4px; }
 
+html[data-skin="sport"] .sp-psum .plan-tip { margin: 0; padding: 10px 0 0; border-top: 1px solid var(--line); font-size: 14px; line-height: 1.6; color: var(--muted); }
+html[data-skin="sport"] .sp-psum .plan-tip::before { display: none; }
 /* —— 20 计划 · 写在这行上面 —— */
 
 /* ══ 30 记录 ═══════════════════════════════════════════════════════════ */

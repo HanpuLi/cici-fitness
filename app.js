@@ -484,6 +484,7 @@ function delLog(idx){
 if(!confirm('确定删除这条记录？'))return;
 const logEntry = LOG[idx];
 LOG.splice(idx,1);
+_syncTombAdd('log',logEntry.date);   // 还没推上去之前开机合并云端,别把云端那条再并回来
 ls(K.log,LOG);
 const dateHasOtherLogs = LOG.some(entry => entry.date === logEntry.date);
 if (!dateHasOtherLogs && S.prog[logEntry.date]) {
@@ -569,6 +570,7 @@ function logBody(){
 function delBody(date){
   if(!confirm('删除 '+date+' 的身体记录？'))return;
   BODY_LOG=BODY_LOG.filter(x=>x.date!==date);
+  _syncTombAdd('body',date);
   ls(K.body,BODY_LOG);
   if(typeof renderStats==='function')renderStats();
 }
@@ -911,7 +913,7 @@ Object.entries(data).forEach(([k,v])=>{
     }
 });
 if (imported) {
-    try{sessionStorage.setItem('_justImported','1')}catch(e){}
+    try{sessionStorage.setItem('_justImported',currentUid())}catch(e){}   // 记是哪个账号导入的:未登录时导入、之后才登录的不算
     location.reload();
 } else {
     alert('未找到有效的备份数据');
@@ -937,7 +939,7 @@ m.classList.add('open');
 }
 function doRestoreSnapshot(idx){
 if(!confirm('恢复到这份快照?当前数据会先自动存一份(可再切回),然后刷新。'))return;
-if(restoreSnapshot(idx)){try{sessionStorage.setItem('_justImported','1')}catch(e){}location.reload();}
+if(restoreSnapshot(idx)){try{sessionStorage.setItem('_justImported',currentUid())}catch(e){}location.reload();}
 }
 
 // ══ Sync Toast ═══════════════════════════════════════════
@@ -955,6 +957,15 @@ const CLOUD_KEYS=Object.values(K);
 let _db=null,_user=null,_pushTimer=null,_pushing=false,_unsub=null;
 let _localDirty=false; // When true, local changes are pending push — block cloud-to-local sync
 let _cloudFirstSnap=false; // 这次登录后是否已经收到过第一份云端快照
+// 开机:等自己文档的第一份「服务器」快照处理完(_onOwnSnap)才许推。之前 v162 是开机 1 秒后不管快照到没到都整键推本机,
+// 网络慢时本机旧数据会盖掉另一台设备刚写的打卡 / 勾选。等的时候改动照样记、未推送标记照样落盘,快照到了再推(要合并就先合并)
+let _ownBoot=false, _ownBootImport=false, _ownBootT=null;
+// 最近一次确认过的云端内容(应用了的快照 / 推成功的那份 / 合并时的云端那份):键 → 规范化 JSON(键排好序,跟字段顺序无关)。null = 不知道
+let _cloudKnown=null;
+// 本机脏的时候收到的别处写入的云端快照(没应用):推之前先跟它合并,别拿本机整键盖掉它
+let _pendingSnap=null;
+function _syncCanon(v){ if(v===null||typeof v!=='object')return JSON.stringify(v); if(Array.isArray(v))return '['+v.map(_syncCanon).join(',')+']'; return '{'+Object.keys(v).filter(k=>v[k]!==undefined).sort().map(k=>JSON.stringify(k)+':'+_syncCanon(v[k])).join(',')+'}'; }
+function _syncKnown(o){ const r={}; Object.keys(o||{}).forEach(k=>{r[k]=_syncCanon(o[k]);}); return r; }
 // 自己文档的云端快照「收到并应用了」几次(本机有没推上去的改动、或骤降拦截而跳过的不算)。没练自动顺延靠它判断本机数据新不新(core.js _shReady):
 // 这次登录 / 最近一次切回前台之后没收到过,就别拿本机的旧数据顺延(否则另一台设备刚打的卡会被推上去的旧计划 / 记录整键盖掉)
 let _cloudSeq=0,_cloudEpochSeq=0;
@@ -986,7 +997,7 @@ updateProfileUI();
 // Recover pre-namespace data into this account before reading state. If anything
 // was migrated, mark local dirty so the realtime listener can't overwrite the
 // just-recovered keys with a stale/empty cloud doc before our first push.
-if(user && typeof migrateLegacyKeys==='function' && migrateLegacyKeys(user.uid)) _localDirty=true;
+if(user && typeof migrateLegacyKeys==='function' && migrateLegacyKeys(user.uid)){ _localDirty=true; _dirtyFlag(true); }   // 落盘标记、不记键 = 开机合并时全当本机改过
 loadState();
 if(typeof saveSnapshot==='function') saveSnapshot('load');
 if(typeof render === 'function') render();
@@ -1125,35 +1136,63 @@ function setupRealtimeSync(){
 if(!_db||!_user)return;
 if(_unsub)_unsub();
 // 刚导入过备份:强制把本地(导入的数据)先推上云,别让旧云端快照盖回来致导入失效(修#1)
-const _justImported=(()=>{try{return sessionStorage.getItem('_justImported')==='1'}catch(e){return false}})();
-if(_justImported){_localDirty=true;try{sessionStorage.removeItem('_justImported')}catch(e){}}
+const _justImported=(()=>{try{const v=sessionStorage.getItem('_justImported');if(v!==null)sessionStorage.removeItem('_justImported');return v===_user.uid}catch(e){return false}})();
+if(_justImported)_localDirty=true;
 const _pendingFromLastRun=_dirtyFlagSet(); // 上次关 app 前还有没推上去的改动
 if(_pendingFromLastRun)_localDirty=true;
 _cloudFirstSnap=false;
 _cloudSeq=0;cloudNewEpoch(false);
-_unsub=_db.collection('users').doc(_user.uid).onSnapshot(_onOwnSnap,e=>console.warn('Sync error:',e));
-// Initial push — send local data up first so cloud has latest(刚导入过则立即推,尽量缩短被旧快照覆盖的窗口)
-setTimeout(()=>pushToCloud(),(_justImported||_pendingFromLastRun)?0:1000);
+_ownBoot=true;_ownBootImport=_justImported;clearTimeout(_ownBootT);_ownBootT=null;_cloudKnown=null;_pendingSnap=null;
+_unsub=_db.collection('users').doc(_user.uid).onSnapshot(_onOwnSnap,e=>{console.warn('Sync error:',e);_ownBootFetch();});
+// 开机推送:刚导入 / 恢复了存档 → 立刻推(用户明确要本机覆盖云端)。别的情况等自己文档的第一份服务器快照(_onOwnSnap):
+// 本机没改动 → 应用云端,不推;云端没有这份文档(新用户)→ 推本机;本机有没推上去的改动 → 先按键合并(_syncMerge)再推
+if(_justImported){clearTimeout(_pushTimer);_pushTimer=setTimeout(pushToCloud,0);}
+}
+// 开机还没等到服务器快照(离线时 SDK 先给的缓存不算、监听出错):隔 5 秒主动向服务器要一份,要到了按开机那份处理
+function _ownBootFetch(){
+  if(_ownBootT||!_ownBoot||!_db||!_user)return;
+  const uid=_user.uid;
+  _ownBootT=setTimeout(()=>{
+    _ownBootT=null;
+    if(!_ownBoot||!_db||!_user||_user.uid!==uid||!_unsub)return;
+    try{ _db.collection('users').doc(uid).get({source:'server'}).then(d=>{ if(_ownBoot&&_user&&_user.uid===uid&&_unsub)_onOwnSnap(d); }).catch(()=>_ownBootFetch()); }catch(e){}
+  },5000);
 }
 // 自己文档的一份云端快照(监听推来的,或切回前台时主动要的)
 function _onOwnSnap(doc){
 // 新手设置要等第一份云端快照回来再决定弹不弹(换新设备登录时本机是空的,别在云端数据到之前先让人从头设一遍)
+// 离线时 SDK 会先给一份缓存里的(常常是「文档不存在」):不能当成新用户把本机推上去,也不算「云端是新的」(顺延照等);
+// 开机时也不拿它解锁新手设置(否则新设备离线登录会从头设一遍,联网后本机新建的计划盖掉云端那份)
+const cached=!!(doc&&doc.metadata&&doc.metadata.fromCache);
+if(_ownBoot&&cached&&!_ownBootImport){_ownBootFetch();return;}
 const _first=!_cloudFirstSnap;
 if(_first){_cloudFirstSnap=true;if(!doc.exists&&typeof render==='function')setTimeout(render,0);}
-if(!doc.exists){_cloudSeq++;_ptSeenSync();if(typeof autoShiftCheck==='function')autoShiftCheck();return;}   // 云端还没有这份文档:本机就是最新的
+if(_ownBoot){
+  if(_ownBootImport){   // 刚导入:本机覆盖云端,这份不应用;本机就是要的数据,算「收到了」
+    _ownBoot=false;_ownBootImport=false;_cloudSeq++;
+    if(_localDirty){clearTimeout(_pushTimer);_pushTimer=setTimeout(pushToCloud,0);}
+    _ptSeenSync();if(typeof autoShiftCheck==='function')autoShiftCheck();
+    return;
+  }
+  _ownBoot=false;clearTimeout(_ownBootT);_ownBootT=null;
+  if(!doc.exists){_cloudKnown=null;_localDirty=true;clearTimeout(_pushTimer);_pushTimer=setTimeout(pushToCloud,0);}   // 新用户:把本机推上去建文档
+  else if(_localDirty){_syncMerge(doc.data(),'开机');return;}   // 本机有没推上去的改动:不整键盲推,先合并
+}
+if(!doc.exists){if(cached)return;_cloudKnown=null;_cloudSeq++;_ptSeenSync();if(typeof autoShiftCheck==='function')autoShiftCheck();return;}   // 云端还没有这份文档:本机就是最新的
 // If local changes are pending push, do NOT let cloud overwrite them
 if(_localDirty){
     console.log('[sync] skipped cloud→local: local changes pending push');
+    if(!cached&&!(doc.metadata&&doc.metadata.hasPendingWrites))_pendingSnap=doc.data();   // 自己刚写的回声不算
     if(_first&&typeof render==='function')setTimeout(render,0);
     return;
 }
 const cd=doc.data();
-// 骤降拦截:云端数据比本地大幅偏少 → 疑似"旧云盖新本地"(丢数据主因),拦住不覆盖,反把本地推上云
+// 骤降拦截:云端数据比本地大幅偏少 → 疑似"旧云盖新本地"(丢数据主因),拦住不覆盖,本机为主跟云端合并后推上去
 const localVol=_dataVolume(k=>lg(K[k]));
 const cloudVol=_dataVolume(k=>cd[K[k]]);
 if(localVol>=15 && cloudVol < localVol*0.6){
   saveSnapshot('predrop-blocked');
-  _localDirty=true; clearTimeout(_pushTimer); _pushTimer=setTimeout(pushToCloud,0);
+  _syncMerge(cd,'骤降',true);   // 云端这份信不过:全按本机改过处理
   showToast('云端数据异常偏少，已保留本机数据'); return;
 }
 let changed=false;
@@ -1163,6 +1202,7 @@ const lv=localStorage.getItem(nk);
 const cv=JSON.stringify(v);
 if(lv!==cv){try{localStorage.setItem(nk,cv);changed=true}catch{}}
 });
+_cloudKnown=_syncKnown(cd);
 _cloudSeq++;   // 先记「收到了」再 loadState(它会顺带跑没练自动顺延)
 if(changed){loadState();renderLog();showToast('已从云端同步');saveSnapshot('post-sync')}
 else if(_first&&typeof render==='function')render();   // 第一份快照没带来变化:也重画一次,让新手设置按最新状态判断
@@ -1174,6 +1214,128 @@ let _dirtyId=0; // bumped on every local change; lets a push detect changes that
 // 未推送标记同时落盘:内存里的 _localDirty 会随 app 被杀掉而丢,下次打开时云端旧快照就会整键盖回来
 function _dirtyFlag(on){try{if(currentUid()==='anon')return;on?localStorage.setItem(nsKey('__dirty__'),'1'):localStorage.removeItem(nsKey('__dirty__'))}catch(e){}}
 function _dirtyFlagSet(){try{return localStorage.getItem(nsKey('__dirty__'))==='1'}catch(e){return false}}
+// 本机删掉、还没推上去的打卡 / 身体记录的日期(只存本机,不上云,推送成功后清掉):合并云端时同日期那条别再并回来
+function _syncTombGet(){try{const t=JSON.parse(localStorage.getItem(nsKey('__deleted__'))||'{}')||{};return{log:Array.isArray(t.log)?t.log:[],body:Array.isArray(t.body)?t.body:[]};}catch(e){return{log:[],body:[]};}}
+// 本机改过、还没推上去的键(只存本机,推送成功后清掉)。返回 null = 不知道是哪些(老版本留下的未推送标记、迁移、没记下):合并时全当改过
+function _syncDirtyKeys(){try{const v=JSON.parse(localStorage.getItem(nsKey('__dirtykeys__'))||'null');return Array.isArray(v)?v:null}catch(e){return null}}
+function _syncMarkKey(k){try{if(currentUid()==='anon'||!CLOUD_KEYS.includes(k))return;const nk=nsKey('__dirtykeys__');
+  let a=JSON.parse(localStorage.getItem(nk)||'null');
+  if(a===null)a=_dirtyFlagSet()?'*':[];   // 已有未推送标记却没记键:是哪些不知道,保持「全当改过」
+  if(Array.isArray(a)&&!a.includes(k))a.push(k);
+  localStorage.setItem(nk,JSON.stringify(a));}catch(e){}}
+function _syncClearDirty(){try{localStorage.removeItem(nsKey('__deleted__'));localStorage.removeItem(nsKey('__dirtykeys__'))}catch(e){}}
+function _syncTombAdd(kind,date){if(!_db||!_user||!date)return;try{const t=_syncTombGet();if(!t[kind].includes(date)){t[kind].push(date);localStorage.setItem(nsKey('__deleted__'),JSON.stringify(t));}}catch(e){}}
+
+// ── 本机有没推上去的改动、云端那份又可能有别的设备新写的:按键合并(不再整键盲推本机)──
+// 打卡记录 fit_log1:按 date 合并(全 app 一天一条)。两边同一天都有:都带 at / ts 时取更新的;没有时间字段(现在的记录都没有)以本机为准 ——
+//   本机这条要么就是还没推上去的改动(编辑过 / 重打卡),要么和云端是同一条
+// 计划 fit_p1:计划本身和其余字段本机为准;按日期的勾选 prog 取并集(同一天同一下标任一边勾了就算勾;两边计划那一格不是同一个动作时不并);
+//   当天的重量 / 组数次数 / 单动作感受(weights / adj / exRpe)只补本机没打卡那几天、本机缺的格子
+// 身体记录 fit_body1:按 date 合并,同一天逐项本机有值的为准、本机空着的用云端的
+// 动作重量 fit_wh1 / 新纪录 fit_pr:按日期跟着打卡走 —— 本机有那天的打卡(或刚删掉)就以本机为准,只有云端有的那天并进来
+// 其余键(设置、扩展状态、成就计数…)本机为准(成就计数 loadState 时按记录重算)
+function _syncTs(x){const v=x&&(x.at!=null?x.at:x.ts);if(v==null)return null;const n=typeof v==='number'?v:Date.parse(v);return isFinite(n)?n:null;}
+function _syncExName(p,d,i){const days=p&&p.plan&&p.plan.days;if(!Array.isArray(days))return undefined;const day=days.find(x=>x&&x.date===d);const ex=day&&day.exercises&&day.exercises[i];return ex?ex.name:undefined;}
+function _syncMergeKeys(loc,cd,tomb){
+  const out={}, J=v=>JSON.parse(JSON.stringify(v));
+  const L=loc[K.log], C=cd[K.log];
+  let logOut=L;
+  if(Array.isArray(L)&&Array.isArray(C)){
+    const pos=new Map();logOut=L.slice();logOut.forEach((x,i)=>{if(x&&x.date&&!pos.has(x.date))pos.set(x.date,i)});
+    let add=false;
+    C.forEach(c=>{
+      if(!c||!c.date||tomb.log.includes(c.date))return;
+      if(!pos.has(c.date)){pos.set(c.date,logOut.length);logOut.push(J(c));add=true;return;}
+      const i=pos.get(c.date),tl=_syncTs(logOut[i]),tc=_syncTs(c);
+      if(tl!=null&&tc!=null&&tc>tl)logOut[i]=J(c);
+    });
+    if(add)logOut.sort((a,b)=>String(b&&b.date||'').localeCompare(String(a&&a.date||'')));
+    out[K.log]=logOut;
+  }
+  // 「这天归本机」:本机有这天的打卡,或这天刚在本机删掉 → 这天的重量 / 新纪录 / 勾选以本机为准
+  const own=new Set([...(Array.isArray(L)?L:[]).map(x=>x&&x.date),...tomb.log]);
+  const PL=loc[K.plan], PC=cd[K.plan];
+  if(PL&&PC&&typeof PL==='object'&&typeof PC==='object'){
+    const p=J(PL);p.prog=(p.prog&&typeof p.prog==='object')?p.prog:{};
+    // 当天改过的重量 / 组数次数 / 单动作感受(键 = 日期-下标[-s|-r]):那天不归本机、本机没这个键、两边那一格是同一个动作,才用云端的
+    ['weights','adj','exRpe'].forEach(f=>{
+      const cf=PC[f];if(!cf||typeof cf!=='object')return;
+      Object.entries(cf).forEach(([key,v])=>{
+        const d=key.slice(0,10),i=key.slice(11).split('-')[0];
+        if(v==null||!/^\d{4}-\d\d-\d\d$/.test(d)||own.has(d)||i==='')return;
+        if(!p[f]||typeof p[f]!=='object')p[f]={};
+        if(p[f][key]!=null)return;
+        if(_syncExName(PL,d,i)!==_syncExName(PC,d,i))return;
+        p[f][key]=J(v);
+      });
+    });
+    if(PC.prog&&typeof PC.prog==='object')Object.entries(PC.prog).forEach(([d,cp])=>{
+      if(!cp||typeof cp!=='object'||tomb.log.includes(d))return;
+      Object.entries(cp).forEach(([i,v])=>{
+        if(!v||(p.prog[d]&&Object.prototype.hasOwnProperty.call(p.prog[d],i)))return;   // 本机这格有值(含取消勾选的 false)就以本机为准
+        if(_syncExName(PL,d,i)!==_syncExName(PC,d,i))return;   // 两边计划这一格不是同一个动作(一边重排过):勾选对不上,不并
+        if(!p.prog[d]||typeof p.prog[d]!=='object')p.prog[d]={};
+        p.prog[d][i]=v;
+      });
+    });
+    out[K.plan]=p;
+  }
+  const BL=loc[K.body], BC=cd[K.body];
+  if(Array.isArray(BL)&&Array.isArray(BC)){
+    const b=J(BL), at=new Map();b.forEach((x,i)=>{if(x&&x.date)at.set(x.date,i)});
+    BC.forEach(c=>{
+      if(!c||!c.date||tomb.body.includes(c.date))return;
+      if(!at.has(c.date)){at.set(c.date,b.length);b.push(J(c));return;}
+      const x=b[at.get(c.date)];Object.keys(c).forEach(f=>{if(x[f]==null&&c[f]!=null)x[f]=c[f];});
+    });
+    b.sort((x,y)=>String(x&&x.date||'').localeCompare(String(y&&y.date||'')));
+    out[K.body]=b;
+  }
+  const WL=loc[K.wh], WC=cd[K.wh];
+  if(WL&&WC&&typeof WL==='object'&&typeof WC==='object'&&!Array.isArray(WL)&&!Array.isArray(WC)){
+    const w=J(WL);
+    Object.entries(WC).forEach(([n,arr])=>{
+      if(!Array.isArray(arr))return;
+      const mine=Array.isArray(w[n])?w[n]:[];
+      const add=arr.filter(h=>h&&h.date&&!own.has(h.date)&&!mine.some(m=>m&&m.date===h.date)).map(J);
+      if(!add.length)return;
+      w[n]=mine.concat(add).sort((a,b)=>String(a.date).localeCompare(String(b.date))).slice(-50);
+    });
+    out[K.wh]=w;
+  }
+  const RL=loc[K.pr], RC=cd[K.pr];
+  if(Array.isArray(RL)&&Array.isArray(RC)){
+    const add=RC.filter(c=>c&&c.date&&!own.has(c.date)&&!RL.some(x=>x&&x.date===c.date&&x.exercise===c.exercise)).map(J);
+    out[K.pr]=add.length?RL.concat(add).sort((a,b)=>String(b&&b.date||'').localeCompare(String(a&&a.date||''))).slice(0,50):RL;
+  }
+  return out;
+}
+function _syncMerge(cd,why,allLocal){
+  saveSnapshot('pre-merge');   // 合并前本机这份先存一份(「我 → 数据」里能恢复)
+  const tomb=_syncTombGet(), loc={};
+  CLOUD_KEYS.forEach(k=>{const v=localStorage.getItem(nsKey(k));if(v!==null){try{loc[k]=JSON.parse(v)}catch(e){loc[k]=v}}});
+  const m=_syncMergeKeys(loc,cd||{},tomb), dk=allLocal?null:_syncDirtyKeys();
+  _cloudKnown=_syncKnown(cd||{});
+  let got=0;
+  const hasC=k=>cd&&cd[k]!==undefined&&cd[k]!==null;
+  CLOUD_KEYS.forEach(k=>{
+    let v;
+    if(!(k in loc)){if(hasC(k)){v=cd[k];got++;}else return;}   // 本机没有这个键:用云端的
+    else if(dk&&!dk.includes(k)){if(hasC(k))v=cd[k];else return;}   // 本机没改过这个键:云端的为准(别拿本机旧设置 / 旧计划盖掉别的设备新写的)
+    else if(k in m)v=m[k];
+    else return;   // 本机改过:本机为准
+    const s=JSON.stringify(v);
+    if(localStorage.getItem(nsKey(k))!==s){try{localStorage.setItem(nsKey(k),s);if(k in loc)got++;}catch(e){}}
+  });
+  console.log('[sync] merged cloud→local ('+(why||'')+'), keys changed: '+got);
+  _localDirty=true;_dirtyId++;_dirtyFlag(true);
+  _cloudSeq++;   // 云端这份已经并进本机了:算「收到了」(顺延按合并后的数据判断)
+  loadState();renderLog();if(typeof renderStats==='function')renderStats();
+  if(got)saveSnapshot('post-merge');
+  _ptSeenSync();
+  if(typeof autoShiftCheck==='function')autoShiftCheck();
+  clearTimeout(_pushTimer);_pushTimer=setTimeout(pushToCloud,0);
+}
 function schedulePush(){
 _dirtyFlag(true);
 if(!_db||!_user)return;
@@ -1192,20 +1354,27 @@ if(typeof document!=='undefined'){
 
 async function pushToCloud(){
 if(!_db||!_user||_pushing)return;
+if(_ownBoot&&!_ownBootImport)return;   // 还没见过云端那份:先别推(改动和落盘标记都留着,快照到了 _onOwnSnap 再推,要合并先合并)
+// 本机脏的时候别处写过云端(那份快照没应用):先合并再推,合并完会重新排一次推送
+if(_pendingSnap){const c=_pendingSnap;_pendingSnap=null;if(!(_cloudKnown&&Object.keys(c).every(k=>_cloudKnown[k]===_syncCanon(c[k])))){_syncMerge(c,'推送前');return;}}
 if(typeof _mockSyncFail !== 'undefined' && _mockSyncFail) {
     console.log('[sync] simulated push failure (offline)');
     _syncPill(false);
     clearTimeout(_pushTimer); _pushTimer=setTimeout(pushToCloud,5000); // keep dirty + retry
     return;
 }
-_pushing=true;
 const sentId=_dirtyId;
 const data={};
 CLOUD_KEYS.forEach(k=>{const v=localStorage.getItem(nsKey(k));if(v!==null){try{data[k]=JSON.parse(v)}catch{data[k]=v}}});
+// 要推的和最近确认过的云端那份一模一样(比如刚应用完快照、重算成就又写了一遍同样的值):不推,省得白推一次
+if(_cloudKnown&&Object.keys(data).every(k=>_cloudKnown[k]===_syncCanon(data[k]))){ _localDirty=false; _dirtyFlag(false); _syncClearDirty(); _syncPill(true,new Date()); return; }
+_pushing=true;
 try{
-await _db.collection('users').doc(_user.uid).set(data,{merge:true});
+// 逐键整块替换(merge:true 是深合并:本机删掉的勾选 / 重量 / 动作历史永远删不到云端,下次合并又冒回来)
+await _db.collection('users').doc(_user.uid).set(data,{mergeFields:Object.keys(data)});
+_cloudKnown=Object.assign(_cloudKnown||{},_syncKnown(data));
 // Only stop blocking cloud→local if no newer change arrived during the await; else keep dirty + reschedule.
-if(_dirtyId===sentId){ _localDirty=false; _dirtyFlag(false); } else { clearTimeout(_pushTimer); _pushTimer=setTimeout(pushToCloud,2000); }
+if(_dirtyId===sentId){ _localDirty=false; _dirtyFlag(false); _syncClearDirty(); } else { clearTimeout(_pushTimer); _pushTimer=setTimeout(pushToCloud,2000); }
 _syncPill(true,new Date());
 }catch(e){
 console.warn('Push failed:',e);

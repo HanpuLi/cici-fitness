@@ -386,7 +386,8 @@ function uiRenderPlanSummary() {
     const it = assessPlanIntensity();
     kv = `<div class="kv"><span class="k">计划</span><span>${wd.length} 个训练日 · 已完成 ${done}/${wd.length} · ${total} 个动作</span>`
       + `<span class="k">强度</span><span>${uiEsc(it.status)} <span class="faint">· ${uiEsc(it.desc)}</span></span>`
-      + (ex ? `<span class="k">过滤</span><span class="warn-tag">已过滤${ex}个受限动作</span>` : '') + `</div>`;
+      + (ex ? `<span class="k">过滤</span><span class="warn-tag">已过滤${ex}个受限动作</span>` : '') + `</div>`
+      + `<div class="tip plan-tip" style="white-space:pre-line">${uiEsc(planTipText())}</div>`;   // 方案要点:按现在的目标实时取(core.js planTipText)
   } else {
     kv = `<div class="note-line">还没有计划 · 设好下面几项后到「08」生成。</div>`;
   }

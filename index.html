@@ -98,8 +98,14 @@
             <section class="panel-tab" id="me" role="tabpanel" aria-labelledby="tab-me" hidden>
                 <div id="me-content"></div>
                 <div class="version-foot">
-                    <button type="button" id="app-version" class="link-btn" onclick="toggleChangelog()" aria-expanded="false" aria-controls="changelog-box">Cici健身计划 v3.6.1 (build 162) · 更新日志 ▾</button>
+                    <button type="button" id="app-version" class="link-btn" onclick="toggleChangelog()" aria-expanded="false" aria-controls="changelog-box">Cici健身计划 v3.6.2 (build 163) · 更新日志 ▾</button>
                     <div id="changelog-box" style="display:none">
+                        <p class="cl-h">v3.6.2 · 2026-10-29</p>
+                        <ul>
+                            <li>修：打开 app 时先等云端最新数据再同步，网络慢时不会再拿这台手机的旧数据盖掉另一台设备刚打的卡、刚改的设置。</li>
+                            <li>修：两台设备都改过东西时按项合并：打卡和身体记录按日期合在一起，勾选两边都算，删掉的记录不会再冒出来。</li>
+                            <li>计划页顶部加「方案要点」，跟着你现在的目标变；开通了 AI 教练的，今天页底部不再放这段。</li>
+                        </ul>
                         <p class="cl-h">v3.6.1 · 2026-10-29</p>
                         <ul>
                             <li>修：手机在后台放久了再打开，没练自动顺延会先等云端最新数据再判断，不会把另一台设备刚打的卡冲掉。</li>
