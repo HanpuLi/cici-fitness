@@ -286,7 +286,7 @@ function wpFacts() {
     if (d.isPrivateDay) return { other: true };
     if (d.isRest) return { rest: true };
     const ex = d.exercises.filter(e => !gated.has(e.name) && !e.isWarmup && !e.isStretch).slice(0, 4).map(e => e.name);
-    return ex.length ? { type: d.workoutType, ex } : { other: true };
+    return ex.length ? { type: _shareType(d.workoutType, _coachDayK(d)), ex } : { other: true };   // 类型名同样过门控
   };
   const td = days.find(d => d.date === today), tm = days.find(d => d.date === addDays(today, 1));
   const f = { today, daysPerWeek: +S.days || 3 };
@@ -301,7 +301,7 @@ function wpFacts() {
     if (f.done) {
       if (m.doneAt) f.doneAt = m.doneAt;
       const lg = LOG.find(l => l.date === today && !l.subMetrics);
-      f.doneType = (lg && lg.workout) || td.workoutType;
+      f.doneType = lg ? _shareType(lg.workout, _coachLogK(lg)) : _shareType(td.workoutType, _coachDayK(td));
       const min = lg ? ((typeof wkLogMin === 'function' && wkLogMin(lg)) || +lg.duration) : 0;   // 实际用时优先,没有就用计划时长
       if (min > 0) f.doneMin = min;
     }

@@ -46,17 +46,18 @@ function _coachCatalog(full, gated) {
   });
   return out;
 }
-// 哪些打卡记录能给 AI / 搭子看:私密模式的(带 subMetrics)、私密日的不给;owner 自己的 AI 全给。share=true(搭子 / 推送)永远不给
+// 哪些打卡记录能给 AI / 搭子看:私密模式的(带 subMetrics)、私密日的不给;owner 自己的 AI 全给。share=true(搭子 / 推送)永远不给。
+// 私密日:打卡时记上 priv:1(计划翻页后那天不在计划里了也认得出);更早没有标记的旧记录,动作全是门控动作的(旧版私密日的打卡都是这种)也当私密
 function _coachLogOk(share) {
   if (!_coachHidePriv(share)) return l => !!l;
-  const privDays = new Set((S.plan?.days || []).filter(d => d.isPrivateDay).map(d => d.date));
-  return l => l && !l.subMetrics && !privDays.has(l.date);
+  const privDays = new Set((S.plan?.days || []).filter(d => d.isPrivateDay).map(d => d.date)), gated = _shareGated();
+  return l => l && !l.subMetrics && !l.priv && !privDays.has(l.date) && !((l.exercises || []).length && l.exercises.every(e => e && gated.has(e.name)));
 }
 const _COACH_FEEL = { 4: '轻松', 6.5: '刚好', 8.5: '吃力' };
 function _coachFeel(date, i) { const v = typeof getExRpe === 'function' ? getExRpe(date, i) : null; return v == null ? null : (_COACH_FEEL[v] || `RPE ${v}`) }
 // 一次打卡 → 快照里的一条(动作串格式后端会解析:「名字 [12.5kg ]3×12次[ 未做]」,别改;感受另放 feel)
-// withSub:带上自定义指标 subMetrics(只有 owner 自己的 AI 快照传 true)
-function _coachLogItem(l, okEx, withNote, withSub) {
+// withSub:带上自定义指标 subMetrics(只有 owner 自己的 AI 快照传 true);share:给别人看的,类型名过 _shareType
+function _coachLogItem(l, okEx, withNote, withSub, share) {
   const ex = [], feel = {};
   (l.exercises || []).forEach((e, i) => {
     if (!okEx(e.name)) return;
@@ -64,15 +65,15 @@ function _coachLogItem(l, okEx, withNote, withSub) {
     const f = _coachFeel(l.date, i); if (f) feel[e.name] = f;
   });
   if (!ex.length) return null;
-  return { date: l.date, workout: l.workout, min: l.duration, rpe: l.rpe, ex, ...(Object.keys(feel).length ? { feel } : {}), ...(withNote && l.note ? { note: l.note } : {}), ...(withSub && l.subMetrics ? { subMetrics: l.subMetrics } : {}) };
+  return { date: l.date, workout: share ? _shareType(l.workout, _coachLogK(l)) : l.workout, min: l.duration, rpe: l.rpe, ex, ...(Object.keys(feel).length ? { feel } : {}), ...(withNote && l.note ? { note: l.note } : {}), ...(withSub && l.subMetrics ? { subMetrics: l.subMetrics } : {}) };
 }
-// 更早的记录按月压成一行:几次、平均 RPE、总分钟、练了哪些类型
-function _coachHistory(logs, before) {
+// 更早的记录按月压成一行:几次、平均 RPE、总分钟、练了哪些类型(share:给别人看的,类型名过 _shareType)
+function _coachHistory(logs, before, share) {
   const by = {};
   logs.filter(l => l.date < before).forEach(l => {
     const m = l.date.slice(0, 7), x = by[m] || (by[m] = { month: m, sessions: 0, minutes: 0, rpe: [], types: {} });
     x.sessions++; x.minutes += +l.duration || 0; if (l.rpe) x.rpe.push(+l.rpe);
-    const t = String(l.workout || '其他').slice(0, 12); x.types[t] = (x.types[t] || 0) + 1;
+    const t = String((share ? _shareType(l.workout, _coachLogK(l)) : l.workout) || '其他').slice(0, 12); x.types[t] = (x.types[t] || 0) + 1;
   });
   return Object.values(by).sort((a, b) => b.month.localeCompare(a.month)).slice(0, 12)
     .map(x => ({ month: x.month, sessions: x.sessions, minutes: x.minutes, ...(x.rpe.length ? { avgRpe: Math.round(x.rpe.reduce((a, b) => a + b, 0) / x.rpe.length * 10) / 10 } : {}), types: x.types }));
@@ -124,7 +125,7 @@ function _coachTodayState(focusName, share) {
   else cur = d.exercises.findIndex((e, i) => !pd[i] && !e.isWarmup && !(e.isStretch && !isWeightedMove(e.name)));
   const ce = cur != null && cur >= 0 ? d.exercises[cur] : null;
   const t0 = sp.t0 || 0, started = !!t0 || Object.values(pd).some(Boolean);
-  const out = { date, type: d.workoutType, status: lg ? '已打卡' : started ? '训练中' : '没开练', exercises };
+  const out = { date, type: share ? _shareType(d.workoutType, _coachDayK(d)) : d.workoutType, status: lg ? '已打卡' : started ? '训练中' : '没开练', exercises };
   if (t0) { const t = new Date(t0); out.startedAt = `${String(t.getHours()).padStart(2, '0')}:${String(t.getMinutes()).padStart(2, '0')}`; out.elapsedMin = Math.round((Date.now() - t0) / 60000) }
   if (ce && !gated.has(ce.name) && !lg) { const x = exercises.find(z => z.name === ce.name); if (x) out.current = { name: ce.name, set: Math.min(x.setsDone + 1, x.sets), of: x.sets } }
   if (focusName && !gated.has(focusName) && exercises.some(z => z.name === focusName)) out.askingAbout = focusName;
@@ -148,6 +149,15 @@ function _coachPartner() {
     // 搭子关掉没共享的类(免得 AI 把「没共享」当成「没练」)
     ...(Array.isArray(pp.off) && pp.off.length ? { notShared: pp.off.slice(0, 8).map(k => typeof shareCatLabel === 'function' ? shareCatLabel(k) : str(k, 12)) } : {}) };
 }
+// 对话 / 陪练的数据快照是开头拍一次的(缓存命中省钱),搭子那块却要跟着对方现在的共享设置走:对方关了「允许 TA 的 AI 教练参考」
+// 或关了某一类、解除了配对,下一条起就按现在的发。变了才换(缓存前缀失效一次);现在不该带(_coachPartner 为 null)就整块去掉。返回换没换
+function _coachCtxPartnerNow(ctx) {
+  if (!ctx || typeof ctx !== 'object') return false;
+  const p = _coachPartner();
+  if (JSON.stringify(ctx.partner ?? null) === JSON.stringify(p ?? null)) return false;
+  if (p) ctx.partner = p; else delete ctx.partner;
+  return true;
+}
 // 给 AI 的数据快照。非 owner:私密池 / 盆底动作、私密日、私密模式的记录不进,另有 getExcluded() 兜底;owner 自己的 AI 全进(含 subMetrics)。
 // opts:catalog('names' / 'full')、logDays(明细天数,默认 42)、live(false 不带今天的实时状态)、partner(false 不带搭子)、
 // share(true = 会被别人看到的用途,按 _shareGated 照旧全拦,owner 也一样)。「主动找你」的推送快照用 share:true(推送文字上锁屏)
@@ -166,8 +176,8 @@ function buildCoachContext(opts = {}) {
       ...(S.cycleEnabled && S.periodMode ? { periodMode: true } : {}),
     },
     userExcluded: (S.userExcluded || []).filter(okEx).map(n => n + (S.userExcludeReasons?.[n] ? `(${S.userExcludeReasons[n]})` : '')),
-    recentLogs: logs.filter(l => l.date >= from).map(l => _coachLogItem(l, okEx, true, !hide)).filter(Boolean),
-    history: _coachHistory(logs, from),
+    recentLogs: logs.filter(l => l.date >= from).map(l => _coachLogItem(l, okEx, true, !hide, share)).filter(Boolean),
+    history: _coachHistory(logs, from, share),
     weightHistory: _coachWeights(okEx),
     stats: _coachStats(logs, gated),
     body: BODY_LOG.slice(-12),
@@ -178,7 +188,7 @@ function buildCoachContext(opts = {}) {
     ctx.upcoming = S.plan.days.filter(d => d.date >= today).slice(0, 14).map(d =>
       d.isPrivateDay && hide ? { date: d.date, type: '(另有安排)' } :
         d.isRest ? { date: d.date, type: '休息' } :
-          { date: d.date, type: d.workoutType, ex: d.exercises.filter(e => okEx(e.name)).map(e => `${e.name} ${e.sets}×${e.reps}${e.unit}`) });
+          { date: d.date, type: share ? _shareType(d.workoutType, _coachDayK(d)) : d.workoutType, ex: d.exercises.filter(e => okEx(e.name)).map(e => `${e.name} ${e.sets}×${e.reps}${e.unit}`) });
     // 计划里要上重量的动作，app 下次会建议多少 kg(AI 复盘调重量时参考)
     const nx = {};
     S.plan.days.filter(d => d.date >= today && !(d.isPrivateDay && hide)).forEach(d => d.exercises.forEach(e => {
@@ -186,7 +196,7 @@ function buildCoachContext(opts = {}) {
     }));
     ctx.nextSuggestedKg = nx;
     // 最近自动顺延过哪几天(没练 → 后面的训练往后挪;标记日不会是私密日,类型名再按门控过一遍)
-    const sh = typeof autoShiftFacts === 'function' ? autoShiftFacts().filter(x => ![...gated].some(g => x.planned.includes(g))) : [];
+    const sh = typeof autoShiftFacts === 'function' ? autoShiftFacts().filter(x => ![...gated].some(g => x.planned.includes(g))).map(x => share ? { ...x, planned: _shareType(x.planned) } : x) : [];
     if (sh.length) ctx.autoShifted = sh;
   }
   if (opts.catalog) ctx.catalog = _coachCatalog(opts.catalog === 'full', gated);
@@ -210,10 +220,10 @@ function coachSharedTraining() {
   const t = {
     v: 1, at: today,
     plan: (S.plan?.days || []).filter(d => d.date >= today).slice(0, 14).map(d => d.isPrivateDay ? { date: d.date, type: '另有安排', k: 'p' } : d.isRest ? { date: d.date, type: '休息', k: 'r' }
-      : { date: d.date, type: d.workoutType, k: d.isSwimDay ? 's' : d.workoutType === '轻量替代' ? 'x' : 'g', ex: d.exercises.filter(e => okEx(e.name)).map(e => `${e.name} ${e.sets}×${e.reps}${e.unit}`) }),
+      : { date: d.date, type: _shareType(d.workoutType, _coachDayK(d)), k: _coachDayK(d), ex: d.exercises.filter(e => okEx(e.name)).map(e => `${e.name} ${e.sets}×${e.reps}${e.unit}`) }),
     today: td && !td.isPrivateDay && !td.isRest ? (() => { const s = _coachTodayState(undefined, true); return { status: s.status, done: (s.exercises || []).filter(e => e.done).length, total: (s.exercises || []).length } })() : null,
-    logs: logs.filter(l => l.date >= from).map(l => _coachLogItem(l, okEx, false)).filter(Boolean),
-    history: _coachHistory(logs, from),
+    logs: logs.filter(l => l.date >= from).map(l => _coachLogItem(l, okEx, false, false, true)).filter(Boolean),
+    history: _coachHistory(logs, from, true),
     weights: _coachWeights(okEx, 5, 30),
     stats: (({ streakDays, totalSessions, thisMonth, achievements }) => ({ streakDays, totalSessions, thisMonth: { sessions: thisMonth.sessions, minutes: thisMonth.minutes }, achievements }))(_coachStats(logs, gated)),
     // 最近几批没练自动顺延:只有批次 id(sh-日期-没练那天)和日期,撤销过的标 undone;搭子那边据此跟着对齐(core.js _shFollowRun)。
@@ -437,7 +447,7 @@ async function renderCoach() {
   <div class="co-card" id="co-chat">
     <div class="sec-head"><span class="sec-label">对话</span><button class="link-btn" onclick="coachNewChat()">新对话</button></div>
     <div id="co-chat-log" class="co-chat-log" aria-live="polite"></div>
-    <div class="co-foot">对话只存在这台手机上 · <span id="co-status" class="co-meta">连接中…</span></div>
+    <div class="co-foot">对话只存在这台手机上；你发的话和训练数据会经 Cait 的服务器交给 Claude（Anthropic 的 AI）处理 · <span id="co-status" class="co-meta">连接中…</span></div>
   </div>`);
   _coachShowChat();
   _coachRefPaint();
@@ -696,7 +706,13 @@ function coachApplyReview() {
   saveState();
   if (typeof applySettingsToUI === 'function') applySettingsToUI();
   // 改了天数/时长/训练量/排除 → 用原有生成器重排未来(保留过去、今天已打卡、锁定的天);留在「记录」页
-  if (regen && S.plan) { _genStay = true; genPlan(true); }
+  if (regen && S.plan) {
+    _genStay = true; genPlan(true);
+    // 生成器重排不认私密日:采纳前是私密日的,重排出来的那天照样标上
+    let n = 0; Object.entries(days0.days).forEach(([dt, d0]) => { n += _coachKeepPriv(d0, S.plan.days.find(x => x.date === dt)) });
+    if (n) { saveState(); render(); }
+    if (snap.plan && rv.snap === snap) { snap.post = _coachFps(S.plan.days.filter(d => d.date >= today).map(d => d.date)); _coachSave(st) }
+  }
   else render();
   _coachShowReview(rv);
   showToast(`已采纳 ${done.length} 条`);
@@ -706,8 +722,19 @@ function coachApplyReview() {
     setTimeout(() => { document.getElementById('p8')?.scrollIntoView({ behavior: 'smooth' }); coachPlan(); }, 50);
   }
 }
+// 一天上的私有标记:AI 那一侧整天换掉某天时(排计划采纳、复盘采纳后用生成器重排),照原来那天留下。
+// owner 自己的 AI 看得到、也能排私密日,但那天给别人看(搭子共享、推送、分享卡片)照旧是「另有安排」。私有包(private/xp.js)不在 day 上另设字段
+const _DAY_PRIV_KEYS = ['isPrivateDay'];
+function _coachKeepPriv(from, to) { let n = 0; if (from && to) _DAY_PRIV_KEYS.forEach(k => { if (from[k] && to[k] !== from[k]) { to[k] = from[k]; n++ } }); return n }
 // 复盘采纳会动的设置(撤销时按快照放回去;快照里没有的键 = 原来就没设,删掉)
 const _COACH_RV_SET = ['volumeMultiplier', 'dur', 'days', 'userExcluded', 'userExcludeReasons'];
+// AI 那一侧的撤销先核对:采纳(或对话小改)之后记下受影响那几天计划的指纹(post);撤销时对不上 = 这几天后来又被
+// 没练自动顺延 / 跟着搭子对齐 / 手动改过,照快照按日期写回去会一天两份或丢课 → 不撤。只比计划那天本身:
+// 顺延 / 对齐都会换掉那天的内容;开练、打卡、重量这些按日期存的状态,各个撤销原来就单独处理(开练 / 打卡的天不回滚)。旧快照没有 post 的照旧
+const _COACH_UNDO_MOVED = '这几天后来又被顺延 / 对齐改过，撤不回了';
+function _coachDayFp(date) { const d = S.plan?.days?.find(x => x.date === date); if (!d) return ''; const c = { ...d }; delete c._noShift; return JSON.stringify(c) }
+function _coachFps(dates) { const o = {}; dates.forEach(dt => { o[dt] = _coachDayFp(dt) }); return o }
+function _coachFpMoved(post) { return !!post && Object.keys(post).some(dt => _coachDayFp(dt) !== post[dt]) }
 // 计划里一批天的快照 / 恢复(复盘采纳、AI 排计划草稿采纳的撤销用;规矩同提议卡的 _coachPropUndo)
 function _coachDaySnap(dates) {
   const pick = (o, date) => Object.fromEntries(Object.entries(o || {}).filter(([k]) => k.startsWith(date + '-')));
@@ -747,6 +774,7 @@ function _coachDayRestore(sn, from) {
 function coachReviewUndo() {
   const st = _coachLoad(), rv = st.review, sn = rv && rv.snap;
   if (!sn) return;
+  if (sn.plan && _coachFpMoved(sn.post)) { delete rv.snap; _coachSave(st); coachRenderReview(); showToast(_COACH_UNDO_MOVED); return }
   _COACH_RV_SET.forEach(k => { if (k in sn.set) S[k] = sn.set[k]; else delete S[k] });
   Object.entries(sn.aiW || {}).forEach(([k, v]) => { S.aiWeights = S.aiWeights || {}; if (v == null) delete S.aiWeights[k]; else S.aiWeights[k] = v });
   const kept = sn.plan ? _coachDayRestore(sn.plan, sn.from) : 0;
@@ -820,7 +848,7 @@ function _coachValidatePlan(data, dates) {
     });
     if (!exs.length) { days.push({ date: d.date, isRest: true, workoutType: '休息', duration: 0, exercises: [] }); return }
     const swim = exs.every(e => e.group === 'swimming');
-    days.push({ date: d.date, isRest: false, workoutType: String(d.workoutType || 'AI 计划').slice(0, 20), duration: S.dur, exercises: swim ? exs : _clusterByEquip(exs), ...(swim ? { isSwimDay: true } : {}), _ai: true });
+    days.push({ date: d.date, isRest: false, workoutType: _coachPlanType(d.workoutType, exs, swim, S.plan?.days?.find(x => x.date === d.date)), duration: S.dur, exercises: swim ? exs : _clusterByEquip(exs), ...(swim ? { isSwimDay: true } : {}), _ai: true });
   });
   days.sort((a, b) => a.date.localeCompare(b.date));
   return { rationale: data.rationale || '', days, dropped: [...new Set(dropped)], at: todayStr() };
@@ -881,11 +909,12 @@ function coachApplyPlan() {
     delete S.prog[d.date];
     ['weights', 'exRpe', 'adj'].forEach(k => { if (S[k]) Object.keys(S[k]).forEach(x => { if (x.startsWith(d.date + '-')) delete S[k][x] }) });
     const i = S.plan.days.findIndex(x => x.date === d.date);
-    if (i >= 0) S.plan.days[i] = d; else S.plan.days.push(d);
+    if (i >= 0) { _coachKeepPriv(S.plan.days[i], d); S.plan.days[i] = d } else S.plan.days.push(d);   // 原来是私密日:换了内容照样是私密日
   });
   S.plan.days.sort((a, b) => a.date.localeCompare(b.date));
   if (dr.rationale) S.plan.tip = 'AI 教练：' + dr.rationale;
   // 草稿留着(收成一行「已写进计划 · 撤销」),快照只留这一次的
+  snap.post = _coachFps(days.map(d => d.date));
   dr.state = 'applied'; dr.appliedN = days.length; dr.snap = snap;
   _rvOpen.delete('plan:');
   _coachSave(st);
@@ -898,6 +927,7 @@ function coachApplyPlan() {
 function coachPlanUndo() {
   const st = _coachLoad(), dr = st.planDraft;
   if (!dr || dr.state !== 'applied' || !dr.snap) return;
+  if (_coachFpMoved(dr.snap.post)) { delete dr.snap; _coachSave(st); coachShowPlanDraft(); showToast(_COACH_UNDO_MOVED); return }
   const kept = _coachDayRestore(dr.snap);
   if (S.plan && dr.snap.tip !== null && dr.snap.tip !== undefined) S.plan.tip = dr.snap.tip;
   delete dr.state; delete dr.snap; delete dr.appliedN;
@@ -986,6 +1016,44 @@ function _coachInsertEx(day, item) {
 function _shareGated() { return new Set([..._PRIVATE_POOL, ...(typeof OWNER_ONLY_MOVES !== 'undefined' ? OWNER_ONLY_MOVES : [])]) }
 function _coachGated() { return _ownerSession() ? new Set() : _shareGated() }
 function _coachHidePriv(share) { return !!share || !_ownerSession() }
+// ── 训练类型名(workoutType)── app 自己会生成的那套:各目标的分化(core.js SPLITS 等)+ 游泳 / 轻量替代 / 休息 / 顺延标记日 / 另有安排,
+// 外加出口用的通用名。AI 起的名字只在这套里挑(_coachPlanType);给别人看的出口一律过 _shareType
+const _TYPE_GENERIC = { g: '力量训练', s: '游泳', r: '休息', p: '另有安排', x: '轻量训练' };
+let _typeKnown = null;
+function _coachKnownTypes() {
+  if (!_typeKnown) {
+    _typeKnown = new Set(['游泳训练', '轻量替代', '休息', '没练（已顺延）', '另有安排', '训练', ...Object.values(_TYPE_GENERIC)]);
+    [SPLITS, GLUTE_SPLITS, CURVE_SPLITS, GLUTE_BACK_SPLITS, COMBINED_SPLITS].forEach(o => Object.values(o || {}).forEach(a => (a || []).forEach(x => { if (x && x.type) _typeKnown.add(x.type) })));
+  }
+  return _typeKnown;
+}
+function _coachDayK(d) { return !d ? '' : d.isPrivateDay ? 'p' : d.isRest ? 'r' : d.isSwimDay ? 's' : d.workoutType === '轻量替代' ? 'x' : 'g' }
+function _coachLogK(l) { return l && (l.isSwimDay || /游泳/.test(String(l.workout || ''))) ? 's' : l && l.workout === '轻量替代' ? 'x' : 'g' }
+// 给别人看的类型名(搭子共享文档、实时进度、推送事实和快照):带门控词(子串)、或者不是 app 自己那套的 → 换成按 k 的通用名(不知道 k 就「训练」)
+function _shareType(t, k) {
+  t = String(t ?? '');
+  if (t && _coachKnownTypes().has(t) && ![..._shareGated()].some(g => t.includes(g))) return t;
+  return _TYPE_GENERIC[k] || '训练';
+}
+// AI 排的一天叫什么:AI 给的名字在 app 那套里(且不带门控词、游不游泳对得上)就用;不然沿用原来那天的(原来是同类训练日);
+// 再不然游泳日叫「游泳训练」,其余按主项的分组挑最像的分化名(当前目标那套优先)
+function _coachPlanType(t, exs, swim, d0) {
+  const special = new Set(['休息', '没练（已顺延）', '另有安排', '训练', ...Object.values(_TYPE_GENERIC)]);
+  const ok = x => { x = String(x || ''); return _coachKnownTypes().has(x) && !special.has(x) && ![..._shareGated()].some(g => x.includes(g)) && (x === '游泳训练') === swim };
+  t = String(t || '').trim();
+  if (ok(t)) return t;
+  if (d0 && !d0.isRest && !d0.isMissed && ok(d0.workoutType)) return d0.workoutType;
+  if (swim) return '游泳训练';
+  const gs = new Set(exs.filter(e => !e.isWarmup && !e.isStretch && e.group).map(e => e.group));
+  const mine = hasGoal('女性曲线') ? CURVE_SPLITS : hasGoal('翘臀美背') ? GLUTE_BACK_SPLITS : isCombinedGoal() ? COMBINED_SPLITS : hasGoal('臀腿塑形') ? GLUTE_SPLITS : SPLITS;
+  let best = '', bs = 0;
+  [mine, SPLITS, GLUTE_SPLITS, CURVE_SPLITS, GLUTE_BACK_SPLITS, COMBINED_SPLITS].forEach(o => Object.values(o || {}).forEach(a => (a || []).forEach(x => {
+    if (!x || !ok(x.type)) return;
+    const g = new Set(x.groups || []), inter = [...gs].filter(v => g.has(v)).length, sc = inter / (new Set([...gs, ...g]).size || 1);
+    if (sc > bs) { bs = sc; best = x.type }
+  })));
+  return best || _TYPE_GENERIC.g;
+}
 function _coachUnit(ex) { return ex && (ex.u === '秒' || ex.u === '分钟') ? ex.u : '次' }
 const _COACH_REPS = { '次': [1, 50], '秒': [5, 600], '分钟': [1, 90] };
 function _coachInt(v) { if (v === null || v === undefined || v === '') return null; const x = Number(v); return Number.isFinite(x) ? Math.round(x) : null }
@@ -1308,6 +1376,7 @@ async function coachSend() {
   // 数据快照在对话开头拍一次，整段对话沿用(后端放进第一条消息，缓存命中省钱)；要用最新数据就点「新对话」。
   // 今天做到哪、用时这些会变的,每条消息另带 live(只放进那一条)
   if (!st.chat.length || !st.chatCtx) st.chatCtx = buildCoachContext({ catalog: 'names', logDays: 28 });
+  else _coachCtxPartnerNow(st.chatCtx);   // 搭子那块按对方现在的共享设置换(下面存档时一起存)
   const img = _coachPendingImg;
   st.chat.push({ role: 'user', text: text || (img ? '(看图)' : '这份我想跟你聊聊。'), img: !!img, at: Date.now(), ...(ref ? { ref: { k: ref.k, t: ref.t, s: ref.s } } : {}) });
   delete st.chatRef;
@@ -1413,6 +1482,7 @@ async function coachQuickSend(preset) {
   _cqBusy = true;
   const st = _coachLoad(), q = _coachQuickState(st);
   if (!q.ctx) q.ctx = buildCoachContext({ catalog: 'names', logDays: 14, live: false });
+  else _coachCtxPartnerNow(q.ctx);
   q.msgs.push({ role: 'user', text, at: Date.now() });
   q.msgs = q.msgs.slice(-COACH_QUICK_MAX);
   _coachSave(st);
@@ -1563,6 +1633,7 @@ function _coachTodayApply(changes) {
   });
   if (snap.structural) { try { _spPin = null; _spJust = null } catch { } }   // 运动风格「先做这个」/「做完了」记的是下标,结构变了就作废
   snap.mark = _coachProgress(date);
+  snap.post = _coachFps([date]);
   return { result, n, snap: n ? snap : null };
 }
 // 撤销:回到执行前。结构改过(换 / 加 / 划掉)的,要是之后又练了或已经打卡,就不回滚(免得把进度对到别的动作上)
@@ -1571,6 +1642,7 @@ function _coachTodayUndo(snap) {
   if (snap.structural || Object.keys(snap.keys.adj).length || Object.keys(snap.keys.w).length) {
     if (todayStr() !== date) return '已经不是那天了，没撤';
     if (LOG.some(l => l.date === date)) return '今天已经打卡了，没撤';
+    if (_coachFpMoved(snap.post)) return '今天后来又被顺延 / 对齐改过，撤不回了';
   }
   if (snap.structural) {
     if (_coachProgress(date) > snap.mark) return '改完之后又练了，撤销会把进度对错位，没撤。想改回去直接跟教练说';
@@ -1936,9 +2008,12 @@ function _coachPropApply(p) {
       }
     });
   });
+  snap.post = _coachFps(Object.keys(snap.days));
   return { snap, result, stale, n };
 }
+// 返回没回滚的天数;-1 = 这几天后来又被顺延 / 对齐改过,整个不撤
 function _coachPropUndo(snap) {
+  if (_coachFpMoved(snap.post)) return -1;
   let kept = 0;
   Object.entries(snap.days || {}).forEach(([date, d0]) => {
     const i = (S.plan?.days || []).findIndex(x => x.date === date), s0 = snap.st[date] || {};
@@ -1997,6 +2072,7 @@ function coachPropAct(btn, act) {
   }
   if (act === 'undo' && p.state === 'applied' && p.snap) {
     const kept = _coachPropUndo(p.snap);
+    if (kept < 0) { delete p.snap; _coachSave(st); render(); _coachShowChat(); showToast(_COACH_UNDO_MOVED); return }
     p.state = 'undone'; delete p.snap; m.after = '(她采纳了，后来又撤销了)';
     _coachSave(st);
     saveState();
@@ -2035,7 +2111,7 @@ const _RV = {
         value: c.op !== 'setting' ? '' : c.key === 'limits' && !c.value ? '无' : _rvVal(c.value), why: c.why || ''
       }))
     }),
-    body: h => ({ context: h.st.chatCtx || buildCoachContext({ catalog: 'names', logDays: 28 }) }),
+    body: h => { if (h.st.chatCtx && _coachCtxPartnerNow(h.st.chatCtx)) h.save(); return { context: h.st.chatCtx || buildCoachContext({ catalog: 'names', logDays: 28 }) } },   // 对话快照里的搭子那块同样换成现在的
     take(h, d) {
       const p = _coachPropFrom({ id: h.obj.id, changes: d.changes, dropped: d.dropped });
       return { changes: p ? p.changes : [], dropped: p ? p.dropped : (Array.isArray(d.dropped) ? d.dropped.filter(n => typeof n === 'string').slice(0, 8) : []), msg: _rvClip(d.message, 200), off: [] };

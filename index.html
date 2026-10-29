@@ -98,8 +98,15 @@
             <section class="panel-tab" id="me" role="tabpanel" aria-labelledby="tab-me" hidden>
                 <div id="me-content"></div>
                 <div class="version-foot">
-                    <button type="button" id="app-version" class="link-btn" onclick="toggleChangelog()" aria-expanded="false" aria-controls="changelog-box">Cici健身计划 v3.6.0 (build 161) · 更新日志 ▾</button>
+                    <button type="button" id="app-version" class="link-btn" onclick="toggleChangelog()" aria-expanded="false" aria-controls="changelog-box">Cici健身计划 v3.6.1 (build 162) · 更新日志 ▾</button>
                     <div id="changelog-box" style="display:none">
+                        <p class="cl-h">v3.6.1 · 2026-10-29</p>
+                        <ul>
+                            <li>修：手机在后台放久了再打开，没练自动顺延会先等云端最新数据再判断，不会把另一台设备刚打的卡冲掉。</li>
+                            <li>修：AI 改过的计划被顺延或对齐挪过之后，再点撤销会提示撤不回，不会弄出两份同样的课。</li>
+                            <li>修：搭子关掉某类共享后，正在进行的教练对话马上不再用 TA 之前的数据。</li>
+                            <li>教练页写明：你发的话和训练数据会交给 Claude（Anthropic 的 AI）处理。</li>
+                        </ul>
                         <p class="cl-h">v3.6.0 · 2026-10-29</p>
                         <ul>
                             <li>搭子：配对改成发链接或二维码，状态写清楚（等 TA 加你 / 已互相配对 / TA 不跟你配对了）；今天页有搭子卡，看得到 TA 今天练什么、做到哪；两个人同时在练时显示 TA 在做哪一组。</li>

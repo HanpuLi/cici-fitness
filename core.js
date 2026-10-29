@@ -1,6 +1,6 @@
 // ══ System Version ═════════════════════════════════════════
 const APP_VERSION = 'v3.1.0';
-const APP_BUILD = 161;               // = sw.js 的 CACHE 编号 = index.html 页脚 build(check-static 会查,三处一起改)
+const APP_BUILD = 162;               // = sw.js 的 CACHE 编号 = index.html 页脚 build(check-static 会查,三处一起改)
 const APP_BUILD_DATE = '2026-10-29';
 window.APP_VERSION = APP_VERSION;
 window.APP_BUILD = APP_BUILD;
@@ -2513,17 +2513,26 @@ function _shFp(dt) {
   return JSON.stringify([c, _shState(dt)]);
 }
 function _shTop() { const L = (S.plan && S.plan.shifts) || []; for (let i = L.length - 1; i >= 0; i--) if (L[i].state === 'on') return L[i]; return null; }
-// 登录了就等第一份云端快照到了再算(否则拿本机旧数据顺延、再推上云,会盖掉别的设备刚打的卡)
-function _shReady() { try { return !_user || !!_cloudFirstSnap; } catch (e) { return true; } }
-let _shWaitT = null, _shWaitN = 0;
-function _shWait() { if (_shWaitT || _shWaitN >= 15) return; _shWaitN++; _shWaitT = setTimeout(() => { _shWaitT = null; autoShiftCheck(); }, 2000); }
+// 登录了就等云端快照:这次登录 / 最近一次切回前台之后,收到并应用过一份自己文档的云端快照才算(app.js cloudFresh;
+// 因为本机有没推上去的改动而跳过的不算)。否则拿本机旧数据顺延、再推上云,会盖掉别的设备刚打的卡。
+// 最多等 30 秒(按时钟算,手机后台把计时器拖慢也不会多等),等不到这次就不跑;之后快照到了(app.js _onOwnSnap)再按新数据判断
+const SHIFT_WAIT_MS = 30000;
+function _shReady() { try { return typeof cloudFresh === 'function' ? cloudFresh() : (!_user || !!_cloudFirstSnap); } catch (e) { return true; } }
+let _shWaitT = null, _shWaitUntil = 0;
+function _shWait() {
+  if (_shWaitT) return;
+  if (!_shWaitUntil) _shWaitUntil = Date.now() + SHIFT_WAIT_MS;
+  if (Date.now() > _shWaitUntil) return;
+  _shWaitT = setTimeout(() => { _shWaitT = null; autoShiftCheck(); }, 2000);
+}
+function _shNewEpoch() { clearTimeout(_shWaitT); _shWaitT = null; _shWaitUntil = 0; }   // app.js cloudNewEpoch 调:重新开始等
 function autoShiftCheck() { if (S.plan && S.plan.days && S.plan.days.length) autoShiftRun(); }
 
 // 自己没练就顺延(开关「没练自动顺延」),然后看搭子有没有新顺延要跟(开关「排计划时跟搭子对齐」)。先自己、后跟随:两人同一天都没练时各自顺延就对齐了
 function autoShiftRun() {
   if (!S.plan || !S.plan.days || !S.plan.days.length) return false;
   if (!_shReady()) { _shWait(); return false; }
-  _shWaitN = 0;
+  _shWaitUntil = 0;
   const a = autoShiftOn() ? _shSelfRun() : false;
   const b = _shFollowRun();
   return a || b;
@@ -2579,14 +2588,19 @@ function _shSelfRun() {
   return true;
 }
 function _shAfter() { saveState(); render(); if (typeof renderStats === 'function') try { renderStats(); } catch (e) { } }
-// 撤销 / 撤回:挪过去的天已经开练、或者顺延后计划又改过 → 不动,返回原因
-function _shRestore(b, noShift) {
+// 撤销 / 撤回:挪过去的天已经开练、或者顺延后计划又改过 → 不动,返回原因。
+// logged = 顺延掉的那天后来有了打卡 / 勾选(另一台设备补的,_shRevertIfLogged):那天自己的状态本来就变了,指纹只比计划那天;
+// 写回时那天的状态以现在的为准(另一台设备的勾选 / 重量),快照里有、现在没有的补上
+const _shFpDay = fp => { try { return JSON.stringify(JSON.parse(fp)[0]); } catch (e) { return fp; } };
+function _shMerge(a, c) { a = a || {}; return { p: a.p || c.p ? { ...(a.p || {}), ...(c.p || {}) } : null, w: { ...a.w, ...c.w }, a: { ...a.a, ...c.a }, r: { ...a.r, ...c.r }, pl: c.pl != null ? c.pl : (a.pl ?? null) }; }
+function _shRestore(b, noShift, logged) {
   if (!b || !b.snap) return '这次顺延已经没法撤销了';
   const dates = Object.keys(b.snap.days), idx = dt => S.plan.days.findIndex(d => d.date === dt);
   if (dates.some(dt => idx(dt) < 0)) return '计划已经换过，没法撤销';
   if (dates.some(dt => !b.missed.includes(dt) && _shAct(dt))) return '挪过去的训练已经开练了，没法撤销';
-  if (Object.keys(b.post || {}).some(dt => _shFp(dt) !== b.post[dt])) return '顺延之后又改过计划，没法撤销';
-  dates.forEach(dt => { S.plan.days[idx(dt)] = JSON.parse(JSON.stringify(b.snap.days[dt])); _shPut(dt, b.snap.st[dt]); });
+  const own = dt => logged && b.missed.includes(dt);
+  if (Object.keys(b.post || {}).some(dt => own(dt) ? _shFpDay(_shFp(dt)) !== _shFpDay(b.post[dt]) : _shFp(dt) !== b.post[dt])) return '顺延之后又改过计划，没法撤销';
+  dates.forEach(dt => { S.plan.days[idx(dt)] = JSON.parse(JSON.stringify(b.snap.days[dt])); _shPut(dt, own(dt) ? _shMerge(b.snap.st[dt], _shState(dt)) : b.snap.st[dt]); });
   if (noShift) b.missed.forEach(dt => { S.plan.days[idx(dt)]._noShift = true; });
   delete b.snap; delete b.post;
   return '';
@@ -2595,7 +2609,7 @@ function _shRestore(b, noShift) {
 function _shRevertIfLogged(today) {
   const b = _shTop(); if (!b || !b.snap) return false;
   const hit = b.missed.filter(dt => LOG.some(l => l.date === dt) || Object.values(S.prog[dt] || {}).some(Boolean));
-  if (!hit.length || _shRestore(b, false)) return false;
+  if (!hit.length || _shRestore(b, false, true)) return false;
   b.state = 'reverted'; b.seen = true;
   const msg = `${hit.map(dt => _shWd(dt, today)).join('、')}补了打卡，那次顺延已经撤回`;
   if (typeof uiNotice === 'function') uiNotice(msg); else showToast(msg);
@@ -2705,7 +2719,8 @@ function _shArm() {
   if (t <= n) t.setDate(t.getDate() + 1);
   _shTimerId = setTimeout(() => { autoShiftCheck(); _shArm(); }, Math.min(t - n, 2147000000));
 }
-document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { autoShiftCheck(); _shArm(); } });
+// 切回前台:先开新的一轮(之前收到的云端快照不算了,并主动向服务器要一份),等那份到了再顺延
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { if (typeof cloudNewEpoch === 'function') cloudNewEpoch(true); autoShiftCheck(); _shArm(); } });
 _shArm();
 
 // ══ Render ══════════════════════════════════════════════
@@ -3705,7 +3720,8 @@ function submitRPE(rpe, isSkip = false) {
       mood: moods[actualRpe - 1] || '一般',
       note: note,
       isSwimDay: _dayIsSwim,
-      subMetrics: xMetrics
+      subMetrics: xMetrics,
+      ...(day.isPrivateDay ? { priv: 1 } : {})   // 私密日的打卡:计划翻页后也认得出,不进共享(coach.js _coachLogOk)
     });
     ls(K.log, LOG);
     _fbDate = date;

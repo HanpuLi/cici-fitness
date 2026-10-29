@@ -955,6 +955,18 @@ const CLOUD_KEYS=Object.values(K);
 let _db=null,_user=null,_pushTimer=null,_pushing=false,_unsub=null;
 let _localDirty=false; // When true, local changes are pending push — block cloud-to-local sync
 let _cloudFirstSnap=false; // 这次登录后是否已经收到过第一份云端快照
+// 自己文档的云端快照「收到并应用了」几次(本机有没推上去的改动、或骤降拦截而跳过的不算)。没练自动顺延靠它判断本机数据新不新(core.js _shReady):
+// 这次登录 / 最近一次切回前台之后没收到过,就别拿本机的旧数据顺延(否则另一台设备刚打的卡会被推上去的旧计划 / 记录整键盖掉)
+let _cloudSeq=0,_cloudEpochSeq=0;
+function cloudFresh(){ return !_user||_cloudSeq>_cloudEpochSeq; }
+// 新的一轮(登录、切回前台):之前收到的不算了。fetch=true 时主动向服务器要一份自己的文档 —— 切回前台时云端没变,监听不会再推
+function cloudNewEpoch(fetch){
+  _cloudEpochSeq=_cloudSeq;
+  if(typeof _shNewEpoch==='function')_shNewEpoch();
+  if(!fetch||!_db||!_user||!_unsub)return;
+  const uid=_user.uid;
+  try{ _db.collection('users').doc(uid).get({source:'server'}).then(doc=>{ if(_user&&_user.uid===uid&&_unsub)_onOwnSnap(doc); }).catch(()=>{}); }catch(e){}
+}
 
 function initFirebase(){
 try{
@@ -966,6 +978,7 @@ firebase.auth().onAuthStateChanged(handleAuth);
 
 function handleAuth(user){
 _user=user;
+_cloudSeq=0;cloudNewEpoch(false);   // 换了账号:之前收到的云端快照不算
 // 切账号时复位扩展模式残留(否则登出→换人登录后仍可能弹出扩展提示);非 owner 再把私有包挂上去的东西全撤掉
 if(typeof _xMode!=='undefined'){_xMode=false;_xDetailMode=false;}
 if(typeof _xReset==='function'&&!(typeof _ownerSession==='function'&&_ownerSession()))_xReset();
@@ -1117,11 +1130,17 @@ if(_justImported){_localDirty=true;try{sessionStorage.removeItem('_justImported'
 const _pendingFromLastRun=_dirtyFlagSet(); // 上次关 app 前还有没推上去的改动
 if(_pendingFromLastRun)_localDirty=true;
 _cloudFirstSnap=false;
-_unsub=_db.collection('users').doc(_user.uid).onSnapshot(doc=>{
+_cloudSeq=0;cloudNewEpoch(false);
+_unsub=_db.collection('users').doc(_user.uid).onSnapshot(_onOwnSnap,e=>console.warn('Sync error:',e));
+// Initial push — send local data up first so cloud has latest(刚导入过则立即推,尽量缩短被旧快照覆盖的窗口)
+setTimeout(()=>pushToCloud(),(_justImported||_pendingFromLastRun)?0:1000);
+}
+// 自己文档的一份云端快照(监听推来的,或切回前台时主动要的)
+function _onOwnSnap(doc){
 // 新手设置要等第一份云端快照回来再决定弹不弹(换新设备登录时本机是空的,别在云端数据到之前先让人从头设一遍)
 const _first=!_cloudFirstSnap;
 if(_first){_cloudFirstSnap=true;if(!doc.exists&&typeof render==='function')setTimeout(render,0);}
-if(!doc.exists)return;
+if(!doc.exists){_cloudSeq++;_ptSeenSync();if(typeof autoShiftCheck==='function')autoShiftCheck();return;}   // 云端还没有这份文档:本机就是最新的
 // If local changes are pending push, do NOT let cloud overwrite them
 if(_localDirty){
     console.log('[sync] skipped cloud→local: local changes pending push');
@@ -1144,11 +1163,11 @@ const lv=localStorage.getItem(nk);
 const cv=JSON.stringify(v);
 if(lv!==cv){try{localStorage.setItem(nk,cv);changed=true}catch{}}
 });
+_cloudSeq++;   // 先记「收到了」再 loadState(它会顺带跑没练自动顺延)
 if(changed){loadState();renderLog();showToast('已从云端同步');saveSnapshot('post-sync')}
 else if(_first&&typeof render==='function')render();   // 第一份快照没带来变化:也重画一次,让新手设置按最新状态判断
-},e=>console.warn('Sync error:',e));
-// Initial push — send local data up first so cloud has latest(刚导入过则立即推,尽量缩短被旧快照覆盖的窗口)
-setTimeout(()=>pushToCloud(),(_justImported||_pendingFromLastRun)?0:1000);
+_ptSeenSync();   // 搭子快照先到时没写盘的「读到过搭子」,现在写
+if(typeof autoShiftCheck==='function')autoShiftCheck();   // 正等着这份快照的顺延:不用等下一轮轮询
 }
 
 let _dirtyId=0; // bumped on every local change; lets a push detect changes that arrive mid-flight
@@ -1230,7 +1249,7 @@ function buildSharedProfile(){
     name: myName,
     days: +S.days||null,
     hasPool: S.equip.includes('泳池'),
-    todayType: td?(td.isPrivateDay?'另有安排':td.isRest?'休息':td.workoutType):'—',
+    todayType: td?(td.isPrivateDay?'另有安排':td.isRest?'休息':typeof _shareType==='function'?_shareType(td.workoutType,_coachDayK(td)):'训练'):'—',   // 类型名过门控(coach.js _shareType)
     todayDone: td?!!isDone(td):false,
     swimCount: (typeof SWIM_LOG!=='undefined'&&SWIM_LOG.count)||0,
     cheer: (S.cheer&&S.cheer.date)?S.cheer:null,   // my latest cheer TO my partner(旧版只读这个键:对今天的最近一次回应)
@@ -1442,7 +1461,7 @@ function _ptLiveCore(){
   const mains=td.exercises.map((e,i)=>[e,i]).filter(([e])=>!_isBlockWarm(e)&&!_isBlockStretch(e)&&!gated.has(e.name));
   const t0=typeof wkStartAt==='function'?(+wkStartAt(T)||0):0, g=_ptWmOpen(T);
   const st=LOG.some(l=>l.date===T)?'done':(t0||g||Object.values(pd).some(Boolean))?'training':'idle';
-  const out={date:T,st,type:String(td.workoutType||'').slice(0,20),done:mains.filter(([,i])=>pd[i]).length,total:mains.length};
+  const out={date:T,st,type:String(typeof _shareType==='function'?_shareType(td.workoutType,_coachDayK(td)):'训练').slice(0,20),done:mains.filter(([,i])=>pd[i]).length,total:mains.length};
   if(t0) out.t0=t0;
   if(st==='training'){
     let i=-1,set=0,sets=0;
@@ -1628,12 +1647,19 @@ function ptLogRxHtml(date){
 // ── 对方文档到了 ──
 // 会频繁变的(实时进度、回应、今天勾了几个)不算「内容变了」:只变这些就原地换搭子卡,不整页重画
 function _ptSig(p){ if(!p) return ''; const {live,reacts,cheer,lastActive,todayDone,train,...rest}=p; return JSON.stringify([rest,train?{...train,today:null,at:null}:null]); }
+// 记住「读到过」:以后读不到了 = TA 不跟你配对了。自己的第一份云端快照到之前只记在内存:这时写盘会把本机弄脏,
+// 那份快照就会被当成「本机有没推上去的改动」跳过,接着本机的旧数据整键推上去(_onOwnSnap 收到后再调一次,那时才写)
+function _ptSeenSync(){
+  const pu=partnerUid(), pp=_partnerProfile; if(!pp||!pu) return;
+  const nm=String(pp.name||'').slice(0,20);
+  if(S.partnerSeen!==pu||(nm&&S.partnerName!==nm)){ S.partnerSeen=pu; if(nm) S.partnerName=nm; if(!_user||_cloudSeq>0) saveState(); }
+}
 function _ptOnSnap(prev,exists){
   const pu=partnerUid(), pp=_partnerProfile;
   _ptRead=exists?'ok':'missing';
   if(pp&&pu){
     const nm=String(pp.name||'').slice(0,20);
-    if(S.partnerSeen!==pu||(nm&&S.partnerName!==nm)){ S.partnerSeen=pu; if(nm) S.partnerName=nm; saveState(); }   // 记住「读到过」:以后读不到了 = TA 不跟你配对了
+    _ptSeenSync();
     _ptToastNew();
   }
   const m=document.getElementById('pt-pair-modal');

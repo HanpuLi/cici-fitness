@@ -910,7 +910,7 @@ SKIN_TPL.sport.coachMain = () => `<div class="co-card co-entry sp-co-vision" id=
   + `<div class="co-card sp-co-chat" id="co-chat">`
   + `<div class="sec-head sp-co-chat-h"><span class="sec-label">对话</span><button class="link-btn" onclick="coachNewChat()">新对话</button></div>`
   + `<div id="co-chat-log" class="co-chat-log" aria-live="polite"></div>`
-  + `<div class="co-foot">对话只存在这台手机上 · <span id="co-status" class="co-meta">连接中…</span></div></div>`;
+  + `<div class="co-foot">对话只存在这台手机上；你发的话和训练数据会经 Cait 的服务器交给 Claude（Anthropic 的 AI）处理 · <span id="co-status" class="co-meta">连接中…</span></div></div>`;
 // 对话气泡:我 = 右边墨底(深色 = 荧光绿底),教练 = 左边荧光绿小头像 + 白卡气泡;提议卡和花费跟在教练那条下面
 SKIN_TPL.sport.coachChat = ({ chat, streaming }) => {
   const av = `<span class="sp-co-av" aria-hidden="true">${SP.icon(SP.I.chat, 17)}</span>`;
