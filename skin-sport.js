@@ -93,6 +93,7 @@ function _spSetsPut(date, i, n) {
   if (i !== null) (d.s || (d.s = {}))[i] = n;
   _wkDaysSave(a);
   if (n > 0 || i === null) wkMarkStart(date);   // 第一组 / 第一个勾 = 开练
+  else wkClearIfEmpty(date);                    // 组数退回 0、别的也没做 = 没开练
 }
 function _spT0(date) { return wkStartAt(date); }
 function _spSetsDone(date, i, sets, done) { if (done) return sets; const d = _spSetsAll()[date]; return Math.min((d && d.s && d.s[i]) || 0, Math.max(0, sets - 1)); }
@@ -510,7 +511,7 @@ SKIN_TPL.sport.planSummary = ({ kv }) => {
     ['每周', `${S.days} 天 × ${S.dur} min · 组间${rest ? ` ${rest} s` : '不计时'}`],
     ['器械', (S.equip || []).join(' + ') || '无器材'],
     ['部位', focus.join(' · ')],
-    ['周期', S.cycleEnabled !== false ? `开 · 今天第 ${S.cycleDay || 1} 天` : '关']
+    ['经期记录', S.cycleEnabled !== false ? '开' : '关']
   ];
   if (typeof skinMasthead === 'function' && uiCurrentTab === 'plan') skinMasthead();   // 天数改了:刊头右边的「N 天 / 周」跟着变(设置一改这里就重画)
   return `<div class="plan-sum sp-psum"><div class="sp-psum-h"><span class="sp-psum-t">当前设置</span><span class="saved-dot" id="saved-dot" aria-hidden="true"></span></div>`
@@ -527,19 +528,6 @@ SKIN_TPL.sport.planSec = (text) => {
 
 // 03 Tecnogym 对照表的展开按钮:整行描边按钮 + 箭头(纸墨是「▸ / ▾」字)
 SKIN_TPL.sport.planTecnoBtn = (on) => `<button type="button" class="link-btn sp-tecno-btn" data-toggle="tecno" aria-expanded="${on}" aria-controls="tecno-table">Tecnogym 器械对照表${SP.icon(SP.I.chev, 18, 2.2)}</button>`;
-
-// 06 周期阶段:四段按天数分宽的周期条 + 三角标出今天 + 浅灰说明框(阶段划分和 core.js cyclePhase 同一套算法)
-SKIN_TPL.sport.planPhase = () => {
-  const day = S.cycleDay || 1, len = S.cycleLength || 28, p = cyclePhase(day, len);
-  const ovu = Math.max(8, len - 14);
-  const segs = [['menstrual', '月经', 1, 5], ['follicular', '卵泡', 6, ovu - 2], ['ovulation', '排卵', ovu - 1, ovu + 1], ['luteal', '黄体', ovu + 2, len]];
-  const nudge = p.key === 'menstrual' && !S.periodMode;
-  return `<div id="cycle-phase" class="sp-phase">`
-    + `<div class="sp-phase-bar" aria-hidden="true"><i class="sp-phase-mk" style="left:${((day - 0.5) / len * 100).toFixed(2)}%"></i>`
-    + segs.map(([k, l, a, b]) => `<span class="${k === p.key ? 'on' : ''}" style="flex-grow:${Math.max(1, b - a + 1)}">${l}</span>`).join('') + `</div>`
-    + `<div class="sp-phase-box"><b>${SP.esc(p.name)} · 第 ${day}/${len} 天</b><span class="hint">${SP.esc(p.advice)}</span>`
-    + (nudge ? `<button type="button" class="sp-phase-go" data-toggle="period">一键开经期模式</button>` : '') + `</div></div>`;
-};
 
 // 07 已排除:标题要「07」大号数字,可 #excluded-head 的字由 app.js renderExcludedList 整句改写 →
 // 那句留着给读屏(CSS 视觉隐藏),另画一个只给眼睛看的标题,条数用 CSS 计数器数 .ex-list-row(放在列表后面才数得到,CSS order 提到最上)

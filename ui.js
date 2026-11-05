@@ -277,8 +277,6 @@ function uiStep(group, dir) {
   switch (group) {
     case 'days': S.days = uiClamp((+S.days || 3) + dir, 2, 7); return _uiAfterSetting(true);
     case 'dur': S.dur = uiClamp((+S.dur || 60) + dir * 5, 20, 90); return _uiAfterSetting(true);
-    case 'cycleDay': { const len = S.cycleLength || 28; S.cycleDay = uiClamp((S.cycleDay || 1) + dir, 1, len); S.cycleSetAt = todayStr(); return _uiAfterSetting(false); }
-    case 'cycleLen': { S.cycleLength = uiClamp((S.cycleLength || 28) + dir, 20, 40); S.cycleDay = Math.min(S.cycleDay || 1, S.cycleLength); S.cycleSetAt = todayStr(); return _uiAfterSetting(false); }
     case 'wpQs': case 'wpQe': case 'wpMax': if (typeof wpStep === 'function') wpStep(group, dir); return;   // 「主动找你」安静时段 / 每天上限(push.js)
   }
 }
@@ -288,15 +286,19 @@ function uiToggleSetting(key) {
     case 'autoShift': S.autoShift = !(S.autoShift !== false); _uiAfterSetting(false); if (S.autoShift && typeof autoShiftCheck === 'function') autoShiftCheck(); return;   // 没练自动顺延
     case 'cycle': {
       S.cycleEnabled = !(S.cycleEnabled !== false);
-      let ch = false; if (!S.cycleEnabled && S.periodMode) { S.periodMode = false; ch = true; }
+      let ch = false; if (!S.cycleEnabled && S.periodMode) { periodSet(false); ch = true; }
       _uiAfterSetting(false);
       if (ch && S.plan) { _genStay = true; genPlan(true); }
       return;
     }
     case 'period':
-      S.periodMode = !S.periodMode;
+      periodSet(!S.periodMode);
       _uiAfterSetting(false);
-      if (S.plan) { _genStay = true; genPlan(true); }
+      if (S.plan) {
+        _genStay = true; genPlan(true);
+        // 今天已经开练的话 genPlan 不动今天(否则勾选会错挂到新动作上),要说清楚,不然看起来像没切换成功
+        if (Object.values(S.prog[todayStr()] || {}).some(Boolean) && typeof showToast === 'function') showToast('今天已经开练，今天的内容不变；明天起按新的安排');
+      } else if (typeof render === 'function') render();
       return;
     case 'sound': {
       const on = typeof _soundMuted === 'function' ? _soundMuted() : false;   // 原来是关 → 打开
@@ -500,22 +502,21 @@ function uiRenderP5() {
   uiUpdateLimitsHint();
 }
 function uiUpdateLimitsHint() { const h = document.getElementById('limits-hint'); if (h) h.textContent = uiLimitsHint(); }
-function _uiPhaseHtml() {
-  const day = S.cycleDay || 1, len = S.cycleLength || 28;
-  const p = cyclePhase(day, len);
-  const nudge = p.key === 'menstrual' && !S.periodMode;
-  return `<div id="cycle-phase" class="accent-rule"><span class="mono" style="font-size:13px">${uiEsc(p.name)} · 第 ${day}/${len} 天</span><span class="hint">${uiEsc(p.advice)}</span>${nudge ? `<button type="button" class="link-btn accent u" style="color:var(--accent)" data-toggle="period">一键开经期模式</button>` : ''}</div>`;
+function _uiPeriodNote() {
+  const md = d => d.slice(5).replace('-', '/').replace(/^0/, '').replace('/0', '/');
+  const open = periodOpen(), past = (S.periodLog || []).filter(e => e.to).slice(-3).reverse();
+  const bits = [];
+  if (open) bits.push(`经期第 ${periodDayN()} 天 · ${md(open.from)} 开始`);
+  if (past.length) bits.push('之前：' + past.map(e => `${md(e.from)}–${md(e.to)}`).join('、'));
+  return bits.length ? `<span class="foot-note" id="period-note">${uiEsc(bits.join('\n')).replace('\n', '<br>')}</span>` : '';
 }
 function uiRenderP6() {
   const el = document.getElementById('p6'); if (!el) return;
-  const on = S.cycleEnabled !== false, len = S.cycleLength || 28;
-  el.innerHTML = uiSecLabel('06 — 周期') + uiToggle('cycle', '生理期 / 周期功能', '没有生理周期可以关，下面的选项会收起', on, true, 'cycle-enable-switch')
+  const on = S.cycleEnabled !== false;
+  el.innerHTML = uiSecLabel('06 — 经期') + uiToggle('cycle', '经期记录', '没有月经可以关，下面的选项会收起', on, true, 'cycle-enable-switch')
     + `<div id="cycle-block" style="display:${on ? 'flex' : 'none'};flex-direction:column;gap:10px">`
-    + uiToggle('period', '经期模式', '游泳日换成陆地训练，力量日降负重、避开高腹压动作', !!S.periodMode, false, 'period-switch')
-    + uiStepper('cycleDay', '今天是', S.cycleDay || 1, `/ ${len} 天`, 1, len) + uiStepper('cycleLen', '周期长度', len, '天', 20, 40)
-    + `<button type="button" class="btn-line" onclick="cyclePeriodStart()">今天来月经了 · 周期归到第 1 天</button>`
-    + skinTpl('planPhase', null, () => _uiPhaseHtml())
-    + `<span class="foot-note">仅供参考，以身体感受为准；训练量仍会随每次打卡的 RPE 微调。</span></div>`;
+    + uiToggle('period', '现在是经期', '开着时游泳日换成陆地训练，力量日降负重、避开高腹压动作。结束了再关上', !!S.periodMode, false, 'period-switch')
+    + _uiPeriodNote() + `</div>`;
 }
 function uiRenderP7() {
   const el = document.getElementById('p7'); if (!el) return;
@@ -859,14 +860,13 @@ function uiRenderOobe() {
     body = `<span class="sub-label">器械 · 可多选</span>` + _uiEquipHtml('ob-')
       + (S.equip.includes('泳池') ? `<div style="display:flex;flex-direction:column;gap:8px;margin-top:6px"><span class="sub-label">游泳水平</span>${_uiSwimSegHtml('ob-')}<div class="note-line"><span class="faint">每周拆分 →</span> ${uiEsc(sw)}</div></div>` : '');
   } else if (s === 4) {
-    const on = S.cycleEnabled !== false, len = S.cycleLength || 28;
+    const on = S.cycleEnabled !== false;
     body = `<span class="sub-label">限制或注意 · 没有就空着</span><textarea id="ob-limits" class="line-area" rows="2" aria-label="身体情况" placeholder="例如：膝盖不适、肩伤、避免跳跃"></textarea>`
-      + uiToggle('cycle', '生理期 / 周期功能', '没有生理周期可以关，下面的选项会收起', on)
-      + (on ? uiStepper('cycleDay', '今天是', S.cycleDay || 1, `/ ${len} 天`, 1, len) : '');
+      + uiToggle('cycle', '经期记录', '没有月经可以关；开着的话，来了在今天页记一下就好', on);
   } else {
     const wl = { 初级: '轻', 中级: '中', 高级: '重' }[S.weightLevel || '初级'];
     const rows = [['目标', (S.goal || '').split('+').join(' + ')], ['部位', (S.focus || []).join(' · ')], ['强度', `难度${S.level} · 重量${wl}`],
-      ['每周', `${S.days} 天 × ${S.dur} min`], ['器械', (S.equip || []).join(' + ') || '无器材'], ['周期', S.cycleEnabled !== false ? `开 · 今天第 ${S.cycleDay || 1} 天` : '关']];
+      ['每周', `${S.days} 天 × ${S.dur} min`], ['器械', (S.equip || []).join(' + ') || '无器材'], ['经期记录', S.cycleEnabled !== false ? '开' : '关']];
     if ((S.limits || '').trim()) rows.push(['注意', S.limits.trim()]);
     body = skinTpl('oobe5', rows, () => `<div class="kv" style="font-size:14px;line-height:1.9">${rows.map(([k, v]) => `<span class="k">${k}</span><span>${uiEsc(v)}</span>`).join('')}</div>`
       + `<div style="border-top:1px solid var(--line);padding-top:12px;display:flex;flex-direction:column;gap:8px" class="hint">`

@@ -62,7 +62,7 @@ function updateThemeBtn(theme){
 
 // ══ State Persistence ════════════════════════════════════
 function saveState(){
-ls(K.settings,{goal:S.goal,level:S.level,days:S.days,dur:S.dur,equip:S.equip,focus:S.focus,limits:S.limits,volumeMultiplier:S.volumeMultiplier,restDur:S.restDur,swimLevel:S.swimLevel,weightLevel:S.weightLevel,periodMode:S.periodMode,displayName:S.displayName,sealChar:S.sealChar,cycleEnabled:S.cycleEnabled,cycleDay:S.cycleDay,cycleLength:S.cycleLength,cycleSetAt:S.cycleSetAt||null,vacuumDays:S.vacuumDays,partnerDays:S.partnerDays,partnerUid:S.partnerUid,autoVolumeAdjust:S.autoVolumeAdjust,userExcluded:S.userExcluded,userExcludeReasons:S.userExcludeReasons,cheer:S.cheer,reacts:S.reacts,partnerSeen:S.partnerSeen||null,partnerName:S.partnerName||null,aiWeights:S.aiWeights,planStale:!!S.planStale,skin:S.skin,push:S.push,partnerAlign:S.partnerAlign!==false,autoShift:S.autoShift,shiftFollowed:S.shiftFollowed,share:S.share});
+ls(K.settings,{goal:S.goal,level:S.level,days:S.days,dur:S.dur,equip:S.equip,focus:S.focus,limits:S.limits,volumeMultiplier:S.volumeMultiplier,restDur:S.restDur,swimLevel:S.swimLevel,weightLevel:S.weightLevel,periodMode:S.periodMode,displayName:S.displayName,sealChar:S.sealChar,cycleEnabled:S.cycleEnabled,periodLog:S.periodLog,vacuumDays:S.vacuumDays,partnerDays:S.partnerDays,partnerUid:S.partnerUid,autoVolumeAdjust:S.autoVolumeAdjust,userExcluded:S.userExcluded,userExcludeReasons:S.userExcludeReasons,cheer:S.cheer,reacts:S.reacts,partnerSeen:S.partnerSeen||null,partnerName:S.partnerName||null,aiWeights:S.aiWeights,planStale:!!S.planStale,skin:S.skin,push:S.push,partnerAlign:S.partnerAlign!==false,autoShift:S.autoShift,shiftFollowed:S.shiftFollowed,share:S.share});
 if(S.plan)ls(K.plan,{plan:S.plan,prog:S.prog,adj:S.adj,weights:S.weights,exRpe:S.exRpe,poolLounger:S.poolLounger,flexProg:S.flexProg,unlockedDates:S.unlockedDates});
 localStorage.setItem(nsKey('fit_selDate'), S.selDate || '');
 if(typeof wpStateDirty==='function')wpStateDirty(); // 开了「主动找你」:节流上传快照(push.js)
@@ -70,6 +70,8 @@ if(typeof wpStateDirty==='function')wpStateDirty(); // 开了「主动找你」:
 function loadState(){
 const s=lg(K.settings);
 if(s)Object.assign(S,s);
+if(s){delete S.cycleDay;delete S.cycleLength;delete S.cycleSetAt;}   // 旧的周期推算字段,不再使用
+periodNormalize();
 // 风格(skin.js):有存档但没这个字段 = 老用户,一直在用纸墨,别偷偷换;没有存档(新用户)就沿用开机脚本定的
 if(s)S.skin=(s.skin==='sport'||s.skin==='paper')?s.skin:'paper';
 if(S.skin&&typeof skinApply==='function')skinApply(S.skin);
@@ -2058,7 +2060,6 @@ const reason=S.userExcludeReasons&&S.userExcludeReasons[name]?S.userExcludeReaso
 return `<div class="ex-list-row"><span><span class="n">${_escHtml(name)}</span><span class="why">${_escHtml(reason)}</span></span><button type="button" class="btn-line" data-act="restore" data-name="${_escHtml(name)}" aria-label="恢复 ${_escHtml(name)}">恢复</button></div>`;
 }).join('');
 };
-window.cyclePeriodStart=function(){S.cycleDay=1;S.cycleSetAt=todayStr();saveState();applySettingsToUI();flashSaved();if(typeof showToast==='function')showToast('已记录：周期第 1 天');};
 
 // ══ Share Card Generator ════════════════════════════════
 let _currentShareImgUrl = null;

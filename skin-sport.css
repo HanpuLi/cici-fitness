@@ -747,16 +747,6 @@ html[data-skin="sport"] #limits { min-height: 84px; padding: 10px 12px; border-r
 html[data-skin="sport"] #limits-hint { font-size: 14px; line-height: 1.6; color: var(--muted); }
 
 /* 06 周期:整行描边按钮;周期条四段 + 三角;阶段说明浅灰框 */
-html[data-skin="sport"] #cycle-block > .btn-line { min-height: 48px; border: 1.5px solid var(--ink); border-radius: 14px; font-size: 15px; font-weight: 700; color: var(--ink); }
-html[data-skin="sport"] .sp-phase { display: flex; flex-direction: column; gap: 10px; }
-html[data-skin="sport"] .sp-phase-bar { position: relative; display: flex; gap: 3px; padding-top: 10px; }
-html[data-skin="sport"] .sp-phase-bar > span { flex: 1 1 0; min-width: 28px; height: 30px; border-radius: 8px; background: var(--sp-track); color: var(--muted); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; overflow: hidden; white-space: nowrap; }
-html[data-skin="sport"] .sp-phase-bar > span.on { background: var(--sp-on); color: var(--sp-on-fg); }
-html[data-skin="sport"] .sp-phase-mk { position: absolute; top: 0; width: 0; height: 0; margin-left: -6px; border-left: 6px solid transparent; border-right: 6px solid transparent; border-top: 8px solid var(--ink); }
-html[data-skin="sport"] .sp-phase-box { padding: 12px; border-radius: 14px; background: var(--sp-soft); display: flex; flex-direction: column; gap: 4px; }
-html[data-skin="sport"] .sp-phase-box > b { font-weight: 700; font-size: 15px; }
-html[data-skin="sport"] .sp-phase-box > .hint { line-height: 1.6; color: var(--muted); }
-html[data-skin="sport"] .sp-phase-go { align-self: flex-start; margin-top: 4px; min-height: 44px; padding: 0 16px; border: 0; border-radius: 999px; background: var(--sp-on); color: var(--sp-on-fg); font-family: var(--sp-sans); font-size: 14px; font-weight: 700; }
 
 /* 07 已排除:读屏用的整句标题视觉隐藏,换成大号编号标题(条数 = .ex-list-row 计数) */
 html[data-skin="sport"] #p7 { counter-reset: sp-ex; gap: 8px; }
@@ -1645,3 +1635,4 @@ html[data-skin="sport"] #pt-pair-modal .pair-code { font-family: var(--sp-num); 
 /* —— 60 弹窗内容 · 写在这行上面 —— */
 
 /* ══ 99 结束 ══════════════════════════════════════════════════════════ */
+html[data-skin="sport"] .period-mark .link-btn { font-family: var(--sp-sans); }

@@ -173,7 +173,7 @@ function buildCoachContext(opts = {}) {
       limits: S.limits || '无', volumeMultiplier: S.volumeMultiplier || 1, restSec: S.restDur,
       scheme: sch ? { sets: sch.sets[S.level], reps: sch.reps[S.level], restSec: sch.rest } : null,
       ...(S.equip.includes('泳池') ? { swimLevel: S.swimLevel } : {}),
-      ...(S.cycleEnabled && S.periodMode ? { periodMode: true } : {}),
+      ...(S.cycleEnabled !== false && S.periodMode ? { periodMode: true } : {}),
     },
     userExcluded: (S.userExcluded || []).filter(okEx).map(n => n + (S.userExcludeReasons?.[n] ? `(${S.userExcludeReasons[n]})` : '')),
     recentLogs: logs.filter(l => l.date >= from).map(l => _coachLogItem(l, okEx, true, !hide, share)).filter(Boolean),
@@ -200,11 +200,10 @@ function buildCoachContext(opts = {}) {
     if (sh.length) ctx.autoShifted = sh;
   }
   if (opts.catalog) ctx.catalog = _coachCatalog(opts.catalog === 'full', gated);
-  // 开了周期功能、而且自己设过第几天:当前周期阶段(「计划 → 06」里手动设的,不会自动往后数;setOn = 最后一次设的日子)。
-  // 周期功能默认是开的、默认第 1 天:从没设过的人不发,免得 AI 对没设过(或没有周期)的人说「今天经期第一天」
-  if (S.cycleEnabled !== false && S.cycleSetAt && typeof cyclePhase === 'function') {
-    const day = +S.cycleDay || 1, length = +S.cycleLength || 28;
-    ctx.cycle = { phase: cyclePhase(day, length).name, day, length, setOn: S.cycleSetAt };
+  // 经期:只给她自己记的(现在是不是经期、这段第几天、之前几段的起止日),不推算阶段。没记过的人不发。
+  if (S.cycleEnabled !== false && (S.periodLog || []).length) {
+    const open = periodOpen();
+    ctx.period = { on: !!open, ...(open ? { since: open.from, day: periodDayN() } : {}), past: S.periodLog.filter(e => e.to).slice(-3).map(e => ({ from: e.from, to: e.to })) };
   }
   if (opts.partner !== false) { const p = _coachPartner(); if (p) ctx.partner = p }
   return ctx;

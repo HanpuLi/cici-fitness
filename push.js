@@ -271,6 +271,7 @@ function _wpMark() {
   const started = !!t0 || Object.values(prog).some(Boolean) || LOG.some(l => l.date === today);
   const done = typeof isDone === 'function' && isDone(td);
   let ch = false;
+  if (!started && !done && m.startedAt) { delete m.startedAt; ch = true; }   // 勾了又取消:今天还没开练
   if (started && t0) { const t = new Date(t0), hm = String(t.getHours()).padStart(2, '0') + ':' + String(t.getMinutes()).padStart(2, '0'); if (m.startedAt !== hm) { m.startedAt = hm; ch = true; } }
   else if ((started || done) && !m.startedAt) { m.startedAt = _wpNowHM(); ch = true; }
   if (done && !m.doneAt) { m.doneAt = new Date().toISOString(); ch = true; }
@@ -344,9 +345,9 @@ async function wpUpload(force) {
   try {
     // 快照只要自己的、不会过时的部分:不带 live(今天做到第几组、感受、计时——节流上传一会儿就旧了,推送也不看)、
     // 不带 partner(搭子的数据由搭子自己开了推送才上传;不能借我的上传把没同意的人的数据存到服务器上)、
-    // 去掉身体数据和周期(推送用不到,锁屏上也不该出现,少存一样是一样)
+    // 去掉身体数据和经期记录(推送用不到,锁屏上也不该出现,少存一样是一样)
     const context = buildCoachContext({ live: false, partner: false, share: true });   // share:推送文字上锁屏,owner 的私密内容也不带
-    delete context.body; delete context.cycle;
+    delete context.body; delete context.period;
     await _coachFetch('/api/state', {
       context, facts, prefs: wpPrefs(), tz: _wpTz(),
       partner: (typeof partnerUid === 'function' && partnerUid()) || null,

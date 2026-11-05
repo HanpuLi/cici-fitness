@@ -1,7 +1,7 @@
 // ══ System Version ═════════════════════════════════════════
 const APP_VERSION = 'v3.1.0';
-const APP_BUILD = 163;               // = sw.js 的 CACHE 编号 = index.html 页脚 build(check-static 会查,三处一起改)
-const APP_BUILD_DATE = '2026-10-29';
+const APP_BUILD = 164;               // = sw.js 的 CACHE 编号 = index.html 页脚 build(check-static 会查,三处一起改)
+const APP_BUILD_DATE = '2026-11-05';
 window.APP_VERSION = APP_VERSION;
 window.APP_BUILD = APP_BUILD;
 window.APP_BUILD_DATE = APP_BUILD_DATE;
@@ -88,7 +88,7 @@ function restoreSnapshot(idx) {
 }
 
 // ══ State ════════════════════════════════════════════════
-const S = { goal: '女性薄肌', level: '初级', days: 3, dur: 60, equip: ['健身房全套'], focus: ['均衡全身'], limits: '', plan: null, selDate: null, prog: {}, adj: {}, weights: {}, exRpe: {}, poolLounger: {}, flexProg: {}, volumeMultiplier: 1.0, restDur: 45, swimLevel: '入门', weightLevel: '初级', periodMode: false, cycleEnabled: true, cycleDay: 1, cycleLength: 28, vacuumDays: [], autoVolumeAdjust: true };
+const S = { goal: '女性薄肌', level: '初级', days: 3, dur: 60, equip: ['健身房全套'], focus: ['均衡全身'], limits: '', plan: null, selDate: null, prog: {}, adj: {}, weights: {}, exRpe: {}, poolLounger: {}, flexProg: {}, volumeMultiplier: 1.0, restDur: 45, swimLevel: '入门', weightLevel: '初级', periodMode: false, cycleEnabled: true, periodLog: [], vacuumDays: [], autoVolumeAdjust: true };
 let LOG = lg(K.log) || [];
 let W_HIST = lg(K.wh) || {};
 let PR_LIST = lg(K.pr) || []; // {date,exercise,weight,prev}
@@ -1257,18 +1257,31 @@ function applyGoalToggle(goal) {
   // (徒手动作本来对所有人开放,臀中肌的徒手动作不需要额外勾器材)
   if (!Array.isArray(S.equip) || !S.equip.length) S.equip = ['无器材'];
 }
-// Menstrual-cycle phase from a user-set "current day" (manual slider — a PWA can't read iOS
-// Health). Returns a phase label + gentle training note. Suggestion only; actual training load
-// still auto-tunes from each check-in's RPE, so a wrong guess self-corrects.
-function cyclePhase(day, length) {
-  length = +length || 28; day = +day || 1;
-  const periodLen = 5;
-  const ovu = Math.max(periodLen + 3, length - 14); // 排卵 ≈ 下次月经前 14 天
-  if (day <= periodLen) return { key: 'menstrual', name: '月经期', advice: '建议开「经期模式」(降负重、避高腹压)。能轻动就轻动缓解不适，痛就休息，别硬上。' };
-  if (day < ovu - 1) return { key: 'follicular', name: '卵泡期', advice: '状态通常最好——可冲强度、加重量，臀腿大动作/破纪录的好窗口。' };
-  if (day <= ovu + 1) return { key: 'ovulation', name: '排卵期', advice: '力量峰值，适合上大重量；充分热身、注意关节稳定。' };
-  return { key: 'luteal', name: '黄体期', advice: day > length - 4 ? '经前段：减量、重恢复、睡好；想多吃属正常，优先蛋白。' : '维持训练量即可，临近经前再逐步减量。' };
+// 经期:只记她说的「现在是不是经期」,不推算周期、不预测下次,也不假定持续几天。
+// S.periodMode 决定排计划;每一段的起止日记在 S.periodLog([{from, to}],to 为空 = 还没结束),给「第几天」、历史和 AI 用。
+function periodOpen() { const L = S.periodLog, e = Array.isArray(L) && L[L.length - 1]; return e && !e.to ? e : null; }
+function periodNormalize() {   // 老存档、dev 控制台直接改 S.periodMode 时,把记录补齐到和开关一致
+  if (!Array.isArray(S.periodLog)) S.periodLog = [];
+  const open = periodOpen();
+  if (S.periodMode && !open) S.periodLog.push({ from: todayStr(), to: null });
+  else if (!S.periodMode && open) open.to = todayStr();
 }
+function periodSet(on) {
+  on = !!on;
+  periodNormalize();
+  if (on === !!S.periodMode) return;
+  S.periodMode = on;
+  const today = todayStr(), L = S.periodLog, last = L[L.length - 1];
+  if (on) {
+    if (last && last.to === today) last.to = null;   // 同一天关了又开 = 没结束
+    else L.push({ from: today, to: null });
+  } else if (last && !last.to) {
+    if (last.from === today) L.pop();                // 当天开了又关 = 点错了,不留记录
+    else last.to = today;
+  }
+  if (L.length > 36) L.splice(0, L.length - 36);
+}
+function periodDayN() { const e = periodOpen(); return e ? Math.round((new Date(todayStr() + 'T12:00:00') - new Date(e.from + 'T12:00:00')) / 864e5) + 1 : 0; }
 const SWIM_TIPS = {
   '入门': '蛙泳腿口诀：收翻蹬夹。每次蹬腿后享受2-3秒滑行，不要急着做下一个动作。扶池边是你最好的练习伙伴。',
   '进阶': '好的蛙泳70%时间在滑行。关注节奏而非速度，累了就加长滑行而不是加快频率。',
@@ -2773,10 +2786,17 @@ function stepWeight(date, i, dir) {
   setWeight(date, i, next);
   render();
 }
+// 今天页顶上记经期:经期中一行状态 + 结束了;没在经期时一个不抢眼的入口(owner 没有经期,不显示入口)
+function _periodTodayHtml() {
+  if (S.cycleEnabled === false) return '';
+  if (S.periodMode) return `<div class="notice period-line" role="status"><span>经期第 ${periodDayN() || 1} 天</span><button type="button" class="link-btn u" data-toggle="period">结束了</button></div>`;
+  return _ownerSession() ? '' : `<div class="period-mark"><button type="button" class="link-btn" data-toggle="period">今天来月经了</button></div>`;
+}
 function _todayNotices(sel, today) {
   let h = '';
   if (S.planStale) h += `<div class="stale-bar"><span>训练设置改过了，计划还是按旧设置排的</span><button class="regen-btn" onclick="applyStaleSettings()">按新设置重排</button></div>`;
   h += autoShiftNoticeHtml(today);   // 没练自动顺延:最近一次的提示 + 撤销
+  if (!sel || sel.date === today) h += _periodTodayHtml();
   if (typeof _todayNotice !== 'undefined' && _todayNotice) h += `<div class="notice" role="status"><span>${_escHtml(_todayNotice)}</span><button class="link-btn" onclick="uiNotice('')">知道了</button></div>`;
   if (sel && sel.date !== today) h += `<div class="notice"><span>正在看 ${fmtDate(sel.date)} ${sel.date.slice(5).replace('-', '/')}</span><button class="link-btn u" onclick="calGoToday()">回到今天</button></div>`;
   const isIos = /iphone|ipad|ipod/.test((navigator.userAgent || '').toLowerCase()) || (/macintosh/i.test(navigator.userAgent || '') && navigator.maxTouchPoints > 1);   // iPadOS 的 UA 写的是 Macintosh
@@ -2873,6 +2893,7 @@ function togBlock(date, kind) {
   if (!S.prog[date]) S.prog[date] = {};
   const allDone = idx.every(i => S.prog[date][i]);
   idx.forEach(i => { S.prog[date][i] = !allDone; });
+  if (allDone) wkClearIfEmpty(date);
   if (!allDone) {
     wkMarkStart(date);
     playExerciseDoneSound();
@@ -3566,6 +3587,19 @@ function wkMarkStart(date) {
   d.t0 = Date.now();
   _wkDaysSave(a);
 }
+// 这天还有没有真的进度:打过卡、勾着动作、做过组。开练时刻 t0 本身不算。
+function wkHasWork(date) {
+  if (LOG.some(l => l.date === date)) return true;
+  if (Object.values(S.prog[date] || {}).some(Boolean)) return true;
+  const w = _wkDays()[date];
+  return !!(w && Object.values(w.s || {}).some(n => n > 0));
+}
+// 进度全撤掉了:开练时刻作废。否则勾了又取消也会被自动顺延、推送、搭子卡当成今天练过。
+function wkClearIfEmpty(date) {
+  if (wkHasWork(date)) return;
+  const a = _wkDays(), d = a[date];
+  if (d && d.t0) { delete d.t0; _wkDaysSave(a); }
+}
 // 实际用时(分钟,至少 1);没有开练时间、或长得不像一次训练就是 null
 function wkElapsedMin(date, at) {
   const t0 = wkStartAt(date); if (!t0) return null;
@@ -3870,7 +3904,7 @@ function tog(date, ei) {
       const m = _xPick('tog_toast');
       if (m) showToast(m, 2500);
     }
-  }
+  } else wkClearIfEmpty(date);
 
   saveState(); render();
 
@@ -5190,6 +5224,7 @@ function startGuided(date) {
   else renderGuided();
 }
 function wmClose() {
+    if (_wmDate && _wmSet <= 1) wkClearIfEmpty(_wmDate);   // 打开引导又关掉、一组都没做 = 没开练
     _wmStopCd(); _wmSide = 0;
     const m = document.getElementById('workout-modal');
     if (m) m.classList.remove('open');

@@ -1252,3 +1252,5 @@ body.has-composer:has(#composer:focus-within) #composer { bottom: env(safe-area-
 .pt-code-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: center; }
 .pt-code-row .pair-code { overflow-wrap: anywhere; }
 .pt-warn { color: var(--accent); }
+.period-mark { display: flex; justify-content: flex-end; margin: 2px 0 6px; font-size: 13px; color: var(--muted); }
+.period-mark .link-btn { min-height: 44px; color: var(--muted); }
