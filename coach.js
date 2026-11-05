@@ -200,11 +200,6 @@ function buildCoachContext(opts = {}) {
     if (sh.length) ctx.autoShifted = sh;
   }
   if (opts.catalog) ctx.catalog = _coachCatalog(opts.catalog === 'full', gated);
-  // 经期:只给她自己记的(现在是不是经期、这段第几天、之前几段的起止日),不推算阶段。没记过的人不发。
-  if (S.cycleEnabled !== false && (S.periodLog || []).length) {
-    const open = periodOpen();
-    ctx.period = { on: !!open, ...(open ? { since: open.from, day: periodDayN() } : {}), past: S.periodLog.filter(e => e.to).slice(-3).map(e => ({ from: e.from, to: e.to })) };
-  }
   if (opts.partner !== false) { const p = _coachPartner(); if (p) ctx.partner = p }
   return ctx;
 }

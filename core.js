@@ -1,6 +1,6 @@
 // ══ System Version ═════════════════════════════════════════
 const APP_VERSION = 'v3.1.0';
-const APP_BUILD = 164;               // = sw.js 的 CACHE 编号 = index.html 页脚 build(check-static 会查,三处一起改)
+const APP_BUILD = 165;               // = sw.js 的 CACHE 编号 = index.html 页脚 build(check-static 会查,三处一起改)
 const APP_BUILD_DATE = '2026-11-05';
 window.APP_VERSION = APP_VERSION;
 window.APP_BUILD = APP_BUILD;
@@ -88,7 +88,7 @@ function restoreSnapshot(idx) {
 }
 
 // ══ State ════════════════════════════════════════════════
-const S = { goal: '女性薄肌', level: '初级', days: 3, dur: 60, equip: ['健身房全套'], focus: ['均衡全身'], limits: '', plan: null, selDate: null, prog: {}, adj: {}, weights: {}, exRpe: {}, poolLounger: {}, flexProg: {}, volumeMultiplier: 1.0, restDur: 45, swimLevel: '入门', weightLevel: '初级', periodMode: false, cycleEnabled: true, periodLog: [], vacuumDays: [], autoVolumeAdjust: true };
+const S = { goal: '女性薄肌', level: '初级', days: 3, dur: 60, equip: ['健身房全套'], focus: ['均衡全身'], limits: '', plan: null, selDate: null, prog: {}, adj: {}, weights: {}, exRpe: {}, poolLounger: {}, flexProg: {}, volumeMultiplier: 1.0, restDur: 45, swimLevel: '入门', weightLevel: '初级', periodMode: false, cycleEnabled: true, vacuumDays: [], autoVolumeAdjust: true };
 let LOG = lg(K.log) || [];
 let W_HIST = lg(K.wh) || {};
 let PR_LIST = lg(K.pr) || []; // {date,exercise,weight,prev}
@@ -1257,31 +1257,7 @@ function applyGoalToggle(goal) {
   // (徒手动作本来对所有人开放,臀中肌的徒手动作不需要额外勾器材)
   if (!Array.isArray(S.equip) || !S.equip.length) S.equip = ['无器材'];
 }
-// 经期:只记她说的「现在是不是经期」,不推算周期、不预测下次,也不假定持续几天。
-// S.periodMode 决定排计划;每一段的起止日记在 S.periodLog([{from, to}],to 为空 = 还没结束),给「第几天」、历史和 AI 用。
-function periodOpen() { const L = S.periodLog, e = Array.isArray(L) && L[L.length - 1]; return e && !e.to ? e : null; }
-function periodNormalize() {   // 老存档、dev 控制台直接改 S.periodMode 时,把记录补齐到和开关一致
-  if (!Array.isArray(S.periodLog)) S.periodLog = [];
-  const open = periodOpen();
-  if (S.periodMode && !open) S.periodLog.push({ from: todayStr(), to: null });
-  else if (!S.periodMode && open) open.to = todayStr();
-}
-function periodSet(on) {
-  on = !!on;
-  periodNormalize();
-  if (on === !!S.periodMode) return;
-  S.periodMode = on;
-  const today = todayStr(), L = S.periodLog, last = L[L.length - 1];
-  if (on) {
-    if (last && last.to === today) last.to = null;   // 同一天关了又开 = 没结束
-    else L.push({ from: today, to: null });
-  } else if (last && !last.to) {
-    if (last.from === today) L.pop();                // 当天开了又关 = 点错了,不留记录
-    else last.to = today;
-  }
-  if (L.length > 36) L.splice(0, L.length - 36);
-}
-function periodDayN() { const e = periodOpen(); return e ? Math.round((new Date(todayStr() + 'T12:00:00') - new Date(e.from + 'T12:00:00')) / 864e5) + 1 : 0; }
+// 经期:只有 S.periodMode 一个开关,她自己开、自己关。不记起止日、不算第几天、不推算周期、不预测。
 const SWIM_TIPS = {
   '入门': '蛙泳腿口诀：收翻蹬夹。每次蹬腿后享受2-3秒滑行，不要急着做下一个动作。扶池边是你最好的练习伙伴。',
   '进阶': '好的蛙泳70%时间在滑行。关注节奏而非速度，累了就加长滑行而不是加快频率。',
@@ -2789,7 +2765,7 @@ function stepWeight(date, i, dir) {
 // 今天页顶上记经期:经期中一行状态 + 结束了;没在经期时一个不抢眼的入口(owner 没有经期,不显示入口)
 function _periodTodayHtml() {
   if (S.cycleEnabled === false) return '';
-  if (S.periodMode) return `<div class="notice period-line" role="status"><span>经期第 ${periodDayN() || 1} 天</span><button type="button" class="link-btn u" data-toggle="period">结束了</button></div>`;
+  if (S.periodMode) return `<div class="notice period-line" role="status"><span>经期中</span><button type="button" class="link-btn u" data-toggle="period">结束了</button></div>`;
   return _ownerSession() ? '' : `<div class="period-mark"><button type="button" class="link-btn" data-toggle="period">今天来月经了</button></div>`;
 }
 function _todayNotices(sel, today) {

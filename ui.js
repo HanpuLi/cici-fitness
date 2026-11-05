@@ -286,13 +286,13 @@ function uiToggleSetting(key) {
     case 'autoShift': S.autoShift = !(S.autoShift !== false); _uiAfterSetting(false); if (S.autoShift && typeof autoShiftCheck === 'function') autoShiftCheck(); return;   // 没练自动顺延
     case 'cycle': {
       S.cycleEnabled = !(S.cycleEnabled !== false);
-      let ch = false; if (!S.cycleEnabled && S.periodMode) { periodSet(false); ch = true; }
+      let ch = false; if (!S.cycleEnabled && S.periodMode) { S.periodMode = false; ch = true; }
       _uiAfterSetting(false);
       if (ch && S.plan) { _genStay = true; genPlan(true); }
       return;
     }
     case 'period':
-      periodSet(!S.periodMode);
+      S.periodMode = !S.periodMode;
       _uiAfterSetting(false);
       if (S.plan) {
         _genStay = true; genPlan(true);
@@ -502,21 +502,13 @@ function uiRenderP5() {
   uiUpdateLimitsHint();
 }
 function uiUpdateLimitsHint() { const h = document.getElementById('limits-hint'); if (h) h.textContent = uiLimitsHint(); }
-function _uiPeriodNote() {
-  const md = d => d.slice(5).replace('-', '/').replace(/^0/, '').replace('/0', '/');
-  const open = periodOpen(), past = (S.periodLog || []).filter(e => e.to).slice(-3).reverse();
-  const bits = [];
-  if (open) bits.push(`经期第 ${periodDayN()} 天 · ${md(open.from)} 开始`);
-  if (past.length) bits.push('之前：' + past.map(e => `${md(e.from)}–${md(e.to)}`).join('、'));
-  return bits.length ? `<span class="foot-note" id="period-note">${uiEsc(bits.join('\n')).replace('\n', '<br>')}</span>` : '';
-}
 function uiRenderP6() {
   const el = document.getElementById('p6'); if (!el) return;
   const on = S.cycleEnabled !== false;
   el.innerHTML = uiSecLabel('06 — 经期') + uiToggle('cycle', '经期记录', '没有月经可以关，下面的选项会收起', on, true, 'cycle-enable-switch')
     + `<div id="cycle-block" style="display:${on ? 'flex' : 'none'};flex-direction:column;gap:10px">`
     + uiToggle('period', '现在是经期', '开着时游泳日换成陆地训练，力量日降负重、避开高腹压动作。结束了再关上', !!S.periodMode, false, 'period-switch')
-    + _uiPeriodNote() + `</div>`;
+    + `</div>`;
 }
 function uiRenderP7() {
   const el = document.getElementById('p7'); if (!el) return;
