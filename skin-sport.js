@@ -1196,7 +1196,6 @@ SKIN_TPL.sport.exActions = (c) => c.byName
 SKIN_TPL.sport.exMuscles = ({ muscles, dispName }) => `<div class="sp-ex-mus">${muscles.map(m => `<span class="jchip">${m}</span>`).join('')}</div>`
   + (typeof renderMuscleDiagram === 'function' ? `<div class="sp-ex-diag">${renderMuscleDiagram(muscles, dispName)}</div>` : '');
 // 肌肉图下面的发力要领:方括号小标签换成小牌
-SKIN_TPL.sport.exPose = (P) => `<p class="sec-label">${P[0]}</p><div class="ex-tip sp-ex-pose"><span class="sp-ex-tag">${P[1]}</span>${P[2]}</div>`;
 // 示范(动图 + 四个站外搜索)+ 力量数据(预计 1RM 大字 + 5 / 10 / 15 次三块)
 SKIN_TPL.sport.exStrength = ({ name, gif, e1rm, dq }) => {
   const jump = (href, label, title) => `<a href="${href}" target="_blank" rel="noopener" title="${title}">${label}</a>`;

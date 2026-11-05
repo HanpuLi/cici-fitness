@@ -1490,7 +1490,7 @@ function pushProfile(){
     const p=buildSharedProfile(), key=_user.uid+'|'+JSON.stringify(p);
     if(key===_profileLast) return;
     _db.collection('users').doc(_user.uid).collection('shared').doc('profile')
-       .set(p).then(()=>{_profileLast=key;}).catch(e=>console.warn('profile push failed:',e));
+       .set(p).then(()=>{_profileLast=key;}).catch(e=>{ console.warn('profile push failed:',e); clearTimeout(_profilePushTimer); _profilePushTimer=setTimeout(pushProfile,5000); });
   }catch(e){ console.warn('profile push error:',e); }
 }
 function scheduleProfilePush(){
@@ -1498,14 +1498,22 @@ function scheduleProfilePush(){
   clearTimeout(_profilePushTimer);
   _profilePushTimer=setTimeout(pushProfile,1500);
 }
-function subscribePartner(retry){
-  if(_partnerUnsub){ _partnerUnsub(); _partnerUnsub=null; }
-  clearTimeout(_partnerRetry);
-  _partnerProfile=null;
+// 切后台 / 锁屏时定时器会被冻住:排着的搭子进度(1.5–8 秒节流)当场推出去,否则要等下次打开 app
+function flushPartnerPush(){
+  if(!_db||!_user) return;
+  const live=!!_ptLiveTimer, prof=!!_profilePushTimer;
+  clearTimeout(_ptLiveTimer); _ptLiveTimer=null; clearTimeout(_profilePushTimer); _profilePushTimer=null;
+  if(live) _ptLivePushAt=Date.now();
+  let stale=false; try{ stale=!!partnerUid()&&JSON.stringify(_ptLiveCore())!==_ptLiveSig; }catch(e){}
+  if(live||prof||stale) pushProfile();
+}
+// 切回前台:监听可能还没重连,主动从服务器读一次搭子文档(onSnapshot 重连后也会照常到)
+function refreshPartnerNow(){
   const pu=partnerUid();
-  if(!(retry&&_ptRead==='denied')) _ptRead=pu&&_db&&_user?'loading':'idle';   // 15 秒一次的重试不把状态改回「正在连接」(免得状态行来回闪)
-  if(!_db||!_user||!pu){ if(typeof updatePairUI==='function')updatePairUI(); if(typeof render==='function')render(); return; }
-  _partnerUnsub=_db.collection('users').doc(pu).collection('shared').doc('profile').onSnapshot(doc=>{
+  if(!_db||!_user||!pu||!_partnerUnsub) return;
+  _db.collection('users').doc(pu).collection('shared').doc('profile').get({source:'server'}).then(_ptApplyDoc).catch(e=>console.warn('partner refresh:',e.code||e.message));
+}
+function _ptApplyDoc(doc){
     const prev=_partnerProfile;
     _partnerProfile=doc.exists?doc.data():null;
     _ptOnSnap(prev,doc.exists);
@@ -1514,7 +1522,19 @@ function subscribePartner(retry){
     if(typeof updatePairUI==='function')updatePairUI();
     // 只是实时进度 / 回应变了(对方每做完一组都会推一次):原地换搭子卡,不整页重画(免得打断正在输入的重量)
     if(_ptSig(prev)!==_ptSig(_partnerProfile)){ if(typeof render==='function')render(); } else ptRefresh();
-  },e=>{
+}
+if(typeof document!=='undefined'){
+  document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='hidden') flushPartnerPush(); else refreshPartnerNow(); });
+  window.addEventListener('pagehide',flushPartnerPush);
+}
+function subscribePartner(retry){
+  if(_partnerUnsub){ _partnerUnsub(); _partnerUnsub=null; }
+  clearTimeout(_partnerRetry);
+  _partnerProfile=null;
+  const pu=partnerUid();
+  if(!(retry&&_ptRead==='denied')) _ptRead=pu&&_db&&_user?'loading':'idle';   // 15 秒一次的重试不把状态改回「正在连接」(免得状态行来回闪)
+  if(!_db||!_user||!pu){ if(typeof updatePairUI==='function')updatePairUI(); if(typeof render==='function')render(); return; }
+  _partnerUnsub=_db.collection('users').doc(pu).collection('shared').doc('profile').onSnapshot(_ptApplyDoc,e=>{
     // permission-denied = partner hasn't added me to their allowedReaders yet.
     // Firestore terminates a denied listener and won't auto-resume once access is
     // granted, so retry periodically until both sides have paired.
