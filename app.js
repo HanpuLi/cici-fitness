@@ -534,12 +534,6 @@ if(force===true||confirm('警告：确定要清空所有计划、打卡记录和
 }
 
 // ══ Body metrics (体重/围度 — 体型进度, 腰臀比 WHR) ════════
-function logVacuum(){
-  const t=todayStr(); if(!S.vacuumDays)S.vacuumDays=[];
-  if(S.vacuumDays.includes(t)){if(typeof showToast==='function')showToast('今天已打卡');return;}
-  S.vacuumDays.push(t); if(S.vacuumDays.length>400)S.vacuumDays=S.vacuumDays.slice(-400);
-  saveState(); if(typeof showToast==='function')showToast('真空吸已打卡'); if(typeof renderStats==='function')renderStats();
-}
 // ══ 围度字段(2026-08-27 扩到 10 项) ═════════════════════
 // core:true 的 4 项常显,其余收在"更多围度"里。better = 往哪个方向走算好。
 // 量法写在 tip 里 —— 每次量的位置不一样,数字就是噪声。
@@ -633,8 +627,7 @@ function renderBodyPanel(){
     return `<div style="display:flex;flex-direction:column;gap:4px"><div class="note-line" style="display:flex;justify-content:space-between"><span>${L(f.k)}</span><span style="color:${col}">${delta>0?'+':''}${delta}${f.u} · 现 ${last}${f.u}</span></div><div class="spark">${pts.slice(-14).map(p=>`<i style="height:${(p[f.k]-mn)/rg*70+30}%" title="${p.date}: ${p[f.k]}${f.u}"></i>`).join('')}</div></div>`;
   };
   const charts=BODY_FIELDS.map(spark).join('');
-  const vac=(()=>{const d=S.vacuumDays||[],t=todayStr();let st=0;for(let i=0;i<400;i++){const ds=addDays(t,-i);if(d.includes(ds))st++;else if(i>0)break;}const dn=d.includes(t);
-    return skinTpl('bodyVac',{st,n:d.length,dn},()=>`<div style="display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:12px;align-items:center;border-top:1px dashed var(--line);padding-top:8px"><span><span style="display:block">真空吸收腰打卡</span><span class="foot-note">连续 ${st} 天 · 累计 ${d.length} 次</span></span><button type="button" class="btn-line" onclick="logVacuum()"${dn?' aria-disabled="true" style="opacity:.5"':''}>${dn?'今日已打 ✓':'今日打卡'}</button></div>`);})();
+  const vac='';   // 真空吸打卡 2026-11-05 下线;S.vacuumDays 数据留着
   const hist=BODY_LOG.length?skinTpl('bodyHist',{L},()=>`<details class="fold"><summary>历史记录（${BODY_LOG.length}）</summary><div>${[...BODY_LOG].reverse().slice(0,40).map(x=>`<div style="display:grid;grid-template-columns:auto minmax(0,1fr) auto;column-gap:8px;align-items:center;border-bottom:1px dashed var(--line)" class="note-line"><span>${x.date}</span><span class="faint" style="text-align:right">${BODY_FIELDS.filter(f=>x[f.k]!=null).map(f=>(f.k==='weight'?x.weight+'kg':L(f.k).slice(0,2)+x[f.k])).join(' · ')}</span><button type="button" class="link-btn accent" style="text-align:center" onclick="delBody('${x.date}')" aria-label="删除 ${x.date} 的记录">删除</button></div>`).join('')}</div></details>`):'';
   const title=_bodyLbl('panel_title','身体记录');
   return skinTpl('bodyPanel',{title,core,more,vac,ratios,whrNote,charts,hist},()=>`<div class="panel" id="body-panel"><p class="panel-title">${title} · 体型才是真正的进度</p>

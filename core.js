@@ -1,6 +1,6 @@
 // ══ System Version ═════════════════════════════════════════
 const APP_VERSION = 'v3.1.0';
-const APP_BUILD = 166;               // = sw.js 的 CACHE 编号 = index.html 页脚 build(check-static 会查,三处一起改)
+const APP_BUILD = 169;               // = sw.js 的 CACHE 编号 = index.html 页脚 build(check-static 会查,三处一起改)
 const APP_BUILD_DATE = '2026-11-05';
 window.APP_VERSION = APP_VERSION;
 window.APP_BUILD = APP_BUILD;
@@ -254,6 +254,9 @@ const OWNER_ONLY_MOVES = ['凯格尔盆底收缩', '盆底放松呼吸',
   '收下巴', '肩胛后缩保持', '高跪姿开胸（kneeling chest opener）'];
 // 下架:不再排进任何人的计划,已排进去的开机时换掉;库里条目留着,历史记录和详情还查得到
 const RETIRED_MOVES = ['骨盆前后倾（pelvic tilt）',
+  // 2026-11-05 仪态日课和真空吸都不留(Cait)
+  '收下巴', '肩胛后缩保持', '颈深屈肌保持（chin tuck hold）', '高跪姿开胸（kneeling chest opener）',
+  '头顶书本走姿（poise walk）', '猫步走（catwalk）', '靠墙站立体态检查（wall posture check）', '腹横肌真空吸',
   // 只是转骨盆,没有训练负荷
   '四足跪姿骨盆画8字', '四足跪姿骨盆绕环（hip circles）', '四足髋部大绕环', '水中骨盆画圆',
   // 查不到通行做法 / 练不到标的 / 属于舞蹈技巧
@@ -446,6 +449,13 @@ function _purgeGatedFromPlan() {
     if (!day.exercises) return;
     for (let i = day.exercises.length - 1; i >= 0; i--) {
       const ex = day.exercises[i];
+      if (day.date >= todayStr() && (ex.isPosture || /补弱:近 4 周「(腰窝背沟|颈线肩线)」/.test(ex.note || ''))) {   // 仪态日课和背/肩补弱都停了:今天和以后已排的直接去掉,不补位
+        changed = true;
+        const oldLen = day.exercises.length;
+        day.exercises.splice(i, 1);
+        _reindexAfterRemoval(day.date, i, oldLen);
+        continue;
+      }
       if (!gated.has(ex.name)) continue;
       changed = true;
       const excluded = getExcluded();
@@ -659,6 +669,7 @@ const DB = {
     { n: '仰卧臂屈伸', eq: ['哑铃', '健身房全套'], muscle: ['三头'], diff: 1, note: '上臂垂直地面，只动前臂' },
   ],
   quads: [
+    { n: '靠墙静蹲', eq: ['无器材', '健身房全套'], muscle: ['股四头', '臀'], diff: 1, note: '背贴墙下蹲至大腿平行、膝约90°静态保持——练腿与姿势保持耐力', u: '秒' },
     { n: '杠铃深蹲', eq: ['健身房全套'], muscle: ['股四头', '臀'], diff: 2, note: '膝盖对准脚尖，蹲至大腿平行地面' },
     { n: '靠墙静蹲（wall sit）', eq: ['无器材', '健身房全套'], muscle: ['股四头', '下肢'], diff: 1, note: '背贴墙下滑至大腿平行地面，膝盖90°对准脚尖，静力保持全程均匀呼吸', u: '秒' },
     { n: '相扑深蹲保持（sumo squat hold）', eq: ['无器材', '健身房全套'], muscle: ['股四头', '内收肌', '下肢'], diff: 2, note: '宽距脚尖外展下蹲到底，手肘抵膝内侧撑开，脊柱立直在最低位静力保持', u: '秒' },
@@ -693,6 +704,7 @@ const DB = {
     { n: '单腿relevé踮立', eq: ['无器材', '健身房全套'], muscle: ['臀中肌', '小腿', '平衡'], diff: 1, note: '单腿站立，缓慢踮起足尖至最高，顶端停留2秒再慢速放下，强化小腿与骨盆稳定控制', u: '秒', bi: true },
   ],
   hamglutes: [
+    { n: '臀桥保持', eq: ['无器材', '弹力带', '健身房全套'], muscle: ['臀', '腘绳'], diff: 1, note: '仰卧顶髋至肩-髋-膝一线，顶端夹臀静态保持，练臀+骨盆稳定', u: '秒' },
     { n: '罗马尼亚硬拉', eq: ['哑铃', '健身房全套'], muscle: ['腘绳', '臀'], diff: 2, note: '微屈膝，臀部后推，感受后侧拉伸' },
     { n: '传统硬拉', eq: ['健身房全套'], muscle: ['后链全部'], diff: 3, note: '背部中立，腿部推地发力' },
     { n: '臀推', eq: ['健身房全套', '哑铃'], muscle: ['臀'], diff: 1, note: '顶端挤压臀部1-2秒' },
@@ -732,12 +744,15 @@ const DB = {
     { n: '臀推顶端外展保持', eq: ['无器材', '健身房全套'], muscle: ['臀', '内收肌', '盆底肌'], diff: 3, note: '肩胛骨靠高台做臀推，顶端双膝向两侧外展，等长保持，练臀中肌与臀大肌', u: '秒' },
   ],
   calves: [
+    { n: '双腿relevé踮立保持', eq: ['无器材', '健身房全套'], muscle: ['小腿'], diff: 2, note: '提踵到最高、足尖站立静力保持，练踝稳定/平衡/小腿与挺拔体态(芭蕾relevé)', u: '秒', bi: true },
     { n: '站姿提踵', eq: ['无器材', '哑铃', '健身房全套'], muscle: ['小腿'], diff: 1, note: '全幅度，顶端停顿1秒' },
     { n: '史密斯提踵', eq: ['健身房全套'], muscle: ['小腿'], diff: 1, note: '前脚掌踩铃片，借史密斯机稳定' },
     { n: '腿举机提踵', eq: ['健身房全套'], muscle: ['小腿'], diff: 1, note: '在腿举机上只用前脚掌推' },
     { n: '坐姿提踵', eq: ['健身房全套'], muscle: ['比目鱼'], diff: 1, note: '膝盖90°，控制速度' },
   ],
   core: [
+    { n: '鸟狗式', eq: ['无器材', '健身房全套'], muscle: ['核心'], diff: 1, note: '四足跪姿，对侧手脚伸直保持、骨盆不晃，练核心稳定与平衡', u: '秒', bi: true },
+    { n: '凯格尔盆底收缩', eq: ['无器材', '健身房全套'], muscle: ['核心'], diff: 1, note: '像憋尿般主动收缩盆底肌、保持5-10秒再完全放松，重复；增强盆底控制(与盆底放松呼吸互补)', u: '秒', hold: 120 },
     { n: '腹横肌真空吸', eq: ['无器材', '健身房全套'], muscle: ['腹横肌'], diff: 1, note: '呼气收腹，肚脐向脊柱方向吸紧，每组按计时吸住20秒', u: '秒', hold: 20 },
     { n: '死虫式保持（dead bug hold）', eq: ['无器材', '健身房全套'], muscle: ['核心', '骨盆控制'], diff: 1, note: '仰卧屈髋屈膝90°双臂指天，下背压实地面后静力保持，腰不离地不憋气', u: '秒' },
     { n: '死虫式（慢速对角）', eq: ['无器材', '健身房全套'], muscle: ['核心', '骨盆控制'], diff: 1, note: '仰卧桌面腿，对侧手腿缓慢远离再收回交替进行，下背全程贴地，越慢越有效' },
@@ -876,10 +891,7 @@ const DB = {
     { n: '猫牛式', eq: ['无器材', '健身房全套'], muscle: ['核心', '全身'], diff: 1, note: '四足跪姿，吸气塌腰抬头、呼气拱背低头，随呼吸活动整段脊柱', u: '秒' },
     { n: '胸椎旋转', eq: ['无器材', '健身房全套'], muscle: ['上肢', '核心'], diff: 1, note: '四足跪姿一手扶头后，手肘向上向后打开旋转，转胸椎非腰', u: '秒', bi: true },
     { n: '盆底放松呼吸', eq: ['无器材', '健身房全套'], muscle: ['核心'], diff: 1, note: '仰卧屈膝缓慢腹式呼吸，吸气时主动让盆底放松下沉(反向凯格尔)——柔韧/舒适关键在会放松', u: '秒', hold: 90 },
-    { n: '靠墙静蹲', eq: ['无器材', '健身房全套'], muscle: ['下肢'], diff: 1, note: '背贴墙下蹲至大腿平行、膝约90°静态保持——练腿与姿势保持耐力', u: '秒' },
     { n: '深蹲保持', eq: ['无器材', '健身房全套'], muscle: ['下肢'], diff: 1, note: '全蹲到底(亚洲蹲)、脚掌踩实、胸口打开，放松髋踝静态保持，练深蹲灵活+耐力', u: '秒' },
-    { n: '臀桥保持', eq: ['无器材', '弹力带', '健身房全套'], muscle: ['下肢'], diff: 1, note: '仰卧顶髋至肩-髋-膝一线，顶端夹臀静态保持，练臀+骨盆稳定', u: '秒' },
-    { n: '鸟狗式', eq: ['无器材', '健身房全套'], muscle: ['核心'], diff: 1, note: '四足跪姿，对侧手脚伸直保持、骨盆不晃，练核心稳定与平衡', u: '秒', bi: true },
     { n: '门框开胸拉伸', eq: ['无器材', '健身房全套'], muscle: ['上肢'], diff: 1, note: '前臂贴门框、身体前倾拉开胸/前肩，拉伸胸和前肩', u: '秒', hold: 45, bi: true },
     { n: '胸椎伸展', eq: ['无器材', '健身房全套'], muscle: ['全身'], diff: 1, note: '坐姿双手抱头、上背靠椅背或泡沫轴向后伸展，改善含胸驼背', u: '秒' },
     { n: '颈侧拉伸', eq: ['无器材', '健身房全套'], muscle: ['全身'], diff: 1, note: '头侧倒、同侧手轻搭，放松颈侧/上斜方', u: '秒', bi: true },
@@ -888,12 +900,10 @@ const DB = {
     { n: '比目鱼肌拉伸', eq: ['无器材', '健身房全套'], muscle: ['下肢'], diff: 1, note: '弓步后腿微屈膝、脚跟踩地下沉，拉小腿深层', u: '秒', hold: 45, bi: true },
     { n: '跪姿踝背屈', eq: ['无器材', '健身房全套'], muscle: ['下肢'], diff: 1, note: '跪姿前脚屈膝、膝过脚尖、脚跟不离地，增加踝背屈活动度', u: '秒', bi: true },
     { n: '沙发式髋屈肌拉伸', eq: ['无器材', '健身房全套'], muscle: ['下肢'], diff: 2, note: '跪姿后腿胫骨贴墙/沙发、膝顶墙根，前腿屈膝成弓步，骨盆后倾收臀，拉伸髂腰肌与大腿前侧，两侧各做', u: '秒', hold: 45, bi: true },
-    { n: '双腿relevé踮立保持', eq: ['无器材', '健身房全套'], muscle: ['下肢'], diff: 2, note: '提踵到最高、足尖站立静力保持，练踝稳定/平衡/小腿与挺拔体态(芭蕾relevé)', u: '秒', bi: true },
     { n: '颈深屈肌保持（chin tuck hold）', eq: ['无器材', '健身房全套'], muscle: ['全身'], diff: 1, note: '跪/坐直、轻收下巴，颈深屈肌等长保持耐久，强化头颈姿态、改善前伸颈', u: '秒' },
     { n: '跪姿手腕拉伸（wrist stretch）', eq: ['无器材', '健身房全套'], muscle: ['全身'], diff: 1, note: '跪姿手掌贴地(指尖朝前或朝膝)，缓慢加载手腕/前臂屈伸肌静力支撑，强化腕部稳定', u: '秒', bi: true },
     { n: '肩胛后缩保持', eq: ['无器材', '弹力带', '健身房全套'], muscle: ['上肢'], diff: 1, note: '肩胛骨向脊柱中线收拢并下沉、胸口微挺保持，强化上背与肩胛位置、改善圆肩', u: '秒' },
     { n: '收下巴', eq: ['无器材', '健身房全套'], muscle: ['全身'], diff: 1, note: '轻收下巴使颈椎中立、后脑勺微向后上，练颈深屈肌', u: '秒' },
-    { n: '凯格尔盆底收缩', eq: ['无器材', '健身房全套'], muscle: ['核心'], diff: 1, note: '像憋尿般主动收缩盆底肌、保持5-10秒再完全放松，重复；增强盆底控制(与盆底放松呼吸互补)', u: '秒', hold: 120 },
     { n: '小狗伸展式 (融心式)', eq: ['无器材', '健身房全套'], muscle: ['上肢', '脊柱'], diff: 1, note: '双膝跪地、臀部高翘，胸腔与下巴完全贴地融化，极致打开胸前侧', u: '秒' }, { n: '仰卧大V字开合', eq: ['无器材', '弹力带', '健身房全套'], muscle: ['下肢'], diff: 2, note: '仰卧双腿直指天花板，缓慢向两侧完全打开成V字再并拢，内收肌极度控制' },
     { n: '仰卧牛面式（gomukhasana）', eq: ['无器材', '健身房全套'], muscle: ['下肢'], diff: 2, note: '仰卧双腿在空中紧紧交叉打结，双手抓脚背下压，极度拉扯臀外侧', u: '秒' },
     { n: '仰卧快乐婴儿式', eq: ['无器材', '健身房全套'], muscle: ['下肢', '核心'], diff: 1, note: '仰卧抓两脚外缘、膝向腋下打开下压、脚掌朝上，深层开髋并放松盆底，下背贴地', u: '秒' },
@@ -916,7 +926,7 @@ const DB = {
     { n: '花环式（malasana）', eq: ['无器材', '健身房全套'], muscle: ['下肢', '内收肌', '核心'], diff: 1, note: '双脚与髋宽或稍宽，脚尖外旋45°，深蹲到底脚跟落地，双肘撑开双膝外展，双手合十，骨盆下沉放松', u: '秒' },
     { n: '猴神式（hanumanasana）', eq: ['无器材', '健身房全套'], muscle: ['髋屈肌', '腘绳', '下肢'], diff: 3, note: '前腿向前伸直，后腿向后伸直，完成前后劈叉，骨盆水平正对前方，双手置于两侧支撑，循序渐进下沉', u: '秒', bi: true }
   ],
-  // 仪态(2026-08-27):不进主循环 —— SPLITS 不引用 posture,只由 _appendPosture() 按需挑。
+  // 仪态日课 2026-11-05 已停:这几个动作已下架(RETIRED_MOVES),条目留着给历史记录查说明。
   // 练的是"站着不动就好看"的那部分:体态、步态、颈线、骨盆位置。
   posture: [
     { n: '头顶书本走姿（poise walk）', eq: ['无器材', '健身房全套'], muscle: ['姿势', '核心'], diff: 1, note: '头顶一本书沿直线慢走，下巴微收、头顶向上延伸，书不掉=颈椎中立、重心稳', u: '秒', hold: 60 },
@@ -1203,7 +1213,7 @@ const SCHEMES = {
     intensityNote: {
       初级: '臀推顶端挤压，背部动作专注肩胛后收下沉',
       中级: '臀推加重强调臀峰，划船/下拉控制离心',
-      高级: '臀推突破，美背日加量，核心真空吸收紧腰腹'
+      高级: '臀推突破，美背日加量'
     },
     weightGuide: {
       初级: '臀推约max的60-70%，背部约50-60%',
@@ -1231,7 +1241,7 @@ const TIPS = {
   '臀腿塑形': '全部精力放在下半身，把视觉重心拉下来。臀推是最优先的动作，直接针对臀大肌。臀中肌侧向训练是改善腰胯比的关键，别跳过。重量选最后两次比较吃力的程度，每周尽量加一点点。蛋白质每公斤体重每天1.6-2克，热量吃够才能长肌肉。',
   '女性薄肌+臀腿塑形': '以臀腿为主战场，上肢仅做维持性训练。下半身每周2-3次，髋铰链和深蹲交替。上肢每周1-2次轻量推拉即可，不追求上肢增量。蛋白质每公斤体重每天1.6-2克，热量吃够才能长肌肉。',
   '翘臀美背': '臀推是提臀峰第一动作，顶端挤压1-2秒。你可以也应该练背，背阔分离感和肩胛下沉能让背显挺、视觉收腰。斜方"厚"多半是圆肩体态：停掉直立划船和耸肩，多做面拉、YTW、靠墙天使，把肩膀沉下去。',
-  '女性曲线': '极致沙漏：臀中肌外展每次必练不能跳（胯宽靠它）；臀推/硬拉渐进冲圆臀；股四+腘绳+内收都堆围度让大腿丰满柔顺。腰只做真空吸/平板，绝不做负重侧屈/转体（会把腰练方）。上肢几乎不动以免变宽。蛋白1.6-2g/kg+轻微热量盈余才能喂大臀腿；腰围靠控总量+有氧，不靠饿。'
+  '女性曲线': '极致沙漏：臀中肌外展每次必练不能跳（胯宽靠它）；臀推/硬拉渐进冲圆臀；股四+腘绳+内收都堆围度让大腿丰满柔顺。腰只做平板类，绝不做负重侧屈/转体（会把腰练方）。上肢几乎不动以免变宽。蛋白1.6-2g/kg+轻微热量盈余才能喂大臀腿；腰围靠控总量+有氧，不靠饿。'
 };
 // Resolve S.goal to a canonical SCHEMES/TIPS key. S.goal may be a combo like
 // '女性薄肌+臀腿塑形' or, from older data, an order-swapped/invalid string. Fall back
@@ -1598,12 +1608,9 @@ function pickExercises(split, excluded) {
       let dbEx = null; for (const exs of Object.values(DB)) { const f = exs.find(e => e.n === n.name); if (f) { dbEx = f; break } }
       if (dbEx && dbEx.eq && !dbEx.eq.some(q => q === '无器材' || S.equip.includes(q))) return;
       used.add(n.name);
-      result.push({ name: n.name, sets: n.sets, reps: n.reps, unit: n.unit, note: n.note, group: 'stretch', diff: 1, isStretch: true, bi: false, muscle: ['肩颈'] });
+      result.push({ name: n.name, sets: n.sets, reps: n.reps, unit: n.unit, note: n.note, group: 'stretch', diff: 1, isStretch: n.unit !== '次', bi: false, muscle: ['肩颈'] });
     });
   }
-
-  // 仪态日课:混进收尾,每天轮换 2 个(owner)
-  if (_ownerSession()) _appendPosture(result, used, excluded, 2);
 
   return _clusterByEquip(result); // 同器械的排在一起,少来回跑(反馈④)
 }
@@ -1649,32 +1656,6 @@ function _appendWeakFocus(result, used, excluded, sets) {
   } catch (e) { }
 }
 
-// ══ 仪态日课(2026-08-27) ═══════════════════════════════════
-// Cait 要的是"站着不动就好看"那部分:颈线、肩胛位置、骨盆位置、步态、踮立。
-// 不另开模块 —— 按她的选择混进现有计划,排在收尾,不占主计划名额。
-const POSTURE_POOL = [
-  '靠墙站立体态检查（wall posture check）', '头顶书本走姿（poise walk）', '猫步走（catwalk）',
-  '收下巴', '肩胛后缩保持', '靠墙天使',
-  '双腿relevé踮立保持', '单腿relevé踮立', '高跪姿开胸（kneeling chest opener）',
-];
-// 每天换着来:按日期轮转,不随机 —— 同一天重开 app 不会换掉已经练一半的
-function _appendPosture(result, used, excluded, n) {
-  const pool = POSTURE_POOL.filter(name => !used.has(name) && !excluded.has(name));
-  if (!pool.length) return;
-  const seed = parseInt(todayStr().replace(/-/g, ''), 10) || 0;
-  const step = Math.max(1, Math.floor(pool.length / Math.max(1, n)));   // 两个动作在池子里隔开,别一次给两个踮立
-  for (let i = 0; i < n && pool.length; i++) {
-    const ex = (() => { for (const exs of Object.values(DB)) { const f = exs.find(e => e.n === pool[(seed + i * step) % pool.length]); if (f) return f } return null })();
-    if (!ex || used.has(ex.n)) continue;
-    used.add(ex.n);
-    const isTime = (ex.u === '秒' || ex.u === '分钟');
-    result.push({
-      name: ex.n, sets: 1, reps: isTime ? (ex.hold || 45) : 12, unit: isTime ? '秒' : '次',
-      note: '仪态 · ' + ex.note, group: 'posture', diff: ex.diff, isPosture: true, bi: !!ex.bi, muscle: ex.muscle
-    });
-  }
-}
-
 // ══ 曲线焦点(2026-08-27) ═══════════════════════════════════
 // 把"练臀"拆成看得见的承重点:每个点有自己的动作簇、自己的周目标组数、
 // 以及一条对应的围度指标。练了多少 / 尺寸往哪走,两条线并排看。
@@ -1693,19 +1674,12 @@ const CURVE_FOCUS = [
             '高脚杯深蹲', '壶铃高脚杯深蹲', '保加利亚分腿蹲', '哑铃弓步蹲', '腿弯举', '坐姿腿弯举',
             '站姿单腿弯举机', '杠铃深蹲', '史密斯深蹲', '颈前杠铃深蹲', '相扑深蹲保持（sumo squat hold）',
             '罗马尼亚硬拉', '传统硬拉'] },
-  { key: 'waist', name: '细腰', why: '腹横肌把腰收紧;绕开一切增厚腰侧的动作', metric: 'waist', dir: 'down', weekly: 6,
-    moves: ['腹横肌真空吸', '平板支撑', '侧平板支撑', '死虫式', '死虫式保持（dead bug hold）',
-            '死虫式（慢速对角）', '仰卧对角抬举（dead bug 变体）', '卷腹', '坐姿卷腹机',
+  { key: 'waist', name: '细腰', why: '只练核心稳定,腰围主要看总热量和有氧', metric: 'waist', dir: 'down', weekly: 6,
+    moves: ['平板支撑', '侧平板支撑', '死虫式', '死虫式保持（dead bug hold）',
+            '死虫式（慢速对角）', '卷腹', '坐姿卷腹机',
             '仰卧直腿下放（leg lowering）', '悬挂抬腿', '罗马椅抬腿', '侧平板髋部下沉（side plank hip dip）'] },
-  { key: 'back', name: '腰窝背沟', why: '竖脊+背阔撑出背面的层次,腰窝是收腰的视觉锚', metric: null, dir: null, weekly: 6,
-    moves: ['山羊挺身', '坐姿划船', 'T把划船', '器械上背划船', '俯身划船', '哑铃单臂划船',
-            '高位下拉', '引体向上', '助力引体向上机', '杠铃斜板划船', '弹力带划船', '绳索直臂下压', '直臂下压机'] },
-  { key: 'line', name: '颈线肩线', why: '肩胛下沉+颈椎中立——脖子显长、锁骨露出来', metric: null, dir: null, weekly: 5,
-    moves: ['面拉', '俯卧YTW', '靠墙天使', '肩胛后缩保持', '收下巴', '颈深屈肌保持（chin tuck hold）',
-            '反向飞鸟机', '俯身飞鸟', '靠墙站立体态检查（wall posture check）', '高跪姿开胸（kneeling chest opener）'] },
   { key: 'ankle', name: '脚踝小腿', why: '踮立与提踵——高跟站得住,脚背绷出线条', metric: 'ankle', dir: null, weekly: 4,
-    moves: ['站姿提踵', '坐姿提踵', '史密斯提踵', '腿举机提踵', '单腿relevé踮立', '双腿relevé踮立保持',
-            '头顶书本走姿（poise walk）', '猫步走（catwalk）'] },
+    moves: ['站姿提踵', '坐姿提踵', '史密斯提踵', '腿举机提踵', '单腿relevé踮立', '双腿relevé踮立保持'] },
 ];
 // 近 N 周:每个焦点练了多少组(只算打了勾的),以及对应围度往哪个方向走了
 function curveFocusStats(weeks = 4) {
@@ -2759,6 +2733,29 @@ let _genStay = false;                // 计划页里的开关触发重排时留�
 function toggleExEdit(date, i) { const k = date + '-' + i; _exOpen[k] = !_exOpen[k]; render(); }
 function toggleBlock(k) { _blkOpen[k] = !_blkOpen[k]; render(); }
 function _q(s) { return String(s).replace(/\\/g, '\\\\').replace(/'/g, "\\'"); }   // 拼进 onclick 单引号字符串
+// 动作属于哪一段由动作库决定:库里归拉伸/热身的,不管怎么加进来(AI、手动、换动作、旧计划)都进那一段。
+// 只改标记、不动顺序,按下标存的勾选和重量不受影响。两组之外也有同名条目的不算。
+let _blockNames = null;
+function _blockNameSets() {
+  if (_blockNames) return _blockNames;
+  const inOther = g => n => Object.entries(DB).some(([k, a]) => k !== g && a.some(e => e.n === n));
+  _blockNames = {
+    stretch: new Set(DB.stretch.map(e => e.n).filter(n => !inOther('stretch')(n))),
+    warmup: new Set(DB.warmup.map(e => e.n).filter(n => !inOther('warmup')(n))),
+  };
+  return _blockNames;
+}
+function _syncBlockFlags() {
+  if (!S.plan || !S.plan.days) return;
+  const b = _blockNameSets();
+  S.plan.days.forEach(d => (d.exercises || []).forEach(e => {
+    if (e.swimPhase || e.isWarmup) return;
+    // 打了拉伸标记、但库里属于力量组的(靠墙天使、靠墙静蹲…):退回训练段。能上重量的本来就不进拉伸段,不动
+    if (e.isStretch) { if (!isWeightedMove(e.name) && Object.entries(DB).some(([g, a]) => g !== 'stretch' && g !== 'warmup' && a.some(x => x.n === e.name))) e.isStretch = false; return; }
+    if (b.stretch.has(e.name)) e.isStretch = true;
+    else if (b.warmup.has(e.name)) e.isWarmup = true;
+  }));
+}
 function _isBlockWarm(ex) { return !!ex.isWarmup; }
 function _isBlockStretch(ex) { return !!ex.isStretch && !isWeightedMove(ex.name); }
 function _unitTxt(ex, reps) { return `${reps}${ex.unit || '次'}${ex.bi ? '/每侧' : ''}`; }
@@ -2926,6 +2923,7 @@ function _dayMuscles(sel) {
 }
 
 function render() {
+  _syncBlockFlags();
   _xTheme();
   if (typeof uiUpdateMasthead === 'function') uiUpdateMasthead();
   const mainEl = document.getElementById('main');
@@ -5652,7 +5650,7 @@ function openAddExerciseModal(date) {
     document.body.appendChild(modal);
   }
 
-  const allGroups = Object.keys(DB);
+  const allGroups = Object.keys(DB).filter(g => g !== 'posture');
   const otherGroups = allGroups.filter(g => !targetGroups.includes(g));
 
   modal.innerHTML = skinTpl('addExSheet', { date, sel, targetGroups, otherGroups, grpNames }, () => `<div class="ex-modal-card" onclick="event.stopPropagation()">
@@ -5708,7 +5706,8 @@ function doAddExercise(groupKey, poolIdx) {
   sel._edited = true;
 
   const unit = ex.u || '次';
-  const sets = 3;
+  const _inBlock = groupKey === 'stretch' || groupKey === 'warmup';
+  const sets = _inBlock ? 1 : 3;
   const reps = _repsFor(ex, { sec: 30, min: 10, reps: 12 }); // 规矩③:带 hold 的按 hold
 
   sel.exercises.push({
@@ -5720,8 +5719,8 @@ function doAddExercise(groupKey, poolIdx) {
     group: groupKey,
     muscle: ex.muscle || [],
     diff: ex.diff,
-    isWarmup: false,
-    isStretch: false,
+    isWarmup: groupKey === 'warmup',
+    isStretch: groupKey === 'stretch',
     bi: !!ex.bi,
     addedManually: true
   });

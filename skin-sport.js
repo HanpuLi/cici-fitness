@@ -689,8 +689,6 @@ SKIN_TPL.sport.logCurve = (c) => `<div class="panel" id="curve-panel">${_spLog.h
   + `<div class="hint quote-rule">${c.hint}</div></div>`;
 
 // 身体记录(app.js renderBodyPanel):输入格、保存、真空吸打卡、比例、小柱、历史
-SKIN_TPL.sport.bodyVac = (c) => `<div class="sp-vac"><span class="sp-vac-t"><b>真空吸收腰打卡</b><span class="foot-note">连续 ${c.st} 天 · 累计 ${c.n} 次</span></span>`
-  + `<button type="button" class="btn-line sp-vac-b${c.dn ? ' done' : ''}" onclick="logVacuum()"${c.dn ? ' aria-disabled="true"' : ''}>${c.dn ? SP.tick(16, 3) + '今日已打' : '今日打卡'}</button></div>`;
 SKIN_TPL.sport.bodyHist = (c) => `<details class="fold sp-fold"><summary>历史记录（${BODY_LOG.length}）</summary><div class="sp-rows">`
   + [...BODY_LOG].reverse().slice(0, 40).map(x => `<div class="sp-bh"><span class="sp-bh-d">${x.date}</span><span class="sp-bh-v">${BODY_FIELDS.filter(f => x[f.k] != null).map(f => (f.k === 'weight' ? x.weight + 'kg' : c.L(f.k).slice(0, 2) + x[f.k])).join(' · ')}</span><button type="button" class="link-btn sp-del" onclick="delBody('${x.date}')" aria-label="删除 ${x.date} 的记录">删除</button></div>`).join('')
   + `</div></details>`;

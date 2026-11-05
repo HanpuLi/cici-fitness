@@ -1598,7 +1598,7 @@ function _coachTodayApply(changes) {
     const cat = _coachCatalogMap(), ex = String(c.exercise).trim();
     if (c.op === 'add') {
       const hit = cat.get(ex), sp = _coachSpec(hit, c, true);
-      const at = _coachInsertEx(day, { name: hit.ex.n, sets: sp.sets, reps: sp.reps, unit: sp.unit, note: hit.ex.note || '', group: hit.g, diff: hit.ex.diff, bi: !!hit.ex.bi, muscle: hit.ex.muscle || [], addedManually: true });
+      const at = _coachInsertEx(day, { name: hit.ex.n, sets: sp.sets, reps: sp.reps, unit: sp.unit, note: hit.ex.note || '', group: hit.g, diff: hit.ex.diff, bi: !!hit.ex.bi, muscle: hit.ex.muscle || [], addedManually: true, ...(hit.g === 'warmup' ? { isWarmup: true } : hit.g === 'stretch' ? { isStretch: true } : {}) });
       _coachSpShift(date, at, 1);
       if (sp.kg) { S.weights = S.weights || {}; S.weights[date + '-' + at] = sp.kg }
       snap.structural = true; return;
@@ -1972,7 +1972,7 @@ function _coachPropApply(p) {
       const hit = cat.get(ex), sp = _coachSpec(hit, c, true);
       days.filter(d => !d.isSwimDay && !d.exercises.some(e => e.name === ex)).forEach(d => {
         keepDay(d); d._edited = true;
-        const at = _coachInsertEx(d, { name: hit.ex.n, sets: sp.sets, reps: sp.reps, unit: sp.unit, note: hit.ex.note || '', group: hit.g, diff: hit.ex.diff, bi: !!hit.ex.bi, muscle: hit.ex.muscle || [] });
+        const at = _coachInsertEx(d, { name: hit.ex.n, sets: sp.sets, reps: sp.reps, unit: sp.unit, note: hit.ex.note || '', group: hit.g, diff: hit.ex.diff, bi: !!hit.ex.bi, muscle: hit.ex.muscle || [], ...(hit.g === 'warmup' ? { isWarmup: true } : hit.g === 'stretch' ? { isStretch: true } : {}) });
         if (sp.kg) { S.weights = S.weights || {}; S.weights[d.date + '-' + at] = sp.kg }
       });
       return;
