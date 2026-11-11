@@ -1,9 +1,11 @@
-const CACHE = 'cici-fitness-v169';   // 数字要和 core.js 的 APP_BUILD、index.html 页脚的 build 一致(check-static 会查)
+const CACHE = 'cici-fitness-v170';   // 数字要和 core.js 的 APP_BUILD、index.html 页脚的 build 一致(check-static 会查)
 // 动作演示 GIF:单独一个缓存,只留最近 GIF_MAX 张。来源锁在固定 commit(见 core.js GIF_BASE),内容不会变,
 // 所以缓存优先、跨版本保留;以前走 SWR 进主缓存,看过的每张都存着,越积越多
 const GIF_CACHE = 'cici-fitness-gif-v1';
-const GIF_MAX = 80;
+const GIF_MAX = 200;   // 2026-11-10 列表里每个动作都有缩略图,一天十几张,留够两三周的量
 const GIF_PREFIX = '/gh/hasaneyldrm/exercises-dataset@';
+// Wikimedia Commons 上的开放授权示意图(数据集里没有的动作用,见 core.js EXERCISE_MEDIA):同一个缓存
+const MEDIA_HOSTS = ['upload.wikimedia.org', 'thumb.wikimedia.org'];
 
 // ── Local assets: always pre-cached on install ──
 const LOCAL_ASSETS = [
@@ -19,21 +21,9 @@ const CDN_ASSETS = [
   'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js',
   // Google Fonts CSS —— 必须和 index.html 里实际加载的那条一字不差(以前写的是旧字体,预缓存白做;check-static 会查)
   'https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&family=EB+Garamond:ital,wght@0,400..600;1,400..600&family=Noto+Serif+SC:wght@400;600&display=swap',
-  // 「运动」风格的字体:index.html 开机脚本按风格插入(不是静态 <link>);离线切到运动也要有样式表,所以一样预缓存。
-  // 字体文件本身走下面 fonts.gstatic.com 的 SWR,用过一次就离线可用;没用过时退回系统无衬线
-  'https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700;800&family=Noto+Sans+SC:wght@400..900&display=swap',
+  // 「运动」风格 2026-11-10 起用系统字体,没有网络字体要预缓存
   // Tabler Icons CSS(jsDelivr,运行时走 SWR;这里预缓存一份,离线首开也有样式)。ui-v3 起不再加载霞鹜文楷
   'https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css'
-];
-
-// ── 肌肉解剖图:已本地化到 ./muscles/(原 wger.de 外链无 CORS → 缓存不上、每次实时连 wger,网络不稳就"图解全不可用") ──
-const MUSCLE_ASSETS = [
-  './muscles/m1-main.svg', './muscles/m1-sec.svg', './muscles/m2-main.svg', './muscles/m2-sec.svg',
-  './muscles/m4-main.svg', './muscles/m4-sec.svg', './muscles/m5-main.svg', './muscles/m5-sec.svg',
-  './muscles/m6-main.svg', './muscles/m6-sec.svg', './muscles/m7-main.svg', './muscles/m7-sec.svg',
-  './muscles/m8-main.svg', './muscles/m8-sec.svg', './muscles/m9-main.svg', './muscles/m9-sec.svg',
-  './muscles/m10-main.svg', './muscles/m10-sec.svg', './muscles/m11-main.svg', './muscles/m11-sec.svg',
-  './muscles/m12-main.svg', './muscles/m12-sec.svg', './muscles/m14-main.svg', './muscles/m14-sec.svg'
 ];
 
 // ── Domains that get stale-while-revalidate (font files, icon woff2, etc.) ──
@@ -47,11 +37,7 @@ self.addEventListener('install', e => e.waitUntil(
     const cdnP = Promise.allSettled(CDN_ASSETS.map(url =>
       fetch(url, { mode: 'cors' }).then(r => { if (r.ok) return c.put(url, r) }).catch(() => { })
     ));
-    // 本地肌肉图:同源,best-effort 预缓存(不进原子 addAll,免得个别文件缺失拖垮整个安装)
-    const muscleP = Promise.allSettled(MUSCLE_ASSETS.map(url =>
-      fetch(url).then(r => { if (r.ok) return c.put(url, r) }).catch(() => { })
-    ));
-    return Promise.all([localP, cdnP, muscleP]);
+    return Promise.all([localP, cdnP]);
   }).then(() => self.skipWaiting())
 ));
 
@@ -74,8 +60,8 @@ self.addEventListener('fetch', e => {
     return;
   }
 
-  // ── 动作 GIF:缓存优先 + 只留最近 GIF_MAX 张 ──
-  if (url.hostname === 'cdn.jsdelivr.net' && url.pathname.startsWith(GIF_PREFIX) && url.pathname.endsWith('.gif')) {
+  // ── 动作演示图(GIF / Commons 图):缓存优先 + 只留最近 GIF_MAX 张 ──
+  if ((url.hostname === 'cdn.jsdelivr.net' && url.pathname.startsWith(GIF_PREFIX) && /\.(gif|jpg)$/.test(url.pathname)) || MEDIA_HOSTS.includes(url.hostname)) {
     e.respondWith(
       caches.open(GIF_CACHE).then(cache =>
         cache.match(e.request).then(hit => hit || fetch(e.request).then(r => {

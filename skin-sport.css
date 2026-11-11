@@ -4,7 +4,7 @@
    · 每条规则的每个选择器都以 html[data-skin="sport"] 开头(check-static 会查),纸墨里不漏进任何运动的东西。
    · 纸墨的 style.css 一律不动。运动要换的组件 / 局部布局在这里覆盖;要换 HTML 结构的块,模板在 skin-sport.js(SKIN_TPL.sport.*)。
    · style.css 里每个写死值的 token 这里都要有运动的值(JS 内联样式、owner 扩展包都靠这些旧名变色;check-static 会查)。
-   语言:浅底 #f2f2ee 上白卡片堆叠(圆角 18)、墨 #111;荧光绿 #d4ff3d 只做底色或深底上的字(浅底上绝不拿它写字)。
+   语言:浅底 #f2f2ee 上白卡片堆叠(圆角 18)、墨 #111;荧光绿 var(--sp-neon) 只做底色或深底上的字(浅底上绝不拿它写字)。
    字体:标题 Noto Sans SC 900;数字 / 小标签 Barlow Condensed 600–800;正文 Barlow + Noto Sans SC。
    浅色的点缀橙(旧 --accent 的位置)写字用 #b83a0a(4.9:1),深色用荧光绿。
 
@@ -14,151 +14,176 @@
 
 /* ══ 00 token ═════════════════════════════════════════════════════════ */
 html[data-skin="sport"] {
-    --paper: #f2f2ee;
-    --line: #d9d9d2;
-    --ink: #111111;
-    --muted: #55554f;
-    --faint: #64645d;
-    --accent: #b83a0a;
-    --olive: #2f6a10;
-    --tint: #f2f2ee;
-    --scrim: rgba(13, 13, 13, .5);
-    --accent-rgb: 184, 58, 10;
+    --paper: #f4f2ee;
+    --line: #e6e2db;
+    --ink: #1c1c1e;
+    --muted: #605d57;
+    --faint: #66625b;
+    --accent: #285c53;
+    --olive: #2e6a60;
+    --tint: #f4f2ee;
+    --scrim: rgba(30, 26, 20, .34);
+    --accent-rgb: 46, 106, 96;
 
     --card: #ffffff;
     --surface: #ffffff;
-    --border2: #b9b9b0;
-    --terra-bg: rgba(184, 58, 10, .07);
-    --terra-br: rgba(184, 58, 10, .32);
-    --sage-bg: rgba(47, 106, 16, .08);
-    --sage-br: rgba(47, 106, 16, .32);
-    --amber: #8a5a00;
-    --amber-bg: rgba(138, 90, 0, .08);
-    --blue: #2f5b8a;
-    --blue-bg: rgba(47, 91, 138, .08);
-    --radius-lg: 18px;
+    --border2: #cfcac1;
+    --terra-bg: rgba(46, 106, 96, .08);
+    --terra-br: rgba(46, 106, 96, .30);
+    --sage-bg: rgba(46, 106, 96, .08);
+    --sage-br: rgba(46, 106, 96, .30);
+    --amber: #85500f;
+    --amber-bg: #f7ecdb;
+    --blue: #2d5f8c;
+    --blue-bg: #e3ebf3;
+    --radius-lg: 16px;
     --radius: 14px;
-    --radius-sm: 8px;
+    --radius-sm: 10px;
     --shadow-sm: none;
     --shadow-md: none;
     --shadow-lg: none;
 
     /* 旧名 --font-serif = 正文、--font-mono = 小标签 / 数字,style.css 全靠这两个 */
-    --font-serif: 'Barlow', 'Noto Sans SC', system-ui, sans-serif;
-    --font-mono: 'Barlow Condensed', 'Noto Sans SC', system-ui, sans-serif;
+    --font-serif: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'PingFang SC', 'Hiragino Sans GB', 'Noto Sans SC', 'Helvetica Neue', Arial, sans-serif;
+    --font-mono: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'PingFang SC', 'Hiragino Sans GB', 'Noto Sans SC', 'Helvetica Neue', Arial, sans-serif;
     --font-display: var(--font-serif);
     --font-body: var(--font-serif);
     --font-ui: var(--font-serif);
 
     /* 运动自己的 token(样稿里的同名变量加 sp- 前缀) */
-    --sp-sans: 'Barlow', 'Noto Sans SC', system-ui, sans-serif;
-    --sp-cjk: 'Noto Sans SC', 'Barlow', system-ui, sans-serif;
-    --sp-num: 'Barlow Condensed', 'Noto Sans SC', system-ui, sans-serif;
+    --sp-sans: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'PingFang SC', 'Hiragino Sans GB', 'Noto Sans SC', 'Helvetica Neue', Arial, sans-serif;
+    --sp-cjk: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'PingFang SC', 'Hiragino Sans GB', 'Noto Sans SC', 'Helvetica Neue', Arial, sans-serif;
+    --sp-num: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'PingFang SC', 'Hiragino Sans GB', 'Noto Sans SC', 'Helvetica Neue', Arial, sans-serif;
     --sp-card: #ffffff;
-    --sp-soft: #f2f2ee;
-    --sp-track: #e2e2db;
-    --sp-neon: #d4ff3d;
-    --sp-neon-muted: #45531a;
-    --sp-on: #111111;
-    --sp-on-fg: #d4ff3d;
-    --sp-fill: #111111;
-    --sp-box-on: #111111;
-    --sp-bar-past: #2b2b28;
-    --sp-red: #c4282d;
-    --sp-red-fill: #c4282d;
+    --sp-soft: #f0ede8;
+    --sp-track: #e6e2db;
+    --sp-neon: #2e6a60;
+    --sp-neon-muted: #285c53;
+    --sp-on: #2e6a60;
+    --sp-on-fg: #ffffff;
+    --sp-fill: #2e6a60;
+    --sp-box-on: #2e6a60;
+    --sp-bar-past: #8a867e;
+    --sp-red: #b3261e;
+    --sp-red-fill: #b3261e;
     --sp-red-fill-fg: #ffffff;
-    --sp-nav: #111111;
-    --sp-nav-fg: #b3b3ab;
-    --sp-toast: #111111;
-    --sp-toast-fg: #f4f4f0;
-    --sp-me: #111111;
-    --sp-me-fg: #f4f4f0;
+    --sp-nav: #faf9f6;
+    --sp-nav-fg: #605d57;
+    --sp-toast: #1c1c1e;
+    --sp-toast-fg: #f4f2ee;
+    --sp-me: #2e6a60;
+    --sp-me-fg: #ffffff;
 
     --tabbar-h: 73px;   /* 底栏实高:tab 54 + 上下内边距 8 / 10 + 顶线 1(不含安全区) */
     color-scheme: light;
+    --sp-hl: #e3eeea;
+    --sp-hl-fg: #285c53;
+    --sp-warn: #85500f;
+    --sp-warn-soft: #f7ecdb;
+    --sp-warn-line: #e6cca2;
+    --sp-gif: #f1efeb;
+    --sp-shadow: 0 1px 2px rgba(40, 30, 10, .04), 0 8px 24px rgba(40, 30, 10, .06);
 }
 @media (prefers-color-scheme: dark) {
     html[data-skin="sport"]:not(.light) {
-        --paper: #0d0d0d;
-        --line: #2c2c2a;
-        --ink: #f4f4f0;
-        --muted: #a9a9a1;
-        --faint: #8f8f88;
-        --accent: #d4ff3d;
-        --olive: #b5e85a;
-        --tint: #0d0d0d;
-        --scrim: rgba(0, 0, 0, .62);
-        --accent-rgb: 212, 255, 61;
-        --card: #171717;
-        --surface: #171717;
-        --border2: #45453f;
-        --terra-bg: rgba(212, 255, 61, .08);
-        --terra-br: rgba(212, 255, 61, .35);
-        --sage-bg: rgba(181, 232, 90, .1);
-        --sage-br: rgba(181, 232, 90, .35);
-        --amber: #e0a64a;
-        --amber-bg: rgba(224, 166, 74, .1);
-        --blue: #8fb3e0;
-        --blue-bg: rgba(143, 179, 224, .1);
-        --sp-card: #171717;
-        --sp-soft: #0d0d0d;
-        --sp-track: #2c2c2a;
-        --sp-on: #d4ff3d;
-        --sp-on-fg: #0d0d0d;
-        --sp-fill: #d4ff3d;
-        --sp-box-on: #d4ff3d;
-        --sp-bar-past: #4a4a46;
-        --sp-red: #ff6b70;
+        --paper: #161618;
+        --line: #313135;
+        --ink: #f2f1ee;
+        --muted: #a8a6a0;
+        --faint: #9a988f;
+        --accent: #9fd0c4;
+        --olive: #8ec3b6;
+        --tint: #161618;
+        --scrim: rgba(0, 0, 0, .55);
+        --accent-rgb: 142, 195, 182;
+        --card: #212124;
+        --surface: #212124;
+        --border2: #46464b;
+        --terra-bg: rgba(142, 195, 182, .10);
+        --terra-br: rgba(142, 195, 182, .32);
+        --sage-bg: rgba(142, 195, 182, .10);
+        --sage-br: rgba(142, 195, 182, .32);
+        --amber: #e3ba76;
+        --amber-bg: #352d20;
+        --blue: #94badc;
+        --blue-bg: #233041;
+        --sp-card: #212124;
+        --sp-soft: #2b2b2f;
+        --sp-track: #36363b;
+        --sp-on: #8ec3b6;
+        --sp-on-fg: #0f201c;
+        --sp-fill: #8ec3b6;
+        --sp-box-on: #8ec3b6;
+        --sp-bar-past: #5e5d59;
+        --sp-red: #ff8a80;
         --sp-red-fill: #e5484d;
         --sp-red-fill-fg: #111111;
-        --sp-nav: #171717;
-        --sp-nav-fg: #a9a9a1;
-        --sp-toast: #f4f4f0;
-        --sp-toast-fg: #111111;
-        --sp-me: #d4ff3d;
-        --sp-me-fg: #0d0d0d;
+        --sp-nav: #1e1e21;
+        --sp-nav-fg: #a8a6a0;
+        --sp-toast: #f2f1ee;
+        --sp-toast-fg: #1c1c1e;
+        --sp-me: #8ec3b6;
+        --sp-me-fg: #0f201c;
+        --sp-neon: #8ec3b6;
+        --sp-neon-muted: #9fd0c4;
+        --sp-hl: #263532;
+        --sp-hl-fg: #9fd0c4;
+        --sp-warn: #e3ba76;
+        --sp-warn-soft: #352d20;
+        --sp-warn-line: #4e422f;
+        --sp-gif: #cbc9c4;
+        --sp-shadow: none;
         color-scheme: dark;
     }
 }
 html.dark[data-skin="sport"] {
-    --paper: #0d0d0d;
-    --line: #2c2c2a;
-    --ink: #f4f4f0;
-    --muted: #a9a9a1;
-    --faint: #8f8f88;
-    --accent: #d4ff3d;
-    --olive: #b5e85a;
-    --tint: #0d0d0d;
-    --scrim: rgba(0, 0, 0, .62);
-    --accent-rgb: 212, 255, 61;
-    --card: #171717;
-    --surface: #171717;
-    --border2: #45453f;
-    --terra-bg: rgba(212, 255, 61, .08);
-    --terra-br: rgba(212, 255, 61, .35);
-    --sage-bg: rgba(181, 232, 90, .1);
-    --sage-br: rgba(181, 232, 90, .35);
-    --amber: #e0a64a;
-    --amber-bg: rgba(224, 166, 74, .1);
-    --blue: #8fb3e0;
-    --blue-bg: rgba(143, 179, 224, .1);
-    --sp-card: #171717;
-    --sp-soft: #0d0d0d;
-    --sp-track: #2c2c2a;
-    --sp-on: #d4ff3d;
-    --sp-on-fg: #0d0d0d;
-    --sp-fill: #d4ff3d;
-    --sp-box-on: #d4ff3d;
-    --sp-bar-past: #4a4a46;
-    --sp-red: #ff6b70;
+    --paper: #161618;
+    --line: #313135;
+    --ink: #f2f1ee;
+    --muted: #a8a6a0;
+    --faint: #9a988f;
+    --accent: #9fd0c4;
+    --olive: #8ec3b6;
+    --tint: #161618;
+    --scrim: rgba(0, 0, 0, .55);
+    --accent-rgb: 142, 195, 182;
+    --card: #212124;
+    --surface: #212124;
+    --border2: #46464b;
+    --terra-bg: rgba(142, 195, 182, .10);
+    --terra-br: rgba(142, 195, 182, .32);
+    --sage-bg: rgba(142, 195, 182, .10);
+    --sage-br: rgba(142, 195, 182, .32);
+    --amber: #e3ba76;
+    --amber-bg: #352d20;
+    --blue: #94badc;
+    --blue-bg: #233041;
+    --sp-card: #212124;
+    --sp-soft: #2b2b2f;
+    --sp-track: #36363b;
+    --sp-on: #8ec3b6;
+    --sp-on-fg: #0f201c;
+    --sp-fill: #8ec3b6;
+    --sp-box-on: #8ec3b6;
+    --sp-bar-past: #5e5d59;
+    --sp-red: #ff8a80;
     --sp-red-fill: #e5484d;
     --sp-red-fill-fg: #111111;
-    --sp-nav: #171717;
-    --sp-nav-fg: #a9a9a1;
-    --sp-toast: #f4f4f0;
-    --sp-toast-fg: #111111;
-    --sp-me: #d4ff3d;
-    --sp-me-fg: #0d0d0d;
+    --sp-nav: #1e1e21;
+    --sp-nav-fg: #a8a6a0;
+    --sp-toast: #f2f1ee;
+    --sp-toast-fg: #1c1c1e;
+    --sp-me: #8ec3b6;
+    --sp-me-fg: #0f201c;
+    --sp-neon: #8ec3b6;
+    --sp-neon-muted: #9fd0c4;
+    --sp-hl: #263532;
+    --sp-hl-fg: #9fd0c4;
+    --sp-warn: #e3ba76;
+    --sp-warn-soft: #352d20;
+    --sp-warn-line: #4e422f;
+    --sp-gif: #cbc9c4;
+    --sp-shadow: none;
     color-scheme: dark;
 }
 
@@ -166,7 +191,7 @@ html.dark[data-skin="sport"] {
 html[data-skin="sport"] body { font-family: var(--sp-sans); font-size: 15px; line-height: 1.5; }
 html[data-skin="sport"] :focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 html[data-skin="sport"] a { color: var(--ink); font-weight: 600; }
-html[data-skin="sport"] h1, html[data-skin="sport"] h2, html[data-skin="sport"] h3, html[data-skin="sport"] h4 { font-weight: 700; }
+html[data-skin="sport"] h1, html[data-skin="sport"] h2, html[data-skin="sport"] h3, html[data-skin="sport"] h4 { font-weight: 600; }
 html[data-skin="sport"] button:not(:disabled):active { transform: scale(.97); }
 html[data-skin="sport"] button { transition: transform .08s ease-out; }
 
@@ -193,12 +218,12 @@ html[data-skin="sport"] .mh-row {
     font-family: var(--sp-num);
     font-weight: 600;
     font-size: 13px;
-    letter-spacing: .1em;
+    letter-spacing: .02em;
     margin: -12px 0 -14px;
 }
 html[data-skin="sport"] .mh-row span:last-child { text-align: left; }
 html[data-skin="sport"] .mh-row span:not(:empty) + span:not(:empty)::before { content: '·'; margin: 0 .5em; }
-html[data-skin="sport"] .mh-title { grid-area: title; font-family: var(--sp-cjk); font-weight: 900; font-size: 32px; line-height: 1.05; letter-spacing: -.01em; }
+html[data-skin="sport"] .mh-title { grid-area: title; font-family: var(--sp-cjk); font-weight: 600; font-size: 22px; line-height: 1.05; letter-spacing: -.01em; }
 html[data-skin="sport"] .mh-dot { display: none; }
 /* 刊头右边 / 底下的两块由 skin-sport.js 在运动风格下插进来(纸墨的刊头 DOM 不动) */
 html[data-skin="sport"] .sp-mh-aside { grid-area: aside; align-self: end; display: flex; align-items: flex-end; min-height: 56px; }
@@ -208,12 +233,12 @@ html[data-skin="sport"] .sp-mh-bar:empty { display: none; }
 html[data-skin="sport"] .sp-mh-bar > i { flex: 1; height: 6px; border-radius: 3px; background: var(--sp-track); }
 html[data-skin="sport"] .sp-mh-bar > i.on { background: var(--sp-fill); }
 html[data-skin="sport"] .sp-mh-bar > i.cur { background: var(--sp-fill); opacity: .35; }
-html[data-skin="sport"] .sp-mh-chip { min-height: 32px; padding: 0 12px; border: 1.5px solid var(--line); border-radius: 999px; display: inline-flex; align-items: center; font-family: var(--sp-num); font-weight: 700; font-size: 14px; letter-spacing: .04em; color: var(--muted); white-space: nowrap; }
+html[data-skin="sport"] .sp-mh-chip { min-height: 32px; padding: 0 12px; border: 1.5px solid var(--line); border-radius: 999px; display: inline-flex; align-items: center; font-family: var(--sp-num); font-weight: 600; font-size: 14px; letter-spacing: .02em; color: var(--muted); white-space: nowrap; }
 html[data-skin="sport"] .sp-ring { position: relative; width: 56px; height: 56px; flex: none; }
 html[data-skin="sport"] .sp-ring svg { display: block; transform: rotate(-90deg); }
 html[data-skin="sport"] .sp-ring .tr { stroke: var(--sp-track); }
 html[data-skin="sport"] .sp-ring .fl { stroke: var(--sp-fill); transition: stroke-dasharray .3s ease-out; }
-html[data-skin="sport"] .sp-ring b { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-family: var(--sp-num); font-weight: 800; font-size: 17px; }
+html[data-skin="sport"] .sp-ring b { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-family: var(--sp-num); font-weight: 600; font-size: 17px; }
 
 html[data-skin="sport"] .wrap { padding: 4px 16px calc(var(--tabbar-h) + 28px + env(safe-area-inset-bottom)); }
 html[data-skin="sport"] body.has-composer .wrap { padding-bottom: calc(var(--tabbar-h) + 92px + env(safe-area-inset-bottom)); }
@@ -244,7 +269,7 @@ html[data-skin="sport"] .tab::before {
     -webkit-mask: var(--sp-ico) center / 22px 22px no-repeat;
     mask: var(--sp-ico) center / 22px 22px no-repeat;
 }
-html[data-skin="sport"] .tab.active { background: var(--sp-neon); color: #111111; font-weight: 700; }
+html[data-skin="sport"] .tab.active { background: var(--sp-hl); color: var(--sp-hl-fg); font-weight: 600; }
 html[data-skin="sport"] .tab.active .tab-dot { background: transparent; }
 html[data-skin="sport"] #tab-today { --sp-ico: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M13 2 4 14h7l-1 8 9-12h-7l1-8z'/%3E%3C/svg%3E"); }
 html[data-skin="sport"] #tab-plan { --sp-ico: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 6.5A2.5 2.5 0 0 1 6.5 4h11A2.5 2.5 0 0 1 20 6.5v12a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 4 18.5zM4 10h16M8.5 2.5v3M15.5 2.5v3'/%3E%3C/svg%3E"); }
@@ -254,10 +279,10 @@ html[data-skin="sport"] #tab-me { --sp-ico: url("data:image/svg+xml,%3Csvg xmlns
 
 /* ══ 02 通用组件 ═══════════════════════════════════════════════════════ */
 /* 排版 */
-html[data-skin="sport"] .sec-label, html[data-skin="sport"] .sec { font-family: var(--sp-cjk); font-weight: 700; font-size: 17px; letter-spacing: 0; text-transform: none; color: var(--ink); line-height: 1.3; }
+html[data-skin="sport"] .sec-label, html[data-skin="sport"] .sec { font-family: var(--sp-cjk); font-weight: 600; font-size: 17px; letter-spacing: 0; text-transform: none; color: var(--ink); line-height: 1.3; }
 html[data-skin="sport"] .sp-sec { display: flex; align-items: baseline; gap: 10px; }
-html[data-skin="sport"] .sp-sec-n { font-family: var(--sp-num); font-weight: 800; font-size: 26px; line-height: 1; }
-html[data-skin="sport"] .sp-sec-t { font-family: var(--sp-cjk); font-weight: 700; font-size: 18px; }
+html[data-skin="sport"] .sp-sec-n { font-family: var(--sp-num); font-weight: 600; font-size: 20px; line-height: 1; }
+html[data-skin="sport"] .sp-sec-t { font-family: var(--sp-cjk); font-weight: 600; font-size: 17px; }
 html[data-skin="sport"] .sub-label { font-family: var(--sp-sans); font-size: 13px; font-weight: 600; color: var(--muted); }
 html[data-skin="sport"] .psec { background: var(--sp-card); border: 0; border-radius: 18px; padding: 16px; gap: 12px; }
 html[data-skin="sport"] .psec:last-child { border-bottom: 0; }
@@ -269,19 +294,19 @@ html[data-skin="sport"] .quote-rule { border-left: 3px solid var(--line); }
 html[data-skin="sport"] .accent-rule { border-left: 3px solid var(--sp-fill); }
 html[data-skin="sport"] .kv { font-family: var(--sp-sans); font-size: 14px; line-height: 1.7; }
 html[data-skin="sport"] .kv > .k { font-weight: 600; }
-html[data-skin="sport"] .tag { font-family: var(--sp-num); font-weight: 600; font-size: 13px; letter-spacing: .04em; }
-html[data-skin="sport"] .big-sans { font-family: var(--sp-cjk); font-weight: 900; }
+html[data-skin="sport"] .tag { font-family: var(--sp-num); font-weight: 600; font-size: 13px; letter-spacing: .02em; }
+html[data-skin="sport"] .big-sans { font-family: var(--sp-cjk); font-weight: 600; }
 html[data-skin="sport"] .mono { font-family: var(--sp-num); }
 
 /* 按钮:主按钮 = 墨底荧光绿字(深色反过来);次要 = 细边胶囊 */
-html[data-skin="sport"] .btn-primary { min-height: 56px; border-radius: 14px; background: var(--sp-on); color: var(--sp-on-fg); font-family: var(--sp-cjk); font-weight: 700; font-size: 17px; letter-spacing: 0; }
+html[data-skin="sport"] .btn-primary { min-height: 56px; border-radius: 14px; background: var(--sp-on); color: var(--sp-on-fg); font-family: var(--sp-cjk); font-weight: 600; font-size: 17px; letter-spacing: 0; }
 html[data-skin="sport"] .btn-primary:disabled { opacity: .35; }
-html[data-skin="sport"] .btn-outline { min-height: 52px; border: 1.5px solid var(--ink); border-radius: 999px; font-family: var(--sp-sans); font-weight: 700; font-size: 15px; letter-spacing: 0; }
+html[data-skin="sport"] .btn-outline { min-height: 52px; border: 1.5px solid var(--ink); border-radius: 999px; font-family: var(--sp-sans); font-weight: 600; font-size: 15px; letter-spacing: 0; }
 html[data-skin="sport"] .btn-line { min-height: 44px; padding: 0 14px; border: 1.5px solid var(--line); border-radius: 999px; font-family: var(--sp-sans); font-weight: 600; font-size: 14px; }
 html[data-skin="sport"] .btn-line.accent { border-color: var(--ink); color: var(--ink); }
 html[data-skin="sport"] .btn-line.solid-accent { border-color: var(--sp-on); background: var(--sp-on); color: var(--sp-on-fg); }
 html[data-skin="sport"] .btn-ghost { font-family: var(--sp-sans); font-weight: 600; font-size: 14px; }
-html[data-skin="sport"] .link-btn { font-family: var(--sp-sans); font-weight: 700; font-size: 14px; letter-spacing: 0; color: var(--ink); }
+html[data-skin="sport"] .link-btn { font-family: var(--sp-sans); font-weight: 600; font-size: 14px; letter-spacing: 0; color: var(--ink); }
 html[data-skin="sport"] .link-btn.u { text-decoration: none; }
 html[data-skin="sport"] .link-btn.accent { color: var(--ink); }
 html[data-skin="sport"] .actions { column-gap: 8px; row-gap: 8px; }
@@ -289,12 +314,12 @@ html[data-skin="sport"] .actions .link-btn { min-height: 44px; padding: 0 14px; 
 html[data-skin="sport"] .row-btn { border-bottom: 0; border-top: 1px solid var(--line); min-height: 56px; }
 html[data-skin="sport"] .row-btn .rk { font-size: 16px; font-weight: 600; }
 html[data-skin="sport"] .row-btn .rv { font-family: var(--sp-sans); font-size: 13px; color: var(--muted); }
-html[data-skin="sport"] .row-btn .ra { font-family: var(--sp-sans); font-weight: 700; color: var(--ink); }
+html[data-skin="sport"] .row-btn .ra { font-family: var(--sp-sans); font-weight: 600; color: var(--ink); }
 
 /* chip:选中 = 荧光绿底黑字 + 勾 */
 html[data-skin="sport"] .chips { gap: 8px; }
 html[data-skin="sport"] .chip { padding: 0 16px; border: 1.5px solid var(--line); border-radius: 999px; font-family: var(--sp-sans); font-size: 15px; font-weight: 500; display: inline-flex; align-items: center; gap: 6px; }
-html[data-skin="sport"] .chip.on { background: var(--sp-neon); border-color: var(--sp-box-on); color: #111111; font-weight: 700; }
+html[data-skin="sport"] .chip.on { background: var(--sp-hl); border-color: var(--sp-box-on); color: var(--sp-hl-fg); font-weight: 600; }
 html[data-skin="sport"] .chip.on::before {
     content: '';
     width: 14px;
@@ -309,21 +334,21 @@ html[data-skin="sport"] .chip.on::before {
 html[data-skin="sport"] .seg { gap: 4px; padding: 4px; border: 0; border-radius: 14px; background: var(--sp-soft); }
 html[data-skin="sport"] .psec .seg, html[data-skin="sport"] .ex-modal-card .seg { background: var(--sp-soft); }
 html[data-skin="sport"] .seg-btn { border: 0; border-radius: 10px; font-family: var(--sp-sans); font-size: 15px; font-weight: 500; }
-html[data-skin="sport"] .seg-btn.on { background: var(--sp-on); color: var(--sp-on-fg); font-weight: 700; }
+html[data-skin="sport"] .seg-btn.on { background: var(--sp-on); color: var(--sp-on-fg); font-weight: 600; }
 html[data-skin="sport"] .seg-btn.tall { min-height: 64px; font-family: var(--sp-sans); }
 html[data-skin="sport"] .seg-btn .sub { font-family: var(--sp-sans); font-size: 11px; font-weight: 500; opacity: .85; }
 html[data-skin="sport"] .seg.light { border: 0; }
 /* 风格开关:两格大字 */
-html[data-skin="sport"] :is(#skin-seg, #ob-skin) .seg-btn { min-height: 68px; font-family: var(--sp-cjk); font-weight: 900; font-size: 21px; line-height: 1.15; }
+html[data-skin="sport"] :is(#skin-seg, #ob-skin) .seg-btn { min-height: 68px; font-family: var(--sp-cjk); font-weight: 600; font-size: 17px; line-height: 1.15; }
 
 /* 步进器:圆形 −/+,中间大数字 */
 html[data-skin="sport"] .stepper { grid-template-columns: minmax(0, 1fr) 48px 96px 48px; column-gap: 6px; min-height: 56px; }
 html[data-skin="sport"] .step-lbl { font-family: var(--sp-sans); font-size: 15px; font-weight: 600; color: var(--ink); }
-html[data-skin="sport"] .step-btn { width: 48px; height: 48px; border: 2px solid var(--ink); border-radius: 50%; font-family: var(--sp-num); font-weight: 700; font-size: 22px; }
+html[data-skin="sport"] .step-btn { width: 48px; height: 48px; border: 2px solid var(--ink); border-radius: 50%; font-family: var(--sp-num); font-weight: 600; font-size: 18px; }
 html[data-skin="sport"] .step-btn:disabled { border-color: var(--line); color: var(--line); }
-html[data-skin="sport"] .step-val { font-family: var(--sp-num); font-weight: 800; font-size: 36px; }
+html[data-skin="sport"] .step-val { font-family: var(--sp-num); font-weight: 600; font-size: 24px; }
 html[data-skin="sport"] .step-unit { font-family: var(--sp-num); font-weight: 600; font-size: 14px; }
-html[data-skin="sport"] .step-input { font-family: var(--sp-num); font-weight: 800; font-size: 28px; border: 1.5px solid var(--line); border-radius: 12px; background: var(--sp-card); }
+html[data-skin="sport"] .step-input { font-family: var(--sp-num); font-weight: 600; font-size: 20px; border: 1.5px solid var(--line); border-radius: 12px; background: var(--sp-card); }
 
 /* 开关:胶囊滑块(旧的「[ 开 ]」字藏起来,状态靠 role=switch + aria-checked) */
 html[data-skin="sport"] .toggle-row { border-top: 1px solid var(--line); min-height: 64px; }
@@ -338,7 +363,7 @@ html[data-skin="sport"] .toggle-row[aria-checked="true"] .tv::after { left: 22px
 /* 勾选框:圆角方框,选中荧光绿底黑勾 */
 html[data-skin="sport"] .box-sq { width: 28px; height: 28px; box-sizing: border-box; border: 2px solid var(--faint); border-radius: 8px; }
 html[data-skin="sport"] .box-sq svg { width: 18px; height: 18px; }
-html[data-skin="sport"] .box-sq svg path { stroke: #111111; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+html[data-skin="sport"] .box-sq svg path { stroke: var(--ink); stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
 html[data-skin="sport"] .box.sm .box-sq, html[data-skin="sport"] .boxrow .box-sq { width: 26px; height: 26px; }
 html[data-skin="sport"] .box.sm .box-sq svg, html[data-skin="sport"] .boxrow .box-sq svg { width: 16px; height: 16px; }
 html[data-skin="sport"] [aria-checked="true"] > .box-sq { background: var(--sp-neon); border-color: var(--sp-box-on); }
@@ -349,17 +374,17 @@ html[data-skin="sport"] .boxrow.end { font-size: 13px; }
 html[data-skin="sport"] :is(.line-input, .line-area) { border: 1.5px solid var(--line); border-radius: 12px; background: var(--sp-card); padding: 0 14px; min-height: 48px; }
 html[data-skin="sport"] .line-area { padding: 10px 14px; border-color: var(--line); }
 html[data-skin="sport"] :is(.line-input, .line-area):focus { border-color: var(--ink); }
-html[data-skin="sport"] .line-input.code { font-family: var(--sp-num); font-weight: 700; font-size: 20px; border-color: var(--ink); }
+html[data-skin="sport"] .line-input.code { font-family: var(--sp-num); font-weight: 600; font-size: 17px; border-color: var(--ink); }
 html[data-skin="sport"] input::placeholder, html[data-skin="sport"] textarea::placeholder { color: var(--faint); opacity: 1; }
 
 /* 提示条:白卡 + 墨色细边 */
 html[data-skin="sport"] .notice { padding: 2px 2px 2px 14px; border: 1.5px solid var(--ink); border-radius: 14px; background: var(--sp-card); font-family: var(--sp-sans); font-size: 14px; line-height: 1.45; color: var(--ink); }
-html[data-skin="sport"] .stale-bar { padding: 4px 4px 4px 14px; border: 0; border-radius: 14px; background: var(--sp-neon); color: #111111; font-family: var(--sp-sans); font-size: 14px; font-weight: 600; }
+html[data-skin="sport"] .stale-bar { padding: 4px 4px 4px 14px; border: 0; border-radius: 14px; background: var(--sp-hl); color: var(--sp-hl-fg); font-family: var(--sp-sans); font-size: 14px; font-weight: 600; }
 html[data-skin="sport"] .stale-sticky { top: calc(var(--sp-mh-h, 0px)); }
-html[data-skin="sport"] .regen-btn { min-height: 44px; padding: 0 14px; border-radius: 999px; background: #111111; color: var(--sp-neon); font-family: var(--sp-sans); font-weight: 700; font-size: 14px; text-decoration: none; }
+html[data-skin="sport"] .regen-btn { min-height: 44px; padding: 0 14px; border-radius: 999px; background: var(--sp-fill); color: var(--sp-on-fg); font-family: var(--sp-sans); font-weight: 600; font-size: 14px; text-decoration: none; }
 html[data-skin="sport"] .saved-dot { background: var(--sp-fill); }
-html[data-skin="sport"] .warn-tag { font-family: var(--sp-sans); font-weight: 700; font-size: 13px; color: var(--sp-red); }
-html[data-skin="sport"] details.fold > summary { font-family: var(--sp-sans); font-weight: 700; }
+html[data-skin="sport"] .warn-tag { font-family: var(--sp-sans); font-weight: 600; font-size: 13px; color: var(--sp-red); }
+html[data-skin="sport"] details.fold > summary { font-family: var(--sp-sans); font-weight: 600; }
 
 /* ══ 03 弹窗 / 面板 / 提示 ═════════════════════════════════════════════ */
 /* 底部面板:圆角顶 + 小把手 */
@@ -371,20 +396,20 @@ html[data-skin="sport"] .ex-modal-card {
     animation: sp-up .22s ease-out;
 }
 html[data-skin="sport"] .ex-modal-card::before { content: ''; flex: none; align-self: center; width: 40px; height: 5px; border-radius: 3px; background: var(--line); margin-bottom: 4px; }
-html[data-skin="sport"] .ex-modal-title { font-family: var(--sp-cjk); font-weight: 900; font-size: 26px; line-height: 1.2; padding-top: 4px; }
+html[data-skin="sport"] .ex-modal-title { font-family: var(--sp-cjk); font-weight: 600; font-size: 20px; line-height: 1.2; padding-top: 4px; }
 html[data-skin="sport"] .ex-modal-close { padding: 0 14px; border: 1.5px solid var(--line); border-radius: 999px; font-family: var(--sp-sans); font-weight: 600; font-size: 14px; color: var(--ink); text-align: center; }
-html[data-skin="sport"] .sheet-eyebrow { font-family: var(--sp-num); font-weight: 700; font-size: 14px; letter-spacing: .1em; color: var(--faint); }
-html[data-skin="sport"] .sheet-title { font-family: var(--sp-cjk); font-weight: 900; font-size: 26px; }
+html[data-skin="sport"] .sheet-eyebrow { font-family: var(--sp-num); font-weight: 600; font-size: 14px; letter-spacing: .02em; color: var(--faint); }
+html[data-skin="sport"] .sheet-title { font-family: var(--sp-cjk); font-weight: 600; font-size: 20px; }
 html[data-skin="sport"] .sheet-desc { font-size: 14px; line-height: 1.55; }
 html[data-skin="sport"] .sync-toast { min-height: 48px; box-sizing: border-box; display: flex; align-items: center; padding: 12px 16px; border-radius: 14px; background: var(--sp-toast); color: var(--sp-toast-fg); font-family: var(--sp-sans); font-size: 14px; line-height: 1.4; max-width: calc(100% - 32px); }
 
 /* ══ 04 计时条:黑条荧光绿大字 ═════════════════════════════════════════ */
-html[data-skin="sport"] .timer-bar { background: #111111; color: #f4f4f0; border-bottom: 1px solid #2c2c2a; }
-html[data-skin="sport"] .timer-progress { height: 4px; background: #d4ff3d; }
+html[data-skin="sport"] .timer-bar { background: var(--sp-soft); color: var(--ink); border-bottom: 1px solid var(--line); }
+html[data-skin="sport"] .timer-progress { height: 4px; background: var(--sp-neon); }
 html[data-skin="sport"] .timer-content { padding: 6px 16px; }
-html[data-skin="sport"] .timer-time { font-family: var(--sp-num); font-weight: 800; font-size: 30px; letter-spacing: 0; color: #d4ff3d; font-variant-numeric: tabular-nums; }
-html[data-skin="sport"] .timer-label { font-family: var(--sp-sans); font-size: 13px; font-weight: 600; color: #b3b3ab; opacity: 1; }
-html[data-skin="sport"] .timer-btn { padding: 0 16px; border: 0; border-radius: 999px; background: #f4f4f0; color: #111111; font-family: var(--sp-sans); font-weight: 700; font-size: 14px; }
+html[data-skin="sport"] .timer-time { font-family: var(--sp-num); font-weight: 600; font-size: 22px; letter-spacing: 0; color: var(--sp-neon); font-variant-numeric: tabular-nums; }
+html[data-skin="sport"] .timer-label { font-family: var(--sp-sans); font-size: 13px; font-weight: 600; color: var(--muted); opacity: 1; }
+html[data-skin="sport"] .timer-btn { padding: 0 16px; border: 0; border-radius: 999px; background: var(--sp-card); color: var(--ink); font-family: var(--sp-sans); font-weight: 600; font-size: 14px; }
 
 @keyframes sp-up { from { transform: translateY(48px); } to { transform: none; } }
 @keyframes sp-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
@@ -394,13 +419,13 @@ html[data-skin="sport"] .timer-btn { padding: 0 16px; border: 0; border-radius: 
 html[data-skin="sport"] #main { display: flex; flex-direction: column; gap: 10px; }
 html[data-skin="sport"] .sp-card { background: var(--sp-card); border-radius: 18px; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
 html[data-skin="sport"] .sp-num { font-family: var(--sp-num); font-weight: 600; letter-spacing: .02em; }
-html[data-skin="sport"] .sp-eyebrow { font-family: var(--sp-num); font-weight: 700; font-size: 13px; letter-spacing: .12em; text-transform: uppercase; color: var(--faint); }
+html[data-skin="sport"] .sp-eyebrow { font-family: var(--sp-num); font-weight: 600; font-size: 13px; letter-spacing: .02em; text-transform: uppercase; color: var(--faint); }
 html[data-skin="sport"] .sp-pills { display: flex; flex-wrap: wrap; gap: 8px; }
 html[data-skin="sport"] .sp-pill { min-height: 44px; padding: 0 14px; border: 1.5px solid var(--line); border-radius: 999px; background: transparent; color: var(--ink); font-family: var(--sp-sans); font-weight: 600; font-size: 14px; display: inline-flex; align-items: center; gap: 6px; }
-html[data-skin="sport"] .sp-pill.strong { border-color: var(--ink); font-weight: 700; }
-html[data-skin="sport"] .sp-pill.on { border-color: var(--sp-on); background: var(--sp-on); color: var(--sp-on-fg); font-weight: 700; }
-html[data-skin="sport"] .sp-link { align-self: flex-start; min-height: 44px; padding: 0; border: 0; background: none; color: var(--ink); font-weight: 700; font-size: 14px; display: inline-flex; align-items: center; gap: 6px; }
-html[data-skin="sport"] .sp-pr { margin-left: 8px; padding: 1px 7px; border-radius: 6px; background: var(--sp-neon); color: #111111; font-family: var(--sp-num); font-weight: 700; font-size: 12px; letter-spacing: .04em; vertical-align: 3px; }
+html[data-skin="sport"] .sp-pill.strong { border-color: var(--ink); font-weight: 600; }
+html[data-skin="sport"] .sp-pill.on { border-color: var(--sp-on); background: var(--sp-on); color: var(--sp-on-fg); font-weight: 600; }
+html[data-skin="sport"] .sp-link { align-self: flex-start; min-height: 44px; padding: 0; border: 0; background: none; color: var(--ink); font-weight: 600; font-size: 14px; display: inline-flex; align-items: center; gap: 6px; }
+html[data-skin="sport"] .sp-pr { margin-left: 8px; padding: 1px 7px; border-radius: 6px; background: var(--sp-hl); color: var(--sp-hl-fg); font-family: var(--sp-num); font-weight: 600; font-size: 12px; letter-spacing: .02em; vertical-align: 3px; }
 /* 提示行 / 设置改过了 */
 html[data-skin="sport"] #main > .notice, html[data-skin="sport"] #main > .stale-bar { margin: 0; animation: sp-in .25s ease-out; }
 
@@ -408,35 +433,35 @@ html[data-skin="sport"] #main > .notice, html[data-skin="sport"] #main > .stale-
 html[data-skin="sport"] .sp-day { gap: 14px; }
 html[data-skin="sport"] .sp-day-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
 html[data-skin="sport"] .sp-day-l { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-html[data-skin="sport"] .sp-day-t { font-family: var(--sp-cjk); font-weight: 900; font-size: 28px; line-height: 1.15; overflow-wrap: anywhere; }
+html[data-skin="sport"] .sp-day-t { font-family: var(--sp-cjk); font-weight: 600; font-size: 20px; line-height: 1.15; overflow-wrap: anywhere; }
 html[data-skin="sport"] .sp-day-m { font-size: 14px; color: var(--muted); }
 html[data-skin="sport"] .sp-day-r { display: flex; gap: 16px; flex: none; padding-top: 4px; }
 html[data-skin="sport"] .sp-day-r > div { display: flex; flex-direction: column; align-items: flex-end; }
-html[data-skin="sport"] .sp-day-r b { font-family: var(--sp-num); font-weight: 800; font-size: 32px; line-height: 1; }
-html[data-skin="sport"] .sp-day-r span { font-family: var(--sp-num); font-weight: 600; font-size: 12px; letter-spacing: .1em; color: var(--faint); }
+html[data-skin="sport"] .sp-day-r b { font-family: var(--sp-num); font-weight: 600; font-size: 22px; line-height: 1; }
+html[data-skin="sport"] .sp-day-r span { font-family: var(--sp-num); font-weight: 600; font-size: 12px; letter-spacing: .02em; color: var(--faint); }
 html[data-skin="sport"] .sp-go { display: flex; align-items: center; justify-content: center; gap: 10px; }
 html[data-skin="sport"] .sp-session { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: center; }
 html[data-skin="sport"] .sp-session > div:first-child { display: flex; flex-direction: column; }
-html[data-skin="sport"] .sp-session-t { font-family: var(--sp-num); font-weight: 800; font-size: 36px; line-height: 1; font-variant-numeric: tabular-nums; }
+html[data-skin="sport"] .sp-session-t { font-family: var(--sp-num); font-weight: 600; font-size: 24px; line-height: 1; font-variant-numeric: tabular-nums; }
 html[data-skin="sport"] .sp-session-b { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
-html[data-skin="sport"] .sp-done-bar { min-height: 52px; padding: 0 14px; border-radius: 14px; background: var(--sp-neon); color: #111111; display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 16px; }
-html[data-skin="sport"] .sp-done-bar .sp-num { margin-left: auto; font-weight: 700; font-size: 15px; }
+html[data-skin="sport"] .sp-done-bar { min-height: 52px; padding: 0 14px; border-radius: 14px; background: var(--sp-hl); color: var(--sp-hl-fg); display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 16px; }
+html[data-skin="sport"] .sp-done-bar .sp-num { margin-left: auto; font-weight: 600; font-size: 15px; }
 html[data-skin="sport"] .sp-locked { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-weight: 600; color: var(--muted); }
 html[data-skin="sport"] .sp-rest-tools { display: flex; align-items: center; gap: 8px; padding-top: 12px; border-top: 1px solid var(--line); font-size: 13px; font-weight: 600; color: var(--muted); }
 html[data-skin="sport"] .sp-rest-tools span { margin-right: auto; }
-html[data-skin="sport"] .sp-rest-tools .sp-pill { font-family: var(--sp-num); font-weight: 700; font-size: 15px; }
+html[data-skin="sport"] .sp-rest-tools .sp-pill { font-family: var(--sp-num); font-weight: 600; font-size: 15px; }
 
 /* 教练的话 / 打卡后反馈 */
 html[data-skin="sport"] .sp-coach { padding: 14px 16px 6px; gap: 8px; }
 html[data-skin="sport"] .sp-coach-h { display: flex; align-items: center; gap: 8px; }
 html[data-skin="sport"] .sp-coach-h b { font-size: 15px; }
-html[data-skin="sport"] .sp-coach-h .sp-num { font-size: 13px; letter-spacing: .06em; color: var(--faint); }
-html[data-skin="sport"] .sp-coach-ico { width: 28px; height: 28px; border-radius: 9px; background: var(--sp-neon); color: #111111; display: flex; align-items: center; justify-content: center; }
+html[data-skin="sport"] .sp-coach-h .sp-num { font-size: 13px; letter-spacing: .02em; color: var(--faint); }
+html[data-skin="sport"] .sp-coach-ico { width: 28px; height: 28px; border-radius: 9px; background: var(--sp-hl); color: var(--sp-hl-fg); display: flex; align-items: center; justify-content: center; }
 html[data-skin="sport"] .sp-coach .link-btn.u { align-self: flex-start; }
 html[data-skin="sport"] .sp-coach.co-fb { padding-bottom: 14px; }
 html[data-skin="sport"] .co-fb-next { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 6px; }
 html[data-skin="sport"] .co-fb-next li { padding: 10px 12px; border-radius: 12px; background: var(--sp-soft); display: flex; flex-direction: column; gap: 2px; }
-html[data-skin="sport"] .co-fb-next .what { font-weight: 700; }
+html[data-skin="sport"] .co-fb-next .what { font-weight: 600; }
 html[data-skin="sport"] .co-fb-next .why { font-size: 13px; color: var(--muted); }
 
 /* 00 热身 / 99 拉伸 */
@@ -446,95 +471,95 @@ html[data-skin="sport"] .sp-blk-head { flex: 1; min-width: 0; min-height: 60px; 
 html[data-skin="sport"] .sp-blk-head > svg { color: var(--muted); transition: transform .15s; }
 html[data-skin="sport"] .sp-blk-head[aria-expanded="true"] > svg { transform: rotate(180deg); }
 html[data-skin="sport"] .sp-blk-t { display: flex; flex-direction: column; line-height: 1.3; }
-html[data-skin="sport"] .sp-blk-t > span:first-child { font-family: var(--sp-cjk); font-weight: 700; font-size: 17px; }
-html[data-skin="sport"] .sp-blk-t .sp-num { font-size: 13px; letter-spacing: .06em; color: var(--muted); }
+html[data-skin="sport"] .sp-blk-t > span:first-child { font-family: var(--sp-cjk); font-weight: 600; font-size: 17px; }
+html[data-skin="sport"] .sp-blk-t .sp-num { font-size: 13px; letter-spacing: .02em; color: var(--muted); }
 html[data-skin="sport"] .sp-blk .boxrow.end { min-height: 60px; padding: 0 16px 0 8px; color: var(--muted); }
 html[data-skin="sport"] .sp-blk-list { padding: 0 8px 6px 16px; display: flex; flex-direction: column; }
 html[data-skin="sport"] .sp-mini { min-height: 52px; border-top: 1px solid var(--line); display: flex; align-items: center; gap: 4px; }
 html[data-skin="sport"] .sp-mini-name { flex: 1; min-width: 0; min-height: 44px; padding: 0; border: 0; background: none; color: var(--ink); font-size: 15px; text-align: left; overflow-wrap: anywhere; }
 html[data-skin="sport"] .sp-mini.done .sp-mini-name { color: var(--muted); }
-html[data-skin="sport"] .sp-mini-dose { flex: none; font-family: var(--sp-num); font-weight: 700; font-size: 15px; color: var(--muted); padding: 0 4px; }
+html[data-skin="sport"] .sp-mini-dose { flex: none; font-family: var(--sp-num); font-weight: 600; font-size: 15px; color: var(--muted); padding: 0 4px; }
 html[data-skin="sport"] .sp-mini-act { flex: none; min-width: 44px; min-height: 44px; padding: 0 4px; border: 0; background: none; color: var(--muted); font-size: 13px; font-weight: 600; }
 
 /* 「下一项」焦点卡:荧光绿底、黑字(深浅两种模式都一样) */
-html[data-skin="sport"] .sp-focus { background: #d4ff3d; color: #111111; border-radius: 22px; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
-html[data-skin="sport"] .sp-focus :focus-visible { outline-color: #111111; }
-html[data-skin="sport"] .sp-just { display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 2px 0 12px; border-radius: 12px; background: #111111; color: #f4f4f0; animation: sp-in .3s ease-out; }
-html[data-skin="sport"] .sp-just > svg { flex: none; color: #d4ff3d; }
+html[data-skin="sport"] .sp-focus { background: var(--sp-card); color: var(--ink); border: 1px solid var(--line); box-shadow: var(--sp-shadow); border-radius: 18px; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+html[data-skin="sport"] .sp-focus :focus-visible { outline-color: var(--ink); }
+html[data-skin="sport"] .sp-just { display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 2px 0 12px; border-radius: 12px; background: var(--sp-soft); color: var(--ink); animation: sp-in .3s ease-out; }
+html[data-skin="sport"] .sp-just > svg { flex: none; color: var(--sp-neon); }
 html[data-skin="sport"] .sp-just > span { flex: 1; min-width: 0; font-size: 14px; line-height: 1.35; }
-html[data-skin="sport"] .sp-just button { min-height: 44px; padding: 0 12px; border: 0; background: transparent; color: #d4ff3d; font-weight: 700; font-size: 14px; }
+html[data-skin="sport"] .sp-just button { min-height: 44px; padding: 0 12px; border: 0; background: transparent; color: var(--sp-neon); font-weight: 600; font-size: 14px; }
 html[data-skin="sport"] .sp-f-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
-html[data-skin="sport"] .sp-f-tag { font-family: var(--sp-num); font-weight: 700; font-size: 14px; letter-spacing: .12em; text-transform: uppercase; }
-html[data-skin="sport"] .sp-f-part { min-height: 28px; padding: 0 12px; border-radius: 999px; border: 1.5px solid #111111; display: inline-flex; align-items: center; font-size: 13px; font-weight: 700; }
-html[data-skin="sport"] .sp-f-name { margin-top: -4px; padding: 0; border: 0; background: none; color: #111111; font-family: var(--sp-cjk); font-weight: 700; font-size: 30px; line-height: 1.15; text-align: left; overflow-wrap: anywhere; }
+html[data-skin="sport"] .sp-f-tag { font-family: var(--sp-num); font-weight: 600; font-size: 14px; letter-spacing: .02em; text-transform: uppercase; }
+html[data-skin="sport"] .sp-f-part { min-height: 28px; padding: 0 12px; border-radius: 999px; border: 1.5px solid var(--ink); display: inline-flex; align-items: center; font-size: 13px; font-weight: 600; }
+html[data-skin="sport"] .sp-f-name { margin-top: -4px; padding: 0; border: 0; background: none; color: var(--ink); font-family: var(--sp-cjk); font-weight: 600; font-size: 22px; line-height: 1.15; text-align: left; overflow-wrap: anywhere; }
 html[data-skin="sport"] .sp-f-nums { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 12px; align-items: end; }
 html[data-skin="sport"] .sp-f-nums > div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-html[data-skin="sport"] .sp-f-lbl { font-size: 12px; font-weight: 700; color: #45531a; }
-html[data-skin="sport"] .sp-f-big { font-family: var(--sp-num); font-weight: 800; font-size: 64px; line-height: .9; letter-spacing: -.01em; white-space: nowrap; }
-html[data-skin="sport"] .sp-f-big.md { font-size: 50px; }
-html[data-skin="sport"] .sp-f-big.sm { font-size: 44px; }
+html[data-skin="sport"] .sp-f-lbl { font-size: 12px; font-weight: 600; color: var(--sp-hl-fg); }
+html[data-skin="sport"] .sp-f-big { font-family: var(--sp-num); font-weight: 600; font-size: 32px; line-height: .9; letter-spacing: -.01em; white-space: nowrap; }
+html[data-skin="sport"] .sp-f-big.md { font-size: 28px; }
+html[data-skin="sport"] .sp-f-big.sm { font-size: 26px; }
 html[data-skin="sport"] .sp-f-sets { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 html[data-skin="sport"] .sp-dots { display: flex; flex-wrap: wrap; }
 html[data-skin="sport"] .sp-dot { width: 44px; height: 44px; padding: 0; border: 0; background: transparent; display: flex; align-items: center; justify-content: flex-start; }
-html[data-skin="sport"] .sp-dot i { width: 22px; height: 22px; border-radius: 50%; box-sizing: border-box; border: 2.5px solid #111111; }
-html[data-skin="sport"] .sp-dot.on i { background: #111111; }
-html[data-skin="sport"] .sp-f-setline { font-family: var(--sp-num); font-weight: 700; font-size: 16px; letter-spacing: .02em; }
+html[data-skin="sport"] .sp-dot i { width: 22px; height: 22px; border-radius: 50%; box-sizing: border-box; border: 2.5px solid var(--ink); }
+html[data-skin="sport"] .sp-dot.on i { background: var(--ink); }
+html[data-skin="sport"] .sp-f-setline { font-family: var(--sp-num); font-weight: 600; font-size: 16px; letter-spacing: .02em; }
 html[data-skin="sport"] .sp-f-acts { display: flex; flex-wrap: wrap; gap: 8px; }
-html[data-skin="sport"] .sp-focus .sp-pill { border-color: #111111; color: #111111; font-weight: 700; }
-html[data-skin="sport"] .sp-focus .sp-pill.dark.on { background: #111111; color: #d4ff3d; }
-html[data-skin="sport"] .sp-f-do { min-height: 64px; border: 0; border-radius: 16px; background: #111111; color: #d4ff3d; display: flex; align-items: center; justify-content: center; gap: 10px; font-family: var(--sp-cjk); font-weight: 900; font-size: 19px; }
+html[data-skin="sport"] .sp-focus .sp-pill { border-color: var(--ink); color: var(--ink); font-weight: 600; }
+html[data-skin="sport"] .sp-focus .sp-pill.dark.on { background: var(--sp-fill); color: var(--sp-on-fg); }
+html[data-skin="sport"] .sp-f-do { min-height: 64px; border: 0; border-radius: 16px; background: var(--sp-fill); color: var(--sp-on-fg); display: flex; align-items: center; justify-content: center; gap: 10px; font-family: var(--sp-cjk); font-weight: 600; font-size: 17px; }
 html[data-skin="sport"] .sp-alldone { gap: 10px; animation: sp-in .3s ease-out; }
-html[data-skin="sport"] .sp-f-huge { font-family: var(--sp-num); font-weight: 800; font-size: 76px; line-height: .9; }
+html[data-skin="sport"] .sp-f-huge { font-family: var(--sp-num); font-weight: 600; font-size: 34px; line-height: .9; }
 html[data-skin="sport"] .sp-f-sum { font-size: 15px; line-height: 1.55; }
-html[data-skin="sport"] .sp-f-sum b { font-family: var(--sp-num); font-size: 18px; }
+html[data-skin="sport"] .sp-f-sum b { font-family: var(--sp-num); font-size: 17px; }
 /* 焦点卡里的调整区:黑格,荧光绿 −/+;其余文字黑 */
 html[data-skin="sport"] .sp-f-edit { display: flex; flex-direction: column; gap: 10px; }
 html[data-skin="sport"] .sp-tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
 html[data-skin="sport"] .sp-tile.stepper { display: flex; flex-direction: column; align-items: center; padding-top: 8px; border-radius: 14px; overflow: hidden; min-height: 0; column-gap: 0; }
-html[data-skin="sport"] .sp-tile .step-val { font-family: var(--sp-num); font-weight: 800; font-size: 28px; line-height: 1; }
+html[data-skin="sport"] .sp-tile .step-val { font-family: var(--sp-num); font-weight: 600; font-size: 20px; line-height: 1; }
 html[data-skin="sport"] .sp-tile .step-lbl { font-family: var(--sp-sans); font-weight: 500; font-size: 12px; }
-html[data-skin="sport"] .sp-tile .step-input { width: 100%; min-height: 28px; padding: 0 4px; border: 0; border-radius: 0; background: transparent; font-family: var(--sp-num); font-weight: 800; font-size: 28px; line-height: 1; color: inherit; }
+html[data-skin="sport"] .sp-tile .step-input { width: 100%; min-height: 28px; padding: 0 4px; border: 0; border-radius: 0; background: transparent; font-family: var(--sp-num); font-weight: 600; font-size: 20px; line-height: 1; color: inherit; }
 html[data-skin="sport"] .sp-tile-btns { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); width: 100%; }
 html[data-skin="sport"] .sp-tile .step-btn { width: auto; height: 44px; border: 0; border-radius: 0; background: transparent; display: flex; align-items: center; justify-content: center; }
-html[data-skin="sport"] .sp-focus .sp-tile { background: #111111; color: #f4f4f0; }
-html[data-skin="sport"] .sp-focus .sp-tile .step-lbl { color: #b3b3ab; }
-html[data-skin="sport"] .sp-focus .sp-tile .step-btn { color: #d4ff3d; }
-html[data-skin="sport"] .sp-focus .sp-tile .step-btn:disabled { color: #55554f; }
-html[data-skin="sport"] .sp-focus :is(.note-line, .exnote, .sub-label) { color: #111111; }
+html[data-skin="sport"] .sp-focus .sp-tile { background: var(--sp-soft); color: var(--ink); }
+html[data-skin="sport"] .sp-focus .sp-tile .step-lbl { color: var(--muted); }
+html[data-skin="sport"] .sp-focus .sp-tile .step-btn { color: var(--sp-neon); }
+html[data-skin="sport"] .sp-focus .sp-tile .step-btn:disabled { color: var(--muted); }
+html[data-skin="sport"] .sp-focus :is(.note-line, .exnote, .sub-label) { color: var(--ink); }
 html[data-skin="sport"] .sp-focus .seg { background: rgba(17, 17, 17, .1); }
-html[data-skin="sport"] .sp-focus .seg-btn { color: #111111; }
-html[data-skin="sport"] .sp-focus .seg-btn.on { background: #111111; color: #d4ff3d; }
+html[data-skin="sport"] .sp-focus .seg-btn { color: var(--ink); }
+html[data-skin="sport"] .sp-focus .seg-btn.on { background: var(--sp-fill); color: var(--sp-on-fg); }
 /* 组间休息:黑底荧光绿大数字 */
-html[data-skin="sport"] .sp-rest { background: #111111; color: #f4f4f0; border-radius: 16px; padding: 12px 12px 12px 16px; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: center; animation: sp-in .25s ease-out; }
+html[data-skin="sport"] .sp-rest { background: var(--sp-soft); color: var(--ink); border-radius: 16px; padding: 12px 12px 12px 16px; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: center; animation: sp-in .25s ease-out; }
 html[data-skin="sport"] .sp-rest[hidden] { display: none; }
 html[data-skin="sport"] .sp-rest-l { display: flex; flex-direction: column; min-width: 0; }
-html[data-skin="sport"] .sp-rest-k { font-size: 13px; font-weight: 600; color: #b3b3ab; }
-html[data-skin="sport"] .sp-rest-t { font-family: var(--sp-num); font-weight: 800; font-size: 46px; line-height: 1; color: #d4ff3d; font-variant-numeric: tabular-nums; }
-html[data-skin="sport"] .sp-rest-bar { height: 4px; border-radius: 2px; background: #2c2c2a; margin-top: 8px; overflow: hidden; }
-html[data-skin="sport"] .sp-rest-bar i { display: block; height: 4px; border-radius: 2px; background: #d4ff3d; width: 0; transition: width .25s linear; }
+html[data-skin="sport"] .sp-rest-k { font-size: 13px; font-weight: 600; color: var(--muted); }
+html[data-skin="sport"] .sp-rest-t { font-family: var(--sp-num); font-weight: 600; font-size: 28px; line-height: 1; color: var(--sp-neon); font-variant-numeric: tabular-nums; }
+html[data-skin="sport"] .sp-rest-bar { height: 4px; border-radius: 2px; background: var(--line); margin-top: 8px; overflow: hidden; }
+html[data-skin="sport"] .sp-rest-bar i { display: block; height: 4px; border-radius: 2px; background: var(--sp-neon); width: 0; transition: width .25s linear; }
 html[data-skin="sport"] .sp-rest-r { display: flex; flex-direction: column; gap: 6px; }
-html[data-skin="sport"] .sp-rest-add { min-height: 44px; padding: 0 14px; border: 1.5px solid #55554f; border-radius: 999px; background: transparent; color: #f4f4f0; font-family: var(--sp-num); font-weight: 700; font-size: 16px; }
-html[data-skin="sport"] .sp-rest-skip { min-height: 44px; padding: 0 14px; border: 0; border-radius: 999px; background: #f4f4f0; color: #111111; font-weight: 700; font-size: 14px; }
+html[data-skin="sport"] .sp-rest-add { min-height: 44px; padding: 0 14px; border: 1.5px solid var(--muted); border-radius: 999px; background: transparent; color: var(--ink); font-family: var(--sp-num); font-weight: 600; font-size: 16px; }
+html[data-skin="sport"] .sp-rest-skip { min-height: 44px; padding: 0 14px; border: 0; border-radius: 999px; background: var(--sp-card); color: var(--ink); font-weight: 600; font-size: 14px; }
 html[data-skin="sport"] body.sp-rest-vis .timer-bar.show { transform: translateY(-110%); }
 
 /* 接下来 */
 html[data-skin="sport"] .sp-qhead { display: flex; align-items: baseline; justify-content: space-between; padding: 8px 2px 0; }
-html[data-skin="sport"] .sp-qhead > span:first-child { font-family: var(--sp-cjk); font-weight: 700; font-size: 17px; }
-html[data-skin="sport"] .sp-qhead .sp-num { font-size: 14px; letter-spacing: .04em; color: var(--faint); }
+html[data-skin="sport"] .sp-qhead > span:first-child { font-family: var(--sp-cjk); font-weight: 600; font-size: 17px; }
+html[data-skin="sport"] .sp-qhead .sp-num { font-size: 14px; letter-spacing: .02em; color: var(--faint); }
 html[data-skin="sport"] .sp-queue { padding: 0 0 0 16px; gap: 0; }
 html[data-skin="sport"] .sp-q { display: flex; flex-direction: column; border-top: 1px solid var(--line); }
 html[data-skin="sport"] .sp-q:first-child { border-top: 0; }
 html[data-skin="sport"] .sp-q-top { display: flex; align-items: center; }
 html[data-skin="sport"] .sp-q-main { flex: 1; min-width: 0; min-height: 64px; padding: 8px 0; border: 0; background: transparent; color: var(--ink); display: grid; grid-template-columns: 26px minmax(0, 1fr); column-gap: 8px; align-items: center; text-align: left; }
-html[data-skin="sport"] .sp-q-idx { font-family: var(--sp-num); font-weight: 800; font-size: 15px; color: var(--faint); }
+html[data-skin="sport"] .sp-q-idx { font-family: var(--sp-num); font-weight: 600; font-size: 15px; color: var(--faint); }
 html[data-skin="sport"] .sp-q-txt { display: flex; flex-direction: column; min-width: 0; align-items: flex-start; }
-html[data-skin="sport"] .sp-q-name { font-family: var(--sp-cjk); font-weight: 700; font-size: 17px; line-height: 1.3; overflow-wrap: anywhere; padding: 0; border: 0; background: none; color: inherit; text-align: left; }
+html[data-skin="sport"] .sp-q-name { font-family: var(--sp-cjk); font-weight: 600; font-size: 17px; line-height: 1.3; overflow-wrap: anywhere; padding: 0; border: 0; background: none; color: inherit; text-align: left; }
 html[data-skin="sport"] .sp-q-spec { font-family: var(--sp-num); font-weight: 600; font-size: 15px; letter-spacing: .02em; color: var(--muted); }
 html[data-skin="sport"] .sp-q.done .sp-q-name { color: var(--muted); }
 html[data-skin="sport"] .sp-q .box { width: 60px; height: 64px; flex: none; }
 html[data-skin="sport"] .sp-q-edit { padding: 0 16px 14px 0; display: flex; flex-direction: column; gap: 10px; }
 html[data-skin="sport"] .sp-q-edit .sp-tile { border: 1.5px solid var(--line); }
-html[data-skin="sport"] .sp-q-edit .sp-tile .step-val, html[data-skin="sport"] .sp-q-edit .sp-tile .step-input { font-size: 22px; }
+html[data-skin="sport"] .sp-q-edit .sp-tile .step-val, html[data-skin="sport"] .sp-q-edit .sp-tile .step-input { font-size: 18px; }
 html[data-skin="sport"] .sp-q-edit .sp-tile .step-lbl { font-size: 11px; color: var(--faint); }
 html[data-skin="sport"] .sp-q-edit .sp-tile .step-btn { color: var(--ink); }
 html[data-skin="sport"] .sp-q-edit .sp-tile .step-btn:disabled { color: var(--line); }
@@ -544,34 +569,34 @@ html[data-skin="sport"] .sp-add { min-height: 60px; padding: 0 16px 0 0; border:
 html[data-skin="sport"] .sp-queue > .sp-add:first-child { border-top: 0; }
 html[data-skin="sport"] .sp-card.sp-add { padding: 0 16px; border: 0; flex-direction: row; }
 html[data-skin="sport"] .sp-add-ico { width: 28px; height: 28px; flex: none; box-sizing: border-box; border-radius: 8px; border: 2px dashed var(--faint); display: flex; align-items: center; justify-content: center; }
-html[data-skin="sport"] .sp-add-t { font-weight: 700; font-size: 15px; }
+html[data-skin="sport"] .sp-add-t { font-weight: 600; font-size: 15px; }
 html[data-skin="sport"] .sp-add-s { font-size: 13px; color: var(--faint); }
 /* 泳日 */
 html[data-skin="sport"] .sp-swim { padding: 14px 0 4px 16px; gap: 0; }
-html[data-skin="sport"] .sp-swim-h { font-family: var(--sp-num); font-weight: 700; font-size: 13px; letter-spacing: .12em; color: var(--faint); padding-bottom: 4px; }
+html[data-skin="sport"] .sp-swim-h { font-family: var(--sp-num); font-weight: 600; font-size: 13px; letter-spacing: .02em; color: var(--faint); padding-bottom: 4px; }
 html[data-skin="sport"] .sp-swim .sp-q-main { cursor: default; }
 html[data-skin="sport"] .sp-swim .sp-pills { padding: 0 16px 10px 34px; }
 
 /* 完成打卡 */
-html[data-skin="sport"] .sp-checkin { margin-top: 4px; min-height: 58px; border-radius: 16px; border: 2px solid var(--ink); background: transparent; color: var(--ink); font-family: var(--sp-cjk); font-weight: 900; font-size: 17px; }
+html[data-skin="sport"] .sp-checkin { margin-top: 4px; min-height: 58px; border-radius: 16px; border: 2px solid var(--ink); background: transparent; color: var(--ink); font-family: var(--sp-cjk); font-weight: 600; font-size: 17px; }
 html[data-skin="sport"] .sp-checkin.on { border-color: var(--sp-on); background: var(--sp-on); color: var(--sp-on-fg); }
 
 /* 只读(历史 / 已打卡锁定)、恢复模块、提示、空状态 */
 html[data-skin="sport"] .sp-read { gap: 8px; }
 html[data-skin="sport"] .hist-detail-meta { display: flex; flex-wrap: wrap; gap: 6px; }
-html[data-skin="sport"] .hist-detail-chip { min-height: 28px; padding: 0 10px; border-radius: 999px; background: var(--sp-soft); display: inline-flex; align-items: center; font-family: var(--sp-num); font-weight: 700; font-size: 14px; }
+html[data-skin="sport"] .hist-detail-chip { min-height: 28px; padding: 0 10px; border-radius: 999px; background: var(--sp-soft); display: inline-flex; align-items: center; font-family: var(--sp-num); font-weight: 600; font-size: 14px; }
 html[data-skin="sport"] .sp-read .read-list .ex-row { border-top: 1px solid var(--line); padding: 4px 0; }
 html[data-skin="sport"] .sp-read .read-list .ex-row:first-child { border-top: 0; }
-html[data-skin="sport"] .sp-read .ex-top .idx { font-family: var(--sp-num); font-weight: 800; font-size: 15px; color: var(--faint); }
-html[data-skin="sport"] .sp-read .exname { font-family: var(--sp-cjk); font-weight: 700; font-size: 16px; }
+html[data-skin="sport"] .sp-read .ex-top .idx { font-family: var(--sp-num); font-weight: 600; font-size: 15px; color: var(--faint); }
+html[data-skin="sport"] .sp-read .exname { font-family: var(--sp-cjk); font-weight: 600; font-size: 16px; }
 html[data-skin="sport"] .sp-read .ex-spec.static { font-family: var(--sp-num); font-weight: 600; font-size: 15px; }
 html[data-skin="sport"] .hist-note { font-size: 15px; line-height: 1.6; }
 html[data-skin="sport"] #main .tip { border: 0; font-size: 14px; line-height: 1.6; color: var(--muted); }
 html[data-skin="sport"] #main .tip::before { display: none; }
 html[data-skin="sport"] .recovery-box { background: var(--sp-card); border: 0; border-radius: 18px; padding: 4px 16px 12px; }
-html[data-skin="sport"] .recovery-box > summary { font-family: var(--sp-cjk); font-weight: 700; font-size: 17px; min-height: 52px; display: flex; align-items: center; }
+html[data-skin="sport"] .recovery-box > summary { font-family: var(--sp-cjk); font-weight: 600; font-size: 17px; min-height: 52px; display: flex; align-items: center; }
 html[data-skin="sport"] #main > .empty { background: var(--sp-card); border-radius: 18px; padding: 20px 16px; display: flex; flex-direction: column; gap: 10px; }
-html[data-skin="sport"] #main > .empty p:first-child { font-family: var(--sp-cjk); font-weight: 900; font-size: 24px; color: var(--ink); }
+html[data-skin="sport"] #main > .empty p:first-child { font-family: var(--sp-cjk); font-weight: 600; font-size: 19px; color: var(--ink); }
 /* 运动模板沿用了几个纸墨类名(测试和别的代码靠它们找元素),纸墨那几条规则在这里抵掉 */
 html[data-skin="sport"] .sp-q.ex-row { padding: 0; }
 html[data-skin="sport"] .sp-pill.exname { width: auto; padding-top: 0; font-size: 14px; line-height: 1.25; }
@@ -592,23 +617,23 @@ html[data-skin="sport"] .sp-coach { border: 0; margin: 0; }
 html[data-skin="sport"] #coach-quick .sp-cq { gap: 12px; }
 html[data-skin="sport"] #coach-quick .sp-cq-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
 html[data-skin="sport"] #coach-quick .sp-cq-head { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; padding-top: 4px; }
-html[data-skin="sport"] #coach-quick .sp-cq-head .sheet-title { font-size: 24px; line-height: 1.2; overflow-wrap: anywhere; }
+html[data-skin="sport"] #coach-quick .sp-cq-head .sheet-title { font-size: 19px; line-height: 1.2; overflow-wrap: anywhere; }
 html[data-skin="sport"] #coach-quick .sp-cq-tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin-top: 8px; }
 html[data-skin="sport"] #coach-quick .sp-cq-tiles > div { min-width: 0; padding: 8px 10px; border-radius: 14px; background: var(--sp-card); display: flex; flex-direction: column; gap: 2px; }
-html[data-skin="sport"] #coach-quick .sp-cq-tiles b { font-family: var(--sp-num); font-weight: 800; font-size: 24px; line-height: 1.1; color: var(--ink); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
-html[data-skin="sport"] #coach-quick .sp-cq-tiles b.sm { font-family: var(--sp-cjk); font-weight: 700; font-size: 18px; line-height: 1.3; }
-html[data-skin="sport"] #coach-quick .sp-cq-tiles span { font-family: var(--sp-num); font-weight: 600; font-size: 12px; letter-spacing: .06em; color: var(--muted); }
+html[data-skin="sport"] #coach-quick .sp-cq-tiles b { font-family: var(--sp-num); font-weight: 600; font-size: 19px; line-height: 1.1; color: var(--ink); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+html[data-skin="sport"] #coach-quick .sp-cq-tiles b.sm { font-family: var(--sp-cjk); font-weight: 600; font-size: 17px; line-height: 1.3; }
+html[data-skin="sport"] #coach-quick .sp-cq-tiles span { font-family: var(--sp-num); font-weight: 600; font-size: 12px; letter-spacing: .02em; color: var(--muted); }
 html[data-skin="sport"] #coach-quick .sp-cq-log { display: flex; flex-direction: column; gap: 12px; min-height: 72px; max-height: 40vh; max-height: 40dvh; overflow-y: auto; overscroll-behavior: contain; padding: 4px 0; }
 html[data-skin="sport"] #coach-quick .cq-msg { display: flex; gap: 4px; font-size: 15px; line-height: 1.6; overflow-wrap: anywhere; }
 html[data-skin="sport"] #coach-quick .cq-msg p + p, html[data-skin="sport"] #coach-quick .cq-msg ul { margin-top: 6px; }
 html[data-skin="sport"] #coach-quick .cq-msg ul { padding-left: 18px; }
 html[data-skin="sport"] #coach-quick .sp-cq-co { flex-direction: row; align-items: flex-start; gap: 10px; }
-html[data-skin="sport"] #coach-quick .sp-co-av { width: 30px; height: 30px; flex: none; border-radius: 10px; background: var(--sp-neon); color: #111111; display: flex; align-items: center; justify-content: center; }
+html[data-skin="sport"] #coach-quick .sp-co-av { width: 30px; height: 30px; flex: none; border-radius: 10px; background: var(--sp-hl); color: var(--sp-hl-fg); display: flex; align-items: center; justify-content: center; }
 html[data-skin="sport"] #coach-quick .sp-msg-col { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
 html[data-skin="sport"] #coach-quick .sp-cq-co .co-text { padding: 10px 14px; border-radius: 6px 18px 18px 18px; background: var(--sp-card); }
 html[data-skin="sport"] #coach-quick .sp-cq-me { flex-direction: column; align-self: flex-end; max-width: 84%; }
 html[data-skin="sport"] #coach-quick .sp-cq-me .co-text { padding: 10px 14px; border-radius: 18px 18px 6px 18px; background: var(--sp-me); color: var(--sp-me-fg); }
-html[data-skin="sport"] #coach-quick .co-meta { font-family: var(--sp-num); font-weight: 600; font-size: 13px; letter-spacing: .04em; color: var(--faint); }
+html[data-skin="sport"] #coach-quick .co-meta { font-family: var(--sp-num); font-weight: 600; font-size: 13px; letter-spacing: .02em; color: var(--faint); }
 html[data-skin="sport"] #coach-quick .sp-bub .co-meta { color: var(--muted); }
 html[data-skin="sport"] #coach-quick .sp-cq-empty { padding: 12px 14px; border-radius: 16px; background: var(--sp-card); font-size: 14px; line-height: 1.6; color: var(--muted); }
 html[data-skin="sport"] #coach-quick .sp-cq-sugg { flex-wrap: nowrap; overflow-x: auto; gap: 6px; margin: 0 -16px; padding: 0 16px; scrollbar-width: none; }
@@ -618,7 +643,7 @@ html[data-skin="sport"] #coach-quick .sp-cq-sugg .chip:disabled { opacity: .4; }
 html[data-skin="sport"] #coach-quick .sp-cq-row { display: flex; gap: 8px; align-items: center; }
 html[data-skin="sport"] #coach-quick .sp-cq-row textarea { flex: 1; min-width: 0; box-sizing: border-box; min-height: 44px; max-height: 120px; resize: none; border: 1.5px solid var(--line); border-radius: 22px; background: var(--sp-card); padding: 10px 16px; font-family: var(--sp-sans); font-size: 16px; line-height: 1.4; color: var(--ink); }
 html[data-skin="sport"] #coach-quick .sp-cq-row textarea:focus { outline: none; border-color: var(--ink); }
-html[data-skin="sport"] #coach-quick .sp-cq-row .send { position: relative; flex: none; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 50%; background: var(--sp-on); color: var(--sp-on-fg); overflow: hidden; white-space: nowrap; text-indent: 60px; font-family: var(--sp-sans); font-size: 14px; font-weight: 700; }
+html[data-skin="sport"] #coach-quick .sp-cq-row .send { position: relative; flex: none; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 50%; background: var(--sp-on); color: var(--sp-on-fg); overflow: hidden; white-space: nowrap; text-indent: 60px; font-family: var(--sp-sans); font-size: 14px; font-weight: 600; }
 html[data-skin="sport"] #coach-quick .sp-cq-row .send::before {
     content: '';
     position: absolute;
@@ -635,37 +660,37 @@ html[data-skin="sport"] #coach-quick .cq-foot { font-family: var(--sp-sans); fon
 /* —— 搭子卡(skin-sport.js ptToday):名字首字墨圆、状态胶囊(在练 = 墨底;练完 = 荧光底带勾)、练什么大字、进度条、回应胶囊 —— */
 html[data-skin="sport"] .sp-pt { gap: 10px; }
 html[data-skin="sport"] .sp-pt-top { display: flex; align-items: center; gap: 12px; }
-html[data-skin="sport"] .sp-pt-av { width: 40px; height: 40px; flex: none; border-radius: 50%; background: var(--sp-on); color: var(--sp-on-fg); display: flex; align-items: center; justify-content: center; font-family: var(--sp-num); font-weight: 800; font-size: 20px; }
+html[data-skin="sport"] .sp-pt-av { width: 40px; height: 40px; flex: none; border-radius: 50%; background: var(--sp-on); color: var(--sp-on-fg); display: flex; align-items: center; justify-content: center; font-family: var(--sp-num); font-weight: 600; font-size: 17px; }
 html[data-skin="sport"] .sp-pt-who { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-html[data-skin="sport"] .sp-pt-who b { font-family: var(--sp-cjk); font-weight: 700; font-size: 17px; line-height: 1.25; overflow-wrap: anywhere; }
-html[data-skin="sport"] .sp-pt-st { flex: none; min-height: 30px; padding: 0 12px; box-sizing: border-box; border: 1.5px solid var(--line); border-radius: 999px; display: inline-flex; align-items: center; gap: 6px; font-family: var(--sp-sans); font-weight: 700; font-size: 13px; color: var(--muted); white-space: nowrap; }
+html[data-skin="sport"] .sp-pt-who b { font-family: var(--sp-cjk); font-weight: 600; font-size: 17px; line-height: 1.25; overflow-wrap: anywhere; }
+html[data-skin="sport"] .sp-pt-st { flex: none; min-height: 30px; padding: 0 12px; box-sizing: border-box; border: 1.5px solid var(--line); border-radius: 999px; display: inline-flex; align-items: center; gap: 6px; font-family: var(--sp-sans); font-weight: 600; font-size: 13px; color: var(--muted); white-space: nowrap; }
 html[data-skin="sport"] .sp-pt-st.training { border-color: var(--sp-on); background: var(--sp-on); color: var(--sp-on-fg); }
 html[data-skin="sport"] .sp-pt-st.training i { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
-html[data-skin="sport"] .sp-pt-st.done { border-color: #d4ff3d; background: #d4ff3d; color: #111111; }
-html[data-skin="sport"] .sp-pt-type { font-family: var(--sp-cjk); font-weight: 900; font-size: 24px; line-height: 1.15; overflow-wrap: anywhere; }
+html[data-skin="sport"] .sp-pt-st.done { border-color: var(--sp-neon); background: var(--sp-hl); color: var(--sp-hl-fg); }
+html[data-skin="sport"] .sp-pt-type { font-family: var(--sp-cjk); font-weight: 600; font-size: 19px; line-height: 1.15; overflow-wrap: anywhere; }
 html[data-skin="sport"] .sp-pt-prog { display: flex; align-items: center; gap: 10px; }
 html[data-skin="sport"] .sp-pt-bar { flex: 1; min-width: 0; height: 8px; border-radius: 4px; background: var(--sp-track); overflow: hidden; display: block; }
 html[data-skin="sport"] .sp-pt-bar > i { display: block; height: 100%; border-radius: 4px; background: var(--sp-fill); }
 html[data-skin="sport"] .sp-pt-n { font-size: 13px; color: var(--muted); white-space: nowrap; }
-html[data-skin="sport"] .sp-pt-n b { font-family: var(--sp-num); font-weight: 800; font-size: 18px; color: var(--ink); }
+html[data-skin="sport"] .sp-pt-n b { font-family: var(--sp-num); font-weight: 600; font-size: 17px; color: var(--ink); }
 html[data-skin="sport"] .sp-pt-now { font-size: 14px; font-weight: 600; line-height: 1.45; }
 html[data-skin="sport"] .sp-pt-rx { padding: 8px 12px; border-radius: 14px; background: var(--sp-soft); display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 10px; font-size: 14px; }
 html[data-skin="sport"] .sp-pt-rx-k { font-size: 13px; color: var(--muted); }
-html[data-skin="sport"] .sp-pt-rx b { font-weight: 700; }
+html[data-skin="sport"] .sp-pt-rx b { font-weight: 600; }
 html[data-skin="sport"] .sp-pt-words { display: flex; flex-wrap: wrap; gap: 8px; }
 html[data-skin="sport"] .sp-pt-words .chip { padding: 0 14px; font-size: 14px; font-weight: 600; }
 /* 一起练:焦点卡 / 引导卡(荧光底)顶上的墨字小条 */
-html[data-skin="sport"] .sp-pt-with { align-self: flex-start; max-width: 100%; min-height: 32px; padding: 4px 12px; box-sizing: border-box; border-radius: 999px; background: rgba(17, 17, 17, .1); color: #111111; display: inline-flex; align-items: center; gap: 8px; font-family: var(--sp-sans); font-size: 14px; font-weight: 700; line-height: 1.3; }
+html[data-skin="sport"] .sp-pt-with { align-self: flex-start; max-width: 100%; min-height: 32px; padding: 4px 12px; box-sizing: border-box; border-radius: 999px; background: rgba(17, 17, 17, .1); color: var(--ink); display: inline-flex; align-items: center; gap: 8px; font-family: var(--sp-sans); font-size: 14px; font-weight: 600; line-height: 1.3; }
 html[data-skin="sport"] .sp-pt-with[hidden] { display: none; }
-html[data-skin="sport"] .sp-pt-dot { width: 8px; height: 8px; flex: none; border-radius: 50%; background: #111111; }
+html[data-skin="sport"] .sp-pt-dot { width: 8px; height: 8px; flex: none; border-radius: 50%; background: var(--ink); }
 /* 搭子卡:TA 在「共享给 TA」里关了实时进度 —— 浅灰小字一行,不画进度 */
 html[data-skin="sport"] .sp-pt-off { font-weight: 500; font-size: 13px; color: var(--muted); }
 
 /* 没练自动顺延的提示:白卡里一句粗体 + 小字说明,荧光绿「顺延」小签只做底色;撤销 / 知道了靠右 */
 html[data-skin="sport"] .sp-shift { flex-wrap: wrap; align-items: flex-end; row-gap: 0; padding: 12px 4px 2px 14px; }
 html[data-skin="sport"] .sp-shift-t { flex: 1 1 220px; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
-html[data-skin="sport"] .sp-shift-t b { font-weight: 700; font-size: 15px; line-height: 1.4; }
-html[data-skin="sport"] .sp-shift-tag { min-height: 22px; padding: 0 9px; border-radius: 999px; background: var(--sp-neon); color: #111111; display: inline-flex; align-items: center; font-size: 12px; font-weight: 700; }
+html[data-skin="sport"] .sp-shift-t b { font-weight: 600; font-size: 15px; line-height: 1.4; }
+html[data-skin="sport"] .sp-shift-tag { min-height: 22px; padding: 0 9px; border-radius: 999px; background: var(--sp-hl); color: var(--sp-hl-fg); display: inline-flex; align-items: center; font-size: 12px; font-weight: 600; }
 html[data-skin="sport"] .sp-shift-h { font-size: 13px; line-height: 1.45; color: var(--muted); }
 html[data-skin="sport"] .sp-shift-a { flex: none; margin-left: auto; display: flex; }
 html[data-skin="sport"] .sp-shift-a .link-btn { padding: 0 12px; text-align: center; }
@@ -683,13 +708,13 @@ html[data-skin="sport"] #stale-bar > span { flex: 1; min-width: 0; line-height: 
 html[data-skin="sport"] #plan-cal:not(:empty) { display: flex; flex-direction: column; gap: 8px; padding: 14px 8px 12px; border-radius: 18px; background: var(--sp-card); }
 html[data-skin="sport"] #plan-cal .sp-cal-head { order: 0; padding: 0 0 0 6px; gap: 6px; font-family: var(--sp-sans); color: var(--ink); }
 html[data-skin="sport"] .sp-cal-tt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
-html[data-skin="sport"] .sp-cal-t { font-family: var(--sp-cjk); font-weight: 700; font-size: 17px; line-height: 1.25; }
-html[data-skin="sport"] #plan-cal .cal-nav-label { font-family: var(--sp-num); font-weight: 600; font-size: 14px; letter-spacing: .06em; color: var(--faint); }
+html[data-skin="sport"] .sp-cal-t { font-family: var(--sp-cjk); font-weight: 600; font-size: 17px; line-height: 1.25; }
+html[data-skin="sport"] #plan-cal .cal-nav-label { font-family: var(--sp-num); font-weight: 600; font-size: 14px; letter-spacing: .02em; color: var(--faint); }
 html[data-skin="sport"] #plan-cal .sp-cal-arr { flex: none; width: 44px; height: 44px; min-height: 44px; padding: 0; border: 1.5px solid var(--line); border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; color: var(--ink); }
 html[data-skin="sport"] #plan-cal .sp-cal-arr:disabled { opacity: .35; }
-html[data-skin="sport"] #plan-cal .sp-cal-back { flex: none; min-height: 44px; padding: 0 14px; border-radius: 999px; background: var(--sp-soft); font-size: 14px; font-weight: 700; color: var(--ink); }
+html[data-skin="sport"] #plan-cal .sp-cal-back { flex: none; min-height: 44px; padding: 0 14px; border-radius: 999px; background: var(--sp-soft); font-size: 14px; font-weight: 600; color: var(--ink); }
 html[data-skin="sport"] .sp-cal-dows { order: 1; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 3px; }
-html[data-skin="sport"] .sp-cal-dows > span { text-align: center; font-family: var(--sp-num); font-weight: 600; font-size: 12px; letter-spacing: .08em; color: var(--faint); }
+html[data-skin="sport"] .sp-cal-dows > span { text-align: center; font-family: var(--sp-num); font-weight: 600; font-size: 12px; letter-spacing: .02em; color: var(--faint); }
 html[data-skin="sport"] #plan-cal .cal-scroll { order: 2; }
 html[data-skin="sport"] .sp-cal-key { order: 3; display: flex; flex-wrap: wrap; gap: 4px 14px; padding: 0 6px; font-size: 12px; color: var(--muted); }
 html[data-skin="sport"] .sp-cal-key > span { display: inline-flex; align-items: center; gap: 6px; }
@@ -698,9 +723,9 @@ html[data-skin="sport"] #plan-cal .daygrid { gap: 3px; padding: 0; border-bottom
 /* 日格:训练日浅灰底、休息日透明、今天墨底(深色 = 荧光绿底);日期大号数字,下一行练什么,再下一行 ✓ / 锁 + 搭子圆点 */
 html[data-skin="sport"] #plan-cal .dc { min-height: 60px; box-sizing: border-box; padding: 7px 0 6px; border: 0; border-radius: 12px; background: var(--sp-soft); color: var(--ink); flex-flow: row wrap; justify-content: center; align-content: center; column-gap: 3px; row-gap: 2px; font-family: var(--sp-sans); }
 html[data-skin="sport"] #plan-cal .dc .dw { display: none; }
-html[data-skin="sport"] #plan-cal .dc .dn { flex: 0 0 100%; text-align: center; font-family: var(--sp-num); font-weight: 700; font-size: 19px; line-height: 1; color: inherit; }
-html[data-skin="sport"] #plan-cal .dc .dt { flex: 0 0 100%; text-align: center; font-size: 12px; font-weight: 700; line-height: 1.3; color: inherit; }
-html[data-skin="sport"] #plan-cal .dc .dm { display: inline-flex; align-items: center; min-height: 11px; font-size: 11px; font-weight: 700; color: inherit; }
+html[data-skin="sport"] #plan-cal .dc .dn { flex: 0 0 100%; text-align: center; font-family: var(--sp-num); font-weight: 600; font-size: 17px; line-height: 1; color: inherit; }
+html[data-skin="sport"] #plan-cal .dc .dt { flex: 0 0 100%; text-align: center; font-size: 12px; font-weight: 600; line-height: 1.3; color: inherit; }
+html[data-skin="sport"] #plan-cal .dc .dm { display: inline-flex; align-items: center; min-height: 11px; font-size: 11px; font-weight: 600; color: inherit; }
 html[data-skin="sport"] #plan-cal .dc .dd { align-self: center; background: transparent; }
 html[data-skin="sport"] #plan-cal .dc.co-day .dd { background: currentColor; }
 html[data-skin="sport"] #plan-cal .dc.co-day .dt { text-decoration: none; }   /* 纸墨 .co-day(教练草稿的天)的虚线顶边别漏进格子 */
@@ -715,14 +740,14 @@ html[data-skin="sport"] .touch-clone { border-radius: 12px; outline: 2px solid v
 /* 当前设置:一行一项(左列浅灰小字),下面 01–08 跳转胶囊 */
 html[data-skin="sport"] #plan-summary .sp-psum { padding: 14px 16px 16px; border: 0; border-radius: 18px; background: var(--sp-card); gap: 10px; }
 html[data-skin="sport"] .sp-psum-h { display: flex; align-items: center; }
-html[data-skin="sport"] .sp-psum-t { font-family: var(--sp-cjk); font-weight: 700; font-size: 17px; line-height: 1.3; }
+html[data-skin="sport"] .sp-psum-t { font-family: var(--sp-cjk); font-weight: 600; font-size: 17px; line-height: 1.3; }
 html[data-skin="sport"] .sp-psum .kv { grid-template-columns: 44px minmax(0, 1fr); column-gap: 10px; row-gap: 6px; font-family: var(--sp-sans); font-size: 14px; line-height: 1.45; }
 html[data-skin="sport"] .sp-psum .kv > .k { color: var(--faint); font-weight: 400; }
 html[data-skin="sport"] .sp-psum .kv + .kv { margin-top: -4px; padding-top: 10px; border-top: 1px solid var(--line); }
 html[data-skin="sport"] .sp-psum > .note-line { font-size: 14px; color: var(--muted); }
 html[data-skin="sport"] .sp-psum .sec-index { gap: 6px; margin-top: 2px; }
 html[data-skin="sport"] .sp-psum .sec-index a { min-height: 44px; padding: 0 12px; border-radius: 999px; background: var(--sp-soft); color: var(--ink); font-family: var(--sp-sans); font-weight: 500; font-size: 14px; gap: 6px; }
-html[data-skin="sport"] .sp-psum .sec-index a b { font-family: var(--sp-num); font-weight: 800; color: var(--muted); }
+html[data-skin="sport"] .sp-psum .sec-index a b { font-family: var(--sp-num); font-weight: 600; color: var(--muted); }
 
 /* 各节:标题后半句小灰字;浅灰提示框 */
 html[data-skin="sport"] .sp-sec-s { font-family: var(--sp-sans); font-weight: 400; font-size: 13px; color: var(--faint); }
@@ -737,7 +762,7 @@ html[data-skin="sport"] #p3 .sp-tecno-btn { min-height: 48px; padding: 0 14px; b
 html[data-skin="sport"] #p3 .sp-tecno-btn svg { flex: none; transition: transform .15s; }
 html[data-skin="sport"] #p3 .sp-tecno-btn[aria-expanded="true"] svg { transform: rotate(180deg); }
 html[data-skin="sport"] #p3 .tecno { gap: 12px; font-family: var(--sp-sans); font-size: 14px; line-height: 1.4; }
-html[data-skin="sport"] #p3 .tecno .th2 { padding-bottom: 4px; font-size: 13px; font-weight: 700; letter-spacing: 0; text-transform: none; color: var(--muted); }
+html[data-skin="sport"] #p3 .tecno .th2 { padding-bottom: 4px; font-size: 13px; font-weight: 600; letter-spacing: 0; text-transform: none; color: var(--muted); }
 html[data-skin="sport"] #p3 .tecno .tr { grid-template-columns: 132px minmax(0, 1fr); min-height: 30px; align-items: center; border-bottom: 0; border-top: 1px solid var(--line); }
 html[data-skin="sport"] #p3 .tecno .tr span:first-child { font-family: var(--sp-num); font-weight: 600; font-size: 15px; color: var(--muted); }
 html[data-skin="sport"] #p3 .tecno > .faint { font-size: 13px; line-height: 1.6; color: var(--muted); }
@@ -752,11 +777,11 @@ html[data-skin="sport"] #limits-hint { font-size: 14px; line-height: 1.6; color:
 html[data-skin="sport"] #p7 { counter-reset: sp-ex; gap: 8px; }
 html[data-skin="sport"] #p7:has(.sp-p7-h) #excluded-head { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; border: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 html[data-skin="sport"] #p7 .sp-p7-h { order: -1; }
-html[data-skin="sport"] #p7 .sp-p7-n { font-family: var(--sp-num); font-weight: 700; font-size: 15px; color: var(--faint); }
+html[data-skin="sport"] #p7 .sp-p7-n { font-family: var(--sp-num); font-weight: 600; font-size: 15px; color: var(--faint); }
 html[data-skin="sport"] #p7 .sp-p7-n::after { content: counter(sp-ex); }
 html[data-skin="sport"] #p7 .ex-list-row { counter-increment: sp-ex; min-height: 60px; padding: 4px 0; border-bottom: 0; border-top: 1px solid var(--line); }
 html[data-skin="sport"] #p7 .ex-list-row:first-child { border-top: 0; }
-html[data-skin="sport"] #p7 .ex-list-row .n { font-family: var(--sp-cjk); font-weight: 700; font-size: 16px; }
+html[data-skin="sport"] #p7 .ex-list-row .n { font-family: var(--sp-cjk); font-weight: 600; font-size: 16px; }
 html[data-skin="sport"] #p7 .ex-list-row .why { font-family: var(--sp-sans); font-size: 13px; color: var(--faint); }
 html[data-skin="sport"] #p7 .ex-list-row .btn-line { padding: 0 16px; }
 html[data-skin="sport"] #excluded-list > .note-line { font-family: var(--sp-sans); font-size: 14px; }
@@ -770,27 +795,27 @@ html[data-skin="sport"] #co-plan-body .co-day { border-top: 1px solid var(--line
 /* 采纳过、还能撤销的教练提议(样稿 369–378):周历和当前设置之间,墨色粗边白卡,荧光绿「教练」小签 + 一句摘要 + 撤销 */
 html[data-skin="sport"] #plan-props { display: flex; flex-direction: column; gap: 10px; }
 html[data-skin="sport"] #plan-props .sp-pp { padding: 10px 6px 10px 14px; border: 2px solid var(--ink); border-radius: 18px; background: var(--sp-card); display: flex; flex-direction: row; align-items: center; gap: 10px; animation: sp-in .25s ease-out; }
-html[data-skin="sport"] #plan-props .sp-pp-tag { flex: none; min-height: 26px; padding: 0 9px; border-radius: 999px; background: var(--sp-neon); color: #111111; display: inline-flex; align-items: center; font-family: var(--sp-sans); font-size: 12px; font-weight: 700; }
+html[data-skin="sport"] #plan-props .sp-pp-tag { flex: none; min-height: 26px; padding: 0 9px; border-radius: 999px; background: var(--sp-hl); color: var(--sp-hl-fg); display: inline-flex; align-items: center; font-family: var(--sp-sans); font-size: 12px; font-weight: 600; }
 html[data-skin="sport"] #plan-props .pp-t { flex: 1; min-width: 0; font-family: var(--sp-sans); font-size: 14px; line-height: 1.45; color: var(--ink); }
-html[data-skin="sport"] #plan-props .link-btn { flex: none; min-height: 44px; padding: 0 12px; color: var(--ink); font-family: var(--sp-sans); font-size: 14px; font-weight: 700; letter-spacing: 0; text-decoration: none; }
+html[data-skin="sport"] #plan-props .link-btn { flex: none; min-height: 44px; padding: 0 12px; color: var(--ink); font-family: var(--sp-sans); font-size: 14px; font-weight: 600; letter-spacing: 0; text-decoration: none; }
 /* 02 末尾「搭子」:圆点小标题 / 浅灰框「重合 →」/ 开关 / 整行描边胶囊「对齐搭子的训练日」;预览 = 墨色粗边卡片(同 AI 草稿),采纳后一行浅灰「已对齐 · 撤销」 */
 html[data-skin="sport"] #plan-partner { display: flex; flex-direction: column; gap: 10px; margin-top: 2px; padding-top: 14px; border-top: 1px solid var(--line); }
 html[data-skin="sport"] .sp-pt-h { display: flex; align-items: center; gap: 8px; }
 html[data-skin="sport"] .sp-pt-dot { flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--sp-fill); }
-html[data-skin="sport"] .sp-pt-h .sub-label { font-size: 14px; font-weight: 700; color: var(--ink); }
+html[data-skin="sport"] .sp-pt-h .sub-label { font-size: 14px; font-weight: 600; color: var(--ink); }
 html[data-skin="sport"] .sp-pt-ov { padding: 10px 12px; border-radius: 12px; background: var(--sp-soft); color: var(--ink); }
 html[data-skin="sport"] .sp-pt-ov .faint { color: var(--muted); }
 html[data-skin="sport"] #plan-partner .toggle-row { border-top: 0; }
-html[data-skin="sport"] .sp-pt-go { min-height: 48px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; border-color: var(--ink); color: var(--ink); font-weight: 700; font-size: 15px; }
+html[data-skin="sport"] .sp-pt-go { min-height: 48px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; border-color: var(--ink); color: var(--ink); font-weight: 600; font-size: 15px; }
 html[data-skin="sport"] .sp-pt-go:disabled { border-color: var(--line); }
 html[data-skin="sport"] .sp-pt-rv { padding: 12px 14px; border: 2px solid var(--ink); border-radius: 16px; gap: 10px; animation: sp-in .25s ease-out; }
 html[data-skin="sport"] .sp-pt-rvh { display: flex; align-items: center; gap: 10px; font-family: var(--sp-sans); font-size: 14px; font-weight: 600; color: var(--muted); }
-html[data-skin="sport"] .sp-pt-tag { flex: none; min-height: 26px; padding: 0 9px; border-radius: 999px; background: var(--sp-neon); color: #111111; display: inline-flex; align-items: center; font-size: 12px; font-weight: 700; }
+html[data-skin="sport"] .sp-pt-tag { flex: none; min-height: 26px; padding: 0 9px; border-radius: 999px; background: var(--sp-hl); color: var(--sp-hl-fg); display: inline-flex; align-items: center; font-size: 12px; font-weight: 600; }
 html[data-skin="sport"] .sp-pt-rows { display: flex; flex-direction: column; }
 html[data-skin="sport"] .sp-pt-row { display: grid; grid-template-columns: 52px minmax(0, 1fr); column-gap: 12px; align-items: center; padding: 8px 0; border-top: 1px solid var(--line); }
 html[data-skin="sport"] .sp-pt-row:first-child { border-top: 0; }
 html[data-skin="sport"] .sp-pt-d { display: flex; flex-direction: column; align-items: flex-start; font-family: var(--sp-sans); font-size: 12px; color: var(--muted); line-height: 1.3; }
-html[data-skin="sport"] .sp-pt-d b { font-family: var(--sp-num); font-weight: 800; font-size: 18px; color: var(--ink); }
+html[data-skin="sport"] .sp-pt-d b { font-family: var(--sp-num); font-weight: 600; font-size: 17px; color: var(--ink); }
 html[data-skin="sport"] .sp-pt-c { display: flex; flex-direction: column; gap: 2px; min-width: 0; font-family: var(--sp-sans); font-size: 15px; line-height: 1.4; color: var(--ink); overflow-wrap: anywhere; }
 html[data-skin="sport"] .sp-pt-c s { color: var(--muted); text-decoration-thickness: 1.5px; }
 html[data-skin="sport"] .sp-pt-c small { font-size: 13px; color: var(--muted); }
@@ -798,7 +823,7 @@ html[data-skin="sport"] .sp-pt-note { font-family: var(--sp-sans); font-size: 13
 html[data-skin="sport"] .sp-pt-rv .btn-row .btn-primary { min-height: 48px; font-size: 16px; }
 html[data-skin="sport"] .sp-pt-rv .btn-row .btn-line { min-height: 48px; }
 html[data-skin="sport"] .sp-pt-done { display: flex; align-items: center; gap: 10px; padding: 2px 4px 2px 12px; border-radius: 14px; background: var(--sp-soft); color: var(--ink); }
-html[data-skin="sport"] .sp-pt-ok { flex: none; width: 22px; height: 22px; border-radius: 50%; background: var(--sp-neon); color: #111111; display: inline-flex; align-items: center; justify-content: center; }
+html[data-skin="sport"] .sp-pt-ok { flex: none; width: 22px; height: 22px; border-radius: 50%; background: var(--sp-hl); color: var(--sp-hl-fg); display: inline-flex; align-items: center; justify-content: center; }
 html[data-skin="sport"] .sp-pt-dt { flex: 1; min-width: 0; line-height: 1.45; padding: 8px 0; }
 html[data-skin="sport"] .sp-pt-done .link-btn { flex: none; padding: 0 12px; }
 /* 周历「和搭子同练」:日格圆点(上面 .co-day .dd)同一套;AI 排草稿里跟搭子对齐了几天 = 浅灰一行 */
@@ -816,45 +841,45 @@ html[data-skin="sport"] .sp-psum .plan-tip::before { display: none; }
 html[data-skin="sport"] #stats-content { display: flex; flex-direction: column; gap: 10px; }
 html[data-skin="sport"] #stats-more:empty, html[data-skin="sport"] #log-review:empty { display: none; }
 html[data-skin="sport"] #log .panel { background: var(--sp-card); border: 0; border-radius: 18px; padding: 16px; gap: 12px; }
-html[data-skin="sport"] #log .panel-title { font-family: var(--sp-cjk); font-weight: 700; font-size: 17px; line-height: 1.3; letter-spacing: 0; text-transform: none; color: var(--ink); }
+html[data-skin="sport"] #log .panel-title { font-family: var(--sp-cjk); font-weight: 600; font-size: 17px; line-height: 1.3; letter-spacing: 0; text-transform: none; color: var(--ink); }
 html[data-skin="sport"] #log .sp-ph { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
 html[data-skin="sport"] #log .sp-pu { font-size: 13px; color: var(--faint); white-space: nowrap; }
 html[data-skin="sport"] #log .sp-sub { margin-top: -8px; font-size: 13px; color: var(--muted); }
 html[data-skin="sport"] #log .foot-note { font-family: var(--sp-sans); font-size: 13px; line-height: 1.5; }
 html[data-skin="sport"] #log .sp-meter { flex: 1; min-width: 0; height: 8px; border-radius: 4px; background: var(--sp-track); overflow: hidden; display: block; }
 html[data-skin="sport"] #log .sp-meter > i { display: block; height: 100%; border-radius: 4px; background: var(--sp-fill); }
-html[data-skin="sport"] #log .sp-up { padding: 0 6px; border-radius: 6px; background: var(--sp-neon); color: #111111; font-weight: 700; }
-html[data-skin="sport"] #log .sp-dn { color: var(--sp-red); font-weight: 700; }
+html[data-skin="sport"] #log .sp-up { padding: 0 6px; border-radius: 6px; background: var(--sp-hl); color: var(--sp-hl-fg); font-weight: 600; }
+html[data-skin="sport"] #log .sp-dn { color: var(--sp-red); font-weight: 600; }
 html[data-skin="sport"] #log .sp-eq { color: var(--faint); }
 
 /* 大数字三格:第三格(连续打卡天数)荧光绿底 */
 html[data-skin="sport"] #log .sp-big { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; padding: 0; border: 0; }
 html[data-skin="sport"] #log .sp-bigc { min-width: 0; padding: 14px 12px; border-radius: 18px; background: var(--sp-card); display: flex; flex-direction: column; gap: 4px; }
-html[data-skin="sport"] #log .sp-bigc.on { background: var(--sp-neon); color: #111111; }
-html[data-skin="sport"] #log .sp-big .bignum { font-family: var(--sp-num); font-weight: 800; font-size: 46px; line-height: .95; letter-spacing: 0; }
-html[data-skin="sport"] #log .sp-big .bignum small { font-size: 24px; }
+html[data-skin="sport"] #log .sp-bigc.on { background: var(--sp-hl); color: var(--sp-hl-fg); }
+html[data-skin="sport"] #log .sp-big .bignum { font-family: var(--sp-num); font-weight: 600; font-size: 28px; line-height: .95; letter-spacing: 0; }
+html[data-skin="sport"] #log .sp-big .bignum small { font-size: 19px; }
 html[data-skin="sport"] #log .sp-big .biglbl { margin-top: 0; font-family: var(--sp-sans); font-size: 13px; line-height: 1.35; letter-spacing: 0; color: var(--muted); }
 html[data-skin="sport"] #log .sp-bigc.on .biglbl { color: var(--sp-neon-muted); font-weight: 600; }
 
 /* 训练量 · 近四周:柱子,本周那根荧光绿底 + 墨边 */
 html[data-skin="sport"] #log .sp-bars { height: 156px; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; align-items: end; }
 html[data-skin="sport"] #log .sp-bar { height: 100%; display: flex; flex-direction: column; justify-content: flex-end; gap: 6px; text-align: center; }
-html[data-skin="sport"] #log .sp-bar b { font-family: var(--sp-num); font-weight: 800; font-size: 20px; line-height: 1; }
+html[data-skin="sport"] #log .sp-bar b { font-family: var(--sp-num); font-weight: 600; font-size: 17px; line-height: 1; }
 html[data-skin="sport"] #log .sp-bar i { display: block; min-height: 4px; box-sizing: border-box; border-radius: 10px; background: var(--sp-bar-past); }
 html[data-skin="sport"] #log .sp-bar.cur i { background: var(--sp-neon); border: 2px solid var(--sp-box-on); }
 html[data-skin="sport"] #log .sp-bar i.z { border: 0; border-radius: 2px; background: var(--sp-track); }
-html[data-skin="sport"] #log .sp-bar span { font-family: var(--sp-num); font-weight: 600; font-size: 13px; letter-spacing: .08em; color: var(--faint); }
+html[data-skin="sport"] #log .sp-bar span { font-family: var(--sp-num); font-weight: 600; font-size: 13px; letter-spacing: .02em; color: var(--faint); }
 
 /* 本月 / 成就:小格数字 */
 html[data-skin="sport"] #log .sp-mgrid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px 8px; }
 html[data-skin="sport"] #log .sp-mgrid.sp-g3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 html[data-skin="sport"] #log .sp-mgrid > div { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-html[data-skin="sport"] #log .sp-mgrid b { font-family: var(--sp-num); font-weight: 800; font-size: 28px; line-height: 1; }
+html[data-skin="sport"] #log .sp-mgrid b { font-family: var(--sp-num); font-weight: 600; font-size: 20px; line-height: 1; }
 html[data-skin="sport"] #log .sp-mgrid b small { margin-left: 2px; font-size: 14px; font-weight: 600; }
 html[data-skin="sport"] #log .sp-mgrid span { font-size: 13px; line-height: 1.35; color: var(--muted); }
 html[data-skin="sport"] #log .sp-wk { display: flex; align-items: center; gap: 10px; padding-top: 12px; border-top: 1px solid var(--line); }
 html[data-skin="sport"] #log .sp-wk > span:first-child { font-size: 13px; font-weight: 600; color: var(--muted); }
-html[data-skin="sport"] #log .sp-wk > b { font-family: var(--sp-num); font-weight: 800; font-size: 18px; }
+html[data-skin="sport"] #log .sp-wk > b { font-family: var(--sp-num); font-weight: 600; font-size: 17px; }
 
 /* 日志:标题在卡外,行在白卡里;左边日期块,右边 RPE 胶囊(展开时反色) */
 html[data-skin="sport"] #journal { padding: 0; border-radius: 0; background: transparent; gap: 6px; }
@@ -863,12 +888,12 @@ html[data-skin="sport"] #log-list { padding: 0 16px; border-radius: 18px; backgr
 html[data-skin="sport"] #log-list .sp-lrow { min-height: 72px; padding: 8px 0; border-bottom: 0; border-top: 1px solid var(--line); display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; column-gap: 12px; align-items: center; }
 html[data-skin="sport"] #log-list > .sp-lrow:first-child, html[data-skin="sport"] #log-list .log-month + .sp-lrow { border-top: 0; }
 html[data-skin="sport"] #log-list .sp-ld { display: flex; flex-direction: column; align-items: center; line-height: 1.05; }
-html[data-skin="sport"] #log-list .sp-ld b { font-family: var(--sp-num); font-weight: 800; font-size: 28px; }
-html[data-skin="sport"] #log-list .sp-ld i { font-family: var(--sp-num); font-style: normal; font-weight: 600; font-size: 12px; letter-spacing: .1em; color: var(--faint); }
+html[data-skin="sport"] #log-list .sp-ld b { font-family: var(--sp-num); font-weight: 600; font-size: 20px; }
+html[data-skin="sport"] #log-list .sp-ld i { font-family: var(--sp-num); font-style: normal; font-weight: 600; font-size: 12px; letter-spacing: .02em; color: var(--faint); }
 html[data-skin="sport"] #log-list .sp-lm { min-width: 0; display: flex; flex-direction: column; }
-html[data-skin="sport"] #log-list .lw { font-family: var(--sp-cjk); font-weight: 700; font-size: 16px; line-height: 1.35; }
+html[data-skin="sport"] #log-list .lw { font-family: var(--sp-cjk); font-weight: 600; font-size: 16px; line-height: 1.35; }
 html[data-skin="sport"] #log-list .lt { font-family: var(--sp-sans); font-size: 13px; color: var(--muted); }
-html[data-skin="sport"] #log-list .lr { min-height: 30px; box-sizing: border-box; padding: 0 10px; border: 1.5px solid var(--ink); border-radius: 999px; display: inline-flex; align-items: center; font-family: var(--sp-num); font-weight: 700; font-size: 15px; color: var(--ink); }
+html[data-skin="sport"] #log-list .lr { min-height: 30px; box-sizing: border-box; padding: 0 10px; border: 1.5px solid var(--ink); border-radius: 999px; display: inline-flex; align-items: center; font-family: var(--sp-num); font-weight: 600; font-size: 15px; color: var(--ink); }
 html[data-skin="sport"] #log-list .lr.none { border-color: transparent; color: var(--faint); }
 html[data-skin="sport"] #log-list .sp-lrow[aria-expanded="true"] .lr { border-color: var(--sp-on); background: var(--sp-on); color: var(--sp-on-fg); }
 html[data-skin="sport"] #log-list .log-detail { padding: 0 0 14px; border-bottom: 0; gap: 10px; }
@@ -878,12 +903,12 @@ html[data-skin="sport"] #log-list .jchip.undone { color: var(--faint); text-deco
 html[data-skin="sport"] #log-list .jentry-note { padding-left: 10px; border-left: 3px solid var(--line); font-style: normal; font-size: 14px; color: var(--muted); }
 html[data-skin="sport"] #log-list .log-actions { gap: 6px; }
 html[data-skin="sport"] #log-list .log-actions .btn-line.accent { border-color: var(--line); color: var(--sp-red); }
-html[data-skin="sport"] #log-list .log-month { padding: 16px 0 4px; border-top: 1px solid var(--line); font-family: var(--sp-num); font-weight: 600; font-size: 13px; letter-spacing: .1em; color: var(--faint); }
+html[data-skin="sport"] #log-list .log-month { padding: 16px 0 4px; border-top: 1px solid var(--line); font-family: var(--sp-num); font-weight: 600; font-size: 13px; letter-spacing: .02em; color: var(--faint); }
 html[data-skin="sport"] #log-list > .log-month:first-child { border-top: 0; }
 
 /* 近 12 周:真格子。练了 = 墨(深色 = 荧光绿),没练 = 浅灰,今天 = 描边(今天练了 = 荧光绿底) */
 html[data-skin="sport"] #log .sp-heat { display: grid; grid-template-columns: 24px repeat(13, minmax(0, 1fr)); gap: 4px; align-items: center; }
-html[data-skin="sport"] #log .sp-hl { font-family: var(--sp-num); font-weight: 600; font-size: 12px; letter-spacing: .04em; color: var(--faint); }
+html[data-skin="sport"] #log .sp-hl { font-family: var(--sp-num); font-weight: 600; font-size: 12px; letter-spacing: .02em; color: var(--faint); }
 html[data-skin="sport"] #log :is(.sp-heat, .sp-hkey) i { display: block; aspect-ratio: 1; box-sizing: border-box; border-radius: 4px; background: var(--sp-track); }
 html[data-skin="sport"] #log :is(.sp-heat, .sp-hkey) i.on { background: var(--sp-fill); }
 html[data-skin="sport"] #log :is(.sp-heat, .sp-hkey) i.td { box-shadow: inset 0 0 0 2px var(--ink); }
@@ -897,16 +922,16 @@ html[data-skin="sport"] #log .sp-hkey i { width: 12px; height: 12px; border-radi
 html[data-skin="sport"] #log .sp-hbars { display: flex; flex-direction: column; gap: 10px; }
 html[data-skin="sport"] #log .sp-hbar { display: grid; grid-template-columns: 88px minmax(0, 1fr) 32px; column-gap: 10px; align-items: center; }
 html[data-skin="sport"] #log .sp-hbar .k { font-size: 14px; font-weight: 600; }
-html[data-skin="sport"] #log .sp-hbar b { font-family: var(--sp-num); font-weight: 800; font-size: 18px; text-align: right; }
+html[data-skin="sport"] #log .sp-hbar b { font-family: var(--sp-num); font-weight: 600; font-size: 17px; text-align: right; }
 
 /* 重量进步 / 身体小柱:实心小柱,最后一根荧光绿底 + 墨边 */
 html[data-skin="sport"] #log .sp-wt { display: flex; flex-direction: column; gap: 6px; padding-top: 12px; border-top: 1px solid var(--line); }
 html[data-skin="sport"] #log .sp-ph + .sp-wt { padding-top: 0; border-top: 0; }
 html[data-skin="sport"] #log .sp-wt-h { display: flex; justify-content: space-between; align-items: flex-end; gap: 10px; }
-html[data-skin="sport"] #log .sp-wt-n { min-width: 0; display: flex; flex-direction: column; font-weight: 700; font-size: 15px; }
-html[data-skin="sport"] #log .sp-wt-n small { font-family: var(--sp-num); font-weight: 600; font-size: 13px; letter-spacing: .04em; color: var(--faint); }
+html[data-skin="sport"] #log .sp-wt-n { min-width: 0; display: flex; flex-direction: column; font-weight: 600; font-size: 15px; }
+html[data-skin="sport"] #log .sp-wt-n small { font-family: var(--sp-num); font-weight: 600; font-size: 13px; letter-spacing: .02em; color: var(--faint); }
 html[data-skin="sport"] #log .sp-wt-v { white-space: nowrap; }
-html[data-skin="sport"] #log .sp-wt-v b { font-family: var(--sp-num); font-weight: 800; font-size: 32px; line-height: 1; }
+html[data-skin="sport"] #log .sp-wt-v b { font-family: var(--sp-num); font-weight: 600; font-size: 22px; line-height: 1; }
 html[data-skin="sport"] #log .sp-wt-v small { margin-left: 2px; font-family: var(--sp-num); font-weight: 600; font-size: 14px; color: var(--faint); }
 html[data-skin="sport"] #log .sp-wt-f { display: flex; justify-content: space-between; font-family: var(--sp-num); font-weight: 600; font-size: 13px; color: var(--faint); }
 html[data-skin="sport"] #log .spark { height: 32px; gap: 3px; }
@@ -918,33 +943,33 @@ html[data-skin="sport"] #log .sp-rows { display: flex; flex-direction: column; }
 html[data-skin="sport"] #log .sp-pr { min-height: 56px; padding: 6px 0; border-top: 1px solid var(--line); display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 10px; align-items: center; }
 html[data-skin="sport"] #log .sp-pr:first-child { border-top: 0; }
 html[data-skin="sport"] #log .sp-pr-n { min-width: 0; display: flex; flex-direction: column; }
-html[data-skin="sport"] #log .sp-pr-n b { font-weight: 700; font-size: 15px; }
-html[data-skin="sport"] #log .sp-pr-n span { font-family: var(--sp-num); font-weight: 600; font-size: 13px; letter-spacing: .04em; color: var(--faint); }
+html[data-skin="sport"] #log .sp-pr-n b { font-weight: 600; font-size: 15px; }
+html[data-skin="sport"] #log .sp-pr-n span { font-family: var(--sp-num); font-weight: 600; font-size: 13px; letter-spacing: .02em; color: var(--faint); }
 html[data-skin="sport"] #log .sp-pr-v { display: inline-flex; align-items: center; gap: 6px; color: var(--faint); }
 html[data-skin="sport"] #log .sp-pr-v s { font-family: var(--sp-num); font-weight: 600; font-size: 15px; }
-html[data-skin="sport"] #log .sp-pr-v b { min-height: 34px; padding: 0 10px; border-radius: 10px; background: var(--sp-neon); color: #111111; display: inline-flex; align-items: center; font-family: var(--sp-num); font-weight: 800; font-size: 22px; }
-html[data-skin="sport"] #log .sp-pr-v b small { margin-left: 2px; font-size: 13px; font-weight: 700; }
+html[data-skin="sport"] #log .sp-pr-v b { min-height: 34px; padding: 0 10px; border-radius: 10px; background: var(--sp-hl); color: var(--sp-hl-fg); display: inline-flex; align-items: center; font-family: var(--sp-num); font-weight: 600; font-size: 18px; }
+html[data-skin="sport"] #log .sp-pr-v b small { margin-left: 2px; font-size: 13px; font-weight: 600; }
 
 /* 成就:下一个的进度条 + 勋章墙(解锁的格子荧光绿底) */
 html[data-skin="sport"] #log .sp-next { display: flex; flex-direction: column; gap: 6px; }
 html[data-skin="sport"] #log .sp-next > .sp-meter { flex: none; }
 html[data-skin="sport"] #log .sp-next-h { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; font-size: 14px; font-weight: 600; }
-html[data-skin="sport"] #log .sp-next-h b { font-family: var(--sp-num); font-weight: 800; font-size: 18px; }
-html[data-skin="sport"] #log .sp-alldone { align-self: flex-start; min-height: 32px; padding: 0 12px; border-radius: 999px; background: var(--sp-neon); color: #111111; display: inline-flex; align-items: center; gap: 6px; font-weight: 700; font-size: 14px; }
+html[data-skin="sport"] #log .sp-next-h b { font-family: var(--sp-num); font-weight: 600; font-size: 17px; }
+html[data-skin="sport"] #log .sp-alldone { align-self: flex-start; min-height: 32px; padding: 0 12px; border-radius: 999px; background: var(--sp-hl); color: var(--sp-hl-fg); display: inline-flex; align-items: center; gap: 6px; font-weight: 600; font-size: 14px; }
 html[data-skin="sport"] #log .sp-achw { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
 html[data-skin="sport"] #log .ach-badge-card { width: auto; min-height: 96px; padding: 10px 4px 8px; border: 0; border-radius: 14px; background: var(--sp-soft); justify-content: center; gap: 4px; }
-html[data-skin="sport"] #log .ach-badge-card.on { background: var(--sp-neon); }
+html[data-skin="sport"] #log .ach-badge-card.on { background: var(--sp-hl); }
 html[data-skin="sport"] #log .ach-badge-card svg { width: 40px; height: 40px; }
-html[data-skin="sport"] #log .ach-badge-card .an { max-width: 100%; white-space: normal; overflow: visible; font-family: var(--sp-sans); font-weight: 700; font-size: 12px; line-height: 1.25; color: var(--ink); }
+html[data-skin="sport"] #log .ach-badge-card .an { max-width: 100%; white-space: normal; overflow: visible; font-family: var(--sp-sans); font-weight: 600; font-size: 12px; line-height: 1.25; color: var(--ink); }
 html[data-skin="sport"] #log .ach-badge-card .ad { font-family: var(--sp-num); font-weight: 600; font-size: 12px; color: var(--faint); }
-html[data-skin="sport"] #log .ach-badge-card.on .an { color: #111111; }
-html[data-skin="sport"] #log .ach-badge-card.on .ad { color: var(--sp-neon-muted); }
+html[data-skin="sport"] #log .ach-badge-card.on .an { color: var(--sp-hl-fg); }
+html[data-skin="sport"] #log .ach-badge-card.on .ad { color: var(--sp-hl-fg); }
 
 /* 身体记录:白底输入格、真空吸打卡、比例、历史 */
 html[data-skin="sport"] #log .body-grid { gap: 10px; }
 html[data-skin="sport"] #log .body-grid label { display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: 6px; row-gap: 4px; align-items: baseline; font-family: var(--sp-sans); font-size: 13px; font-weight: 600; color: var(--muted); }
 html[data-skin="sport"] #log .body-grid label .faint { font-family: var(--sp-num); }
-html[data-skin="sport"] #log .body-grid input { grid-column: 1 / -1; width: 100%; min-height: 48px; box-sizing: border-box; padding: 0 12px; border: 1.5px solid var(--line); border-radius: 12px; background: var(--sp-card); font-family: var(--sp-num); font-weight: 700; font-size: 22px; }
+html[data-skin="sport"] #log .body-grid input { grid-column: 1 / -1; width: 100%; min-height: 48px; box-sizing: border-box; padding: 0 12px; border: 1.5px solid var(--line); border-radius: 12px; background: var(--sp-card); font-family: var(--sp-num); font-weight: 600; font-size: 18px; }
 html[data-skin="sport"] #log .body-grid input:focus { border-color: var(--ink); }
 html[data-skin="sport"] #log details.fold > summary { gap: 8px; padding: 4px 0; font-size: 14px; line-height: 1.4; color: var(--ink); }
 html[data-skin="sport"] #log details.fold > summary::after,
@@ -962,107 +987,107 @@ html[data-skin="sport"] #log details.fold[open] > summary::after {
 html[data-skin="sport"] #log details.fold[open] > summary::after { transform: rotate(180deg); }
 html[data-skin="sport"] #log .sp-vac { padding-top: 12px; border-top: 1px solid var(--line); display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 12px; align-items: center; }
 html[data-skin="sport"] #log .sp-vac-t { display: flex; flex-direction: column; }
-html[data-skin="sport"] #log .sp-vac-t b { font-weight: 700; font-size: 15px; }
+html[data-skin="sport"] #log .sp-vac-t b { font-weight: 600; font-size: 15px; }
 html[data-skin="sport"] #log .sp-vac-b { display: inline-flex; align-items: center; gap: 6px; }
-html[data-skin="sport"] #log .sp-vac-b.done { border-color: var(--sp-box-on); background: var(--sp-neon); color: #111111; }
+html[data-skin="sport"] #log .sp-vac-b.done { border-color: var(--sp-box-on); background: var(--sp-hl); color: var(--sp-hl-fg); }
 html[data-skin="sport"] #log :is(.sp-ratios, .sp-charts) { padding-top: 12px; border-top: 1px solid var(--line); }
 html[data-skin="sport"] #log .sp-charts { display: flex; flex-direction: column; gap: 14px; }
 html[data-skin="sport"] #log .sp-bh { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; column-gap: 10px; align-items: center; border-top: 1px solid var(--line); }
 html[data-skin="sport"] #log .sp-bh:first-child { border-top: 0; }
-html[data-skin="sport"] #log .sp-bh-d { font-family: var(--sp-num); font-weight: 700; font-size: 14px; }
+html[data-skin="sport"] #log .sp-bh-d { font-family: var(--sp-num); font-weight: 600; font-size: 14px; }
 html[data-skin="sport"] #log .sp-bh-v { text-align: right; font-size: 13px; color: var(--muted); }
 html[data-skin="sport"] #log .sp-del { padding: 0 6px; font-weight: 600; color: var(--sp-red); text-align: center; }
 
 /* 曲线焦点 */
 html[data-skin="sport"] #log .sp-cv { display: flex; flex-direction: column; gap: 4px; }
 html[data-skin="sport"] #log .sp-cv-h { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
-html[data-skin="sport"] #log .sp-cv-h b { font-weight: 700; font-size: 15px; }
+html[data-skin="sport"] #log .sp-cv-h b { font-weight: 600; font-size: 15px; }
 html[data-skin="sport"] #log .sp-cv-h > span { white-space: nowrap; font-family: var(--sp-num); font-weight: 600; font-size: 14px; color: var(--muted); }
 html[data-skin="sport"] #log .sp-cv-m { display: flex; align-items: center; gap: 10px; }
-html[data-skin="sport"] #log .sp-cv-m b { min-width: 40px; text-align: right; font-family: var(--sp-num); font-weight: 800; font-size: 16px; }
+html[data-skin="sport"] #log .sp-cv-m b { min-width: 40px; text-align: right; font-family: var(--sp-num); font-weight: 600; font-size: 16px; }
 
 /* 每周复盘(#log-review,内容由 coach.js 画):白卡,左上荧光绿胶囊 */
 html[data-skin="sport"] #log-review .sp-rv { padding: 16px; border-radius: 18px; background: var(--sp-card); display: flex; flex-direction: column; gap: 10px; }
 html[data-skin="sport"] #log-review #co-review-body { display: flex; flex-direction: column; gap: 10px; }
 html[data-skin="sport"] #log-review .sp-rv-top { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
-html[data-skin="sport"] #log-review .sp-rv-chip { flex: none; min-height: 26px; padding: 0 10px; border-radius: 999px; background: var(--sp-neon); color: #111111; display: inline-flex; align-items: center; font-family: var(--sp-num); font-weight: 700; font-size: 14px; letter-spacing: .08em; white-space: nowrap; }
+html[data-skin="sport"] #log-review .sp-rv-chip { flex: none; min-height: 26px; padding: 0 10px; border-radius: 999px; background: var(--sp-hl); color: var(--sp-hl-fg); display: inline-flex; align-items: center; font-family: var(--sp-num); font-weight: 600; font-size: 14px; letter-spacing: .02em; white-space: nowrap; }
 html[data-skin="sport"] #log-review .sp-rv-chip.off { background: var(--sp-soft); color: var(--ink); }
 html[data-skin="sport"] #log-review .sp-rv-when { font-size: 13px; color: var(--faint); }
 html[data-skin="sport"] #log-review .co-rv { gap: 10px; font-size: 15px; line-height: 1.6; }
-html[data-skin="sport"] #log-review .rv-h { font-family: var(--sp-cjk); font-weight: 900; font-size: 21px; line-height: 1.3; letter-spacing: 0; }
+html[data-skin="sport"] #log-review .rv-h { font-family: var(--sp-cjk); font-weight: 600; font-size: 17px; line-height: 1.3; letter-spacing: 0; }
 html[data-skin="sport"] #log-review .co-rv-t { margin-top: 2px; font-family: var(--sp-sans); font-size: 13px; font-weight: 600; letter-spacing: 0; color: var(--muted); }
 html[data-skin="sport"] #log-review .co-rv ul { margin: 0; padding-left: 18px; }
 html[data-skin="sport"] #log-review .adj-row { min-height: 60px; grid-template-columns: 28px minmax(0, 1fr); border-top: 1px solid var(--line); }
 html[data-skin="sport"] #log-review .adj-row .box-sq { width: 28px; height: 28px; margin-top: 0; }
 html[data-skin="sport"] #log-review .adj-row .box-sq svg { width: 18px; height: 18px; }
-html[data-skin="sport"] #log-review .adj-row .what { font-family: var(--sp-sans); font-weight: 700; font-size: 15px; }
+html[data-skin="sport"] #log-review .adj-row .what { font-family: var(--sp-sans); font-weight: 600; font-size: 15px; }
 html[data-skin="sport"] #log-review .adj-row .why { font-size: 14px; color: var(--muted); }
 html[data-skin="sport"] #log-review #co-adopt { border-radius: 16px; }
-html[data-skin="sport"] #log-review .sp-rv-done { align-self: flex-start; min-height: 36px; padding: 0 12px; border-radius: 999px; background: var(--sp-neon); color: #111111; display: inline-flex; align-items: center; gap: 6px; font-weight: 700; font-size: 14px; }
-html[data-skin="sport"] #log-review .co-meta { font-family: var(--sp-num); font-weight: 600; font-size: 13px; letter-spacing: .04em; color: var(--faint); }
+html[data-skin="sport"] #log-review .sp-rv-done { align-self: flex-start; min-height: 36px; padding: 0 12px; border-radius: 999px; background: var(--sp-hl); color: var(--sp-hl-fg); display: inline-flex; align-items: center; gap: 6px; font-weight: 600; font-size: 14px; }
+html[data-skin="sport"] #log-review .co-meta { font-family: var(--sp-num); font-weight: 600; font-size: 13px; letter-spacing: .02em; color: var(--faint); }
 /* 没开通:一行白卡,点了去教练页 */
 html[data-skin="sport"] #log-review .sp-rv-lock { width: 100%; min-height: 64px; padding: 12px 16px; border: 0; border-radius: 18px; background: var(--sp-card); color: var(--ink); display: grid; grid-template-columns: auto minmax(0, 1fr) auto; column-gap: 12px; align-items: center; text-align: left; }
 html[data-skin="sport"] #log-review .sp-rv-lk { display: flex; flex-direction: column; gap: 2px; }
-html[data-skin="sport"] #log-review .sp-rv-lk .rk { font-size: 15px; font-weight: 700; }
+html[data-skin="sport"] #log-review .sp-rv-lk .rk { font-size: 15px; font-weight: 600; }
 html[data-skin="sport"] #log-review .sp-rv-lk .rv { font-size: 13px; color: var(--muted); }
 
 /* 历史详情弹窗:大号日期,一排数字格(RPE 荧光绿底),动作清单白卡 */
 html[data-skin="sport"] #hist-modal-content { display: flex; flex-direction: column; gap: 10px; }
 html[data-skin="sport"] #hist-modal .sp-hh { align-items: center; }
 html[data-skin="sport"] #hist-modal .sp-hdate { padding-top: 0; display: flex; align-items: center; gap: 10px; }
-html[data-skin="sport"] #hist-modal .sp-hdate > b { font-family: var(--sp-num); font-weight: 800; font-size: 52px; line-height: .9; }
+html[data-skin="sport"] #hist-modal .sp-hdate > b { font-family: var(--sp-num); font-weight: 600; font-size: 30px; line-height: .9; }
 html[data-skin="sport"] #hist-modal .sp-hdate > span { display: flex; flex-direction: column; }
 html[data-skin="sport"] #hist-modal .sp-hdate i { font-style: normal; }
-html[data-skin="sport"] #hist-modal .sp-hdate i:first-child { font-family: var(--sp-num); font-weight: 700; font-size: 14px; letter-spacing: .1em; color: var(--faint); }
-html[data-skin="sport"] #hist-modal .sp-hdate i:last-child { font-family: var(--sp-cjk); font-weight: 900; font-size: 22px; line-height: 1.15; }
+html[data-skin="sport"] #hist-modal .sp-hdate i:first-child { font-family: var(--sp-num); font-weight: 600; font-size: 14px; letter-spacing: .02em; color: var(--faint); }
+html[data-skin="sport"] #hist-modal .sp-hdate i:last-child { font-family: var(--sp-cjk); font-weight: 600; font-size: 18px; line-height: 1.15; }
 html[data-skin="sport"] #hist-modal .sp-hm { padding: 6px 0 0; display: flex; flex-direction: column; gap: 10px; color: var(--ink); }
-html[data-skin="sport"] #hist-modal .sp-hm-n { font-family: var(--sp-cjk); font-weight: 900; font-size: 24px; line-height: 1.2; }
+html[data-skin="sport"] #hist-modal .sp-hm-n { font-family: var(--sp-cjk); font-weight: 600; font-size: 19px; line-height: 1.2; }
 html[data-skin="sport"] #hist-modal .sp-hm-s { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
 html[data-skin="sport"] #hist-modal .sp-hm-s > span { min-width: 0; padding: 12px; border-radius: 16px; background: var(--sp-card); display: flex; flex-direction: column; gap: 2px; }
-html[data-skin="sport"] #hist-modal .sp-hm-s > span.on { background: var(--sp-neon); color: #111111; }
-html[data-skin="sport"] #hist-modal .sp-hm-s b { font-family: var(--sp-num); font-weight: 800; font-size: 32px; line-height: 1; }
+html[data-skin="sport"] #hist-modal .sp-hm-s > span.on { background: var(--sp-hl); color: var(--sp-hl-fg); }
+html[data-skin="sport"] #hist-modal .sp-hm-s b { font-family: var(--sp-num); font-weight: 600; font-size: 22px; line-height: 1; }
 html[data-skin="sport"] #hist-modal .sp-hm-s b small { font-size: 16px; }
-html[data-skin="sport"] #hist-modal .sp-hm-s b.t { font-family: var(--sp-cjk); font-weight: 900; font-size: 20px; line-height: 1.2; overflow-wrap: anywhere; }
-html[data-skin="sport"] #hist-modal .sp-hm-s i { font-style: normal; font-family: var(--sp-num); font-weight: 600; font-size: 12px; letter-spacing: .1em; color: var(--faint); }
+html[data-skin="sport"] #hist-modal .sp-hm-s b.t { font-family: var(--sp-cjk); font-weight: 600; font-size: 17px; line-height: 1.2; overflow-wrap: anywhere; }
+html[data-skin="sport"] #hist-modal .sp-hm-s i { font-style: normal; font-family: var(--sp-num); font-weight: 600; font-size: 12px; letter-spacing: .02em; color: var(--faint); }
 html[data-skin="sport"] #hist-modal .sp-hm-s .on i { color: var(--sp-neon-muted); }
 html[data-skin="sport"] #hist-modal .hist-detail-exercises { padding: 0 16px; border-radius: 18px; background: var(--sp-card); }
 html[data-skin="sport"] #hist-modal .hist-ex-row { min-height: 52px; border-bottom: 0; border-top: 1px solid var(--line); }
 html[data-skin="sport"] #hist-modal .hist-ex-row:first-child { border-top: 0; }
 html[data-skin="sport"] #hist-modal .hist-ex-name { font-family: var(--sp-sans); font-weight: 600; font-size: 15px; }
 html[data-skin="sport"] #hist-modal .hist-ex-detail { gap: 10px; font-family: var(--sp-num); font-weight: 600; font-size: 15px; color: var(--muted); }
-html[data-skin="sport"] #hist-modal .hist-ex-weight { font-weight: 800; color: var(--ink); }
+html[data-skin="sport"] #hist-modal .hist-ex-weight { font-weight: 600; color: var(--ink); }
 html[data-skin="sport"] #hist-modal .hist-note { padding: 2px 0 2px 10px; border-left: 3px solid var(--line); font-style: normal; font-size: 14px; color: var(--muted); }
 html[data-skin="sport"] #hist-modal .hist-empty { padding: 16px; border-radius: 18px; background: var(--sp-card); font-family: var(--sp-sans); font-size: 14px; color: var(--muted); }
 /* 历史详情:有实际用时时多一格,四格排成 2 × 2 */
 html[data-skin="sport"] #hist-modal .sp-hm-s.n4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 /* —— 搭子卡(skin-sport.js ptLog):荧光底大数字「你俩连续周数」+ 本周两条进度;TA 最近的打卡(日期块 + 回应胶囊)—— */
 html[data-skin="sport"] #log .sp-ptl-top { display: grid; grid-template-columns: minmax(0, 104px) minmax(0, 1fr); gap: 12px; }
-html[data-skin="sport"] #log .sp-ptl-big { padding: 12px; border-radius: 16px; background: #d4ff3d; color: #111111; display: flex; flex-direction: column; justify-content: space-between; gap: 4px; }
-html[data-skin="sport"] #log .sp-ptl-big .bignum { font-family: var(--sp-num); font-weight: 800; font-size: 46px; line-height: .95; }
+html[data-skin="sport"] #log .sp-ptl-big { padding: 12px; border-radius: 16px; background: var(--sp-hl); color: var(--sp-hl-fg); display: flex; flex-direction: column; justify-content: space-between; gap: 4px; }
+html[data-skin="sport"] #log .sp-ptl-big .bignum { font-family: var(--sp-num); font-weight: 600; font-size: 28px; line-height: .95; }
 html[data-skin="sport"] #log .sp-ptl-big .biglbl { margin: 0; font-family: var(--sp-sans); font-size: 13px; line-height: 1.3; letter-spacing: 0; font-weight: 600; color: var(--sp-neon-muted); }
 html[data-skin="sport"] #log .sp-ptl-wk { min-width: 0; display: flex; flex-direction: column; justify-content: center; gap: 8px; }
 html[data-skin="sport"] #log .sp-ptl-h { font-size: 13px; color: var(--faint); }
 html[data-skin="sport"] #log .sp-ptl-r { display: grid; grid-template-columns: minmax(0, 52px) minmax(0, 1fr) auto; column-gap: 8px; align-items: center; font-size: 14px; }
 html[data-skin="sport"] #log .sp-ptl-r .k { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-html[data-skin="sport"] #log .sp-ptl-r b { font-family: var(--sp-num); font-weight: 800; font-size: 16px; }
+html[data-skin="sport"] #log .sp-ptl-r b { font-family: var(--sp-num); font-weight: 600; font-size: 16px; }
 html[data-skin="sport"] #log .sp-ptl-rows { display: flex; flex-direction: column; }
 html[data-skin="sport"] #log .sp-ptl-row { padding: 8px 0; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 8px; }
 html[data-skin="sport"] #log .sp-ptl-row:first-child { padding-top: 0; border-top: 0; }
 html[data-skin="sport"] #log .sp-ptl-rt { display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; column-gap: 12px; align-items: center; }
 html[data-skin="sport"] #log .sp-ptl-rt .sp-ld { display: flex; flex-direction: column; align-items: center; line-height: 1.05; }
-html[data-skin="sport"] #log .sp-ptl-rt .sp-ld b { font-family: var(--sp-num); font-weight: 800; font-size: 24px; }
-html[data-skin="sport"] #log .sp-ptl-rt .sp-ld i { font-family: var(--sp-num); font-style: normal; font-weight: 600; font-size: 12px; letter-spacing: .1em; color: var(--faint); }
+html[data-skin="sport"] #log .sp-ptl-rt .sp-ld b { font-family: var(--sp-num); font-weight: 600; font-size: 19px; }
+html[data-skin="sport"] #log .sp-ptl-rt .sp-ld i { font-family: var(--sp-num); font-style: normal; font-weight: 600; font-size: 12px; letter-spacing: .02em; color: var(--faint); }
 html[data-skin="sport"] #log .sp-ptl-rt .sp-lm { min-width: 0; display: flex; flex-direction: column; }
-html[data-skin="sport"] #log .sp-ptl-rt .lw { font-family: var(--sp-cjk); font-weight: 700; font-size: 15px; line-height: 1.35; }
+html[data-skin="sport"] #log .sp-ptl-rt .lw { font-family: var(--sp-cjk); font-weight: 600; font-size: 15px; line-height: 1.35; }
 html[data-skin="sport"] #log .sp-ptl-rt :is(.lt, .sp-ptl-mine) { font-family: var(--sp-sans); font-size: 13px; color: var(--muted); }
 html[data-skin="sport"] #log .sp-ptl-row > .sp-pt-words { padding-left: 56px; }
 /* 我的日志行下面:搭子对这次打卡的回应 */
 html[data-skin="sport"] #log-list .sp-ptl-rx { margin: -2px 0 10px 56px; padding: 6px 12px; border-radius: 12px; background: var(--sp-soft); display: flex; flex-wrap: wrap; gap: 2px 8px; font-family: var(--sp-sans); font-size: 13px; color: var(--muted); }
-html[data-skin="sport"] #log-list .sp-ptl-rx b { font-weight: 700; color: var(--ink); }
+html[data-skin="sport"] #log-list .sp-ptl-rx b { font-weight: 600; color: var(--ink); }
 /* 搭子卡:TA 关了连续周数 / 打卡记录 —— 浅灰框一行「你俩连续周数 · TA 没共享」 */
 html[data-skin="sport"] #log .sp-ptl-off { min-height: 44px; padding: 8px 12px; box-sizing: border-box; border-radius: 14px; background: var(--sp-soft); display: flex; align-items: center; justify-content: space-between; gap: 10px; font-family: var(--sp-sans); font-size: 14px; }
 html[data-skin="sport"] #log .sp-ptl-off .k { color: var(--muted); }
-html[data-skin="sport"] #log .sp-ptl-off b { font-weight: 700; color: var(--ink); }
+html[data-skin="sport"] #log .sp-ptl-off b { font-weight: 600; color: var(--ink); }
 
 /* —— 30 记录 · 写在这行上面 —— */
 
@@ -1074,39 +1099,39 @@ html[data-skin="sport"] #coach-content { display: flex; flex-direction: column; 
 html[data-skin="sport"] #coach-content .sp-co-gate { padding: 18px 16px; gap: 12px; }
 html[data-skin="sport"] #coach-content .sp-co-gate-h { display: flex; align-items: center; gap: 10px; }
 html[data-skin="sport"] #coach-content .sp-co-lock { width: 36px; height: 36px; flex: none; border-radius: 11px; background: var(--sp-on); color: var(--sp-on-fg); display: flex; align-items: center; justify-content: center; }
-html[data-skin="sport"] #coach-content .sp-co-eyebrow { font-family: var(--sp-num); font-weight: 700; font-size: 14px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
-html[data-skin="sport"] #coach-content .sp-co-big { font-family: var(--sp-cjk); font-weight: 900; font-size: 22px; line-height: 1.35; }
+html[data-skin="sport"] #coach-content .sp-co-eyebrow { font-family: var(--sp-num); font-weight: 600; font-size: 14px; letter-spacing: .02em; text-transform: uppercase; color: var(--muted); }
+html[data-skin="sport"] #coach-content .sp-co-big { font-family: var(--sp-cjk); font-weight: 600; font-size: 18px; line-height: 1.35; }
 html[data-skin="sport"] #coach-content .sp-co-sub { font-size: 15px; line-height: 1.6; color: var(--muted); }
 html[data-skin="sport"] #coach-content .sp-co-gate .btn-outline { min-height: 56px; border-width: 2px; border-radius: 16px; font-family: var(--sp-cjk); font-size: 16px; }
 html[data-skin="sport"] #coach-content .sp-co-gate .btn-primary { border-radius: 16px; font-size: 16px; }
-html[data-skin="sport"] #co-code.line-input.code { min-height: 58px; border: 2px solid var(--line); border-radius: 14px; background: var(--sp-soft); padding: 0 16px; font-size: 24px; letter-spacing: .14em; }
+html[data-skin="sport"] #co-code.line-input.code { min-height: 58px; border: 2px solid var(--line); border-radius: 14px; background: var(--sp-soft); padding: 0 16px; font-size: 19px; letter-spacing: .02em; }
 html[data-skin="sport"] #co-code.line-input.code:focus { border-color: var(--ink); }
-html[data-skin="sport"] #co-code::placeholder { font-size: 17px; letter-spacing: .06em; }
+html[data-skin="sport"] #co-code::placeholder { font-size: 17px; letter-spacing: .02em; }
 html[data-skin="sport"] #coach-content .sp-co-gate .foot-note { color: var(--muted); }
 
 /* 认器械入口:荧光绿图标块 + 两行字 + 箭头;识别结果接在下面 */
 html[data-skin="sport"] #coach-content .sp-co-vision { background: var(--sp-card); border: 0; border-radius: 18px; padding: 0 16px; }
 html[data-skin="sport"] #coach-content .sp-co-vrow { border-top: 0; min-height: 72px; padding: 12px 0; grid-template-columns: 40px minmax(0, 1fr) auto; column-gap: 12px; }
-html[data-skin="sport"] #coach-content .sp-co-vic { width: 40px; height: 40px; border-radius: 12px; background: var(--sp-neon); color: #111111; display: flex; align-items: center; justify-content: center; }
-html[data-skin="sport"] #coach-content .sp-co-vrow .rk { display: block; font-size: 16px; font-weight: 700; }
+html[data-skin="sport"] #coach-content .sp-co-vic { width: 40px; height: 40px; border-radius: 12px; background: var(--sp-hl); color: var(--sp-hl-fg); display: flex; align-items: center; justify-content: center; }
+html[data-skin="sport"] #coach-content .sp-co-vrow .rk { display: block; font-size: 16px; font-weight: 600; }
 html[data-skin="sport"] #coach-content .sp-co-vrow .rv { display: block; font-size: 13px; line-height: 1.45; color: var(--muted); }
 html[data-skin="sport"] #coach-content .sp-co-vrow .ra { display: flex; color: var(--faint); }
 html[data-skin="sport"] #co-vision-body:not(:empty) { border-top: 1px solid var(--line); }
 html[data-skin="sport"] #co-vision-body .co-thumb { border: 0; border-radius: 14px; max-width: 184px; max-height: 184px; }
 html[data-skin="sport"] #co-vision-body .co-rv { font-size: 15px; line-height: 1.6; }
-html[data-skin="sport"] #co-vision-body .co-rv-h { font-family: var(--sp-cjk); font-weight: 900; font-size: 20px; }
+html[data-skin="sport"] #co-vision-body .co-rv-h { font-family: var(--sp-cjk); font-weight: 600; font-size: 17px; }
 html[data-skin="sport"] #co-vision-body .co-vx { border-top: 1px solid var(--line); }
-html[data-skin="sport"] #co-vision-body .co-vx > button:first-child > span { font-weight: 700; font-size: 15px; }
+html[data-skin="sport"] #co-vision-body .co-vx > button:first-child > span { font-weight: 600; font-size: 15px; }
 html[data-skin="sport"] #co-vision-body .co-vx small { font-size: 13px; line-height: 1.45; color: var(--muted); }
 
 /* 对话:标题行(新对话胶囊)+ 气泡直接排在页面上 */
 html[data-skin="sport"] #coach-content .sp-co-chat { display: flex; flex-direction: column; gap: 14px; }
-html[data-skin="sport"] #coach-content .sp-co-chat-h .sec-label { font-family: var(--sp-num); font-weight: 700; font-size: 14px; letter-spacing: .1em; color: var(--muted); }
+html[data-skin="sport"] #coach-content .sp-co-chat-h .sec-label { font-family: var(--sp-num); font-weight: 600; font-size: 14px; letter-spacing: .02em; color: var(--muted); }
 html[data-skin="sport"] #coach-content .sp-co-chat-h .link-btn { padding: 0 14px; border: 1.5px solid var(--line); border-radius: 999px; font-weight: 600; text-align: center; }
 html[data-skin="sport"] #co-chat-log { gap: 14px; }
 html[data-skin="sport"] #co-chat-log .co-msg { padding: 0; gap: 4px; font-size: 15px; line-height: 1.6; }
 html[data-skin="sport"] #co-chat-log .co-msg + .co-msg { border-top: 0; }
-html[data-skin="sport"] #co-chat-log .co-msg .who { font-family: var(--sp-num); font-weight: 600; font-size: 13px; letter-spacing: .06em; color: var(--faint); }
+html[data-skin="sport"] #co-chat-log .co-msg .who { font-family: var(--sp-num); font-weight: 600; font-size: 13px; letter-spacing: .02em; color: var(--faint); }
 html[data-skin="sport"] #co-chat-log .co-msg p + p, html[data-skin="sport"] #co-chat-log .co-msg ul { margin-top: 6px; }
 html[data-skin="sport"] #co-chat-log .co-msg ul { padding-left: 18px; }
 /* 我:右边墨底气泡(深色 = 荧光绿底黑字) */
@@ -1115,10 +1140,10 @@ html[data-skin="sport"] #co-chat-log .sp-msg-me .co-text { max-width: 100%; padd
 html[data-skin="sport"] #co-chat-log .sp-co-img { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 0 12px; border-radius: 999px; background: var(--sp-me); color: var(--sp-me-fg); font-size: 13px; font-weight: 600; }
 /* 教练:左边荧光绿小头像 + 白卡气泡 */
 html[data-skin="sport"] #co-chat-log .sp-msg-co { flex-direction: row; align-items: flex-start; gap: 10px; }
-html[data-skin="sport"] #co-chat-log .sp-co-av { width: 32px; height: 32px; flex: none; border-radius: 10px; background: var(--sp-neon); color: #111111; display: flex; align-items: center; justify-content: center; }
+html[data-skin="sport"] #co-chat-log .sp-co-av { width: 32px; height: 32px; flex: none; border-radius: 10px; background: var(--sp-hl); color: var(--sp-hl-fg); display: flex; align-items: center; justify-content: center; }
 html[data-skin="sport"] #co-chat-log .sp-msg-col { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
 html[data-skin="sport"] #co-chat-log .sp-msg-co .co-text { padding: 12px 14px; border-radius: 6px 18px 18px 18px; background: var(--sp-card); }
-html[data-skin="sport"] #co-chat-log .co-meta { font-family: var(--sp-num); font-weight: 600; font-size: 13px; letter-spacing: .04em; color: var(--faint); }
+html[data-skin="sport"] #co-chat-log .co-meta { font-family: var(--sp-num); font-weight: 600; font-size: 13px; letter-spacing: .02em; color: var(--faint); }
 html[data-skin="sport"] #co-chat-log .sp-bub .co-meta { color: var(--muted); }
 /* 还没聊过:一张示例问题卡 */
 html[data-skin="sport"] #co-chat-log .sp-co-empty { background: var(--sp-card); border-radius: 18px; padding: 14px 16px; display: flex; flex-direction: column; gap: 6px; }
@@ -1130,19 +1155,19 @@ html[data-skin="sport"] #coach-content .co-foot .co-err { color: var(--sp-red); 
 /* 提议卡:墨色粗边白卡,「提议」荧光绿小签;采纳 2 : 不要 1;采纳后荧光绿条 + 撤销 */
 html[data-skin="sport"] #co-chat-log .sp-prop { background: var(--sp-card); border: 2px solid var(--ink); border-radius: 18px; padding: 14px; gap: 10px; }
 html[data-skin="sport"] #co-chat-log .sp-prop .co-prop-h { font-family: var(--sp-sans); font-size: 15px; letter-spacing: 0; text-transform: none; gap: 8px; }
-html[data-skin="sport"] #co-chat-log .sp-prop-tag { min-height: 24px; padding: 0 8px; border-radius: 999px; background: var(--sp-neon); color: #111111; display: inline-flex; align-items: center; font-size: 12px; font-weight: 700; }
-html[data-skin="sport"] #co-chat-log .sp-prop-t { font-weight: 700; }
+html[data-skin="sport"] #co-chat-log .sp-prop-tag { min-height: 24px; padding: 0 8px; border-radius: 999px; background: var(--sp-hl); color: var(--sp-hl-fg); display: inline-flex; align-items: center; font-size: 12px; font-weight: 600; }
+html[data-skin="sport"] #co-chat-log .sp-prop-t { font-weight: 600; }
 html[data-skin="sport"] #co-chat-log .sp-prop .co-prop-list { font-family: var(--sp-sans); font-size: 14px; line-height: 1.5; grid-template-columns: minmax(38px, max-content) minmax(0, 1fr); column-gap: 10px; row-gap: 8px; }
-html[data-skin="sport"] #co-chat-log .sp-prop .co-prop-list .d { font-weight: 700; color: var(--ink); }
+html[data-skin="sport"] #co-chat-log .sp-prop .co-prop-list .d { font-weight: 600; color: var(--ink); }
 html[data-skin="sport"] #co-chat-log .sp-prop .co-prop-list .c small { font-family: var(--sp-sans); font-size: 13px; line-height: 1.45; color: var(--muted); }
 html[data-skin="sport"] #co-chat-log .sp-prop .co-prop-list .c.bad small { color: var(--sp-red); }
 html[data-skin="sport"] #co-chat-log .sp-prop .co-prop-btns { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); }
 html[data-skin="sport"] #co-chat-log .sp-prop .co-prop-btns .btn-primary,
 html[data-skin="sport"] #co-chat-log .sp-prop .co-prop-btns .btn-line { min-height: 48px; border-radius: 14px; font-family: var(--sp-sans); font-size: 15px; letter-spacing: 0; }
 html[data-skin="sport"] #co-chat-log .sp-prop .co-prop-btns .btn-line { font-weight: 600; }
-html[data-skin="sport"] #co-chat-log .sp-prop-done { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-height: 48px; padding: 0 4px 0 12px; border-radius: 14px; background: var(--sp-neon); color: #111111; }
-html[data-skin="sport"] #co-chat-log .sp-prop-done > span { flex: 1; min-width: 0; font-size: 14px; font-weight: 700; }
-html[data-skin="sport"] #co-chat-log .sp-prop-done .link-btn.u { padding: 0 12px; color: #111111; font-size: 14px; font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
+html[data-skin="sport"] #co-chat-log .sp-prop-done { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-height: 48px; padding: 0 4px 0 12px; border-radius: 14px; background: var(--sp-hl); color: var(--sp-hl-fg); }
+html[data-skin="sport"] #co-chat-log .sp-prop-done > span { flex: 1; min-width: 0; font-size: 14px; font-weight: 600; }
+html[data-skin="sport"] #co-chat-log .sp-prop-done .link-btn.u { padding: 0 12px; color: var(--ink); font-size: 14px; font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
 html[data-skin="sport"] #co-chat-log .sp-prop-st { min-height: 44px; display: flex; align-items: center; font-family: var(--sp-sans); font-size: 14px; color: var(--muted); }
 
 /* 输入条:圆形拍照键 + 胶囊输入框 + 圆形发送键(结构和纸墨一样,只换样子)。
@@ -1154,7 +1179,7 @@ html[data-skin="sport"] #composer .icon-btn { border: 1.5px solid var(--line); b
 html[data-skin="sport"] #composer .icon-btn svg { stroke-width: 2; }
 html[data-skin="sport"] #composer textarea { box-sizing: border-box; min-height: 44px; border: 1.5px solid var(--line); border-radius: 22px; background: var(--sp-card); padding: 10px 16px; font-family: var(--sp-sans); font-size: 16px; line-height: 1.4; color: var(--ink); }
 html[data-skin="sport"] #composer textarea:focus { border-color: var(--ink); }
-html[data-skin="sport"] #composer .send { position: relative; width: 44px; height: 44px; padding: 0; border-radius: 50%; background: var(--sp-on); color: var(--sp-on-fg); overflow: hidden; white-space: nowrap; text-indent: 60px; font-family: var(--sp-sans); font-size: 14px; font-weight: 700; }
+html[data-skin="sport"] #composer .send { position: relative; width: 44px; height: 44px; padding: 0; border-radius: 50%; background: var(--sp-on); color: var(--sp-on-fg); overflow: hidden; white-space: nowrap; text-indent: 60px; font-family: var(--sp-sans); font-size: 14px; font-weight: 600; }
 html[data-skin="sport"] #composer .send::before {
     content: '';
     position: absolute;
@@ -1173,14 +1198,14 @@ html[data-skin="sport"] #composer .co-pending .link-btn { padding: 0 14px; borde
 /* 提议卡「不要」之后:灰字 + 「再看看」(回到待定,样稿 732–736) */
 html[data-skin="sport"] #co-chat-log .sp-prop-no { display: flex; align-items: center; gap: 8px; min-height: 48px; }
 html[data-skin="sport"] #co-chat-log .sp-prop-no .sp-prop-st { flex: 1; min-width: 0; }
-html[data-skin="sport"] #co-chat-log .sp-prop-no .link-btn { flex: none; min-height: 44px; padding: 0 12px; color: var(--ink); font-family: var(--sp-sans); font-size: 14px; font-weight: 700; letter-spacing: 0; }
+html[data-skin="sport"] #co-chat-log .sp-prop-no .link-btn { flex: none; min-height: 44px; padding: 0 12px; color: var(--ink); font-family: var(--sp-sans); font-size: 14px; font-weight: 600; letter-spacing: 0; }
 /* 小改卡(对话 / 陪练面板里都有,所以不限在 #co-chat-log 里):白卡 + 荧光绿「已改」小签,一条一行;撤销 = 描边胶囊。
    撤销了 / 没改成的(.off)小签换成灰底 */
 html[data-skin="sport"] .sp-act { background: var(--sp-card); border: 1.5px solid var(--line); border-radius: 18px; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; text-align: left; }
 html[data-skin="sport"] .sp-act-h { display: flex; align-items: center; gap: 8px; font-family: var(--sp-sans); font-size: 15px; }
-html[data-skin="sport"] .sp-act-tag { min-height: 24px; padding: 0 8px; border-radius: 999px; background: var(--sp-neon); color: #111111; display: inline-flex; align-items: center; font-size: 12px; font-weight: 700; }
+html[data-skin="sport"] .sp-act-tag { min-height: 24px; padding: 0 8px; border-radius: 999px; background: var(--sp-hl); color: var(--sp-hl-fg); display: inline-flex; align-items: center; font-size: 12px; font-weight: 600; }
 html[data-skin="sport"] .sp-act.off .sp-act-tag { background: var(--sp-track); color: var(--ink); }
-html[data-skin="sport"] .sp-act-t { font-weight: 700; }
+html[data-skin="sport"] .sp-act-t { font-weight: 600; }
 html[data-skin="sport"] .sp-act .co-act-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; font-family: var(--sp-sans); font-size: 14px; line-height: 1.5; }
 html[data-skin="sport"] .sp-act .co-act-list li { display: flex; flex-direction: column; padding-left: 14px; border-left: 3px solid var(--ink); overflow-wrap: anywhere; }
 html[data-skin="sport"] .sp-act .co-act-list li > span { font-weight: 600; }
@@ -1203,10 +1228,10 @@ html[data-skin="sport"] body.has-composer:has(#composer:focus-within) #composer 
 /* 「改一下」「聊聊」= 两个描边胶囊;版本切换一行;输入框浅灰圆角,发送 2 : 取消 1;改的时候荧光绿小点 + 墨字 */
 html[data-skin="sport"] .sp-rvw { display: flex; flex-direction: column; gap: 8px; text-align: left; }
 html[data-skin="sport"] .sp-rvw-acts { display: flex; flex-wrap: wrap; gap: 8px; }
-html[data-skin="sport"] .sp-rvw-chip { min-height: 44px; display: inline-flex; align-items: center; gap: 6px; padding: 0 16px; border: 1.5px solid var(--line); border-radius: 999px; background: var(--sp-card); color: var(--ink); font-family: var(--sp-sans); font-size: 14px; font-weight: 700; letter-spacing: 0; }
+html[data-skin="sport"] .sp-rvw-chip { min-height: 44px; display: inline-flex; align-items: center; gap: 6px; padding: 0 16px; border: 1.5px solid var(--line); border-radius: 999px; background: var(--sp-card); color: var(--ink); font-family: var(--sp-sans); font-size: 14px; font-weight: 600; letter-spacing: 0; }
 html[data-skin="sport"] .sp-rvw-chip:active { background: var(--sp-soft); }
 html[data-skin="sport"] .sp-rvw-v { display: flex; flex-wrap: wrap; align-items: center; gap: 0 4px; }
-html[data-skin="sport"] .sp-rvw-vn { margin-right: 4px; font-family: var(--sp-num); font-size: 15px; font-weight: 700; letter-spacing: .04em; color: var(--ink); }
+html[data-skin="sport"] .sp-rvw-vn { margin-right: 4px; font-family: var(--sp-num); font-size: 15px; font-weight: 600; letter-spacing: .02em; color: var(--ink); }
 html[data-skin="sport"] .sp-rvw-vb { min-height: 44px; padding: 0 10px; color: var(--ink); font-family: var(--sp-sans); font-size: 14px; font-weight: 600; letter-spacing: 0; text-decoration: underline; text-underline-offset: 3px; }
 html[data-skin="sport"] .sp-rvw-ta { box-sizing: border-box; width: 100%; min-height: 88px; padding: 12px 14px; border: 1.5px solid var(--line); border-radius: 14px; background: var(--sp-soft); color: var(--ink); font-family: var(--sp-sans); font-size: 16px; line-height: 1.5; resize: vertical; }
 html[data-skin="sport"] .sp-rvw-ta:focus { outline: none; border-color: var(--ink); }
@@ -1232,7 +1257,7 @@ html[data-skin="sport"] #co-chat-log .sp-prop .sp-rvw { padding-top: 10px; borde
 html[data-skin="sport"] .sp-act-btns { display: flex; flex-wrap: wrap; gap: 8px; }
 /* 「聊聊」带进对话的引用:浅灰小卡(粗体「关于这份 XX」+ 摘要);输入框上面待带上的那条 */
 html[data-skin="sport"] .sp-ref { display: flex; flex-direction: column; gap: 2px; max-width: 100%; padding: 8px 12px; border-radius: 12px; background: var(--sp-track); color: var(--ink); font-family: var(--sp-sans); font-size: 13px; line-height: 1.45; text-align: left; overflow-wrap: anywhere; }
-html[data-skin="sport"] .sp-ref b { font-weight: 700; }
+html[data-skin="sport"] .sp-ref b { font-weight: 600; }
 html[data-skin="sport"] #composer .sp-ref-pend .sp-ref { flex: 1; min-width: 0; }
 /* 复盘:撤销刚才采纳的(描边胶囊);改一下 / 聊聊 上面一条细线 */
 html[data-skin="sport"] #log-review .sp-rv-undo { align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; padding: 0 14px; border: 1.5px solid var(--line); border-radius: 999px; color: var(--ink); font-family: var(--sp-sans); font-size: 14px; font-weight: 600; letter-spacing: 0; }
@@ -1240,7 +1265,7 @@ html[data-skin="sport"] #log-review .sp-rvw { padding-top: 10px; border-top: 1px
 /* 计划 08 AI 排草稿:每天前面一个勾选框 */
 html[data-skin="sport"] #co-plan-body .co-day-sel { min-height: 48px; grid-template-columns: 26px minmax(0, 1fr); column-gap: 10px; align-items: center; padding: 6px 0 !important; }
 html[data-skin="sport"] #co-plan-body .co-day-sel .box-sq { width: 26px; height: 26px; margin-top: 0; }
-html[data-skin="sport"] #co-plan-body .co-day-sel .what { font-family: var(--sp-sans); font-size: 15px; font-weight: 700; }
+html[data-skin="sport"] #co-plan-body .co-day-sel .what { font-family: var(--sp-sans); font-size: 15px; font-weight: 600; }
 html[data-skin="sport"] #co-plan-body .sp-rvw { padding-top: 10px; border-top: 1px solid var(--line); }
 /* 今天页教练的话 / 打卡反馈、换动作面板的 AI 推荐:改一下 / 聊聊 贴在卡片底下 */
 html[data-skin="sport"] .sp-coach .sp-rvw,
@@ -1253,16 +1278,16 @@ html[data-skin="sport"] #me-content { display: flex; flex-direction: column; gap
 
 /* 01 账号 */
 html[data-skin="sport"] #me-acct .sp-id { gap: 14px; }
-html[data-skin="sport"] #me-acct .sp-id .seal { width: 64px; height: 64px; border: 0; border-radius: 18px; background: var(--sp-neon); color: #111111; font-family: var(--sp-cjk); font-weight: 900; font-size: 30px; }
+html[data-skin="sport"] #me-acct .sp-id .seal { width: 64px; height: 64px; border: 0; border-radius: 18px; background: var(--sp-hl); color: var(--sp-hl-fg); font-family: var(--sp-cjk); font-weight: 600; font-size: 22px; }
 html[data-skin="sport"] #me-acct .sp-id-t { display: flex; flex-direction: column; min-width: 0; }
-html[data-skin="sport"] #me-acct .sp-id h2 { font-family: var(--sp-cjk); font-weight: 900; font-size: 22px; line-height: 1.25; overflow-wrap: anywhere; }
+html[data-skin="sport"] #me-acct .sp-id h2 { font-family: var(--sp-cjk); font-weight: 600; font-size: 18px; line-height: 1.25; overflow-wrap: anywhere; }
 html[data-skin="sport"] #me-acct .sp-id-sub { font-size: 13px; line-height: 1.5; color: var(--muted); overflow-wrap: anywhere; }
 html[data-skin="sport"] #me-acct .sp-me-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 html[data-skin="sport"] #me-acct .sp-field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 html[data-skin="sport"] #me-acct .line-input { background: var(--sp-soft); padding: 0 12px; font-size: 16px; }
 html[data-skin="sport"] #me-acct > .btn-line { padding: 0 18px; }
 html[data-skin="sport"] #me-acct .sp-me-login { display: flex; flex-direction: column; gap: 10px; padding-top: 14px; border-top: 1px solid var(--line); }
-html[data-skin="sport"] #me-acct .sp-me-h { font-family: var(--sp-cjk); font-weight: 900; font-size: 22px; line-height: 1.3; }
+html[data-skin="sport"] #me-acct .sp-me-h { font-family: var(--sp-cjk); font-weight: 600; font-size: 18px; line-height: 1.3; }
 html[data-skin="sport"] #me-acct .sp-me-login .btn-primary { min-height: 52px; font-size: 15px; }
 html[data-skin="sport"] #me-acct .sp-me-login .btn-outline { min-height: 52px; border-width: 2px; border-radius: 14px; }
 html[data-skin="sport"] #me-acct .sp-me-login .btn-line { min-height: 48px; border-radius: 14px; }
@@ -1281,11 +1306,11 @@ html[data-skin="sport"] #me-pair .pair-grid > :nth-child(4) { grid-column: 1 / -
 html[data-skin="sport"] #me-pair .pair-grid > :nth-child(5) { grid-column: 1; grid-row: 4; }
 html[data-skin="sport"] #me-pair .pair-grid > :nth-child(6) { grid-column: 2; grid-row: 4; }
 html[data-skin="sport"] #me-pair .pair-grid > .k { font-size: 13px; color: var(--faint); }
-html[data-skin="sport"] #me-pair .pair-code { font-family: var(--sp-num); font-weight: 800; font-size: 20px; line-height: 1.15; letter-spacing: .04em; color: var(--ink); }
+html[data-skin="sport"] #me-pair .pair-code { font-family: var(--sp-num); font-weight: 600; font-size: 17px; line-height: 1.15; letter-spacing: .02em; color: var(--ink); }
 html[data-skin="sport"] #me-pair #partner-code-input { min-width: 0; background: var(--sp-soft); padding: 0 12px; min-height: 44px; }
 html[data-skin="sport"] #me-pair .pair-grid .btn-line { padding: 0 16px; }
 html[data-skin="sport"] #me-pair .pair-status { padding: 10px 12px; border-radius: 14px; background: var(--sp-soft); font-family: var(--sp-sans); font-size: 14px; line-height: 1.5; color: var(--ink); }
-html[data-skin="sport"] #me-pair .pair-status b { font-weight: 700; }
+html[data-skin="sport"] #me-pair .pair-status b { font-weight: 600; }
 html[data-skin="sport"] #me-pair .pair-status .accent { color: var(--sp-red); font-weight: 600; }
 /* 分享配对链接一行(墨底主按钮 + 二维码)、二维码白底块、回应胶囊(#cheer-btn 是第一个「加油」,发过的荧光底带勾)、TA 最近的回应 */
 html[data-skin="sport"] #me-pair .pair-acts { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
@@ -1301,13 +1326,13 @@ html[data-skin="sport"] #me-pair .pt-rx-list { border-radius: 14px; background: 
 html[data-skin="sport"] #me-pair .pt-rx-list li { min-height: 40px; padding: 0 12px; border-bottom: 0; border-top: 1px solid var(--line); align-items: center; }
 html[data-skin="sport"] #me-pair .pt-rx-list li:first-child { border-top: 0; }
 html[data-skin="sport"] #me-pair .pt-rx-list .k { color: var(--muted); }
-html[data-skin="sport"] #me-pair .pt-rx-list b { font-weight: 700; }
+html[data-skin="sport"] #me-pair .pt-rx-list b { font-weight: 600; }
 html[data-skin="sport"] #me-pair #partner-days-row .sub-label { font-weight: 500; }
 html[data-skin="sport"] #me-pair #partner-overlap { font-family: var(--sp-sans); font-size: 14px; color: var(--ink); }
 
 /* 03 · 共享给 TA:粗小标题 + 灰字说明,下面一列开关(02 通用的开关样子),整组是一块浅灰底圆角卡 */
 html[data-skin="sport"] #me-pair .pair-share { padding: 12px 14px 4px; border-radius: 18px; background: var(--sp-soft); }
-html[data-skin="sport"] #me-pair .pair-share #pair-share-h { font-size: 15px; font-weight: 700; color: var(--ink); }
+html[data-skin="sport"] #me-pair .pair-share #pair-share-h { font-size: 15px; font-weight: 600; color: var(--ink); }
 html[data-skin="sport"] #me-pair .pair-share .hint { font-family: var(--sp-sans); font-size: 13px; line-height: 1.5; color: var(--muted); }
 html[data-skin="sport"] #me-pair .pair-share .toggle-row { min-height: 60px; }
 html[data-skin="sport"] #me-pair .pair-share .toggle-row .tl { font-size: 15px; }
@@ -1328,22 +1353,22 @@ html[data-skin="sport"] #me-remind .sp-wp-tiles .step-btn:disabled { opacity: .3
 html[data-skin="sport"] #me-remind .sp-wp-dev { display: grid; grid-template-columns: 32px minmax(0, 1fr) auto; column-gap: 10px; align-items: center; min-height: 56px; padding: 6px 6px 6px 12px; border-radius: 14px; background: var(--sp-soft); color: var(--ink); }
 html[data-skin="sport"] #me-remind .sp-wp-ic { width: 32px; height: 32px; border-radius: 10px; background: var(--sp-card); display: flex; align-items: center; justify-content: center; }
 html[data-skin="sport"] #me-remind .sp-wp-t { display: flex; flex-direction: column; min-width: 0; font-family: var(--sp-sans); font-size: 14px; line-height: 1.45; color: var(--muted); }
-html[data-skin="sport"] #me-remind .sp-wp-t b { font-size: 13px; font-weight: 700; color: var(--ink); }
+html[data-skin="sport"] #me-remind .sp-wp-t b { font-size: 13px; font-weight: 600; color: var(--ink); }
 html[data-skin="sport"] #me-remind .sp-wp-btn { background: var(--sp-card); white-space: nowrap; }
-html[data-skin="sport"] #me-remind .sp-wp-dev.on { background: var(--sp-neon); color: #111111; }
-html[data-skin="sport"] #me-remind .sp-wp-dev.on :is(.sp-wp-t, .sp-wp-t b) { color: #111111; }
-html[data-skin="sport"] #me-remind .sp-wp-dev.on .sp-wp-ic { background: #111111; color: #d4ff3d; }
-html[data-skin="sport"] #me-remind .sp-wp-dev.on .sp-wp-btn { border-color: #111111; background: #111111; color: #d4ff3d; }
+html[data-skin="sport"] #me-remind .sp-wp-dev.on { background: var(--sp-hl); color: var(--sp-hl-fg); }
+html[data-skin="sport"] #me-remind .sp-wp-dev.on :is(.sp-wp-t, .sp-wp-t b) { color: var(--ink); }
+html[data-skin="sport"] #me-remind .sp-wp-dev.on .sp-wp-ic { background: var(--sp-fill); color: var(--sp-on-fg); }
+html[data-skin="sport"] #me-remind .sp-wp-dev.on .sp-wp-btn { border-color: var(--ink); background: var(--sp-fill); color: var(--sp-on-fg); }
 html[data-skin="sport"] #me-remind .sp-wp-steps { list-style: none; margin: 0; padding: 12px 14px; border-radius: 14px; background: var(--sp-soft); display: flex; flex-direction: column; gap: 10px; }
 html[data-skin="sport"] #me-remind .sp-wp-steps li { display: grid; grid-template-columns: 26px minmax(0, 1fr); column-gap: 10px; align-items: start; font-family: var(--sp-sans); font-size: 14px; line-height: 1.55; color: var(--ink); }
-html[data-skin="sport"] #me-remind .sp-wp-n { width: 24px; height: 24px; border-radius: 50%; background: var(--sp-on); color: var(--sp-on-fg); display: flex; align-items: center; justify-content: center; font-family: var(--sp-num); font-weight: 800; font-size: 14px; line-height: 1; }
+html[data-skin="sport"] #me-remind .sp-wp-n { width: 24px; height: 24px; border-radius: 50%; background: var(--sp-on); color: var(--sp-on-fg); display: flex; align-items: center; justify-content: center; font-family: var(--sp-num); font-weight: 600; font-size: 14px; line-height: 1; }
 html[data-skin="sport"] #me-remind .sp-wp > .foot-note { color: var(--muted); }
 
 /* 05 AI 教练:模型单选(圆圈)、思考深度、两格花费;没开通 = 一行带箭头的按钮 */
 html[data-skin="sport"] #me-ai .sp-models { display: flex; flex-direction: column; margin-top: -4px; }
 html[data-skin="sport"] #me-ai .sp-models .model-row { min-height: 52px; border-bottom: 0; border-top: 1px solid var(--line); grid-template-columns: 28px minmax(0, 1fr) auto; column-gap: 8px; color: var(--ink); font-family: var(--sp-sans); font-size: 15px; font-weight: 500; }
 html[data-skin="sport"] #me-ai .sp-models .model-row:first-child { border-top: 0; }
-html[data-skin="sport"] #me-ai .sp-models .model-row[aria-checked="true"] { font-weight: 700; }
+html[data-skin="sport"] #me-ai .sp-models .model-row[aria-checked="true"] { font-weight: 600; }
 html[data-skin="sport"] #me-ai .sp-models .note { font-size: 13px; font-weight: 500; color: var(--muted); }
 html[data-skin="sport"] #me-ai .sp-radio { width: 22px; height: 22px; box-sizing: border-box; border: 2px solid var(--faint); border-radius: 50%; display: flex; align-items: center; justify-content: center; }
 html[data-skin="sport"] #me-ai .sp-radio::after { content: ''; width: 10px; height: 10px; border-radius: 50%; background: var(--ink); opacity: 0; }
@@ -1353,7 +1378,7 @@ html[data-skin="sport"] #me-ai .sp-dim { opacity: .45; }
 html[data-skin="sport"] #me-ai .sp-me-stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 html[data-skin="sport"] #me-ai .sp-me-stats > div { display: flex; flex-direction: column; padding: 10px 12px; border-radius: 14px; background: var(--sp-soft); }
 html[data-skin="sport"] #me-ai .sp-me-stats .sub-label { font-weight: 500; }
-html[data-skin="sport"] #me-ai .sp-me-stats b { font-family: var(--sp-num); font-weight: 800; font-size: 28px; line-height: 1.1; }
+html[data-skin="sport"] #me-ai .sp-me-stats b { font-family: var(--sp-num); font-weight: 600; font-size: 20px; line-height: 1.1; }
 html[data-skin="sport"] #me-ai .sp-me-stats small { font-size: 12px; color: var(--muted); }
 html[data-skin="sport"] #me-ai .foot-note { color: var(--muted); }
 html[data-skin="sport"] #me-ai .sp-me-go { min-height: 52px; padding: 0 14px; border: 1.5px solid var(--line); border-radius: 14px; font-size: 15px; font-weight: 600; }
@@ -1370,7 +1395,7 @@ html[data-skin="sport"] :is(#me-data, #oobe) .sp-me-ic { width: 30px; height: 30
 
 /* 「重新走一遍新手设置」:单独一张白卡(纸墨行内写了下边线,这里盖掉);右边的「→」换成箭头(字留给读屏) */
 html[data-skin="sport"] #me-content > .row-btn { min-height: 64px; padding: 10px 16px; border: 0 !important; border-radius: 18px; background: var(--sp-card); }
-html[data-skin="sport"] #me-content > .row-btn .rk { display: block; font-size: 16px; font-weight: 700; }
+html[data-skin="sport"] #me-content > .row-btn .rk { display: block; font-size: 16px; font-weight: 600; }
 html[data-skin="sport"] #me-content > .row-btn .rv { display: block; }
 html[data-skin="sport"] #me-content > .row-btn .ra { position: relative; width: 16px; height: 16px; overflow: hidden; white-space: nowrap; text-indent: 32px; color: var(--faint); }
 html[data-skin="sport"] #me-content > .row-btn .ra::before {
@@ -1383,7 +1408,7 @@ html[data-skin="sport"] #me-content > .row-btn .ra::before {
 }
 
 /* 07 恢复出厂:红框按钮,再点一次 = 红底 */
-html[data-skin="sport"] #me-wipe .wipe-btn { min-height: 52px; border: 2px solid var(--sp-red); border-radius: 14px; color: var(--sp-red); font-family: var(--sp-sans); font-size: 15px; font-weight: 700; }
+html[data-skin="sport"] #me-wipe .wipe-btn { min-height: 52px; border: 2px solid var(--sp-red); border-radius: 14px; color: var(--sp-red); font-family: var(--sp-sans); font-size: 15px; font-weight: 600; }
 html[data-skin="sport"] #me-wipe .wipe-btn.armed { border-color: var(--sp-red-fill); background: var(--sp-red-fill); color: var(--sp-red-fill-fg); }
 html[data-skin="sport"] #me-wipe .foot-note { color: var(--muted); }
 
@@ -1391,31 +1416,31 @@ html[data-skin="sport"] #me-wipe .foot-note { color: var(--muted); }
 html[data-skin="sport"] #me .version-foot { border-top: 0; padding: 4px 0 8px; gap: 4px; }
 html[data-skin="sport"] #me .version-foot .link-btn { padding: 0 12px; font-family: var(--sp-sans); font-size: 13px; font-weight: 600; color: var(--muted); }
 html[data-skin="sport"] #me #changelog-box { box-sizing: border-box; padding: 12px 14px; border-radius: 14px; background: var(--sp-card); font-family: var(--sp-sans); font-size: 13px; line-height: 1.55; color: var(--muted); }
-html[data-skin="sport"] #me #changelog-box .cl-h { margin-top: 12px; font-family: var(--sp-num); font-weight: 800; font-size: 14px; letter-spacing: .04em; color: var(--ink); }
+html[data-skin="sport"] #me #changelog-box .cl-h { margin-top: 12px; font-family: var(--sp-num); font-weight: 600; font-size: 14px; letter-spacing: .02em; color: var(--ink); }
 html[data-skin="sport"] #me #changelog-box .cl-h:first-child { margin-top: 0; }
 html[data-skin="sport"] #me #changelog-box ul { margin-top: 4px; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; }
 
 /* 新手设置:头(步骤标签 + 跳过胶囊、五段进度、900 大标题)/ 中间滚动 / 底部 上一步 1 : 下一步 2 */
 html[data-skin="sport"] #oobe .oobe-head { padding: 16px 16px 12px; padding-top: calc(16px + env(safe-area-inset-top)); border-bottom: 0; gap: 12px; }
-html[data-skin="sport"] #oobe .oobe-top { font-family: var(--sp-num); font-weight: 700; font-size: 14px; letter-spacing: .12em; color: var(--muted); }
+html[data-skin="sport"] #oobe .oobe-top { font-family: var(--sp-num); font-weight: 600; font-size: 14px; letter-spacing: .02em; color: var(--muted); }
 html[data-skin="sport"] #oobe .oobe-top .link-btn { padding: 0 14px; border: 1.5px solid var(--line); border-radius: 999px; font-family: var(--sp-sans); font-weight: 600; font-size: 14px; letter-spacing: 0; color: var(--ink); text-align: center; }
 html[data-skin="sport"] #oobe .sp-ob-bar { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; }
 html[data-skin="sport"] #oobe .sp-ob-bar > i { height: 6px; border-radius: 3px; background: var(--sp-track); }
 html[data-skin="sport"] #oobe .sp-ob-bar > i.on { background: var(--sp-fill); }
-html[data-skin="sport"] #oobe .oobe-title { font-family: var(--sp-cjk); font-weight: 900; font-size: 36px; line-height: 1.1; letter-spacing: 0; }
+html[data-skin="sport"] #oobe .oobe-title { font-family: var(--sp-cjk); font-weight: 600; font-size: 24px; line-height: 1.1; letter-spacing: 0; }
 html[data-skin="sport"] #oobe .sp-ob-sub { margin-top: -4px; font-size: 15px; line-height: 1.55; color: var(--muted); }
 html[data-skin="sport"] #oobe .oobe-body { padding: 4px 16px 16px; gap: 12px; }
 html[data-skin="sport"] #oobe .oobe-foot { padding: 10px 16px calc(16px + env(safe-area-inset-bottom)); border-top: 1px solid var(--line); }
-html[data-skin="sport"] #oobe .oobe-foot .btn-line { min-height: 58px; border: 2px solid var(--line); border-radius: 16px; font-family: var(--sp-sans); font-size: 15px; font-weight: 700; }
-html[data-skin="sport"] #oobe .oobe-foot .btn-primary { min-height: 58px; border-radius: 16px; font-weight: 900; }
+html[data-skin="sport"] #oobe .oobe-foot .btn-line { min-height: 58px; border: 2px solid var(--line); border-radius: 16px; font-family: var(--sp-sans); font-size: 15px; font-weight: 600; }
+html[data-skin="sport"] #oobe .oobe-foot .btn-primary { min-height: 58px; border-radius: 16px; font-weight: 600; }
 /* 第 0 步:荧光绿四格卡;从备份恢复 / 登录同步收进一张白卡 */
-html[data-skin="sport"] #oobe .sp-ob-four { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; padding: 16px; border-radius: 18px; background: var(--sp-neon); color: #111111; }
-html[data-skin="sport"] #oobe .sp-ob-four > span { display: flex; flex-direction: column; font-size: 14px; font-weight: 700; line-height: 1.35; }
-html[data-skin="sport"] #oobe .sp-ob-four b { font-family: var(--sp-num); font-weight: 800; font-size: 34px; line-height: 1; }
+html[data-skin="sport"] #oobe .sp-ob-four { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; padding: 16px; border-radius: 18px; background: var(--sp-hl); color: var(--sp-hl-fg); }
+html[data-skin="sport"] #oobe .sp-ob-four > span { display: flex; flex-direction: column; font-size: 14px; font-weight: 600; line-height: 1.35; }
+html[data-skin="sport"] #oobe .sp-ob-four b { font-family: var(--sp-num); font-weight: 600; font-size: 24px; line-height: 1; }
 html[data-skin="sport"] #oobe .sp-ob-rows { display: flex; flex-direction: column; padding: 0 16px; border-radius: 18px; background: var(--sp-card); }
 html[data-skin="sport"] #oobe .sp-ob-rows .row-btn { min-height: 64px; padding: 8px 0; }
 html[data-skin="sport"] #oobe .sp-ob-rows .row-btn:first-child { border-top: 0; }
-html[data-skin="sport"] #oobe .sp-ob-rows .rk { display: block; font-size: 16px; font-weight: 700; }
+html[data-skin="sport"] #oobe .sp-ob-rows .rk { display: block; font-size: 16px; font-weight: 600; }
 html[data-skin="sport"] #oobe .sp-ob-rows .rv { display: block; }
 html[data-skin="sport"] #oobe .sp-ob-rows .ra { display: flex; color: var(--faint); }
 /* 第 1–4 步:控件在浅底上 —— 分段托盘换白,目标说明 / 每周拆分 / 步进器 / 周期开关收进白卡 */
@@ -1442,16 +1467,16 @@ html[data-skin="sport"] #oobe .sp-ob-sum > span:not(.k) { font-weight: 600; over
 html[data-skin="sport"] #oobe .sp-ob-tips { display: grid; grid-template-columns: 32px minmax(0, 1fr); column-gap: 10px; row-gap: 12px; align-items: start; padding: 14px 16px; border-radius: 18px; background: var(--sp-card); }
 html[data-skin="sport"] #oobe .sp-ob-tips .sp-me-ic { width: 32px; height: 32px; border-radius: 10px; }
 html[data-skin="sport"] #oobe .sp-ob-tips > span:not(.sp-me-ic) { display: flex; flex-direction: column; font-size: 14px; line-height: 1.55; color: var(--muted); }
-html[data-skin="sport"] #oobe .sp-ob-tips b { font-size: 15px; font-weight: 700; color: var(--ink); }
+html[data-skin="sport"] #oobe .sp-ob-tips b { font-size: 15px; font-weight: 600; color: var(--ink); }
 /* 05 里「教练记住的事」:白卡一行一条,右边「删掉」描边胶囊;底下红框「全部清空」 */
 html[data-skin="sport"] #me-ai .sp-mem { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
 html[data-skin="sport"] #me-ai .sp-mem-list { display: flex; flex-direction: column; padding: 0 8px 0 14px; border-radius: 16px; background: var(--sp-soft); }
 html[data-skin="sport"] #me-ai .sp-mem-list .co-mem-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 10px; align-items: center; min-height: 56px; padding: 8px 0; }
 html[data-skin="sport"] #me-ai .sp-mem-list .co-mem-row + .co-mem-row { border-top: 1px solid var(--line); }
 html[data-skin="sport"] #me-ai .sp-mem-list .t { font-size: 15px; line-height: 1.45; overflow-wrap: anywhere; }
-html[data-skin="sport"] #me-ai .sp-mem-list small { display: block; font-family: var(--sp-num); font-weight: 600; font-size: 13px; letter-spacing: .04em; color: var(--faint); }
+html[data-skin="sport"] #me-ai .sp-mem-list small { display: block; font-family: var(--sp-num); font-weight: 600; font-size: 13px; letter-spacing: .02em; color: var(--faint); }
 html[data-skin="sport"] #me-ai .sp-mem-del { padding: 0 14px; border: 1.5px solid var(--line); border-radius: 999px; color: var(--ink); font-family: var(--sp-sans); font-size: 14px; font-weight: 600; text-align: center; }
-html[data-skin="sport"] #me-ai .sp-mem-clear { align-self: flex-start; min-height: 44px; padding: 0 16px; border: 1.5px solid var(--sp-red); border-radius: 999px; background: transparent; color: var(--sp-red); font-family: var(--sp-sans); font-size: 14px; font-weight: 700; }
+html[data-skin="sport"] #me-ai .sp-mem-clear { align-self: flex-start; min-height: 44px; padding: 0 16px; border: 1.5px solid var(--sp-red); border-radius: 999px; background: transparent; color: var(--sp-red); font-family: var(--sp-sans); font-size: 14px; font-weight: 600; }
 html[data-skin="sport"] #me-ai .sp-mem-empty { padding: 12px 14px; border-radius: 16px; background: var(--sp-soft); font-size: 14px; line-height: 1.6; color: var(--muted); }
 html[data-skin="sport"] #me-ai .sp-mem-retry { align-self: flex-start; padding: 0 14px; border: 1.5px solid var(--line); border-radius: 999px; color: var(--ink); font-family: var(--sp-sans); font-weight: 600; text-align: center; }
 html[data-skin="sport"] #me-ai .sp-mem .co-err { color: var(--sp-red); }
@@ -1474,8 +1499,8 @@ html[data-skin="sport"] .sp-sh-card .sub-label { margin-top: 2px; }
 html[data-skin="sport"] .sp-sh-card [data-group="swapReason"] .chip { padding: 0 14px; font-size: 14px; }
 
 /* 换 / 划掉:分组小标题(AI 小牌 + 「推荐 · 按『原因』」/「同肌群 · 按规则」) */
-html[data-skin="sport"] .sp-sh-grp { display: flex; align-items: center; gap: 8px; margin-top: 2px; font-family: var(--sp-sans); font-size: 14px; font-weight: 700; letter-spacing: 0; text-transform: none; color: var(--ink); }
-html[data-skin="sport"] .sp-sh-ai { min-height: 24px; padding: 0 8px; border-radius: 999px; background: var(--sp-neon); color: #111111; display: inline-flex; align-items: center; font-family: var(--sp-sans); font-size: 12px; font-weight: 700; }
+html[data-skin="sport"] .sp-sh-grp { display: flex; align-items: center; gap: 8px; margin-top: 2px; font-family: var(--sp-sans); font-size: 14px; font-weight: 600; letter-spacing: 0; text-transform: none; color: var(--ink); }
+html[data-skin="sport"] .sp-sh-ai { min-height: 24px; padding: 0 8px; border-radius: 999px; background: var(--sp-hl); color: var(--sp-hl-fg); display: inline-flex; align-items: center; font-family: var(--sp-sans); font-size: 12px; font-weight: 600; }
 html[data-skin="sport"] #swap-ai { gap: 10px; }
 html[data-skin="sport"] #swap-ai .co-err { color: var(--sp-red); }
 html[data-skin="sport"] .sp-sh-retry { align-self: flex-start; }
@@ -1485,10 +1510,10 @@ html[data-skin="sport"] .sp-sh-alts { display: flex; flex-direction: column; gap
 html[data-skin="sport"] .sp-sh-card .swap-option { border-top: 0; color: var(--ink); text-align: left; }
 html[data-skin="sport"] .swap-option.sp-sh-alt { min-height: 72px; padding: 12px 12px 12px 14px; border-radius: 16px; background: var(--sp-card); display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 10px; align-items: center; }
 html[data-skin="sport"] .sp-sh-l { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-html[data-skin="sport"] :is(#swap-modal, #add-ex-modal) .swap-option .so-n { font-family: var(--sp-cjk); font-weight: 700; font-size: 17px; line-height: 1.3; }
+html[data-skin="sport"] :is(#swap-modal, #add-ex-modal) .swap-option .so-n { font-family: var(--sp-cjk); font-weight: 600; font-size: 17px; line-height: 1.3; }
 html[data-skin="sport"] :is(#swap-modal, #add-ex-modal) .swap-option .so-s { margin-left: 0; display: flex; flex-wrap: wrap; align-items: center; column-gap: 8px; font-family: var(--sp-num); font-weight: 600; font-size: 15px; color: var(--muted); }
 html[data-skin="sport"] :is(#swap-modal, #add-ex-modal) .swap-option .so-note { font-family: var(--sp-sans); font-size: 14px; line-height: 1.5; color: var(--muted); }
-html[data-skin="sport"] .sp-sh-go { min-height: 44px; padding: 0 14px; border-radius: 999px; background: var(--sp-on); color: var(--sp-on-fg); display: inline-flex; align-items: center; font-family: var(--sp-sans); font-size: 14px; font-weight: 700; white-space: nowrap; }
+html[data-skin="sport"] .sp-sh-go { min-height: 44px; padding: 0 14px; border-radius: 999px; background: var(--sp-on); color: var(--sp-on-fg); display: inline-flex; align-items: center; font-family: var(--sp-sans); font-size: 14px; font-weight: 600; white-space: nowrap; }
 
 /* 紧凑行:白卡里一行一个(加动作列表、「其他同肌群」展开) */
 html[data-skin="sport"] .sp-sh-rows { display: flex; flex-direction: column; padding: 0 6px 0 14px; border-radius: 16px; background: var(--sp-card); }
@@ -1504,14 +1529,14 @@ html[data-skin="sport"] .swap-option.sp-sh-more { min-height: 48px; padding: 0 1
 /* 底部两个大按钮:只今天划掉(墨框)/ 永久排除(红框);动作详情顶上那排也用这两个 */
 html[data-skin="sport"] .sp-sh-acts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 4px; }
 html[data-skin="sport"] .sp-sh-acts.one { grid-template-columns: minmax(0, 1fr); }
-html[data-skin="sport"] :is(.sp-sh-strike, .sp-sh-excl) { min-height: 52px; padding: 0 12px; border: 2px solid var(--ink); border-radius: 14px; background: transparent; color: var(--ink); display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-family: var(--sp-sans); font-size: 15px; font-weight: 700; line-height: 1.3; }
+html[data-skin="sport"] :is(.sp-sh-strike, .sp-sh-excl) { min-height: 52px; padding: 0 12px; border: 2px solid var(--ink); border-radius: 14px; background: transparent; color: var(--ink); display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-family: var(--sp-sans); font-size: 15px; font-weight: 600; line-height: 1.3; }
 html[data-skin="sport"] .sp-sh-excl { border-color: var(--sp-red); color: var(--sp-red); }
 html[data-skin="sport"] .sp-sh-ask { align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; }
 
 /* 加一个动作:肌群 chip 画成白托盘里的分段(选中墨底荧光绿字,不画勾) */
 html[data-skin="sport"] .sp-sh-seg { display: flex; flex-wrap: wrap; gap: 4px; padding: 4px; border-radius: 14px; background: var(--sp-card); }
 html[data-skin="sport"] .sp-sh-seg .chip { flex: 1 1 auto; justify-content: center; min-height: 44px; padding: 0 12px; border: 0; border-radius: 10px; background: transparent; color: var(--ink); font-size: 15px; font-weight: 500; }
-html[data-skin="sport"] .sp-sh-seg .chip.on { background: var(--sp-on); color: var(--sp-on-fg); font-weight: 700; }
+html[data-skin="sport"] .sp-sh-seg .chip.on { background: var(--sp-on); color: var(--sp-on-fg); font-weight: 600; }
 html[data-skin="sport"] .sp-sh-seg .chip.on::before { content: none; display: none; }
 html[data-skin="sport"] details.sp-sh-fold > summary { gap: 6px; font-size: 14px; color: var(--ink); }
 html[data-skin="sport"] details.sp-sh-fold > summary::after { content: none; }
@@ -1522,117 +1547,163 @@ html[data-skin="sport"] .sp-sh-done { border-width: 2px; border-radius: 14px; }
 /* 打卡(#rpe-modal 静态 DOM):标题下三块数字;1–10 两排方格,只写数字,选中那格露出说明;备注 / 下调勾选做成白卡 */
 html[data-skin="sport"] #rpe-modal .sp-rpe-stats.sp-on { display: grid !important; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
 html[data-skin="sport"] .sp-rpe-stat { min-width: 0; padding: 10px 12px; border-radius: 14px; background: var(--sp-card); display: flex; flex-direction: column; }
-html[data-skin="sport"] .sp-rpe-stat b { font-family: var(--sp-num); font-weight: 800; font-size: 28px; line-height: 1.05; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+html[data-skin="sport"] .sp-rpe-stat b { font-family: var(--sp-num); font-weight: 600; font-size: 20px; line-height: 1.05; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 html[data-skin="sport"] .sp-rpe-stat span { font-size: 12px; color: var(--muted); }
 html[data-skin="sport"] #rpe-modal-title { margin: 0; }
 html[data-skin="sport"] #rpe-modal-desc { margin: 2px 0 -4px; font-size: 13px; font-weight: 600; line-height: 1.5; color: var(--muted); }
 html[data-skin="sport"] #rpe-modal .rpe-grid { gap: 6px; border: 0; border-radius: 0; }
 html[data-skin="sport"] #rpe-modal .rpe-btn { min-height: 56px; padding: 4px 2px; border: 1.5px solid var(--line); border-radius: 12px; background: var(--sp-card); color: var(--ink); gap: 2px; }
-html[data-skin="sport"] #rpe-modal .rpe-val { font-family: var(--sp-num); font-weight: 800; font-size: 24px; line-height: 1; }
+html[data-skin="sport"] #rpe-modal .rpe-val { font-family: var(--sp-num); font-weight: 600; font-size: 19px; line-height: 1; }
 html[data-skin="sport"] #rpe-modal .rpe-lbl { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; font-family: var(--sp-sans); font-size: 11px; }
 html[data-skin="sport"] #rpe-modal .rpe-btn[aria-checked="true"] { border-color: var(--sp-on); background: var(--sp-on); color: var(--sp-on-fg); }
-html[data-skin="sport"] #rpe-modal .rpe-btn[aria-checked="true"] .rpe-lbl { position: static; width: auto; max-width: 100%; height: auto; clip-path: none; overflow: hidden; text-overflow: ellipsis; font-weight: 700; line-height: 1.2; color: var(--sp-on-fg); }
+html[data-skin="sport"] #rpe-modal .rpe-btn[aria-checked="true"] .rpe-lbl { position: static; width: auto; max-width: 100%; height: auto; clip-path: none; overflow: hidden; text-overflow: ellipsis; font-weight: 600; line-height: 1.2; color: var(--sp-on-fg); }
 html[data-skin="sport"] #rpe-modal .rpe-note-input { box-sizing: border-box; min-height: 64px; padding: 10px 12px; border: 1.5px solid var(--line); border-radius: 14px; background: var(--sp-card); color: var(--ink); font-family: var(--sp-sans); font-size: 16px; line-height: 1.55; }
 html[data-skin="sport"] #rpe-modal .rpe-note-input:focus { border-color: var(--ink); }
-html[data-skin="sport"] #chk-reduce-volume { width: 100%; min-height: 56px; padding: 10px 12px; border: 1.5px solid var(--line); border-radius: 14px; background: var(--sp-card); color: var(--ink); display: grid; grid-template-columns: 28px minmax(0, 1fr); column-gap: 12px; align-items: center; font-size: 15px; font-weight: 700; line-height: 1.4; }
+html[data-skin="sport"] #chk-reduce-volume { width: 100%; min-height: 56px; padding: 10px 12px; border: 1.5px solid var(--line); border-radius: 14px; background: var(--sp-card); color: var(--ink); display: grid; grid-template-columns: 28px minmax(0, 1fr); column-gap: 12px; align-items: center; font-size: 15px; font-weight: 600; line-height: 1.4; }
 html[data-skin="sport"] #chk-reduce-volume .box-sq { width: 28px; height: 28px; }
 html[data-skin="sport"] #chk-reduce-volume .box-sq svg { width: 18px; height: 18px; }
-html[data-skin="sport"] #rpe-submit { min-height: 60px; border-radius: 16px; font-weight: 900; font-size: 18px; }
+html[data-skin="sport"] #rpe-submit { min-height: 60px; border-radius: 16px; font-weight: 600; font-size: 17px; }
 html[data-skin="sport"] #rpe-modal .btn-ghost { min-height: 48px; font-size: 15px; color: var(--muted); }
 
 /* 动作详情:顶上两个按钮;肌群一排墨框胶囊 + 肌肉图;示范、力量数据、要点、提示都放白卡 */
 html[data-skin="sport"] #ex-modal-muscles { display: flex; flex-direction: column; gap: 10px; font-family: var(--sp-sans); font-size: 14px; color: var(--ink); }
 html[data-skin="sport"] .sp-ex-mus { display: flex; flex-wrap: wrap; gap: 6px; }
-html[data-skin="sport"] .sp-ex-mus .jchip { min-height: 30px; padding: 0 12px; border: 1.5px solid var(--ink); border-radius: 999px; display: inline-flex; align-items: center; font-family: var(--sp-sans); font-size: 13px; font-weight: 700; color: var(--ink); }
+html[data-skin="sport"] .sp-ex-mus .jchip { min-height: 30px; padding: 0 12px; border: 1.5px solid var(--ink); border-radius: 999px; display: inline-flex; align-items: center; font-family: var(--sp-sans); font-size: 13px; font-weight: 600; color: var(--ink); }
 html[data-skin="sport"] .sp-ex-diag > div { margin: 0 !important; gap: 10px !important; }
 html[data-skin="sport"] .sp-ex-diag div[style*="background:#fff"] { border: 0 !important; border-radius: 16px; }
 html[data-skin="sport"] #ex-modal-strength { display: flex; flex-direction: column; gap: 10px; }
 html[data-skin="sport"] #ex-modal-strength:empty { display: none; }
-html[data-skin="sport"] #ex-modal .gif-box { padding: 12px; border-radius: 16px; background: #ffffff; }
-html[data-skin="sport"] #ex-modal .gif-box .cap { margin-top: 6px; font-family: var(--sp-num); font-weight: 600; font-size: 12px; letter-spacing: .04em; color: #55554f; }
+html[data-skin="sport"] #ex-modal .gif-box { padding: 0; border-radius: 16px; background: var(--sp-gif); }
+html[data-skin="sport"] #ex-modal .gif-box .cap { margin-top: 6px; font-family: var(--sp-num); font-weight: 600; font-size: 12px; letter-spacing: .02em; color: var(--muted); }
 html[data-skin="sport"] #ex-modal .demo-links { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
-html[data-skin="sport"] #ex-modal .demo-links a { justify-content: center; min-width: 0; padding: 0 8px; border: 1.5px solid var(--line); border-radius: 999px; font-family: var(--sp-sans); font-size: 14px; font-weight: 700; color: var(--ink); }
+html[data-skin="sport"] #ex-modal .demo-links a { justify-content: center; min-width: 0; padding: 0 8px; border: 1.5px solid var(--line); border-radius: 999px; font-family: var(--sp-sans); font-size: 14px; font-weight: 600; color: var(--ink); }
 html[data-skin="sport"] .sp-ex-1rm { display: flex; flex-direction: column; gap: 10px; padding: 14px; border-radius: 16px; background: var(--sp-card); }
 html[data-skin="sport"] .sp-ex-1rm-top { display: flex; justify-content: space-between; align-items: flex-end; gap: 10px; }
-html[data-skin="sport"] .sp-ex-1rm-k { display: flex; flex-direction: column; font-family: var(--sp-cjk); font-weight: 700; font-size: 16px; line-height: 1.3; }
+html[data-skin="sport"] .sp-ex-1rm-k { display: flex; flex-direction: column; font-family: var(--sp-cjk); font-weight: 600; font-size: 16px; line-height: 1.3; }
 html[data-skin="sport"] .sp-ex-1rm-k small { font-family: var(--sp-sans); font-weight: 500; font-size: 12px; color: var(--muted); }
-html[data-skin="sport"] .sp-ex-1rm-v { font-family: var(--sp-num); font-weight: 800; font-size: 44px; line-height: .95; white-space: nowrap; }
-html[data-skin="sport"] :is(.sp-ex-1rm-v, .sp-ex-1rm-grid b) small { margin-left: 3px; font-size: 14px; font-weight: 700; color: var(--muted); }
+html[data-skin="sport"] .sp-ex-1rm-v { font-family: var(--sp-num); font-weight: 600; font-size: 26px; line-height: .95; white-space: nowrap; }
+html[data-skin="sport"] :is(.sp-ex-1rm-v, .sp-ex-1rm-grid b) small { margin-left: 3px; font-size: 14px; font-weight: 600; color: var(--muted); }
 html[data-skin="sport"] .sp-ex-1rm-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
 html[data-skin="sport"] .sp-ex-1rm-grid > div { min-width: 0; padding: 8px 10px; border-radius: 12px; background: var(--sp-soft); display: flex; flex-direction: column; }
-html[data-skin="sport"] .sp-ex-1rm-grid b { font-family: var(--sp-num); font-weight: 800; font-size: 26px; line-height: 1.1; white-space: nowrap; }
+html[data-skin="sport"] .sp-ex-1rm-grid b { font-family: var(--sp-num); font-weight: 600; font-size: 20px; line-height: 1.1; white-space: nowrap; }
 html[data-skin="sport"] .sp-ex-1rm-grid span { font-size: 12px; color: var(--muted); }
 html[data-skin="sport"] #ex-modal-steps { display: flex; flex-direction: column; padding: 2px 14px; border-radius: 16px; background: var(--sp-card); }
 html[data-skin="sport"] #ex-modal .ex-step { grid-template-columns: 26px minmax(0, 1fr); gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--line); font-size: 15px; line-height: 1.6; }
 html[data-skin="sport"] #ex-modal .ex-step:last-child { border-bottom: 0; }
-html[data-skin="sport"] #ex-modal .ex-step-n { padding-top: 0; font-family: var(--sp-num); font-weight: 800; font-size: 18px; line-height: 1.35; color: var(--ink); }
+html[data-skin="sport"] #ex-modal .ex-step-n { padding-top: 0; font-family: var(--sp-num); font-weight: 600; font-size: 17px; line-height: 1.35; color: var(--ink); }
 html[data-skin="sport"] :is(#ex-modal-tips, #ex-modal-mistakes) { display: flex; flex-direction: column; gap: 8px; }
 html[data-skin="sport"] :is(#ex-modal-tips, #ex-modal-mistakes):empty { display: none; }
 html[data-skin="sport"] #ex-modal .ex-tip { padding: 10px 12px; border-left: 0; border-radius: 14px; background: var(--sp-card); color: var(--ink); font-size: 14px; line-height: 1.6; }
 html[data-skin="sport"] #ex-modal .ex-tip.how { box-shadow: inset 4px 0 0 var(--sp-fill); }
 html[data-skin="sport"] #ex-modal .ex-tip.mistake { color: var(--ink); box-shadow: inset 4px 0 0 var(--sp-red); }
-html[data-skin="sport"] .sp-ex-tag { display: inline-flex; align-items: center; min-height: 22px; padding: 0 8px; margin-right: 8px; border-radius: 999px; background: var(--sp-neon); color: #111111; font-family: var(--sp-sans); font-size: 12px; font-weight: 700; vertical-align: 1px; }
+html[data-skin="sport"] .sp-ex-tag { display: inline-flex; align-items: center; min-height: 22px; padding: 0 8px; margin-right: 8px; border-radius: 999px; background: var(--sp-hl); color: var(--sp-hl-fg); font-family: var(--sp-sans); font-size: 12px; font-weight: 600; vertical-align: 1px; }
 html[data-skin="sport"] .sp-ex-warn { color: var(--sp-red); }
 
 /* 引导训练(全屏):荧光绿焦点卡,黑字;64px 组×次 / 重量;组点;黑底荧光绿主按钮。卡在深色里也是荧光绿 */
 html[data-skin="sport"] #workout-modal .wm-top { min-height: 44px; gap: 12px; }
-html[data-skin="sport"] .sp-g-card { padding: 16px; border-radius: 22px; background: var(--sp-neon); color: #111111; display: flex; flex-direction: column; gap: 12px; }
-html[data-skin="sport"] .sp-g-card :focus-visible { outline-color: #111111; }
+html[data-skin="sport"] .sp-g-card { padding: 16px; border-radius: 22px; background: var(--sp-hl); color: var(--sp-hl-fg); display: flex; flex-direction: column; gap: 12px; }
+html[data-skin="sport"] .sp-g-card :focus-visible { outline-color: var(--ink); }
 html[data-skin="sport"] .sp-g-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
-html[data-skin="sport"] .sp-g-tag { font-family: var(--sp-num); font-weight: 700; font-size: 14px; letter-spacing: .12em; text-transform: uppercase; }
-html[data-skin="sport"] .sp-g-part { min-height: 28px; padding: 0 12px; border: 1.5px solid #111111; border-radius: 999px; display: inline-flex; align-items: center; font-size: 13px; font-weight: 700; }
-html[data-skin="sport"] .sp-g-card .wm-name { margin: -4px 0 0; font-family: var(--sp-cjk); font-weight: 700; font-size: 30px; line-height: 1.15; letter-spacing: 0; color: #111111; }
+html[data-skin="sport"] .sp-g-tag { font-family: var(--sp-num); font-weight: 600; font-size: 14px; letter-spacing: .02em; text-transform: uppercase; }
+html[data-skin="sport"] .sp-g-part { min-height: 28px; padding: 0 12px; border: 1.5px solid var(--ink); border-radius: 999px; display: inline-flex; align-items: center; font-size: 13px; font-weight: 600; }
+html[data-skin="sport"] .sp-g-card .wm-name { margin: -4px 0 0; font-family: var(--sp-cjk); font-weight: 600; font-size: 22px; line-height: 1.15; letter-spacing: 0; color: var(--ink); }
 html[data-skin="sport"] .sp-g-grid { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 12px; align-items: end; }
 html[data-skin="sport"] .sp-g-grid.one { grid-template-columns: minmax(0, 1fr); }
 html[data-skin="sport"] .sp-g-cell { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-html[data-skin="sport"] .sp-g-lbl { font-family: var(--sp-sans); font-size: 12px; font-weight: 700; color: var(--sp-neon-muted); }
-html[data-skin="sport"] .sp-g-big { font-family: var(--sp-num); font-weight: 800; font-size: 64px; line-height: .9; letter-spacing: -.01em; white-space: nowrap; }
-html[data-skin="sport"] .sp-g-big.sm { font-size: 50px; }
-html[data-skin="sport"] .sp-g-kg { width: 100%; min-height: 58px; box-sizing: border-box; padding: 0; border: 0; border-bottom: 2.5px solid #111111; border-radius: 0; background: transparent; color: #111111; font-family: var(--sp-num); font-weight: 800; font-size: 56px; line-height: 1; letter-spacing: -.01em; -moz-appearance: textfield; appearance: textfield; }
+html[data-skin="sport"] .sp-g-lbl { font-family: var(--sp-sans); font-size: 12px; font-weight: 600; color: var(--sp-neon-muted); }
+html[data-skin="sport"] .sp-g-big { font-family: var(--sp-num); font-weight: 600; font-size: 32px; line-height: .9; letter-spacing: -.01em; white-space: nowrap; }
+html[data-skin="sport"] .sp-g-big.sm { font-size: 28px; }
+html[data-skin="sport"] .sp-g-kg { width: 100%; min-height: 58px; box-sizing: border-box; padding: 0; border: 0; border-bottom: 2.5px solid var(--ink); border-radius: 0; background: transparent; color: var(--ink); font-family: var(--sp-num); font-weight: 600; font-size: 30px; line-height: 1; letter-spacing: -.01em; -moz-appearance: textfield; appearance: textfield; }
 html[data-skin="sport"] .sp-g-kg::-webkit-inner-spin-button, html[data-skin="sport"] .sp-g-kg::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
 html[data-skin="sport"] .sp-g-kg::placeholder { color: var(--sp-neon-muted); opacity: .7; }
 html[data-skin="sport"] .sp-g-sets { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
 html[data-skin="sport"] .sp-g-dots { display: flex; flex-wrap: wrap; gap: 8px; }
-html[data-skin="sport"] .sp-g-dots i { width: 22px; height: 22px; box-sizing: border-box; border: 2.5px solid #111111; border-radius: 50%; }
-html[data-skin="sport"] .sp-g-dots i.on { background: #111111; }
-html[data-skin="sport"] .sp-g-dots i.cur { background: radial-gradient(circle, #111111 0 4px, transparent 4.5px); }
-html[data-skin="sport"] .sp-g-line { font-family: var(--sp-num); font-weight: 700; font-size: 16px; letter-spacing: .02em; }
+html[data-skin="sport"] .sp-g-dots i { width: 22px; height: 22px; box-sizing: border-box; border: 2.5px solid var(--ink); border-radius: 50%; }
+html[data-skin="sport"] .sp-g-dots i.on { background: var(--ink); }
+html[data-skin="sport"] .sp-g-dots i.cur { background: radial-gradient(circle, var(--ink) 0 4px, transparent 4.5px); }
+html[data-skin="sport"] .sp-g-line { font-family: var(--sp-num); font-weight: 600; font-size: 16px; letter-spacing: .02em; }
 html[data-skin="sport"] .sp-g-meta { margin-top: -4px; font-family: var(--sp-num); font-weight: 600; font-size: 14px; letter-spacing: .02em; color: var(--sp-neon-muted); }
-html[data-skin="sport"] .sp-g-cd { padding: 12px 16px; border-radius: 16px; background: #111111; color: #f4f4f0; text-align: left; display: flex; flex-direction: column; gap: 2px; }
-html[data-skin="sport"] .sp-g-cd .tag { font-family: var(--sp-sans); font-size: 13px; font-weight: 600; letter-spacing: 0; color: #b3b3ab; }
-html[data-skin="sport"] .sp-g-cd .cd { font-family: var(--sp-num); font-weight: 800; font-size: 46px; line-height: 1; letter-spacing: 0; color: #d4ff3d; font-variant-numeric: tabular-nums; }
-html[data-skin="sport"] .sp-g-cd .wm-bar { height: 4px; margin-top: 8px; border-radius: 2px; background: #2c2c2a; }
-html[data-skin="sport"] .sp-g-cd .wm-bar > i { height: 4px; border-radius: 2px; background: #d4ff3d; }
-html[data-skin="sport"] .sp-g-card .sp-g-do { min-height: 64px; border-radius: 16px; background: #111111; color: #d4ff3d; display: flex; align-items: center; justify-content: center; gap: 10px; font-family: var(--sp-cjk); font-weight: 900; font-size: 19px; }
+html[data-skin="sport"] .sp-g-cd { padding: 12px 16px; border-radius: 16px; background: var(--sp-soft); color: var(--ink); text-align: left; display: flex; flex-direction: column; gap: 2px; }
+html[data-skin="sport"] .sp-g-cd .tag { font-family: var(--sp-sans); font-size: 13px; font-weight: 600; letter-spacing: 0; color: var(--muted); }
+html[data-skin="sport"] .sp-g-cd .cd { font-family: var(--sp-num); font-weight: 600; font-size: 28px; line-height: 1; letter-spacing: 0; color: var(--sp-neon); font-variant-numeric: tabular-nums; }
+html[data-skin="sport"] .sp-g-cd .wm-bar { height: 4px; margin-top: 8px; border-radius: 2px; background: var(--line); }
+html[data-skin="sport"] .sp-g-cd .wm-bar > i { height: 4px; border-radius: 2px; background: var(--sp-neon); }
+html[data-skin="sport"] .sp-g-card .sp-g-do { min-height: 64px; border-radius: 16px; background: var(--sp-fill); color: var(--sp-on-fg); display: flex; align-items: center; justify-content: center; gap: 10px; font-family: var(--sp-cjk); font-weight: 600; font-size: 17px; }
 html[data-skin="sport"] .sp-wm-alt { min-height: 48px; border-radius: 14px; }
 html[data-skin="sport"] .sp-wm-note { padding: 12px 14px; border-radius: 16px; background: var(--sp-card); color: var(--muted); font-size: 14px; line-height: 1.6; }
 html[data-skin="sport"] .wm-nav.sp-wm-nav { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-html[data-skin="sport"] .wm-nav.sp-wm-nav .btn-line { min-height: 52px; border: 1.5px solid var(--ink); border-radius: 14px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-size: 15px; font-weight: 700; color: var(--ink); }
-html[data-skin="sport"] .sp-wm-end { min-height: 52px; border: 2px solid var(--ink); border-radius: 14px; color: var(--ink); font-size: 15px; font-weight: 700; }
+html[data-skin="sport"] .wm-nav.sp-wm-nav .btn-line { min-height: 52px; border: 1.5px solid var(--ink); border-radius: 14px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-size: 15px; font-weight: 600; color: var(--ink); }
+html[data-skin="sport"] .sp-wm-end { min-height: 52px; border: 2px solid var(--ink); border-radius: 14px; color: var(--ink); font-size: 15px; font-weight: 600; }
 
 /* 分享 / 成就:只管外框(卡片图是 canvas,别处画) */
 html[data-skin="sport"] :is(#share-modal, #achievement-modal) .share-preview { min-height: 160px; padding: 12px; border: 0; border-radius: 16px; background: var(--sp-card); }
 html[data-skin="sport"] :is(#share-modal, #achievement-modal) .share-preview img { border-radius: 10px; }
 html[data-skin="sport"] #achievement-modal .ach-badge-big { padding: 16px 0 4px; }
-html[data-skin="sport"] #achievement-modal .ach-name { margin: 0; font-family: var(--sp-cjk); font-weight: 900; font-size: 26px; line-height: 1.2; }
-html[data-skin="sport"] #achievement-modal .ach-status { margin: -6px 0 0; font-family: var(--sp-num); font-weight: 700; font-size: 14px; letter-spacing: .06em; }
+html[data-skin="sport"] #achievement-modal .ach-name { margin: 0; font-family: var(--sp-cjk); font-weight: 600; font-size: 20px; line-height: 1.2; }
+html[data-skin="sport"] #achievement-modal .ach-status { margin: -6px 0 0; font-family: var(--sp-num); font-weight: 600; font-size: 14px; letter-spacing: .02em; }
 html[data-skin="sport"] #achievement-modal .sheet-desc { margin: 0; text-align: center; }
 
 /* 轻提示:左右各 16 的整条黑条(深色是浅条),从下面淡入 */
 html[data-skin="sport"] .sync-toast { left: 16px; right: 16px; width: auto; max-width: 528px; margin: 0 auto; transform: translateY(12px); }
 html[data-skin="sport"] .sync-toast.show { transform: none; }
 /* 引导卡里的 调整 / 问教练 / 换 胶囊、调整展开的黑格(和今天页焦点卡同一套样子),组间倒计时用 10 区的 .sp-rest */
-html[data-skin="sport"] .sp-g-card .sp-pill { border-color: #111111; color: #111111; font-weight: 700; }
-html[data-skin="sport"] .sp-g-card .sp-pill.dark.on { background: #111111; color: #d4ff3d; }
-html[data-skin="sport"] .sp-g-card .sp-tile { background: #111111; color: #f4f4f0; }
-html[data-skin="sport"] .sp-g-card .sp-tile .step-lbl { color: #b3b3ab; }
-html[data-skin="sport"] .sp-g-card .sp-tile .step-btn { color: #d4ff3d; }
-html[data-skin="sport"] .sp-g-card .sp-tile .step-btn:disabled { color: #55554f; }
+html[data-skin="sport"] .sp-g-card .sp-pill { border-color: var(--ink); color: var(--ink); font-weight: 600; }
+html[data-skin="sport"] .sp-g-card .sp-pill.dark.on { background: var(--sp-fill); color: var(--sp-on-fg); }
+html[data-skin="sport"] .sp-g-card .sp-tile { background: var(--sp-soft); color: var(--ink); }
+html[data-skin="sport"] .sp-g-card .sp-tile .step-lbl { color: var(--muted); }
+html[data-skin="sport"] .sp-g-card .sp-tile .step-btn { color: var(--sp-neon); }
+html[data-skin="sport"] .sp-g-card .sp-tile .step-btn:disabled { color: var(--muted); }
 /* 配对确认(app.js _ptModal*):底板用 03 区的 .ex-modal-card;配对码一行、替换现有搭子的提醒 */
 html[data-skin="sport"] #pt-pair-modal .pt-warn { color: var(--sp-red); font-weight: 600; }
 html[data-skin="sport"] #pt-pair-modal .pt-code-row { padding: 8px 8px 8px 12px; border-radius: 14px; background: var(--sp-soft); }
-html[data-skin="sport"] #pt-pair-modal .pair-code { font-family: var(--sp-num); font-weight: 700; font-size: 16px; letter-spacing: .04em; color: var(--ink); }
+html[data-skin="sport"] #pt-pair-modal .pair-code { font-family: var(--sp-num); font-weight: 600; font-size: 16px; letter-spacing: .02em; color: var(--ink); }
 /* —— 60 弹窗内容 · 写在这行上面 —— */
+
+/* ══ 11 演示图 / 需保护 / 拉伸要点(2026-11-10 改版:安静克制)═════════════════ */
+html[data-skin="sport"] body { font-variant-numeric: tabular-nums; -webkit-font-smoothing: antialiased; }
+html[data-skin="sport"] .sp-thumb { flex: none; display: block; width: 52px; height: 52px; border-radius: 12px; background: #fff; object-fit: cover; }
+html[data-skin="sport"] img.sp-thumb.err { visibility: hidden; }
+html[data-skin="sport"] .sp-thumb.none { background: var(--sp-soft); mix-blend-mode: normal; }
+html[data-skin="sport"] .sp-thumb.sm { width: 48px; height: 48px; border-radius: 11px; }
+html[data-skin="sport"] .sp-thumb.lg { width: 76px; height: 76px; border-radius: 14px; }
+html[data-skin="sport"] .sp-thumb.xl { width: 168px; height: 168px; border-radius: 18px; }
+html.dark[data-skin="sport"] :is(.sp-thumb:not(.none), .gif-box img) { filter: brightness(.86); }
+@media (prefers-color-scheme: dark) { html[data-skin="sport"]:not(.light) :is(.sp-thumb:not(.none), .gif-box img) { filter: brightness(.86); } }
+html[data-skin="sport"] .sp-spot { display: inline-flex; align-items: center; height: 22px; margin-left: 8px; padding: 0 7px; border-radius: 6px; background: var(--sp-warn-soft); color: var(--sp-warn); font-size: 12px; font-weight: 600; white-space: nowrap; vertical-align: 2px; }
+html[data-skin="sport"] .sp-spot.soft { background: transparent; border: 1px solid var(--sp-warn-line); }
+html[data-skin="sport"] .sp-spot-box { margin: 4px 0 12px; padding: 12px 14px; border-radius: 14px; background: var(--sp-warn-soft); border: 1px solid var(--sp-warn-line); }
+html[data-skin="sport"] .sp-spot-box .sp-spot { margin: 0; padding: 0; background: none; border: 0; font-size: 15px; height: auto; }
+html[data-skin="sport"] .sp-spot-box p { margin: 6px 0 0; font-size: 15px; line-height: 1.55; color: var(--ink); }
+/* 接下来:序号不要了,左边是缩略图 */
+html[data-skin="sport"] .sp-q-main { grid-template-columns: 52px minmax(0, 1fr) !important; gap: 12px; align-items: center; }
+html[data-skin="sport"] .sp-q-main .sp-q-idx { display: none; }
+html[data-skin="sport"] .sp-swim .sp-q-main { grid-template-columns: 26px minmax(0, 1fr) !important; }
+html[data-skin="sport"] .sp-swim .sp-q-main .sp-q-idx { display: inline; }
+/* 热身 / 拉伸小行:缩略图 + 名字 / 量 / 一句要点(整块点开详情)*/
+html[data-skin="sport"] .sp-mini { align-items: center; padding: 8px 0; }
+html[data-skin="sport"] .sp-mini-main { flex: 1; min-width: 0; min-height: 52px; padding: 0; border: 0; background: none; color: var(--ink); display: flex; align-items: center; gap: 12px; text-align: left; font: inherit; }
+html[data-skin="sport"] .sp-mini-txt { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+html[data-skin="sport"] .sp-mini-main .sp-mini-name { flex: none; min-height: 0; font-size: 15px; font-weight: 500; line-height: 1.3; }
+html[data-skin="sport"] .sp-mini-main .sp-mini-dose { padding: 0; font-size: 13px; font-weight: 600; color: var(--ink); }
+html[data-skin="sport"] .sp-mini-note { font-size: 13px; line-height: 1.4; color: var(--muted); }
+html[data-skin="sport"] .sp-mini.done .sp-mini-main { opacity: .62; }
+/* 当前动作卡头:缩略图 + 名字 */
+html[data-skin="sport"] .sp-f-head { display: flex; align-items: center; gap: 14px; }
+html[data-skin="sport"] .sp-f-media, html[data-skin="sport"] .sp-g-media { flex: none; width: auto !important; min-width: 0; margin: 0; padding: 0; border: 0; background: none; border-radius: 14px; line-height: 0; }
+html[data-skin="sport"] .sp-f-head-t { flex: 1 1 auto; min-width: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 0; }
+html[data-skin="sport"] .sp-f-head-t .sp-f-name { margin: 0; font-size: 20px; line-height: 1.25; overflow-wrap: normal; word-break: normal; }
+/* 引导训练:大图居中,下面名字 */
+html[data-skin="sport"] .sp-g-head { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+html[data-skin="sport"] .sp-g-head-t { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; }
+html[data-skin="sport"] .sp-g-how { margin: 12px 0 0; padding: 0 14px; border-radius: 14px; background: var(--sp-soft); }
+html[data-skin="sport"] .sp-g-how summary { min-height: 44px; display: flex; align-items: center; font-size: 15px; font-weight: 600; cursor: pointer; }
+html[data-skin="sport"] .sp-g-how ol { margin: 0; padding: 0 0 12px 20px; font-size: 15px; line-height: 1.55; }
+html[data-skin="sport"] .sp-g-how li + li { margin-top: 6px; }
+/* 详情大图 */
+html[data-skin="sport"] .gif-box { background: var(--sp-gif); border-radius: 16px; overflow: hidden; display: flex; flex-direction: column; align-items: center; }
+html[data-skin="sport"] .gif-box img { width: 240px; height: 240px; object-fit: contain; mix-blend-mode: multiply; }
+html[data-skin="sport"] #ex-modal .gif-box .cap, html[data-skin="sport"] .gif-box .cap { margin: 0; align-self: stretch; padding: 6px 12px; font-size: 12px; color: var(--muted); background: var(--sp-card); text-align: right; }
+html[data-skin="sport"] .gif-box .cap a { color: inherit; }
 
 /* ══ 99 结束 ══════════════════════════════════════════════════════════ */
 html[data-skin="sport"] .period-mark .link-btn { font-family: var(--sp-sans); }

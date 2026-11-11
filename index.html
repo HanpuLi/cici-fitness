@@ -26,8 +26,8 @@
             } catch (e) { k = 'paper'; }
             d.setAttribute('data-skin', k);
             if (t === 'dark' || t === 'light') d.classList.add(t);
-            var FONTS = { sport: 'https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700;800&family=Noto+Sans+SC:wght@400..900&display=swap' };
-            window.CF_TC = { paper: ['#f5f2eb', '#151412'], sport: ['#f2f2ee', '#0d0d0d'] };
+            var FONTS = {};   // 2026-11-10 运动风格改用系统字体(苹方 / SF),不再加载网络字体
+            window.CF_TC = { paper: ['#f5f2eb', '#151412'], sport: ['#f4f2ee', '#161618'] };
             window.cfSkinFonts = function (s) {
                 var u = FONTS[s]; if (!u || document.querySelector('link[data-skin-fonts="' + s + '"]')) return;
                 if (document.readyState === 'loading' && !document.body) { document.write('<link rel="stylesheet" data-skin-fonts="' + s + '" href="' + u + '">'); return; }   // 开机:和静态 <link> 一样阻塞首屏,不闪字体
@@ -98,8 +98,18 @@
             <section class="panel-tab" id="me" role="tabpanel" aria-labelledby="tab-me" hidden>
                 <div id="me-content"></div>
                 <div class="version-foot">
-                    <button type="button" id="app-version" class="link-btn" onclick="toggleChangelog()" aria-expanded="false" aria-controls="changelog-box">Cici健身计划 v3.6.8 (build 169) · 更新日志 ▾</button>
+                    <button type="button" id="app-version" class="link-btn" onclick="toggleChangelog()" aria-expanded="false" aria-controls="changelog-box">Cici健身计划 v3.7.0 (build 170) · 更新日志 ▾</button>
                     <div id="changelog-box" style="display:none">
+                        <p class="cl-h">v3.7.0 · 2026-11-11</p>
+                        <ul>
+                            <li>运动风格换新版：系统字体，灰青绿配炭灰，不再是荧光绿和粗黑大字。纸墨不变。</li>
+                            <li>动作有了缩略动图：174 个动作配了演示图（之前 92 个，其中 18 个配错已改），列表、当前动作和引导训练里都能看到；「示范」先打开带动图的详情。</li>
+                            <li>需要搭子保护的动作（杠铃卧推等）在列表和详情里标出来，详情写了搭子站哪、怎么接。</li>
+                            <li>全部动作说明重新核对：拉伸都写成 5 到 7 步；时长、每侧、说明和动图对得上；每侧动作在历史记录里也写「每侧」。</li>
+                            <li>不再自动顺延，也没有那张顺延提示卡；漏练了怎么接上由教练安排。最近几天自动顺延过的会撤回成原计划。</li>
+                            <li>运动风格去掉「正在看 · 回到今天」那一条。</li>
+                            <li>去掉以前的肌肉示意图。Keep 只在能直接打开对应动作页的动作上出现，不再跳到下载页。</li>
+                        </ul>
                         <p class="cl-h">v3.6.8 · 2026-11-05</p>
                         <ul>
                             <li>修：拉伸段里混入力量动作（靠墙天使、靠墙静蹲、臀桥保持、鸟狗式）。现在它们回到训练段，已排好的计划也会归位。</li>

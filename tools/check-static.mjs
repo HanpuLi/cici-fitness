@@ -72,7 +72,7 @@ else if (!sw.includes(`'${googleFontUrl}'`)) errors.push('sw.js: Google Fonts pr
 // 两套风格的字体样式表:纸墨是静态 <link>,运动由 <head> 开机脚本按风格插入 —— 每一条都要在 sw.js 预缓存里(离线切风格也有样式)
 {
   const fontUrls = [...new Set([...html.matchAll(/https:\/\/fonts\.googleapis\.com\/css2\?[^"'\s<>]+/g)].map(m => m[0]))];
-  if (fontUrls.length < 2) errors.push(`index.html: expected the font stylesheets of both skins (paper <link> + sport in the boot script), found ${fontUrls.length}`);
+  if (fontUrls.length < 1) errors.push(`index.html: expected the paper font stylesheet <link>, found ${fontUrls.length}`);   // 运动风格 2026-11-10 起用系统字体
   for (const u of fontUrls) if (!sw.includes(`'${u}'`)) errors.push(`sw.js: Google Fonts stylesheet ${u} is used by index.html but not pre-cached`);
 }
 // 页面引用的本地样式表 / 脚本都要预缓存(新加文件最容易漏)

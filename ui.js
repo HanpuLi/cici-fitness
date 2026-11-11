@@ -535,8 +535,7 @@ function uiRenderP8() {
     + (isAi ? `<div style="display:flex;flex-direction:column;gap:10px">${uiSeg('ai-span', 'aiSpan', [['7', '接下来 7 天'], ['14', '接下来 14 天']], _uiGen.span, { light: true, label: '天数' })}`
       + `<input type="hidden" id="co-plan-span" value="${_uiGen.span}"><input id="co-plan-req" class="line-input" placeholder="要求（可空）：周五只有 30 分钟" aria-label="排计划的要求" value="${uiEsc(req)}"></div>` : '')
     + `<button type="button" class="btn-primary" id="gen-btn" onclick="uiGenerate()">${label}</button>`
-    + `<div class="foot-note">${note}</div><div id="co-plan-body"></div>`
-    + uiToggle('autoShift', '没练自动顺延', '过了晚上 11 点还没打卡，后面的训练往后挪一天，碰到休息日为止；关掉就只提醒', S.autoShift !== false, false, 'auto-shift-switch');
+    + `<div class="foot-note">${note}</div><div id="co-plan-body"></div>`;   // 「没练自动顺延」开关 2026-11-10 去掉(功能停用)
   if (typeof coachShowPlanDraft === 'function') coachShowPlanDraft();
 }
 function uiGenerate() {

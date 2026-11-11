@@ -195,9 +195,9 @@ function buildCoachContext(opts = {}) {
       if (okEx(e.name) && !nx[e.name] && needsWeightUI(e)) { const w = suggestWeight(e.name); if (w) nx[e.name] = w }
     }));
     ctx.nextSuggestedKg = nx;
-    // 最近自动顺延过哪几天(没练 → 后面的训练往后挪;标记日不会是私密日,类型名再按门控过一遍)
+    // 最近 14 天排了却没练的训练日(app 不再自动顺延,漏练后怎么接上由教练安排;私密日不进,类型名再按门控过一遍)
     const sh = typeof autoShiftFacts === 'function' ? autoShiftFacts().filter(x => ![...gated].some(g => x.planned.includes(g))).map(x => share ? { ...x, planned: _shareType(x.planned) } : x) : [];
-    if (sh.length) ctx.autoShifted = sh;
+    if (sh.length) ctx.missed = sh;
   }
   if (opts.catalog) ctx.catalog = _coachCatalog(opts.catalog === 'full', gated);
   if (opts.partner !== false) { const p = _coachPartner(); if (p) ctx.partner = p }

@@ -118,7 +118,9 @@ function _spName(date, ex, i, o) {
   const pdot = o.pv && o.pv.has(ex.name) ? `<span class="pdot"${alt ? ` onclick="event.stopPropagation();_xShowAltDesc('${_q(ex.name)}')" style="cursor:pointer"` : ''}></span>` : '';
   const curW = getWeight(date, i), hist = W_HIST[ex.name];
   const pr = needsWeightUI(ex) && hist && hist.length && (curW || 0) >= Math.max(...hist.map(h => h.weight)) ? `<span class="sp-pr">纪录</span>` : '';
-  return { name, note, pdot, pr };
+  const sp = typeof exSpot === 'function' && !alt ? exSpot(ex.name) : null;
+  const spot = sp ? `<span class="sp-spot${sp.level === '必须' ? '' : ' soft'}" title="${sp.level === '必须' ? '需要搭子保护' : '建议有人保护'}">${sp.level === '必须' ? '需保护' : '建议保护'}</span>` : '';
+  return { name, note, pdot, pr, spot };
 }
 // 组 / 次 / kg 三格(焦点卡是黑格,接下来列表里是描边格)。onclick 和纸墨展开区同一套:adj / stepWeight / setWeight
 function _spSteps(date, ex, i) {
@@ -157,11 +159,20 @@ function _spActBtns(date, ex, i) {
   const aiOn = typeof coachAccess === 'function' && coachAccess() === 'on';
   return (aiOn ? `<button type="button" class="sp-pill link-btn" onclick="coachAskAbout('${_q(ex.name)}')">问教练</button>` : '')
     + `<button type="button" class="sp-pill link-btn swap-btn" onclick="swapExercise('${date}',${i})">${SP.icon(SP.I.swap, 16)}换 / 划掉</button>`
-    + `<button type="button" class="sp-pill link-btn" onclick="openDemo('${_q(ex.name)}')">示范</button>`
+    + `<button type="button" class="sp-pill link-btn" ${_detailAttrs(ex.name, date, i)}>示范</button>`   // 2026-11-10:先看 app 里的动图(详情顶上),站外搜索在详情里
     + (timed ? `<button type="button" class="sp-pill link-btn" onclick="startTimer(${_timedSec(ex, reps)}, '${_q(ex.name)}')">计时 ${_unitTxt(ex, reps).replace('/每侧', '')}</button>` : '')
     + `<button type="button" class="sp-pill link-btn" onclick="startTimer(${S.restDur || 45},'组间休息')">休息 ${S.restDur || 45}s</button>`;
 }
 function _spBox(on, attrs, label) { return uiBox(on, attrs, label); }
+function _spSpotTag(name) { const sp = name && typeof exSpot === 'function' ? exSpot(name) : null; return sp ? `<span class="sp-spot${sp.level === '必须' ? '' : ' soft'}">${sp.level === '必须' ? '需保护' : '建议保护'}</span>` : ''; }
+// 引导训练里的「怎么做」:动作详情的步骤(拉伸 / 热身默认展开,别的收起;2026-11-10 Cici:拉伸要有详细说明)
+function _spHowList(ex) {
+  const d = typeof EX_DETAIL !== 'undefined' ? EX_DETAIL[ex.name] : null;
+  if (!d || !d.steps || !d.steps.length) return '';
+  const open = ex.isStretch || ex.isWarmup;
+  return `<details class="sp-g-how"${open ? ' open' : ''}><summary>怎么做</summary><ol>${d.steps.map(t => `<li>${t}</li>`).join('')}</ol></details>`;
+}
+function _spCue(note) { let n = String(note || ''); if (n.startsWith('经期温和模式 | ')) n = n.slice(9); const k = n.indexOf(' — '); return (k >= 0 ? n.slice(0, k) : n).trim(); }
 
 // ── 焦点卡:「下一项 · 03」 ──
 function _spFocusHtml(sel, st, o) {
@@ -180,7 +191,8 @@ function _spFocusHtml(sel, st, o) {
   if (_spJust && _spJust.date === date) h += _spJustHtml(sel);
   h += `<div class="sp-f-top"><span class="sp-f-tag">${inSession ? '现在' : '下一项'} · ${pos}</span>${part ? `<span class="sp-f-part">${_escHtml(part)}</span>` : ''}</div>`
     + ((inSession || _spT0(date) > 0) && date === todayStr() && typeof ptWithHtml === 'function' ? ptWithHtml('f') : '')   // 一起练:我开练了(点过开练 / 做过一组)、搭子也在练时写 TA 在做什么(app.js;没配对是空串)
-    + `<button type="button" class="sp-f-name exname" ${_detailAttrs(ex.name, date, i)}>${nm.name}${nm.pdot}${nm.pr}</button>`
+    + `<div class="sp-f-head"><button type="button" class="sp-f-media exname" ${_detailAttrs(ex.name, date, i)} aria-label="看 ${_escHtml(nm.name)} 的示范">${exThumbHtml(ex.name, 'sp-thumb lg')}</button>`
+    + `<div class="sp-f-head-t"><button type="button" class="sp-f-name exname" ${_detailAttrs(ex.name, date, i)}>${nm.name}${nm.pdot}${nm.pr}</button>${nm.spot}</div></div>`
     + `<div class="sp-f-nums"><div><span class="sp-f-lbl">组 × ${timedU}${ex.bi ? ' / 每侧' : ''}</span><span class="sp-f-big">${sets}×${reps}</span></div>`
     + `<div><span class="sp-f-lbl">${needW ? '重量 KG' : '负重'}</span><span class="sp-f-big ${kgSize}">${kgVal}</span></div></div>`;
   if (!o.locked) {
@@ -210,8 +222,8 @@ function _spQueueHtml(sel, st, o) {
     const done = !!st.pd[i], open = !!_exOpen[date + '-' + i] && !o.locked, nm = _spName(date, ex, i, o);
     const pos = SP.pad2(st.mains.findIndex(([, k]) => k === i) + 1);
     h += `<div class="sp-q ex-row${done ? ' done' : ''}" data-i="${i}"><div class="sp-q-top">`
-      + (o.locked ? `<div class="sp-q-main"><span class="sp-q-idx">${pos}</span><span class="sp-q-txt"><span class="sp-q-name">${nm.name}${nm.pdot}${nm.pr}</span><span class="sp-q-spec">${_spSpec(date, ex, i, true)}</span></span></div>`
-        : `<button type="button" class="sp-q-main ex-spec" aria-expanded="${open}" onclick="toggleExEdit('${date}',${i})"><span class="sp-q-idx">${pos}</span><span class="sp-q-txt"><span class="sp-q-name">${nm.name}${nm.pdot}${nm.pr}</span><span class="sp-q-spec">${_spSpec(date, ex, i)}</span></span></button>`)
+      + (o.locked ? `<div class="sp-q-main"><span class="sp-q-idx">${pos}</span>${exThumbHtml(ex.name)}<span class="sp-q-txt"><span class="sp-q-name">${nm.name}${nm.pdot}${nm.pr}${nm.spot}</span><span class="sp-q-spec">${_spSpec(date, ex, i, true)}</span></span></div>`
+        : `<button type="button" class="sp-q-main ex-spec" aria-expanded="${open}" onclick="toggleExEdit('${date}',${i})"><span class="sp-q-idx">${pos}</span>${exThumbHtml(ex.name)}<span class="sp-q-txt"><span class="sp-q-name">${nm.name}${nm.pdot}${nm.pr}${nm.spot}</span><span class="sp-q-spec">${_spSpec(date, ex, i)}</span></span></button>`)
       + (o.locked ? _spBox(done, 'aria-disabled="true" tabindex="-1"', `完成 ${ex.name}`) : _spBox(done, `onclick="spTog('${date}',${i})"`, `完成 ${ex.name}`)) + `</div>`;
     if (open) {
       h += `<div class="sp-q-edit ex-edit">${_spSteps(date, ex, i)}${_spEditMore(date, ex, i, nm.note)}`
@@ -234,7 +246,8 @@ function _spBlockHtml(kind, date, items, o) {
     h += `<div class="sp-blk-list">${items.map(([ex, i]) => {
       const done = !!o.pd[i], sets = getAdj(date, i, 's', ex.sets), reps = getAdj(date, i, 'r', ex.reps), nm = _spName(date, ex, i, o);
       const timed = ex.unit === '秒' || ex.unit === '分钟';
-      return `<div class="sp-mini mini-row${done ? ' done' : ''}"><button type="button" class="sp-mini-name exname" ${_detailAttrs(ex.name, date, i)}>${nm.name}${nm.pdot}</button><span class="sp-mini-dose">${sets > 1 ? sets + '×' : ''}${_unitTxt(ex, reps)}</span>`
+      const cue = _spCue(nm.note);
+      return `<div class="sp-mini mini-row${done ? ' done' : ''}"><button type="button" class="sp-mini-main exname" ${_detailAttrs(ex.name, date, i)}>${exThumbHtml(ex.name, 'sp-thumb sm')}<span class="sp-mini-txt"><span class="sp-mini-name">${nm.name}${nm.pdot}</span><span class="sp-mini-dose">${sets > 1 ? sets + '×' : ''}${_unitTxt(ex, reps)}</span>${cue ? `<span class="sp-mini-note">${_escHtml(cue)}</span>` : ''}</span></button>`
         + (o.locked ? '' : (timed ? `<button type="button" class="sp-mini-act link-btn" onclick="startTimer(${_timedSec(ex, reps)}, '${_q(ex.name)}')">计时</button>` : '') + `<button type="button" class="sp-mini-act link-btn" onclick="openSwapSheet('${date}',${i})">划掉</button>`)
         + (o.locked ? uiBox(done, 'aria-disabled="true" tabindex="-1"', `完成 ${ex.name}`, 'sm') : uiBox(done, `onclick="spTog('${date}',${i})"`, `完成 ${ex.name}`, 'sm')) + `</div>`;
     }).join('')}</div>`;
@@ -479,6 +492,8 @@ SKIN_TPL.sport.ptToday = ({ v, rx, date, now, start, off }) => {
 };
 // 「一起练」一行(焦点卡 / 引导卡顶上,荧光底上的墨字小条):搭子没在练时是 hidden 的占位,ptRefresh 原地换
 SKIN_TPL.sport.ptWith = ({ where, on, text }) => `<div class="sp-pt-with pt-with" id="pt-with-${where}"${on ? '' : ' hidden'}><span class="sp-pt-dot" aria-hidden="true"></span><span>${SP.esc(text)}</span></div>`;
+// 今天页「正在看 X · 回到今天」条:运动风格不显示(Cici 2026-11-10:太碍事,她会自己点周历回今天)
+SKIN_TPL.sport.viewingNotice = () => '';
 // 没练自动顺延 / 跟着搭子对齐的提示(core.js autoShiftNoticeHtml):白卡 + 荧光绿小签(顺延 / 对齐)+ 一句 + 小字说明,撤销 / 知道了。id、onclick 同纸墨
 SKIN_TPL.sport.shiftNotice = (t) => `<div class="notice sp-shift" id="${t.id}" role="status"><span class="sp-shift-t"><span class="sp-shift-tag">${SP.esc(t.tag)}</span><b>${SP.esc(t.main)}</b>${t.hint ? `<span class="sp-shift-h">${SP.esc(t.hint)}</span>` : ''}</span>`
   + `<span class="sp-shift-a"><button type="button" class="link-btn u" onclick="${t.undo}">撤销</button><button type="button" class="link-btn" onclick="${t.dismiss}">知道了</button></span></div>`;
@@ -1197,17 +1212,18 @@ SKIN_TPL.sport.exMuscles = ({ muscles, dispName }) => `<div class="sp-ex-mus">${
 // 示范(动图 + 四个站外搜索)+ 力量数据(预计 1RM 大字 + 5 / 10 / 15 次三块)
 SKIN_TPL.sport.exStrength = ({ name, gif, e1rm, dq }) => {
   const jump = (href, label, title) => `<a href="${href}" target="_blank" rel="noopener" title="${title}">${label}</a>`;
-  const gifBlock = gif ? `<div class="gif-box"><img src="${GIF_BASE}${gif}" alt="${name}演示" crossorigin="anonymous" loading="lazy" onerror="this.parentElement.style.display='none'"><div class="cap">动图示范 · © Gym Visual</div></div>` : '';
+  const gifBlock = exMediaBlock(name);
   const demo = `<p class="sec-label">示范 · 看怎么做</p>${gifBlock}<div class="demo-links">`
     + jump('https://www.douyin.com/search/' + dq, '抖音', '在抖音搜索该动作演示')
     + jump('https://www.xiaohongshu.com/search_result?keyword=' + dq, '小红书', '在小红书搜索该动作演示')
     + jump('https://search.bilibili.com/all?keyword=' + dq, 'B站', '在B站搜索该动作视频')
-    + jump('https://keep.com/', 'Keep', '打开 Keep app（Keep 无关键词搜索链接，需自行搜索）') + `</div>`;
+    + (exKeepUrl(name) ? jump(exKeepUrl(name), 'Keep', '打开 Keep 上这个动作的示范页') : '') + `</div>`;
   if (!e1rm) return demo;
   return demo + `<div class="sp-ex-1rm"><div class="sp-ex-1rm-top"><span class="sp-ex-1rm-k">预计 1RM<small>基于你的历史</small></span><span class="sp-ex-1rm-v">≈ ${e1rm}<small>kg</small></span></div>`
     + `<div class="sp-ex-1rm-grid">${[[5, '力量'], [10, '增肌'], [15, '塑形']].map(([n, l]) => `<div><b>${weightForReps(e1rm, n)}<small>kg</small></b><span>${l} · ${n} 次</span></div>`).join('')}</div></div>`;
 };
-SKIN_TPL.sport.exTips = ({ how, tips }) => how.map(t => `<div class="ex-tip how"><span class="sp-ex-tag">怎么上重量</span>${t}</div>`).join('')
+SKIN_TPL.sport.exTips = ({ how, tips, spot }) => (spot ? `<div class="sp-spot-box" role="note"><span class="sp-spot">${spot.level === '必须' ? '需要搭子保护' : '建议有人保护'}</span><p>${spot.how}</p></div>` : '')
+  + how.map(t => `<div class="ex-tip how"><span class="sp-ex-tag">怎么上重量</span>${t}</div>`).join('')
   + tips.map(t => `<div class="ex-tip">${t}</div>`).join('');
 SKIN_TPL.sport.exMistakes = (m) => m.length ? `<p class="sec-label sp-ex-warn">常见错误</p>` + m.map(x => `<div class="ex-tip mistake">${x}</div>`).join('') : '';
 
@@ -1252,7 +1268,8 @@ SKIN_TPL.sport.guided = (c) => {
     + `<div class="sp-g-card">`
     + `<div class="sp-g-top"><span class="sp-g-tag">动作 ${SP.pad2(idx + 1)} / ${SP.pad2(list.length)}</span>${part ? `<span class="sp-g-part">${part}</span>` : ''}</div>`
     + (date === todayStr() && typeof ptWithHtml === 'function' ? ptWithHtml('g') : '')   // 一起练
-    + `<h2 class="wm-name">${dispName}</h2>`
+    + `<div class="sp-g-head"><button type="button" class="sp-g-media exname" ${_detailAttrs(ex.name, date, i)} aria-label="看 ${_escHtml(dispName)} 的示范">${exThumbHtml(ex.name, 'sp-thumb xl')}</button>`
+    + `<div class="sp-g-head-t"><h2 class="wm-name">${dispName}</h2>${_spSpotTag(dispName === ex.name ? ex.name : '')}</div></div>`
     + `<div class="sp-g-grid${needW ? '' : ' one'}"><div class="sp-g-cell"><span class="sp-g-lbl">${bigLbl}</span><span class="sp-g-big${big.length > 5 ? ' sm' : ''}">${big}</span></div>`
     + (needW ? `<div class="sp-g-cell"><label class="sp-g-lbl" for="wm-weight">重量 KG</label><input id="wm-weight" class="sp-g-kg" type="number" inputmode="decimal" step="0.5" value="${curW || ''}" placeholder="${lastW ? lastW.weight : ''}"></div>` : '')
     + `</div>`
@@ -1262,6 +1279,7 @@ SKIN_TPL.sport.guided = (c) => {
     + cd + main + `</div>`
     + alt
     + (dispNote ? `<div class="exnote sp-wm-note">${dispNote}</div>` : '')
+    + (dispName === ex.name ? _spHowList(ex) : '')
     + `<div class="wm-nav sp-wm-nav"><button class="btn-line" onclick="wmNav(-1)" aria-label="上一个动作"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>上一个</button>`
     + `<button class="btn-line" onclick="wmNav(1)" aria-label="下一个动作">下一个<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button></div>`
     + `<button class="btn-line sp-wm-end" onclick="wmFinish()">结束训练并打卡</button>`;
